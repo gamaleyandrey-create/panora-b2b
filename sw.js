@@ -1,4 +1,4 @@
-const CACHE='panora-v28';
+const CACHE='panora-v29';
 const ASSETS=['./','index.html','styles.css','portal.css','quantity.css','account-state.css','cart-date.css','app.js','portal.js','admin.html','admin.css','admin.js','commerce.css','settings.css','export.css','commerce.js','manifest.webmanifest','icon.svg','bread-plain.jpg','bread-pumpkin.jpg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener('install',()=>self.skipWaiting());
