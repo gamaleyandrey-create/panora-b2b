@@ -1,0 +1,3 @@
+.purchase-filter{display:flex;align-items:end;justify-content:space-between;gap:20px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:14px}
+.purchase-filter label{display:grid;gap:6px;color:var(--muted);font-size:12px}.purchase-filter select{min-width:310px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+@media(max-width:650px){.purchase-filter{display:block}.purchase-filter strong{display:block;margin-top:10px}.purchase-filter select{width:100%;min-width:0}}

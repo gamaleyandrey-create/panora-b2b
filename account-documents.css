@@ -1,0 +1,4 @@
+.account-note,.account-cancel{border:0;background:transparent;color:#a34d42;text-decoration:underline;cursor:pointer;font:inherit;padding:2px}
+.account-note{color:#304b39}
+.account-payments>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #d7d8d2}
+.account-payments small{display:block;color:#707870;max-width:290px}
