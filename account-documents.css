@@ -2,3 +2,4 @@
 .account-note{color:#304b39}
 .account-payments>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #d7d8d2}
 .account-payments small{display:block;color:#707870;max-width:290px}
+.order-item-cost{display:block;margin-top:3px;color:var(--muted);font-size:12px;font-weight:500;white-space:nowrap}
