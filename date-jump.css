@@ -1,0 +1,6 @@
+.period{align-items:end;flex-wrap:wrap}
+.period button{min-height:43px;padding:10px 13px}
+.period strong{align-self:center}
+.date-jump{display:grid;gap:4px;margin-left:10px;color:var(--muted);font-size:12px}
+.date-jump input{min-height:43px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:15px}
+@media(max-width:650px){.date-jump{order:5;width:100%;margin-left:0}.date-jump input{width:100%}}

@@ -40,6 +40,13 @@ function renderStock(){const balances=Object.keys(PRODUCTS).map(pid=>({pid,qty:m
 $$('.admin-nav button').forEach(b=>b.onclick=()=>{$$('.admin-nav button,.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');$('#view-'+b.dataset.view).classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 $('#prevWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()-7);renderPlan()};$('#nextWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()+7);renderPlan()};$('#today').onclick=()=>{weekStart=startOfWeek(new Date());renderPlan()};
+const planDateJump=$('#planDateJump');
+if(planDateJump){
+  planDateJump.value=iso(new Date());
+  planDateJump.onchange=()=>{if(!planDateJump.value)return;weekStart=startOfWeek(new Date(`${planDateJump.value}T12:00:00`));renderPlan()};
+  const label=$('#planDateJumpLabel');
+  if(label)label.textContent=lang==='ru'?'Перейти к дате':lang==='es'?'Ir a la fecha':'Go to date';
+}
 $('#addPlan').onclick=()=>{const f=$('#planForm'),b=new Date();b.setDate(b.getDate()+3);f.bakeDate.value=iso(b);f.deliveryDate.value=iso(b);const c=new Date(b);c.setDate(c.getDate()-2);c.setHours(18,0,0,0);f.cutoff.value=c.toISOString().slice(0,16);$('#planDialog').showModal()};
 $('#savePlan').onclick=e=>{e.preventDefault();const f=new FormData($('#planForm'));plans.push({id:crypto.randomUUID(),bakeDate:f.get('bakeDate'),deliveryDate:f.get('deliveryDate'),product:f.get('product'),planned:Number(f.get('planned')),ordered:0,cutoff:f.get('cutoff'),open:f.get('open')==='on'});store('panora-production-plans',plans);$('#planDialog').close();renderAll()};
 $('#addMovement').onclick=()=>$('#movementDialog').showModal();$('#saveMovement').onclick=e=>{e.preventDefault();const f=new FormData($('#movementForm'));movements.push({id:crypto.randomUUID(),date:iso(new Date()),product:f.get('product'),type:f.get('type'),quantity:Number(f.get('quantity')),note:f.get('note')});store('panora-stock-movements',movements);$('#movementDialog').close();$('#movementForm').reset();renderStock()};
