@@ -1,0 +1,1 @@
+.product-manage{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted)}.product-manage button{border:1px solid #e5c4bd;background:#fff7f5;color:#a5483d;border-radius:8px;padding:8px 10px}.product-manage label{display:flex;gap:8px;align-items:center}

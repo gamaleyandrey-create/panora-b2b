@@ -1,5 +1,5 @@
-const CACHE='panora-v50';
-const ASSETS=['./','index.html','styles.css','portal.css','quantity.css','account-state.css','account-documents.css','cart-date.css','app.js','portal.js','admin.html','admin.css','admin.js','commerce.css','settings.css','export.css','recipe-actions.css','purchase-filter.css','date-jump.css','easy-plan.css','commerce.js','invoice-settings.js','invoice-tax-display.js','manifest.webmanifest','icon.svg','bread-plain.jpg','bread-pumpkin.jpg'];
+const CACHE='panora-v53';
+const ASSETS=['./','index.html','styles.css','portal.css','quantity.css','account-state.css','account-documents.css','cart-date.css','app.js','dynamic-products.js','portal.js','admin.html','admin.css','admin.js','commerce.css','settings.css','export.css','recipe-actions.css','purchase-filter.css','date-jump.css','easy-plan.css','product-admin.css','calendar-plan.css','commerce.js','invoice-settings.js','invoice-tax-display.js','admin-localization.js','product-admin.js','calendar-plan.js','manifest.webmanifest','icon.svg','bread-plain.jpg','bread-pumpkin.jpg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
