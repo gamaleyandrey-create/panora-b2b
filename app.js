@@ -10,6 +10,9 @@ I18N.es.calendar={kicker:'Calendario Panora',title:'Elige el día de horneado y 
 I18N.ru.catalog.categories.yeastfree='Бездрожжевой хлеб';
 I18N.en.catalog.categories.yeastfree='Yeast-free bread';
 I18N.es.catalog.categories.yeastfree='Pan sin levadura';
+I18N.ru.catalog.privateNote='Индивидуальные цены доступны после входа в личный кабинет.';
+I18N.en.catalog.privateNote='Personal prices are available after signing in.';
+I18N.es.catalog.privateNote='Los precios personalizados están disponibles después de iniciar sesión.';
 I18N.ru.benefits.daysTitle='Заказ за 48 часов';
 I18N.ru.benefits.daysText='Принимаем заказы не позднее чем за 48 часов до выпечки.';
 I18N.en.benefits.daysTitle='Order 48 hours ahead';
@@ -21,7 +24,7 @@ const PRODUCTS=[
 {id:'plain',category:'yeastfree',price:0,pieces:12,weight:650,bg:'#e9dfca',text:{ru:['Обычный хлеб','Бездрожжевой хлеб для ежедневной подачи.','Бездрожжевой'],en:['Plain bread','Yeast-free bread for everyday table service.','Yeast-free'],es:['Pan clásico','Pan sin levadura para el servicio diario.','Sin levadura']}},
 {id:'pumpkin',category:'yeastfree',price:0,pieces:12,weight:650,bg:'#e5c789',text:{ru:['Хлеб из тыквы','Бездрожжевой хлеб с тыквой.','Бездрожжевой'],en:['Pumpkin bread','Yeast-free pumpkin bread.','Yeast-free'],es:['Pan de calabaza','Pan de calabaza sin levadura.','Sin levadura']}}
 ];
-const MIN_PIECES=12,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48,SHOW_PRICES=false;
+const MIN_PIECES=12,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48;let SHOW_PRICES=false;
 const CONTACTS={email:'gamaley1@gmail.com',whatsapp:'34611187640',telegram:'anastasiiagamalei'};
 const $=s=>document.querySelector(s);
 let lang=localStorage.getItem('panora-lang')||(['ru','en','es'].includes(navigator.language.slice(0,2))?navigator.language.slice(0,2):'en');
