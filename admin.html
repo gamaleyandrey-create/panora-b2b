@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#24382c">
+  <title>Panora — управление пекарней</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="admin-topbar">
+    <a href="index.html" class="brand"><span>P</span>Panora</a>
+    <div><select id="adminLanguage"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><b id="saveState">Сохранено</b></div>
+  </header>
+  <main class="admin-shell">
+    <aside class="admin-nav">
+      <h1 data-t="bakery">Пекарня</h1>
+      <button class="active" data-view="plan" data-t="plan">План выпечки</button>
+      <button data-view="recipes" data-t="recipes">Рецептуры</button>
+      <button data-view="purchase" data-t="purchase">Закупка</button>
+      <button data-view="stock" data-t="stock">Склад хлеба</button>
+    </aside>
+    <section class="admin-content">
+      <div class="view active" id="view-plan">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="planTitle">План выпечки и доставки</h2><p data-t="planText">Добавляйте даты и планируйте каждый хлеб в штуках.</p></div><button class="primary" id="addPlan" data-t="addBake">+ Добавить выпечку</button></div>
+        <div class="period"><button id="prevWeek">←</button><strong id="periodLabel"></strong><button id="nextWeek">→</button><button id="today" data-t="today">Сегодня</button></div>
+        <div class="summary-grid"><article><span data-t="planned">Запланировано</span><strong id="plannedPieces">0 шт.</strong></article><article><span data-t="ordered">Заказано</span><strong id="orderedPieces">0 шт.</strong></article><article><span data-t="reserve">Свободно</span><strong id="freePieces">0 шт.</strong></article></div>
+        <div id="planList" class="plan-list"></div>
+      </div>
+      <div class="view" id="view-recipes">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="recipeTitle">Рецептуры на 1 штуку</h2><p data-t="recipeText">Введите фактический расход ингредиентов на один хлеб.</p></div></div>
+        <div id="recipeList" class="recipe-grid"></div>
+      </div>
+      <div class="view" id="view-purchase">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по плану выпечки с учётом остатков и страхового запаса.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
+        <div class="table-wrap"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+      </div>
+      <div class="view" id="view-stock">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Остатки и движения учитываются в штуках.</p></div><button class="primary" id="addMovement" data-t="movement">+ Движение</button></div>
+        <div id="stockCards" class="summary-grid"></div>
+        <div class="table-wrap"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="planDialog"><form method="dialog" id="planForm"><h3 data-t="newBake">Новая выпечка</h3><label><span data-t="bakeDate">Дата выпечки</span><input type="date" name="bakeDate" required></label><label><span data-t="deliveryDate">Дата доставки</span><input type="date" name="deliveryDate" required></label><label><span data-t="product">Хлеб</span><select name="product"><option value="plain">Обычный хлеб</option><option value="pumpkin">Хлеб из тыквы</option></select></label><label><span data-t="plannedPiecesLabel">План, шт.</span><input type="number" name="planned" min="0" step="1" required></label><label><span data-t="cutoff">Приём заказов до</span><input type="datetime-local" name="cutoff" required></label><label class="check"><input type="checkbox" name="open" checked><span data-t="accepting">Принимать заказы</span></label><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="savePlan" data-t="save">Сохранить</button></div></form></dialog>
+  <dialog id="movementDialog"><form method="dialog" id="movementForm"><h3 data-t="newMovement">Движение хлеба</h3><label><span data-t="product">Хлеб</span><select name="product"><option value="plain">Обычный хлеб</option><option value="pumpkin">Хлеб из тыквы</option></select></label><label><span data-t="operation">Операция</span><select name="type"><option value="produced">Произведено</option><option value="shipped">Отгружено</option><option value="returned">Возврат</option><option value="written_off">Списано</option></select></label><label><span data-t="quantity">Количество, шт.</span><input type="number" name="quantity" min="1" step="1" required></label><label><span data-t="note">Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="saveMovement" data-t="save">Сохранить</button></div></form></dialog>
+  <script src="admin.js"></script>
+</body>
+</html>
