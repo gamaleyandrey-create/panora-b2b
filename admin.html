@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#24382c">
   <title>Panora — управление пекарней</title>
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="commerce.css">
 </head>
 <body>
   <header class="admin-topbar">
@@ -19,6 +20,9 @@
       <button data-view="recipes" data-t="recipes">Рецептуры</button>
       <button data-view="purchase" data-t="purchase">Закупка</button>
       <button data-view="stock" data-t="stock">Склад хлеба</button>
+      <button data-view="restaurants">Рестораны и цены</button>
+      <button data-view="orders">Заказы и отгрузки</button>
+      <button data-view="accounting">Оплаты и долги</button>
     </aside>
     <section class="admin-content">
       <div class="view active" id="view-plan">
@@ -40,11 +44,29 @@
         <div id="stockCards" class="summary-grid"></div>
         <div class="table-wrap"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
       </div>
+      <div class="view" id="view-restaurants">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Рестораны и индивидуальные цены</h2><p>Каждый ресторан видит только назначенные ему цены.</p></div><button class="primary" id="addRestaurant">+ Добавить ресторан</button></div>
+        <div id="restaurantCards" class="restaurant-grid"></div>
+      </div>
+      <div class="view" id="view-orders">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Заказы и отгрузки</h2><p>Заказ ведётся в штуках. При отгрузке создаётся накладная и задолженность.</p></div><button class="primary" id="addOrder">+ Новый заказ</button></div>
+        <div class="table-wrap"><table><thead><tr><th>№</th><th>Дата</th><th>Ресторан</th><th>Состав</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody id="orderRows"></tbody></table></div>
+      </div>
+      <div class="view" id="view-accounting">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Оплаты и задолженность</h2><p>Отгрузка увеличивает долг, оплата уменьшает его.</p></div><button class="primary" id="addPayment">+ Принять оплату</button></div>
+        <div class="summary-grid"><article><span>Общая задолженность</span><strong id="totalDebt">0 €</strong></article><article><span>Отгружено</span><strong id="totalShipped">0 €</strong></article><article><span>Оплачено</span><strong id="totalPaid">0 €</strong></article></div>
+        <div class="table-wrap"><table><thead><tr><th>Ресторан</th><th>Отгрузки</th><th>Оплаты</th><th>Задолженность</th><th>Последняя операция</th></tr></thead><tbody id="accountRows"></tbody></table></div>
+      </div>
     </section>
   </main>
 
   <dialog id="planDialog"><form method="dialog" id="planForm"><h3 data-t="newBake">Новая выпечка</h3><label><span data-t="bakeDate">Дата выпечки</span><input type="date" name="bakeDate" required></label><label><span data-t="deliveryDate">Дата доставки</span><input type="date" name="deliveryDate" required></label><label><span data-t="product">Хлеб</span><select name="product"><option value="plain">Обычный хлеб</option><option value="pumpkin">Хлеб из тыквы</option></select></label><label><span data-t="plannedPiecesLabel">План, шт.</span><input type="number" name="planned" min="0" step="1" required></label><label><span data-t="cutoff">Приём заказов до</span><input type="datetime-local" name="cutoff" required></label><label class="check"><input type="checkbox" name="open" checked><span data-t="accepting">Принимать заказы</span></label><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="savePlan" data-t="save">Сохранить</button></div></form></dialog>
   <dialog id="movementDialog"><form method="dialog" id="movementForm"><h3 data-t="newMovement">Движение хлеба</h3><label><span data-t="product">Хлеб</span><select name="product"><option value="plain">Обычный хлеб</option><option value="pumpkin">Хлеб из тыквы</option></select></label><label><span data-t="operation">Операция</span><select name="type"><option value="produced">Произведено</option><option value="shipped">Отгружено</option><option value="returned">Возврат</option><option value="written_off">Списано</option></select></label><label><span data-t="quantity">Количество, шт.</span><input type="number" name="quantity" min="1" step="1" required></label><label><span data-t="note">Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="saveMovement" data-t="save">Сохранить</button></div></form></dialog>
+  <dialog id="restaurantDialog"><form method="dialog" id="restaurantForm"><h3>Новый ресторан</h3><label><span>Название</span><input name="name" required></label><label><span>Email для входа</span><input name="email" type="email" required></label><label><span>Телефон</span><input name="phone" type="tel"></label><label><span>Адрес доставки</span><input name="address"></label><label><span>Цена обычного хлеба, € / шт.</span><input name="plainPrice" type="number" min="0" step="0.01" required></label><label><span>Цена хлеба из тыквы, € / шт.</span><input name="pumpkinPrice" type="number" min="0" step="0.01" required></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveRestaurant">Сохранить</button></div></form></dialog>
+  <dialog id="orderDialog"><form method="dialog" id="orderForm"><h3>Новый заказ</h3><label><span>Ресторан</span><select name="restaurant" id="orderRestaurant" required></select></label><label><span>Дата выпечки и доставки</span><input name="date" type="date" required></label><label><span>Обычный хлеб, шт.</span><input name="plain" type="number" min="0" step="1" value="0"></label><label><span>Хлеб из тыквы, шт.</span><input name="pumpkin" type="number" min="0" step="1" value="0"></label><p class="form-hint">Минимальный заказ — 12 шт. суммарно.</p><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveOrder">Создать заказ</button></div></form></dialog>
+  <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" value="0"></label><label><span>Способ оплаты</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
+  <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать оплату</button></div></form></dialog>
   <script src="admin.js"></script>
+  <script src="commerce.js"></script>
 </body>
 </html>
