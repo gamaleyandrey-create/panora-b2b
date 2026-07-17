@@ -38,7 +38,7 @@ let cart=JSON.parse(localStorage.getItem('panora-cart')||'{}');
 let selectedBakeDate=localStorage.getItem('panora-bake-date')||'';
 let activeCategory='all';
 const tr=path=>path.split('.').reduce((o,k)=>o&&o[k],I18N[lang])||path;
-const money=n=>`€ ${new Intl.NumberFormat(I18N[lang].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0)}`;
+const money=n=>{const value=new Intl.NumberFormat(I18N[lang].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
 const pText=p=>p.text[lang];
 const unit=()=>lang==='ru'?'за 1 шт.':lang==='es'?'por 1 ud.':'per 1 pc';
 const weight=p=>`${p.weight} g`;
@@ -72,4 +72,4 @@ function repeatLast(){const last=JSON.parse(localStorage.getItem('panora-last-or
 $('#languageSelect').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-lang',lang);applyLanguage()};$('#cartButton').onclick=()=>openPanel($('#cartDrawer'));$('#checkoutButton').onclick=()=>{closePanels();setTimeout(()=>openPanel($('#checkoutModal')),180)};$('#overlay').onclick=closePanels;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closePanels);$('#profileButton').onclick=()=>openPanel($('#profileModal'));$('#mobileProfile').onclick=()=>openPanel($('#profileModal'));$('#repeatOrderButton').onclick=repeatLast;$('#mobileOrders').onclick=repeatLast;$('#fulfillmentSelect').onchange=toggleFulfillment;
 $('#checkoutForm').onsubmit=e=>{e.preventDefault();const data=new FormData(e.target),summary=cartData(),fulfillment=data.get('fulfillment'),items=summary.rows.map(p=>({id:p.id,quantityPieces:p.quantityPieces,total:p.total}));const order={id:'PN-'+Date.now().toString().slice(-6),restaurant:data.get('restaurant'),contact:data.get('contact'),phone:data.get('phone'),email:data.get('email'),address:fulfillment==='delivery'?data.get('address'):'',date:data.get('date'),dateLabel:formatDate(new Date(data.get('date')+'T09:00:00')),time:fulfillment==='delivery'?data.get('time'):'',fulfillment,fulfillmentLabel:fulfillment==='delivery'?tr('checkout.deliveryOption'):tr('checkout.pickupOption'),comment:data.get('comment'),total:summary.total,items};localStorage.setItem('panora-last-order',JSON.stringify(order));cart={};localStorage.removeItem('panora-cart');closePanels();renderProducts();renderCart();showShare(order)};
 applyLanguage();toggleFulfillment();
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=27').then(r=>r.update()).catch(()=>{}));
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=28').then(r=>r.update()).catch(()=>{}));
