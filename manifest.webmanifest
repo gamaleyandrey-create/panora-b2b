@@ -6,6 +6,6 @@
   "background_color":"#fbfaf7",
   "theme_color":"#2f4937",
   "lang":"ru",
-  "description":"Оптовые предзаказы свежего хлеба для ресторанов",
+  "description":"Multilingual wholesale bread pre-orders for restaurants",
   "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }

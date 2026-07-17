@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#2f4937">
-  <meta name="description" content="Panora — оптовые поставки свежего хлеба для ресторанов">
+  <meta name="description" content="Panora — bakery pre-orders for restaurants">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <title>Panora — хлеб для ресторанов</title>
@@ -12,111 +12,113 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#top" aria-label="Panora, на главную">
+      <a class="brand" href="#top" aria-label="Panora">
         <span class="brand-mark">P</span>
         <span>Panora</span>
       </a>
-      <button class="icon-button" id="profileButton" aria-label="Профиль ресторана">Р</button>
+      <div class="top-actions"><select class="language-select" id="languageSelect" aria-label="Language"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><button class="icon-button" id="profileButton" aria-label="Profile">P</button></div>
     </header>
 
     <main id="top">
       <section class="hero">
-        <div class="eyebrow"><span></span> Для ресторанов</div>
-        <h1>Печём под ваш<br>предзаказ.</h1>
-        <p>Выберите ближайший день выпечки — мы приготовим нужное количество свежего хлеба для вашего ресторана.</p>
+        <div class="eyebrow"><span></span><i data-i18n="hero.eyebrow">Для ресторанов</i></div>
+        <h1 data-i18n-html="hero.title">Печём под ваш<br>предзаказ.</h1>
+        <p data-i18n="hero.text">Выберите ближайший день выпечки — мы приготовим нужное количество свежего хлеба для вашего ресторана.</p>
         <div class="hero-actions">
-          <a class="button button-primary" href="#catalog">Выбрать хлеб</a>
-          <button class="button button-ghost" id="repeatOrderButton">Повторить заказ</button>
+          <a class="button button-primary" href="#catalog" data-i18n="hero.choose">Выбрать хлеб</a>
+          <button class="button button-ghost" id="repeatOrderButton" data-i18n="hero.repeat">Повторить заказ</button>
         </div>
         <div class="hero-meta">
-          <div><strong id="nextBakeHero">—</strong><span>ближайшая выпечка</span></div>
-          <div><strong id="cutoffHero">—</strong><span>приём заказов до</span></div>
-          <div><strong>2 раза</strong><span>в неделю</span></div>
+          <div><strong id="nextBakeHero">—</strong><span data-i18n="hero.nextBake">ближайшая выпечка</span></div>
+          <div><strong id="cutoffHero">—</strong><span data-i18n="hero.cutoff">приём заказов до</span></div>
+          <div><strong data-i18n="hero.twice">2 раза</strong><span data-i18n="hero.week">в неделю</span></div>
         </div>
       </section>
 
       <section class="benefits" aria-label="Преимущества">
-        <article><span>01</span><div><strong>Только под заказ</strong><p>Не перепроизводим и не храним лишнее.</p></div></article>
-        <article><span>02</span><div><strong>Два дня выпечки</strong><p>Собираем заявки к среде и субботе.</p></div></article>
-        <article><span>03</span><div><strong>Всегда свежий хлеб</strong><p>Получаете заказ в день выпечки.</p></div></article>
+        <article><span>01</span><div><strong data-i18n="benefits.orderTitle">Только под заказ</strong><p data-i18n="benefits.orderText">Не перепроизводим и не храним лишнее.</p></div></article>
+        <article><span>02</span><div><strong data-i18n="benefits.daysTitle">Два дня выпечки</strong><p data-i18n="benefits.daysText">Собираем заявки к среде и субботе.</p></div></article>
+        <article><span>03</span><div><strong data-i18n="benefits.freshTitle">Всегда свежий хлеб</strong><p data-i18n="benefits.freshText">Получаете заказ в день выпечки.</p></div></article>
       </section>
 
       <section class="bake-picker" aria-label="Ближайшие дни выпечки">
-        <div><span class="kicker">Календарь Panora</span><h2>Выберите день выпечки</h2><p>Корзина будет закреплена за выбранной датой.</p></div>
+        <div><span class="kicker" data-i18n="calendar.kicker">Календарь Panora</span><h2 data-i18n="calendar.title">Выберите день выпечки</h2><p data-i18n="calendar.text">Корзина будет закреплена за выбранной датой.</p></div>
         <div class="bake-dates" id="bakeDates"></div>
       </section>
 
       <section class="catalog-section" id="catalog">
         <div class="section-heading">
-          <div><span class="kicker">Каталог</span><h2>Хлеб для вашего меню</h2></div>
-          <p>Цены указаны за единицу, без НДС.</p>
+          <div><span class="kicker" data-i18n="catalog.kicker">Каталог</span><h2 data-i18n="catalog.title">Хлеб для вашего меню</h2></div>
+          <p data-i18n="catalog.note">Цены указаны за единицу, без НДС.</p>
         </div>
         <div class="chips" id="categoryChips" aria-label="Категории товаров"></div>
         <div class="product-grid" id="productGrid"></div>
       </section>
 
       <section class="how-section">
-        <span class="kicker">Как это работает</span>
-        <h2>Первая поставка — за три шага</h2>
+        <span class="kicker" data-i18n="steps.kicker">Как это работает</span>
+        <h2 data-i18n="steps.title">Первая поставка — за три шага</h2>
         <div class="steps">
-          <article><b>1</b><h3>Выберите выпечку</h3><p>Посмотрите ближайшие даты и срок предзаказа.</p></article>
-          <article><b>2</b><h3>Соберите заказ</h3><p>Укажите нужное количество хлеба для ресторана.</p></article>
-          <article><b>3</b><h3>Получите свежим</h3><p>Заберите или получите заказ в день выпечки.</p></article>
+          <article><b>1</b><h3 data-i18n="steps.oneTitle">Выберите выпечку</h3><p data-i18n="steps.oneText">Посмотрите ближайшие даты и срок предзаказа.</p></article>
+          <article><b>2</b><h3 data-i18n="steps.twoTitle">Соберите заказ</h3><p data-i18n="steps.twoText">Укажите нужное количество хлеба для ресторана.</p></article>
+          <article><b>3</b><h3 data-i18n="steps.threeTitle">Получите свежим</h3><p data-i18n="steps.threeText">Заберите или получите заказ в день выпечки.</p></article>
         </div>
       </section>
     </main>
 
     <nav class="mobile-nav" aria-label="Основная навигация">
-      <a href="#top"><span>⌂</span>Главная</a>
-      <a href="#catalog"><span>◫</span>Каталог</a>
-      <button id="mobileOrders"><span>↻</span>Заказы</button>
-      <button id="mobileProfile"><span>○</span>Профиль</button>
+      <a href="#top"><span>⌂</span><i data-i18n="nav.home">Главная</i></a>
+      <a href="#catalog"><span>◫</span><i data-i18n="nav.catalog">Каталог</i></a>
+      <button id="mobileOrders"><span>↻</span><i data-i18n="nav.orders">Заказы</i></button>
+      <button id="mobileProfile"><span>○</span><i data-i18n="nav.profile">Профиль</i></button>
     </nav>
 
     <button class="cart-fab" id="cartButton" aria-label="Открыть корзину">
-      <span>Корзина</span><b id="cartCount">0</b><strong id="cartTotal">0 ₽</strong>
+      <span data-i18n="cart.title">Корзина</span><b id="cartCount">0</b><strong id="cartTotal">0 €</strong>
     </button>
 
     <div class="overlay" id="overlay"></div>
     <aside class="drawer" id="cartDrawer" aria-hidden="true" aria-label="Корзина">
-      <div class="drawer-head"><div><span class="kicker">Ваш заказ</span><h2>Корзина</h2></div><button class="close-button" data-close>×</button></div>
+      <div class="drawer-head"><div><span class="kicker" data-i18n="cart.kicker">Ваш заказ</span><h2 data-i18n="cart.title">Корзина</h2></div><button class="close-button" data-close>×</button></div>
       <div class="cart-items" id="cartItems"></div>
-      <div class="cart-empty" id="cartEmpty"><span>◇</span><h3>Корзина пока пустая</h3><p>Добавьте хлеб из каталога.</p></div>
+      <div class="cart-empty" id="cartEmpty"><span>◇</span><h3 data-i18n="cart.emptyTitle">Корзина пока пустая</h3><p data-i18n="cart.emptyText">Добавьте хлеб из каталога.</p></div>
       <div class="cart-summary" id="cartSummary">
-        <div><span>Товары</span><strong id="subtotal">0 ₽</strong></div>
-        <div><span>Доставка</span><strong>Бесплатно</strong></div>
-        <div class="summary-total"><span>Итого</span><strong id="summaryTotal">0 ₽</strong></div>
+        <div><span data-i18n="cart.goods">Товары</span><strong id="subtotal">0 €</strong></div>
+        <div><span data-i18n="cart.delivery">Доставка</span><strong data-i18n="cart.free">Бесплатно</strong></div>
+        <div class="summary-total"><span data-i18n="cart.total">Итого</span><strong id="summaryTotal">0 €</strong></div>
         <p class="minimum-hint" id="minimumHint"></p>
-        <button class="button button-primary full" id="checkoutButton">Оформить поставку</button>
+        <button class="button button-primary full" id="checkoutButton" data-i18n="cart.checkout">Оформить поставку</button>
       </div>
     </aside>
 
     <section class="modal" id="checkoutModal" aria-hidden="true" aria-label="Оформление поставки">
-      <div class="modal-head"><div><span class="kicker">Последний шаг</span><h2>Оформление поставки</h2></div><button class="close-button" data-close>×</button></div>
+      <div class="modal-head"><div><span class="kicker" data-i18n="checkout.kicker">Последний шаг</span><h2 data-i18n="checkout.title">Оформление поставки</h2></div><button class="close-button" data-close>×</button></div>
       <form id="checkoutForm">
-        <label>Название ресторана<input name="restaurant" required value="Ресторан Panora Demo"></label>
-        <label>Адрес доставки<input name="address" required placeholder="Улица, дом, вход"></label>
+        <label><span data-i18n="checkout.restaurant">Название ресторана</span><input name="restaurant" required data-i18n-placeholder="checkout.restaurantPlaceholder" placeholder="Название ресторана"></label>
+        <div class="form-row"><label><span data-i18n="checkout.contact">Контактное лицо</span><input name="contact" required data-i18n-placeholder="checkout.contactPlaceholder" placeholder="Имя и фамилия"></label><label><span data-i18n="checkout.phone">Телефон</span><input name="phone" type="tel" required placeholder="+34 …"></label></div>
+        <label><span>Email</span><input name="email" type="email" placeholder="restaurant@example.com"></label>
+        <label id="deliveryAddressLabel"><span data-i18n="checkout.address">Адрес доставки</span><input name="address" required data-i18n-placeholder="checkout.addressPlaceholder" placeholder="Улица, дом, вход"></label>
         <div class="form-row">
-          <label>День выпечки<select name="date" required id="deliveryDate"></select></label>
-          <label>Интервал<select name="time"><option>06:00–08:00</option><option>08:00–10:00</option><option>10:00–11:00</option></select></label>
+          <label><span data-i18n="checkout.bakeDay">День выпечки</span><select name="date" required id="deliveryDate"></select></label>
+          <label id="deliveryTimeLabel"><span data-i18n="checkout.interval">Интервал</span><select name="time"><option>06:00–08:00</option><option>08:00–10:00</option><option>10:00–11:00</option></select></label>
         </div>
-        <label>Получение<select name="fulfillment"><option>Доставка в ресторан</option><option>Самовывоз в день выпечки</option></select></label>
-        <label>Комментарий<textarea name="comment" rows="3" placeholder="Куда подойти, кому передать…"></textarea></label>
-        <div class="checkout-total"><span>К оплате по счёту</span><strong id="checkoutTotal">0 ₽</strong></div>
-        <button class="button button-primary full" type="submit">Подтвердить заказ</button>
-        <p class="legal-note">Нажимая кнопку, вы подтверждаете заказ. Менеджер свяжется с вами для проверки реквизитов.</p>
+        <label><span data-i18n="checkout.receiving">Получение</span><select name="fulfillment" id="fulfillmentSelect"></select></label>
+        <label><span data-i18n="checkout.comment">Комментарий</span><textarea name="comment" rows="3" data-i18n-placeholder="checkout.commentPlaceholder" placeholder="Куда подойти, кому передать…"></textarea></label>
+        <div class="checkout-total"><span data-i18n="checkout.invoice">К оплате по счёту</span><strong id="checkoutTotal">0 €</strong></div>
+        <button class="button button-primary full" type="submit" data-i18n="checkout.confirm">Подтвердить заказ</button>
+        <p class="legal-note" data-i18n="checkout.legal">Нажимая кнопку, вы подтверждаете заказ. Менеджер свяжется с вами для проверки реквизитов.</p>
       </form>
     </section>
 
     <section class="modal compact" id="profileModal" aria-hidden="true" aria-label="Профиль ресторана">
-      <div class="modal-head"><div><span class="kicker">Покупатель</span><h2>Профиль ресторана</h2></div><button class="close-button" data-close>×</button></div>
-      <div class="profile-card"><div class="profile-logo">Р</div><div><strong>Ресторан Panora Demo</strong><span>Оптовый покупатель</span></div></div>
-      <div class="profile-list"><div><span>Условия оплаты</span><strong>По счёту</strong></div><div><span>Персональная скидка</span><strong>Будет рассчитана</strong></div><div><span>Менеджер</span><strong>Назначается</strong></div></div>
-      <button class="button button-ghost full" data-close>Готово</button>
+      <div class="modal-head"><div><span class="kicker" data-i18n="profile.kicker">Покупатель</span><h2 data-i18n="profile.title">Профиль ресторана</h2></div><button class="close-button" data-close>×</button></div>
+      <div class="profile-card"><div class="profile-logo">P</div><div><strong>Panora B2B</strong><span data-i18n="profile.wholesale">Оптовый покупатель</span></div></div>
+      <div class="profile-list"><div><span data-i18n="profile.payment">Условия оплаты</span><strong data-i18n="profile.invoice">По счёту</strong></div><div><span data-i18n="profile.discount">Персональная скидка</span><strong data-i18n="profile.calculated">Будет рассчитана</strong></div><div><span data-i18n="profile.manager">Менеджер</span><strong data-i18n="profile.assigned">Назначается</strong></div></div>
+      <button class="button button-ghost full" data-close data-i18n="profile.done">Готово</button>
     </section>
 
     <div class="success" id="successMessage" role="status">
-      <span>✓</span><div><strong>Заказ принят</strong><p id="successText">Мы свяжемся с вами.</p></div>
+      <span>✓</span><div><strong data-i18n="success.title">Заказ принят</strong><p id="successText" data-i18n="success.text">Мы свяжемся с вами.</p></div>
     </div>
     <div class="toast" id="toast" role="status"></div>
   </div>
