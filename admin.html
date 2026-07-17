@@ -7,6 +7,7 @@
   <title>Panora — управление пекарней</title>
   <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="commerce.css">
+  <link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <header class="admin-topbar">
@@ -23,6 +24,7 @@
       <button data-view="restaurants">Рестораны и цены</button>
       <button data-view="orders">Заказы и отгрузки</button>
       <button data-view="accounting">Оплаты и долги</button>
+      <button data-view="settings">Настройки Panora</button>
     </aside>
     <section class="admin-content">
       <div class="view active" id="view-plan">
@@ -56,6 +58,10 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Оплаты и задолженность</h2><p>Отгрузка увеличивает долг, оплата уменьшает его.</p></div><button class="primary" id="addPayment">+ Принять оплату</button></div>
         <div class="summary-grid"><article><span>Общая задолженность</span><strong id="totalDebt">0 €</strong></article><article><span>Отгружено</span><strong id="totalShipped">0 €</strong></article><article><span>Оплачено</span><strong id="totalPaid">0 €</strong></article></div>
         <div class="table-wrap"><table><thead><tr><th>Ресторан</th><th>Отгрузки</th><th>Оплаты</th><th>Задолженность</th><th>Последняя операция</th></tr></thead><tbody id="accountRows"></tbody></table></div>
+      </div>
+      <div class="view" id="view-settings">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
+        <form id="bakerySettingsForm" class="settings-card"><label><span>Юридическое название</span><input name="legalName" value="Panora"></label><label><span>Налоговый номер</span><input name="taxId" placeholder="NIF / CIF"></label><label><span>Адрес</span><input name="address"></label><div class="settings-row"><label><span>Email</span><input name="email" type="email" value="gamaley1@gmail.com"></label><label><span>Телефон</span><input name="phone" value="+34611187640"></label></div><label><span>Ставка налога, %</span><input name="taxRate" type="number" min="0" step="0.01" value="0"></label><button class="primary" type="submit">Сохранить настройки</button></form>
       </div>
     </section>
   </main>
