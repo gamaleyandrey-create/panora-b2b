@@ -3,7 +3,7 @@ let restaurants=cRead('panora-restaurants',[]),orders=cRead('panora-orders',[]),
 let bakerySettings=cRead('panora-bakery-settings',{legalName:'Panora',taxId:'',address:'',email:'gamaley1@gmail.com',phone:'+34611187640',taxRate:0});
 let reminderLog=cRead('panora-reminder-log',{});
 const cSave=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
-const euro=n=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(Number(n)||0);
+const euro=n=>`€ ${new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0)}`;
 const restaurant=id=>restaurants.find(r=>r.id===id);
 const orderSubtotal=o=>o.items.reduce((sum,i)=>sum+i.quantity*Number((o.prices||restaurant(o.restaurantId).prices)[i.product]),0);
 const orderTotal=o=>orderSubtotal(o)*(1+Number(o.taxRate??bakerySettings.taxRate)/100);
