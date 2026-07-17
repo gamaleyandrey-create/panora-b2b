@@ -1,6 +1,9 @@
-.period{align-items:end;flex-wrap:wrap}
-.period button{min-height:43px;padding:10px 13px}
-.period strong{align-self:center}
-.date-jump{display:grid;gap:4px;margin-left:10px;color:var(--muted);font-size:12px}
-.date-jump input{min-height:43px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:15px}
-@media(max-width:650px){.date-jump{order:5;width:100%;margin-left:0}.date-jump input{width:100%}}
+.plan-navigation{display:grid;gap:12px;margin-bottom:22px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.week-navigation{display:grid;grid-template-columns:auto minmax(230px,1fr) auto auto;align-items:center;gap:10px}
+.week-navigation strong{text-align:center;font-size:17px}
+.week-navigation button,.date-jump button{min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);cursor:pointer}
+.week-navigation #today,.date-jump button{background:var(--green);color:#fff;border-color:var(--green)}
+.date-jump{display:flex;align-items:end;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.date-jump label{display:grid;gap:5px;color:var(--muted);font-size:12px}
+.date-jump input{min-height:44px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:15px}
+@media(max-width:850px){.week-navigation{grid-template-columns:1fr 1fr}.week-navigation strong{grid-column:1/-1;grid-row:1}.week-navigation #today{grid-column:1/-1}.date-jump{display:grid;grid-template-columns:1fr}.date-jump input,.date-jump button{width:100%}}

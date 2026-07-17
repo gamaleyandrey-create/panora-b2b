@@ -43,9 +43,13 @@ $('#prevWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()-7);renderPlan(
 const planDateJump=$('#planDateJump');
 if(planDateJump){
   planDateJump.value=iso(new Date());
-  planDateJump.onchange=()=>{if(!planDateJump.value)return;weekStart=startOfWeek(new Date(`${planDateJump.value}T12:00:00`));renderPlan()};
+  $('#goToPlanDate').onclick=()=>{if(!planDateJump.value)return;weekStart=startOfWeek(new Date(`${planDateJump.value}T12:00:00`));renderPlan()};
   const label=$('#planDateJumpLabel');
-  if(label)label.textContent=lang==='ru'?'Перейти к дате':lang==='es'?'Ir a la fecha':'Go to date';
+  if(label)label.textContent=lang==='ru'?'Выбрать дату':lang==='es'?'Elegir fecha':'Choose date';
+  $('#goToPlanDate').textContent=lang==='ru'?'Показать неделю':lang==='es'?'Mostrar semana':'Show week';
+  $('#prevWeek').textContent=lang==='ru'?'← Предыдущая неделя':lang==='es'?'← Semana anterior':'← Previous week';
+  $('#nextWeek').textContent=lang==='ru'?'Следующая неделя →':lang==='es'?'Semana siguiente →':'Next week →';
+  $('#today').textContent=lang==='ru'?'Текущая неделя':lang==='es'?'Semana actual':'Current week';
 }
 $('#addPlan').onclick=()=>{const f=$('#planForm'),b=new Date();b.setDate(b.getDate()+3);f.bakeDate.value=iso(b);f.deliveryDate.value=iso(b);const c=new Date(b);c.setDate(c.getDate()-2);c.setHours(18,0,0,0);f.cutoff.value=c.toISOString().slice(0,16);$('#planDialog').showModal()};
 $('#savePlan').onclick=e=>{e.preventDefault();const f=new FormData($('#planForm'));plans.push({id:crypto.randomUUID(),bakeDate:f.get('bakeDate'),deliveryDate:f.get('deliveryDate'),product:f.get('product'),planned:Number(f.get('planned')),ordered:0,cutoff:f.get('cutoff'),open:f.get('open')==='on'});store('panora-production-plans',plans);$('#planDialog').close();renderAll()};
