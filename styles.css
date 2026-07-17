@@ -8,4 +8,5 @@
 @media(max-width:760px){.bake-picker{display:block;padding:42px 16px}.bake-dates{margin-top:22px;overflow:auto}.bake-date{min-width:138px}}
 .top-actions{display:flex;align-items:center;gap:10px}.language-select{height:40px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;padding:0 10px;font:700 11px Manrope;cursor:pointer}.language-select option{color:var(--ink);background:#fff}.eyebrow i,.mobile-nav i{font-style:normal}.share-actions{display:grid;gap:10px;margin-top:26px}.button-telegram{background:#2481cc;color:#fff}.button-whatsapp{background:#1f9d58;color:#fff}.qty-control strong{white-space:nowrap;padding:0 3px}
 .share-hint{text-align:center;color:var(--muted);font-size:10px;line-height:1.5;margin-top:5px;overflow-wrap:anywhere}
+.product-image>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}.product-card:hover .product-image>img{transform:scale(1.035)}.product-tag{z-index:1}
 @media(max-width:760px){.language-select{height:34px}.top-actions{gap:7px}.qty-control strong{font-size:10px}}
