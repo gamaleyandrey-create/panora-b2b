@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="commerce.css">
   <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="export.css">
 </head>
 <body>
   <header class="admin-topbar">
@@ -62,6 +63,7 @@
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
         <form id="bakerySettingsForm" class="settings-card"><label><span>Юридическое название</span><input name="legalName" value="Panora"></label><label><span>Налоговый номер</span><input name="taxId" placeholder="NIF / CIF"></label><label><span>Адрес</span><input name="address"></label><div class="settings-row"><label><span>Email</span><input name="email" type="email" value="gamaley1@gmail.com"></label><label><span>Телефон</span><input name="phone" value="+34611187640"></label></div><label><span>Ставка налога, %</span><input name="taxRate" type="number" min="0" step="0.01" value="0"></label><button class="primary" type="submit">Сохранить настройки</button></form>
+        <section class="export-card"><h3>Резервные копии и выгрузки</h3><p>Скачайте полную копию данных или отдельную таблицу для Excel.</p><div class="export-actions"><button class="secondary" id="exportBackup">Полная копия JSON</button><button class="secondary" id="exportOrders">Заказы CSV</button><button class="secondary" id="exportPayments">Оплаты и долги CSV</button><button class="secondary" id="exportStock">Склад CSV</button><button class="secondary" id="exportPlan">План выпечки CSV</button></div></section>
       </div>
     </section>
   </main>
