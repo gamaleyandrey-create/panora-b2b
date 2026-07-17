@@ -1,0 +1,3 @@
+.recipe-row{grid-template-columns:1fr 100px 60px 36px}
+.recipe-delete{border:1px solid #e5cbc7;background:#fff4f2;color:#a34d42;border-radius:7px;font-size:20px;cursor:pointer}
+@media(max-width:520px){.recipe-row{grid-template-columns:1fr 80px 58px 34px}}
