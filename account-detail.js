@@ -1,0 +1,11 @@
+(function(){
+ const dialog=$('#accountDetailDialog'),body=$('#accountRows');if(!dialog||!body)return;let selectedId=null;
+ function bindRows(){[...body.querySelectorAll('tr')].forEach((row,index)=>{const client=restaurants[index];if(client){row.dataset.accountRestaurant=client.id;row.tabIndex=0;row.title='Открыть операции ресторана'}})}
+ function historyFor(id){return [...deliveryNotes.filter(note=>note.restaurantId===id).map(note=>({date:note.date,type:'Отгрузка',number:`DN-${String(note.number).padStart(4,'0')}`,amount:note.total,className:'shipment'})),...payments.filter(payment=>payment.restaurantId===id).map(payment=>({date:payment.date,type:'Оплата',number:payment.note||payment.method||'',amount:-payment.amount,className:'payment'}))].sort((a,b)=>String(b.date).localeCompare(String(a.date)))}
+ function open(id){const client=restaurant(id);if(!client)return;selectedId=id;const shipped=shippedFor(id),paid=paidFor(id),history=historyFor(id);$('#accountDetailName').textContent=client.name;$('#accountDetailContact').textContent=[client.email,client.phone,client.address].filter(Boolean).join(' · ');$('#accountDetailDebt').textContent=euro(shipped-paid);$('#accountDetailShipped').textContent=euro(shipped);$('#accountDetailPaid').textContent=euro(paid);$('#accountDetailHistory').innerHTML=history.length?history.map(item=>`<article class="${item.className}"><div><strong>${item.type}</strong><span>${item.date}${item.number?` · ${item.number}`:''}</span></div><b>${item.amount<0?'−':'+'}${euro(Math.abs(item.amount))}</b></article>`).join(''):'<p class="empty-row">Операций пока нет.</p>';dialog.showModal()}
+ body.addEventListener('click',event=>{const row=event.target.closest('[data-account-restaurant]');if(row)open(row.dataset.accountRestaurant)});
+ body.addEventListener('keydown',event=>{const row=event.target.closest('[data-account-restaurant]');if(row&&(event.key==='Enter'||event.key===' ')){event.preventDefault();open(row.dataset.accountRestaurant)}});
+ $('#closeAccountDetail').onclick=()=>dialog.close();dialog.onclick=event=>{if(event.target===dialog)dialog.close()};
+ $('#accountDetailPayment').onclick=()=>{dialog.close();$('#paymentRestaurant').value=selectedId;$('#paymentDialog').showModal()};
+ const observer=new MutationObserver(bindRows);observer.observe(body,{childList:true});bindRows();
+})();

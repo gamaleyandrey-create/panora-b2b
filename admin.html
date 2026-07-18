@@ -29,9 +29,8 @@
   <link rel="stylesheet" href="calendar-calm.css?v=90">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=92">
   <link rel="stylesheet" href="purchase-costs.css?v=95">
-  <style>
-    @media(max-width:720px){#adminMenuToggle{display:inline-flex!important;visibility:visible!important;opacity:1!important}.admin-topbar{overflow:visible!important}}
-  </style>
+  <link rel="stylesheet" href="purchase-filter-simple.css?v=97">
+  <link rel="stylesheet" href="account-detail.css?v=98">
 </head>
 <body>
   <header class="admin-topbar">
@@ -69,7 +68,7 @@
       <div class="view" id="view-purchase">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по плану выпечки с учётом остатков и страхового запаса.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
         <div class="purchase-filter legacy-purchase-filter"><label><span>Рассчитать закупку для</span><select id="purchaseDateFilter"></select></label><strong id="purchaseFilterSummary"></strong></div>
-        <section class="cost-period"><div class="cost-period-fields"><label><span>Период с</span><input id="costDateFrom" type="date"></label><label><span>по</span><input id="costDateTo" type="date"></label><button class="secondary" type="button" id="costCurrentMonth">Текущий месяц</button></div><div class="cost-summary"><article><span>Хлеба в плане</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Введите цену за 1 кг, 1 литр или 1 штуку. Расчёт закупки учитывает остаток и страховой запас.</p></section>
+        <section class="cost-period"><div class="cost-bake-select"><label><span>Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div class="cost-summary"><article><span>Хлеба в плане</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Выберите отдельную дату выпечки или общий расчёт по всем датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
@@ -122,6 +121,7 @@
   <dialog id="orderDialog"><form method="dialog" id="orderForm"><h3>Новый заказ</h3><label><span>Ресторан</span><select name="restaurant" id="orderRestaurant" required></select></label><label><span>Дата выпечки и доставки</span><input name="date" type="date" required></label><label><span>Льняной бездрожжевой хлеб с семенами, шт.</span><input name="plain" type="number" min="0" step="1" value="0"></label><label><span>Тыквенный бездрожжевой хлеб с семенами, шт.</span><input name="pumpkin" type="number" min="0" step="1" value="0"></label><p class="form-hint">Минимальный заказ — 12 шт. суммарно.</p><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveOrder">Создать заказ</button></div></form></dialog>
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" value="0"></label><label><span>Способ оплаты</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
   <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать оплату</button></div></form></dialog>
+  <dialog id="accountDetailDialog" class="account-detail-dialog"><div class="account-detail-shell"><button type="button" class="dialog-close" id="closeAccountDetail" aria-label="Закрыть">×</button><span class="kicker">PANORA</span><h2 id="accountDetailName">Ресторан</h2><p id="accountDetailContact"></p><div class="account-detail-summary"><article><span>Задолженность</span><strong id="accountDetailDebt">0 €</strong></article><article><span>Отгружено</span><strong id="accountDetailShipped">0 €</strong></article><article><span>Оплачено</span><strong id="accountDetailPaid">0 €</strong></article></div><div class="account-detail-head"><h3>История операций</h3><button type="button" class="primary" id="accountDetailPayment">+ Принять оплату</button></div><div id="accountDetailHistory" class="account-detail-history"></div></div></dialog>
   <script src="admin.js?v=58"></script>
   <script src="commerce.js?v=91"></script>
   <script src="invoice-settings.js?v=48"></script>
@@ -134,12 +134,13 @@
   <script src="mobile-admin-nav.js?v=85"></script>
   <script src="admin-status-sync.js?v=89"></script>
   <script src="admin-mobile-tabs.js?v=96"></script>
-  <script src="purchase-costs.js?v=95"></script>
+  <script src="purchase-costs.js?v=97"></script>
   <script src="invoice-close.js?v=93"></script>
+  <script src="account-detail.js?v=98"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=94').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=98').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
