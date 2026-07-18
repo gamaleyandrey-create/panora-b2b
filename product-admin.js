@@ -1,9 +1,18 @@
 const productRegistryDefaults=[
- {id:'plain',builtIn:true,active:true,weight:600,names:{ru:'Обычный хлеб',en:'Plain bread',es:'Pan clásico'}},
- {id:'pumpkin',builtIn:true,active:true,weight:600,names:{ru:'Хлеб из тыквы',en:'Pumpkin bread',es:'Pan de calabaza'}}
+ {id:'plain',builtIn:true,active:true,weight:750,basePrice:4.5,names:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Yeast-free flaxseed bread with seeds',es:'Pan de lino sin levadura con semillas'}},
+ {id:'pumpkin',builtIn:true,active:true,weight:750,basePrice:5,names:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'}}
 ];
 let productRegistry=cRead('panora-products',productRegistryDefaults);
 if(!productRegistry.some(p=>p.id==='plain'))productRegistry=[...productRegistryDefaults,...productRegistry];
+if(localStorage.getItem('panora-builtin-products-version')!=='2'){
+ productRegistryDefaults.forEach(source=>{const target=productRegistry.find(p=>p.id===source.id);if(target)Object.assign(target,structuredClone(source));else productRegistry.push(structuredClone(source))});
+ const savedRestaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+ savedRestaurants.forEach(r=>{r.prices??={};r.prices.plain=4.5;r.prices.pumpkin=5});
+ localStorage.setItem('panora-product-registry',JSON.stringify(productRegistry));
+ localStorage.setItem('panora-restaurants',JSON.stringify(savedRestaurants));
+ localStorage.setItem('panora-builtin-products-version','2');
+ if(typeof restaurants!=='undefined')restaurants=savedRestaurants;
+}
 const productLabel=(id,language=lang)=>productRegistry.find(p=>p.id===id)?.names?.[language]||productRegistry.find(p=>p.id===id)?.names?.ru||id;
 productName=id=>productLabel(id);
 function saveProducts(){cSave('panora-products',productRegistry)}
