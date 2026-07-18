@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=85">
   <link rel="stylesheet" href="calendar-calm.css?v=90">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=92">
+  <link rel="stylesheet" href="purchase-costs.css?v=95">
   <style>
     @media(max-width:720px){#adminMenuToggle{display:inline-flex!important;visibility:visible!important;opacity:1!important}.admin-topbar{overflow:visible!important}}
   </style>
@@ -67,8 +68,9 @@
       </div>
       <div class="view" id="view-purchase">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по плану выпечки с учётом остатков и страхового запаса.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
-        <div class="purchase-filter"><label><span>Рассчитать закупку для</span><select id="purchaseDateFilter"></select></label><strong id="purchaseFilterSummary"></strong></div>
-        <div class="table-wrap"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+        <div class="purchase-filter legacy-purchase-filter"><label><span>Рассчитать закупку для</span><select id="purchaseDateFilter"></select></label><strong id="purchaseFilterSummary"></strong></div>
+        <section class="cost-period"><div class="cost-period-fields"><label><span>Период с</span><input id="costDateFrom" type="date"></label><label><span>по</span><input id="costDateTo" type="date"></label><button class="secondary" type="button" id="costCurrentMonth">Текущий месяц</button></div><div class="cost-summary"><article><span>Хлеба в плане</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Введите цену за 1 кг, 1 литр или 1 штуку. Расчёт закупки учитывает остаток и страховой запас.</p></section>
+        <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Остатки и движения учитываются в штуках.</p></div><button class="primary" id="addMovement" data-t="movement">+ Движение</button></div>
@@ -132,6 +134,7 @@
   <script src="mobile-admin-nav.js?v=85"></script>
   <script src="admin-status-sync.js?v=89"></script>
   <script src="admin-mobile-tabs.js?v=92"></script>
+  <script src="purchase-costs.js?v=95"></script>
   <script src="invoice-close.js?v=93"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
