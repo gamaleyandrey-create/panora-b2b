@@ -1,7 +1,7 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0;
-  const status=(text,error=false)=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060'}};
+  const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
   const request=async(path,options={})=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
     const response=await fetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json',...(options.headers||{})}});
@@ -106,14 +106,18 @@
     }
     status('Облако ✓');
   }
-  function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
-  function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
-  function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
-  function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),500)}
+  const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);status(`Ошибка: ${section}`,true,error?.message||String(error))};
+  function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
+  function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>fail('товары',error)),350)}
+  function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
+  function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    try{await loadProducts();await loadPlans();await loadRestaurants();await loadOrders();ready=true;status('Облако ✓')}catch(error){console.error('Panora cloud sync',error);status('Ошибка облака',true)}
+    const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders]],errors=[];
+    for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
+    ready=true;
+    if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
