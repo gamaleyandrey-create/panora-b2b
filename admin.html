@@ -30,8 +30,9 @@
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=92">
   <link rel="stylesheet" href="purchase-costs.css?v=95">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=97">
-  <link rel="stylesheet" href="account-detail.css?v=98">
+  <link rel="stylesheet" href="account-detail.css?v=110">
   <link rel="stylesheet" href="order-prices.css?v=106">
+  <link rel="stylesheet" href="order-notifications.css?v=110">
 </head>
 <body>
   <header class="admin-topbar">
@@ -41,9 +42,9 @@
   <main class="admin-shell">
     <aside class="admin-nav" id="adminNavigation">
       <h1 data-t="bakery">Пекарня</h1>
-      <button data-view="orders">Заказы и отгрузки</button>
+      <button class="active" data-view="orders">Заказы и отгрузки <span class="order-alert-badge" data-new-order-count hidden>0</span></button>
       <button data-view="accounting">Оплаты и долги</button>
-      <button class="active" data-view="plan" data-t="plan">План выпечки</button>
+      <button data-view="plan" data-t="plan">План выпечки</button>
       <button data-view="reminders">Напоминания клиентам</button>
       <button data-view="restaurants">Рестораны и цены</button>
       <button data-view="products">Карточки продукции</button>
@@ -53,7 +54,7 @@
       <button data-view="settings">Настройки Panora</button>
     </aside>
     <section class="admin-content">
-      <div class="view active" id="view-plan">
+      <div class="view" id="view-plan">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="planTitle">План выпечки и доставки</h2><p data-t="planText">Нажмите на нужный день календаря, чтобы запланировать выпечку.</p></div><div class="head-actions"><button class="cancel-bake-button" id="cancelBakeDay">Отменить день выпечки</button><button hidden style="display:none!important" class="calendar-only-add" id="addPlan" data-t="addBake" aria-hidden="true" tabindex="-1">+ Добавить выпечку</button></div></div>
         <div class="plan-navigation">
           <div class="week-navigation"><button id="prevWeek">← Предыдущая неделя</button><strong id="periodLabel"></strong><button id="nextWeek">Следующая неделя →</button><button id="today">Текущая неделя</button></div>
@@ -85,8 +86,8 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Рестораны и индивидуальные цены</h2><p>Каждый ресторан видит только назначенные ему цены.</p></div><button class="primary" id="addRestaurant">+ Добавить ресторан</button></div>
         <div id="restaurantCards" class="restaurant-grid"></div>
       </div>
-      <div class="view" id="view-orders">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Заказы и отгрузки</h2><p>Заказ ведётся в штуках. При отгрузке создаётся накладная и задолженность.</p></div><button class="primary" id="addOrder">+ Новый заказ</button></div>
+      <div class="view active" id="view-orders">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Заказы и отгрузки</h2><p>Заказ ведётся в штуках. При отгрузке создаётся накладная и задолженность.</p></div><div class="head-actions"><button class="secondary" id="enableAdminNotifications">Включить уведомления</button><button class="primary" id="addOrder">+ Новый заказ</button></div></div>
         <div class="table-wrap"><table><thead><tr><th>№</th><th>Дата</th><th>Ресторан</th><th>Состав</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody id="orderRows"></tbody></table></div>
       </div>
       <div class="view" id="view-reminders">
@@ -109,9 +110,9 @@
   </main>
 
   <nav class="admin-mobile-tabs" id="adminMobileTabs" aria-label="Основные разделы пекарни">
-    <button type="button" data-mobile-view="orders"><span>▤</span><i>Заказы</i></button>
+    <button class="active" type="button" data-mobile-view="orders"><span>▤<b class="order-alert-badge" data-new-order-count hidden>0</b></span><i>Заказы</i></button>
     <button type="button" data-mobile-view="accounting"><span>€</span><i>Оплаты</i></button>
-    <button class="active" type="button" data-mobile-view="plan"><span>▦</span><i>План</i></button>
+    <button type="button" data-mobile-view="plan"><span>▦</span><i>План</i></button>
     <button type="button" id="adminMobileMore"><span>•••</span><i>Ещё</i></button>
   </nav>
 
@@ -121,10 +122,10 @@
   <dialog id="restaurantDialog"><form method="dialog" id="restaurantForm"><h3>Новый ресторан</h3><label><span>Название</span><input name="name" required></label><label><span>Email для входа и напоминаний</span><input name="email" type="email" required></label><label><span>Код доступа</span><input name="accessCode" minlength="4" required placeholder="Например: 4826"></label><label><span>Телефон / WhatsApp</span><input name="phone" type="tel"></label><label><span>Telegram, без @</span><input name="telegram" placeholder="restaurant_name"></label><label><span>Язык сообщений</span><select name="language"><option value="ru">Русский</option><option value="en">English</option><option value="es">Español</option></select></label><label><span>Адрес доставки</span><input name="address"></label><label><span>Цена льняного хлеба, € / шт.</span><input name="plainPrice" type="number" min="0" step="0.01" value="4.50" required></label><label><span>Цена тыквенного хлеба, € / шт.</span><input name="pumpkinPrice" type="number" min="0" step="0.01" value="5.00" required></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveRestaurant">Сохранить</button></div></form></dialog>
   <dialog id="orderDialog"><form method="dialog" id="orderForm"><h3>Новый заказ</h3><label><span>Ресторан</span><select name="restaurant" id="orderRestaurant" required></select></label><label><span>Дата выпечки и доставки</span><input name="date" type="date" required></label><label><span>Льняной бездрожжевой хлеб с семенами, шт.</span><input name="plain" type="number" min="0" step="1" placeholder="Количество"></label><label><span>Тыквенный бездрожжевой хлеб с семенами, шт.</span><input name="pumpkin" type="number" min="0" step="1" placeholder="Количество"></label><p class="form-hint">Минимальный заказ — 12 шт. суммарно.</p><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveOrder">Создать заказ</button></div></form></dialog>
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" placeholder="Введите сумму или оставьте пустым"></label><label><span>Способ оплаты</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
-  <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать оплату</button></div></form></dialog>
+  <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><p class="form-hint">После записи подтвердите фактическое получение средств в карточке ресторана.</p><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" placeholder="Введите сумму" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать на подтверждение</button></div></form></dialog>
   <dialog id="accountDetailDialog" class="account-detail-dialog"><div class="account-detail-shell"><button type="button" class="dialog-close" id="closeAccountDetail" aria-label="Закрыть">×</button><span class="kicker">PANORA</span><h2 id="accountDetailName">Ресторан</h2><p id="accountDetailContact"></p><div class="account-detail-summary"><article><span>Задолженность</span><strong id="accountDetailDebt">0 €</strong></article><article><span>Отгружено</span><strong id="accountDetailShipped">0 €</strong></article><article><span>Оплачено</span><strong id="accountDetailPaid">0 €</strong></article></div><div class="account-detail-head"><h3>История операций</h3><button type="button" class="primary" id="accountDetailPayment">+ Принять оплату</button></div><div id="accountDetailHistory" class="account-detail-history"></div></div></dialog>
   <script src="admin.js?v=58"></script>
-  <script src="commerce.js?v=106"></script>
+  <script src="commerce.js?v=111"></script>
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=50"></script>
   <script src="admin-localization.js?v=51"></script>
@@ -137,11 +138,13 @@
   <script src="admin-mobile-tabs.js?v=96"></script>
   <script src="purchase-costs.js?v=97"></script>
   <script src="invoice-close.js?v=93"></script>
-  <script src="account-detail.js?v=98"></script>
+  <script src="account-detail.js?v=111"></script>
+  <script src="order-notifications.js?v=111"></script>
+  <script src="order-communication.js?v=111"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=106').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=111').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
