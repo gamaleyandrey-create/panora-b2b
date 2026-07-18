@@ -1,2 +1,5 @@
 .order-alert-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-left:7px;padding:0 7px;border-radius:999px;background:#c03932;color:#fff;font:800 13px/1 Arial;vertical-align:middle}.admin-mobile-tabs .order-alert-badge{position:absolute;top:-5px;right:-10px;min-width:20px;height:20px;margin:0;padding:0 5px;font-size:11px}.admin-mobile-tabs button>span{position:relative}.order-contact-button{border-color:#31543e!important;color:#31543e!important;background:#f4f8f3!important}
 @media(max-width:720px){#enableAdminNotifications{min-height:46px}.order-alert-badge{min-width:21px;height:21px;font-size:11px}}
+/* Secondary communication action spans the two primary actions. */
+.order-contact-button{display:flex!important;align-items:center!important;justify-content:center!important;width:306px!important;min-height:46px!important;margin-top:8px!important;border-color:#7d9484!important;border-radius:12px!important;color:#31543e!important;background:#f4f8f3!important;font-weight:650!important}
+@media(max-width:720px){.order-contact-button{width:100%!important;margin-top:8px!important}}

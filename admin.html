@@ -31,13 +31,25 @@
   <link rel="stylesheet" href="purchase-costs.css?v=95">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=97">
   <link rel="stylesheet" href="account-detail.css?v=110">
-  <link rel="stylesheet" href="order-prices.css?v=112">
-  <link rel="stylesheet" href="order-notifications.css?v=110">
+  <link rel="stylesheet" href="order-prices.css?v=114">
+  <link rel="stylesheet" href="order-notifications.css?v=114">
+  <link rel="stylesheet" href="admin-auth.css?v=113">
 </head>
-<body>
+<body class="auth-pending">
+  <div class="admin-auth-layer" id="adminAuthLayer">
+    <form class="admin-auth-card" id="adminAuthForm">
+      <div class="admin-auth-brand">Panora</div>
+      <h1>Вход в пекарню</h1>
+      <p>Административный кабинет доступен только сотрудникам Panora.</p>
+      <label><span>Email</span><input name="email" type="email" autocomplete="username" value="gamaley1@gmail.com" required></label>
+      <label><span>Пароль</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Войти</button>
+      <p class="admin-auth-error" id="adminAuthError" role="alert"></p>
+    </form>
+  </div>
   <header class="admin-topbar">
     <a href="index.html" class="brand"><span>P</span>Panora</a>
-    <div><button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-controls="adminNavigation" aria-expanded="false"><span>☰</span> Разделы</button><select id="adminLanguage"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><b id="saveState">Сохранено</b></div>
+    <div><button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-controls="adminNavigation" aria-expanded="false"><span>☰</span> Разделы</button><select id="adminLanguage"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><b id="saveState">Сохранено</b><button type="button" class="admin-logout" id="adminLogout">Выйти</button></div>
   </header>
   <main class="admin-shell">
     <aside class="admin-nav" id="adminNavigation">
@@ -124,6 +136,8 @@
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" placeholder="Введите сумму или оставьте пустым"></label><label><span>Способ оплаты</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
   <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><p class="form-hint">После записи подтвердите фактическое получение средств в карточке ресторана.</p><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" placeholder="Введите сумму" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать на подтверждение</button></div></form></dialog>
   <dialog id="accountDetailDialog" class="account-detail-dialog"><div class="account-detail-shell"><button type="button" class="dialog-close" id="closeAccountDetail" aria-label="Закрыть">×</button><span class="kicker">PANORA</span><h2 id="accountDetailName">Ресторан</h2><p id="accountDetailContact"></p><div class="account-detail-summary"><article><span>Задолженность</span><strong id="accountDetailDebt">0 €</strong></article><article><span>Отгружено</span><strong id="accountDetailShipped">0 €</strong></article><article><span>Оплачено</span><strong id="accountDetailPaid">0 €</strong></article></div><div class="account-detail-head"><h3>История операций</h3><button type="button" class="primary" id="accountDetailPayment">+ Принять оплату</button></div><div id="accountDetailHistory" class="account-detail-history"></div></div></dialog>
+  <script src="supabase-config.js?v=113"></script>
+  <script src="admin-auth.js?v=113"></script>
   <script src="admin.js?v=58"></script>
   <script src="commerce.js?v=111"></script>
   <script src="invoice-settings.js?v=48"></script>
