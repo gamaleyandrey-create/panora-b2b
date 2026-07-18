@@ -32,6 +32,7 @@
   }
   async function hydrate(){
     if(!session?.access_token)return false;
+    const pendingLocal=typeof portalOrders==='function'?portalOrders().filter(o=>o.sourceId&&o.status==='submitted'):[];
     const uid=session.user?.id;
     const profiles=await rest(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`);
     const profile=profiles?.[0];
@@ -40,8 +41,8 @@
     const [restaurantRows,prices,orders,notes,payments,days,products]=await Promise.all([
       rest(`restaurants?id=eq.${restaurantId}&select=*`),rest(`restaurant_prices?restaurant_id=eq.${restaurantId}&select=product_id,price`),rest(`orders?restaurant_id=eq.${restaurantId}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),rest(`delivery_notes?restaurant_id=eq.${restaurantId}&select=*`),rest(`payments?restaurant_id=eq.${restaurantId}&select=*`),rest('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),rest('products?select=*&active=eq.true&order=created_at.asc')
     ]);
-    const own=mapRestaurant(restaurantRows[0],prices||[]),mappedOrders=(orders||[]).map(mapOrder);
-    localStorage.setItem('panora-restaurants',JSON.stringify([own]));localStorage.setItem('panora-orders',JSON.stringify(mappedOrders));
+    const own=mapRestaurant(restaurantRows[0],prices||[]),mappedOrders=(orders||[]).map(mapOrder),unsent=pendingLocal.filter(local=>!mappedOrders.some(remote=>remote.id===local.id));
+    localStorage.setItem('panora-restaurants',JSON.stringify([own]));localStorage.setItem('panora-orders',JSON.stringify([...mappedOrders,...unsent]));
     localStorage.setItem('panora-delivery-notes',JSON.stringify((notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),items:mappedOrders.find(o=>o.id===n.order_id)?.items||[],prices:mappedOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||''}))));
     localStorage.setItem('panora-payments',JSON.stringify((payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status}))));
     localStorage.setItem('panora-production-plans',JSON.stringify((days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:mappedOrders.filter(o=>o.date===d.bake_date&&!['cancelled'].includes(o.status)).flatMap(o=>o.items).filter(i2=>i2.product===i.product_id).reduce((s,i2)=>s+i2.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders})))));
@@ -52,17 +53,13 @@
     if(!session?.access_token||!order||uploading)return;
     uploading=true;
     try{
-      const existing=await rest(`orders?id=eq.${encodeURIComponent(order.id)}&select=id`);if(existing?.length){await hydrate();return}
-      const days=await rest(`bake_days?bake_date=eq.${encodeURIComponent(order.date)}&select=id,delivery_date`),day=days?.[0];
-      if(!day)throw new Error(lang==='ru'?'День выпечки отсутствует в облачном плане.':lang==='es'?'El día de horneado no existe en el plan.':'Bake day is missing from the cloud plan.');
-      const meta=JSON.stringify({deliveryDate:order.deliveryDate||day.delivery_date||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
-      const rows=await rest('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id:order.id,restaurant_id:account.id,bake_day_id:day.id,status:'submitted',comment:meta,created_by:session.user.id})}),created=rows?.[0];
+      const rows=await rest('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:order.id,p_bake_date:order.date,p_delivery_date:order.deliveryDate||order.date,p_items:order.items.map(i=>({product:i.product,quantity:Number(i.quantity)})),p_comment:order.comment||''})}),created=rows?.[0];
       if(!created)throw new Error('Заказ не создан');
-      await rest('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(order.items.map(i=>({order_id:order.id,product_id:i.product,quantity:Number(i.quantity),unit_price:Number(order.prices?.[i.product]??account.prices?.[i.product]??0)})))});
       await hydrate();showToast(lang==='ru'?`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`:lang==='es'?'Pedido enviado a la panadería':'Order sent to the bakery');
     }catch(error){console.error('Panora restaurant cloud order',error);showToast((lang==='ru'?'Заказ сохранён на устройстве, но не отправлен: ':'Cloud order failed: ')+error.message)}finally{uploading=false}
   }
   async function cancelOrder(id){try{await rest(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await hydrate()}catch(error){showToast(error.message)}}
+  async function retryPending(){for(const order of portalOrders().filter(o=>o.sourceId&&o.restaurantId===account?.id&&o.status==='submitted'))await uploadOrder(order)}
   const oldLogin=loginAccount;loginAccount=async function(e){
     e.preventDefault();const form=new FormData(e.target),email=String(form.get('email')).trim().toLowerCase(),password=String(form.get('code')).trim(),button=e.target.querySelector('button[type="submit"],button:not([type])');if(button)button.disabled=true;
     try{await authenticate(email,password,false);closePanels();showToast(account.name);if(checkoutAfterLogin){checkoutAfterLogin=false;setTimeout(openCheckoutForAccount,220)}}catch(error){const el=$('#accountError');el.textContent=error.message;el.classList.add('show')}finally{if(button)button.disabled=false}
@@ -73,7 +70,7 @@
   const oldCancel=restaurantCancelOrder;restaurantCancelOrder=function(id){const before=portalOrders().find(o=>o.id===id)?.status;oldCancel(id);const after=portalOrders().find(o=>o.id===id)?.status;if(before!==after&&after==='cancelled')cancelOrder(id)};
   const callback=new URLSearchParams(location.hash.replace(/^#/,''));
   if(callback.get('access_token')){saveSession({access_token:callback.get('access_token'),refresh_token:callback.get('refresh_token'),token_type:callback.get('token_type')||'bearer',expires_in:Number(callback.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
-  session=readSession();if(session?.access_token){if(!session.user){fetch(`${cfg.url}/auth/v1/user`,{headers:authHeaders()}).then(r=>r.json()).then(user=>{session.user=user;saveSession(session);return hydrate()}).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else hydrate().catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else renderAccountModal();
+  session=readSession();if(session?.access_token){if(!session.user){fetch(`${cfg.url}/auth/v1/user`,{headers:authHeaders()}).then(r=>r.json()).then(async user=>{session.user=user;saveSession(session);await hydrate();await retryPending()}).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else hydrate().then(retryPending).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else renderAccountModal();
   setInterval(()=>{if(session?.access_token)hydrate().catch(()=>{})},15000);
-  window.panoraPortalCloud={uploadOrder,hydrate};
+  window.panoraPortalCloud={uploadOrder,hydrate,retry:retryPending};
 })();
