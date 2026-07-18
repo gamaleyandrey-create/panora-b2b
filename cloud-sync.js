@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0;
   const status=(text,error=false)=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060'}};
   const request=async(path,options={})=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
@@ -27,6 +27,25 @@
     if(!ready||typeof productRegistry==='undefined')return;
     status('Синхронизация…');
     await request('products?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(productRegistry.map(productRow))});
+    status('Облако ✓');
+  }
+  const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,telegram:r.telegram||null,address:r.address||null,language:r.language||'ru',active:!r.deletedAt,updated_at:new Date().toISOString()});
+  const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',telegram:row.telegram||'',address:row.address||'',language:row.language||'ru',accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
+  async function loadRestaurants(){
+    const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    if(rows?.length){
+      restaurants=rows.map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
+      localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+      if(typeof renderCommerce==='function')renderCommerce();
+    }else if(local.length){restaurants=local;ready=true;await saveRestaurantsNow()}
+  }
+  async function saveRestaurantsNow(){
+    if(!ready||typeof restaurants==='undefined')return;
+    status('Синхронизация…');
+    if(restaurants.length)await request('restaurants?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(restaurants.map(restaurantRow))});
+    const prices=restaurants.flatMap(r=>Object.entries(r.prices||{}).map(([product_id,price])=>({restaurant_id:r.id,product_id,price:Number(price),updated_at:new Date().toISOString()})));
+    if(prices.length)await request('restaurant_prices?on_conflict=restaurant_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(prices)});
     status('Облако ✓');
   }
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
@@ -58,12 +77,13 @@
   }
   function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
+  function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    try{await loadProducts();await loadPlans();ready=true;status('Облако ✓')}catch(error){console.error('Panora cloud sync',error);status('Ошибка облака',true)}
+    try{await loadProducts();await loadPlans();await loadRestaurants();ready=true;status('Облако ✓')}catch(error){console.error('Panora cloud sync',error);status('Ошибка облака',true)}
   }
-  window.panoraCloud={start,queuePlans,queueProducts,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
