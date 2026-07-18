@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="responsive.css?v=59">
   <link rel="stylesheet" href="calendar-fun.css?v=84">
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=85">
-  <link rel="stylesheet" href="calendar-calm.css?v=88">
+  <link rel="stylesheet" href="calendar-calm.css?v=90">
   <style>
     @media(max-width:720px){#adminMenuToggle{display:inline-flex!important;visibility:visible!important;opacity:1!important}.admin-topbar{overflow:visible!important}}
   </style>
@@ -113,18 +113,19 @@
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" value="0"></label><label><span>Способ оплаты</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
   <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><label><span>Ресторан</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" required></label><label><span>Способ</span><select name="method"><option>Банковский перевод</option><option>Карта</option><option>Наличные</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Записать оплату</button></div></form></dialog>
   <script src="admin.js?v=58"></script>
-  <script src="commerce.js?v=58"></script>
+  <script src="commerce.js?v=91"></script>
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=50"></script>
   <script src="admin-localization.js?v=51"></script>
   <script src="product-admin.js?v=60"></script>
-  <script src="calendar-plan.js?v=77"></script>
+  <script src="calendar-plan.js?v=90"></script>
   <script src="delivery-qr.js?v=83"></script>
   <script src="mobile-admin-nav.js?v=85"></script>
+  <script src="admin-status-sync.js?v=89"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=87').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=90').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>

@@ -1,5 +1,9 @@
 /* Calm calendar: fewer borders and badges, clear emphasis only on production days. */
 .plan-navigation{display:none!important}
+#view-plan .plan-list{display:none!important}
+#view-plan>.summary-grid{margin-top:18px!important}
+#view-plan>.summary-grid article{padding:18px 20px!important;border:1px solid #e0e3dc!important;border-radius:15px!important;background:#fff!important;box-shadow:none!important}
+#view-plan>.summary-grid article span{font-size:13px!important;color:#737d75!important}#view-plan>.summary-grid article strong{font-size:28px!important;color:#26392d!important}
 .page-head .head-actions{align-self:center!important}.cancel-bake-button{white-space:nowrap!important}
 .bake-calendar{padding:20px!important;border:1px solid #dfe3dc!important;border-radius:22px!important;background:#fbfcf8!important;box-shadow:none!important}
 .calendar-grid{gap:6px!important;align-items:start!important}.calendar-weekdays{gap:6px!important;margin-bottom:5px!important}.calendar-weekdays b{color:#6d786f!important;font-size:12px!important;font-weight:750!important}.calendar-weekdays b.weekend{color:#b34b43!important}
