@@ -4,7 +4,7 @@ const portalRead=(key,fallback=[])=>{try{return JSON.parse(localStorage.getItem(
 const portalMoney=n=>new Intl.NumberFormat(I18N[lang].locale,{style:'currency',currency:'EUR'}).format(Number(n)||0);
 const portalOrderTotal=o=>o.items.reduce((sum,i)=>sum+Number(i.quantity||0)*Number((o.prices||account.prices)[i.product]||0),0)*(1+Number(o.taxRate||0)/100);
 const portalPieces=()=>lang==='ru'?'шт.':lang==='es'?'uds.':'pcs';
-const portalProduct=id=>id==='plain'?accountText('plain'):accountText('pumpkin');
+const portalProduct=id=>PRODUCTS.find(p=>p.id===id)?.text?.[lang]?.[0]||id;
 function portalRestaurants(){return portalRead('panora-restaurants')}
 function portalOrders(){return portalRead('panora-orders')}
 function portalNotes(){return portalRead('panora-delivery-notes')}

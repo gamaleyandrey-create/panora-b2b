@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="easy-plan.css">
   <link rel="stylesheet" href="product-admin.css">
   <link rel="stylesheet" href="calendar-plan.css">
+  <link rel="stylesheet" href="responsive.css?v=59">
 </head>
 <body>
   <header class="admin-topbar">
@@ -28,6 +29,7 @@
       <button data-view="recipes" data-t="recipes">Рецептуры</button>
       <button data-view="purchase" data-t="purchase">Закупка</button>
       <button data-view="stock" data-t="stock">Склад хлеба</button>
+      <button data-view="products">Карточки продукции</button>
       <button data-view="restaurants">Рестораны и цены</button>
       <button data-view="reminders">Напоминания клиентам</button>
       <button data-view="orders">Заказы и отгрузки</button>
@@ -57,6 +59,10 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Остатки и движения учитываются в штуках.</p></div><button class="primary" id="addMovement" data-t="movement">+ Движение</button></div>
         <div id="stockCards" class="summary-grid"></div>
         <div class="table-wrap"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
+      </div>
+      <div class="view" id="view-products">
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Карточки продукции</h2><p>Настройте фотографии, названия, описания, вес и отображение хлеба в каталоге.</p></div><button class="primary" id="addProductCard">+ Новый вид хлеба</button></div>
+        <div id="productAdminGrid" class="product-admin-grid"></div>
       </div>
       <div class="view" id="view-restaurants">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Рестораны и индивидуальные цены</h2><p>Каждый ресторан видит только назначенные ему цены.</p></div><button class="primary" id="addRestaurant">+ Добавить ресторан</button></div>
@@ -97,7 +103,7 @@
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=50"></script>
   <script src="admin-localization.js?v=51"></script>
-  <script src="product-admin.js?v=58"></script>
+  <script src="product-admin.js?v=59"></script>
   <script src="calendar-plan.js?v=53"></script>
 </body>
 </html>
