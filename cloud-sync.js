@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0;
   const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
   const request=async(path,options={})=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
@@ -156,6 +156,7 @@
     const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
+    clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),12000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,get ready(){return ready}};
