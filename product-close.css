@@ -1,0 +1,5 @@
+.product-edit-dialog form{position:relative}
+.product-edit-dialog .dialog-close{position:absolute!important;top:14px!important;right:14px!important;z-index:50;display:grid!important;place-items:center;width:48px!important;height:48px!important;padding:0!important;border:0!important;border-radius:50%!important;background:#eef0ec!important;color:#27342b!important;font-size:36px!important;line-height:1!important;cursor:pointer}
+.product-edit-dialog .dialog-close:hover,.product-edit-dialog .dialog-close:focus{background:#dce3dc!important;outline:2px solid #2f513d;outline-offset:2px}
+.product-edit-dialog h3{padding-right:64px}
+@media(max-width:650px){.product-edit-dialog .dialog-close{position:sticky!important;float:right;top:0!important;right:0!important;margin:0 0 8px 8px}}
