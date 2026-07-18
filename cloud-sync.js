@@ -8,7 +8,7 @@
   };
   const request=async(path,options={},retried=false)=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
-    const response=await fetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json',...(options.headers||{})}});
+    const response=await fetch(`${cfg.url}/rest/v1/${path}`,{cache:'no-store',...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}});
     if(response.status===401&&!retried){await refreshSession();return request(path,options,true)}
     if(!response.ok){const detail=await response.text();throw new Error(detail||`Supabase: ${response.status}`)}
     if(response.status===204)return null;
@@ -62,7 +62,7 @@
   async function loadOrders(){
     const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-orders')||'[]');
-    if(rows?.length){orders=rows.map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll()}
+    if(rows?.length){orders=rows.map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows.length} заказов`)}
     else if(local.length){orders=local;ready=true;await saveOrdersNow()}
   }
   async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}

@@ -50,7 +50,6 @@
   }
   async function hydrate(){
     if(!session?.access_token)return false;
-    const pendingLocal=typeof portalOrders==='function'?portalOrders().filter(o=>o.sourceId&&o.status==='submitted'):[];
     const uid=session.user?.id;
     const profiles=await rest(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`);
     const profile=profiles?.[0];
@@ -59,7 +58,7 @@
     const [restaurantRows,prices,orders,notes,payments,days,products]=await Promise.all([
       rest(`restaurants?id=eq.${restaurantId}&select=*`),rest(`restaurant_prices?restaurant_id=eq.${restaurantId}&select=product_id,price`),rest(`orders?restaurant_id=eq.${restaurantId}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),rest(`delivery_notes?restaurant_id=eq.${restaurantId}&select=*`),rest(`payments?restaurant_id=eq.${restaurantId}&select=*`),rest('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),rest('products?select=*&active=eq.true&order=created_at.asc')
     ]);
-    const own=mapRestaurant(restaurantRows[0],prices||[]),mappedOrders=(orders||[]).map(mapOrder),unsent=pendingLocal.filter(local=>!mappedOrders.some(remote=>remote.id===local.id));
+    const own=mapRestaurant(restaurantRows[0],prices||[]),mappedOrders=(orders||[]).map(mapOrder),pendingNow=typeof portalOrders==='function'?portalOrders().filter(o=>o.sourceId&&o.status==='submitted'):[],unsent=pendingNow.filter(local=>!mappedOrders.some(remote=>remote.id===local.id));
     localStorage.setItem('panora-restaurants',JSON.stringify([own]));localStorage.setItem('panora-orders',JSON.stringify([...mappedOrders,...unsent]));
     localStorage.setItem('panora-delivery-notes',JSON.stringify((notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),items:mappedOrders.find(o=>o.id===n.order_id)?.items||[],prices:mappedOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||''}))));
     localStorage.setItem('panora-payments',JSON.stringify((payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status}))));
