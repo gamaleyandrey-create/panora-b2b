@@ -24,14 +24,16 @@
   <link rel="stylesheet" href="mobile-admin-all.css?v=80">
   <link rel="stylesheet" href="mobile-admin-menu.css?v=81">
   <link rel="stylesheet" href="responsive.css?v=59">
+  <link rel="stylesheet" href="calendar-fun.css?v=84">
+  <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=85">
 </head>
 <body>
   <header class="admin-topbar">
     <a href="index.html" class="brand"><span>P</span>Panora</a>
-    <div><select id="adminLanguage"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><b id="saveState">Сохранено</b></div>
+    <div><button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-controls="adminNavigation" aria-expanded="false"><span>☰</span> Разделы</button><select id="adminLanguage"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><b id="saveState">Сохранено</b></div>
   </header>
   <main class="admin-shell">
-    <aside class="admin-nav">
+    <aside class="admin-nav" id="adminNavigation">
       <h1 data-t="bakery">Пекарня</h1>
       <button class="active" data-view="plan" data-t="plan">План выпечки</button>
       <button data-view="orders">Заказы и отгрузки</button>
@@ -114,5 +116,6 @@
   <script src="product-admin.js?v=60"></script>
   <script src="calendar-plan.js?v=77"></script>
   <script src="delivery-qr.js?v=83"></script>
+  <script src="mobile-admin-nav.js?v=85"></script>
 </body>
 </html>

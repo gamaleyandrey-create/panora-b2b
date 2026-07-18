@@ -1,0 +1,9 @@
+/* Keep the final order action inside the mobile modal, even when an ancestor is transformed. */
+@media(max-width:720px){
+ #checkoutModal{position:fixed!important;inset:0!important;transform:none!important;overflow:hidden!important}
+ #checkoutModal[aria-hidden="false"]{display:block!important}
+ #checkoutForm{position:static!important;width:100%!important;max-width:100%!important;margin:0!important;padding:16px 14px calc(104px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important}
+ #checkoutForm>*{max-width:100%!important;min-width:0!important}
+ #checkoutForm>button[type="submit"]{position:absolute!important;left:12px!important;right:12px!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;width:auto!important;max-width:none!important;min-width:0!important;height:58px!important;min-height:58px!important;margin:0!important;padding:12px 16px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border-radius:15px!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:17px!important;font-weight:800!important;line-height:1.1!important;white-space:normal!important;text-align:center!important;box-sizing:border-box!important;z-index:30!important}
+ #checkoutForm .legal-note{margin-bottom:10px!important}
+}
