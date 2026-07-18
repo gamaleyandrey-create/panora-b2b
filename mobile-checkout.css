@@ -1,0 +1,19 @@
+@media(max-width:720px){
+  #checkoutModal{inset:0!important;width:100%!important;height:100dvh!important;max-height:none!important;border-radius:0!important;padding:0!important;overflow:hidden!important;background:#faf9f5!important}
+  #checkoutModal .modal-head{position:sticky!important;top:0;z-index:5;padding:18px 18px 14px!important;background:#faf9f5!important;border-bottom:1px solid #ddd9ce!important}
+  #checkoutModal .modal-head h2{font-size:31px!important;line-height:1!important;margin:4px 0!important}
+  #checkoutModal .close-button{width:48px!important;height:48px!important;font-size:32px!important}
+  #checkoutForm{height:calc(100dvh - 88px)!important;overflow-y:auto!important;padding:18px 16px 126px!important}
+  #checkoutForm label{gap:7px!important;margin-bottom:14px!important}
+  #checkoutForm input,#checkoutForm select,#checkoutForm textarea{width:100%!important;min-height:54px!important;padding:13px 14px!important;font-size:17px!important;border-radius:13px!important}
+  #checkoutForm textarea{min-height:86px!important}
+  #checkoutForm .form-row{display:grid!important;grid-template-columns:1fr!important;gap:0!important}
+  #checkoutForm.returning-checkout [data-customer-fields]{display:none!important}
+  .saved-customer-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:15px;border:1px solid #d6dbd4;border-radius:16px;background:#fff}
+  .saved-customer-summary[hidden]{display:none!important}
+  .saved-customer-summary div{min-width:0;display:grid;gap:4px}.saved-customer-summary strong{font-size:17px}.saved-customer-summary span{overflow:hidden;color:#707770;font-size:13px;white-space:nowrap;text-overflow:ellipsis}
+  .saved-customer-summary button{flex:0 0 auto;padding:10px 12px;border:1px solid #2f513d;border-radius:11px;background:#fff;color:#2f513d;font-weight:700}
+  #checkoutForm .checkout-total{margin-top:18px!important;padding:16px!important;border-radius:14px!important;background:#eef1ec!important}
+  #checkoutForm>button[type="submit"]{position:fixed!important;z-index:8;left:16px!important;right:16px!important;bottom:calc(16px + env(safe-area-inset-bottom))!important;width:calc(100% - 32px)!important;min-height:60px!important;box-shadow:0 10px 28px rgba(33,50,39,.25)!important}
+  #checkoutForm .legal-note{font-size:12px!important}
+}
