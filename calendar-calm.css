@@ -1,0 +1,24 @@
+/* Calm calendar: fewer borders and badges, clear emphasis only on production days. */
+.plan-navigation{display:none!important}
+.page-head .head-actions{align-self:center!important}.cancel-bake-button{white-space:nowrap!important}
+.bake-calendar{padding:20px!important;border:1px solid #dfe3dc!important;border-radius:22px!important;background:#fbfcf8!important;box-shadow:none!important}
+.calendar-grid{gap:6px!important;align-items:start!important}.calendar-weekdays{gap:6px!important;margin-bottom:5px!important}.calendar-weekdays b{color:#6d786f!important;font-size:12px!important;font-weight:750!important}.calendar-weekdays b.weekend{color:#b34b43!important}
+.calendar-empty{height:62px!important;min-height:62px!important}
+.calendar-day{position:relative!important;height:62px!important;min-height:62px!important;padding:7px 6px!important;gap:0!important;border:1px solid transparent!important;border-radius:12px!important;background:#f1f4ee!important;box-shadow:none!important;overflow:hidden!important}
+.calendar-day:hover{transform:none!important;border-color:#cbd5cb!important;background:#e9efe8!important;box-shadow:none!important}
+.calendar-day>em{display:flex!important;height:46px!important;min-height:0!important;justify-content:center!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.calendar-day .weekday-name{display:none!important;background:transparent!important}
+.calendar-day .date-name{display:block!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;color:#26362c!important;font-size:15px!important;font-weight:750!important;line-height:46px!important;box-shadow:none!important}
+.calendar-day.weekend:not(.has-bake){background:#fbf3f1!important}.calendar-day.weekend .date-name{color:#ad4942!important}
+.calendar-day.today:not(.has-bake){border:1px solid #df7b42!important;background:#fff7ef!important}
+.calendar-day.today:not(.has-bake)::before{content:''!important;display:block!important;position:absolute!important;top:7px!important;right:7px!important;width:7px!important;height:7px!important;border-radius:50%!important;background:#df7b42!important;box-shadow:none!important}
+.calendar-day.today:not(.has-bake)::after{display:none!important;content:none!important}
+.calendar-day.has-bake{height:auto!important;min-height:120px!important;padding:9px!important;gap:6px!important;border:1px solid #7aa087!important;border-radius:14px!important;background:#eaf3eb!important;box-shadow:none!important}
+.calendar-day.has-bake::before{content:''!important;display:block!important;top:9px!important;right:9px!important;width:7px!important;height:7px!important;background:#315b42!important;box-shadow:none!important}
+.calendar-day.has-bake>em{height:34px!important;min-height:34px!important;padding:0 10px!important}.calendar-day.has-bake .date-name{color:#274b35!important;font-size:15px!important;line-height:34px!important}
+.calendar-day.has-bake.weekend{border-color:#d5a29d!important;background:#f5eeeb!important}.calendar-day.has-bake.weekend .date-name{color:#a8443d!important}
+.calendar-day.has-bake>span{min-height:0!important;padding:7px 6px!important;border:0!important;border-left:3px solid #df7b42!important;border-radius:8px!important;background:#fff!important;box-shadow:none!important}
+.calendar-day.has-bake>span strong{font-size:10px!important;line-height:1.18!important}.calendar-day.has-bake>span i{margin-top:3px!important;font-size:9px!important;line-height:1.18!important}
+@media(max-width:900px){
+ .bake-calendar{padding:10px!important}.calendar-grid{gap:6px!important}.calendar-day{height:58px!important;min-height:58px!important}.calendar-day>em{height:42px!important}.calendar-day .weekday-name{display:block!important;color:#728078!important;font-size:9px!important;font-weight:650!important;line-height:1.1!important}.calendar-day .date-name{font-size:14px!important;line-height:1.2!important}.calendar-day>em{gap:3px!important}.calendar-day.has-bake{height:auto!important;min-height:112px!important}.calendar-day.has-bake>em{height:auto!important;min-height:35px!important}.calendar-day.has-bake .date-name{line-height:1.15!important}
+}

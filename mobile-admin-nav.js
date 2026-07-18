@@ -1,6 +1,7 @@
 (function(){
  const button=document.querySelector('#adminMenuToggle'),navigation=document.querySelector('#adminNavigation');
  if(!button||!navigation)return;
+ button.dataset.ready='1';
  const setOpen=open=>{document.body.classList.toggle('admin-menu-open',open);button.setAttribute('aria-expanded',String(open));button.querySelector('span').textContent=open?'×':'☰'};
  button.onclick=event=>{event.stopPropagation();setOpen(!document.body.classList.contains('admin-menu-open'))};
  navigation.querySelectorAll('button[data-view]').forEach(item=>item.addEventListener('click',()=>setOpen(false)));

@@ -1,6 +1,7 @@
-const CACHE='panora-v53';
-const ASSETS=['./','index.html','styles.css','portal.css','quantity.css','account-state.css','account-documents.css','cart-date.css','app.js','dynamic-products.js','portal.js','admin.html','admin.css','admin.js','commerce.css','settings.css','export.css','recipe-actions.css','purchase-filter.css','date-jump.css','easy-plan.css','product-admin.css','calendar-plan.css','commerce.js','invoice-settings.js','invoice-tax-display.js','admin-localization.js','product-admin.js','calendar-plan.js','manifest.webmanifest','icon.svg','bread-plain.jpg','bread-pumpkin.jpg'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
+const CACHE='panora-v87';
 self.addEventListener('install',()=>self.skipWaiting());
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(e.request,copy));return response}).catch(()=>caches.match(e.request)))});
+self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key!==CACHE)await caches.delete(key);await self.clients.claim()})()));
+self.addEventListener('fetch',event=>{
+ const request=event.request;if(request.method!=='GET'||new URL(request.url).origin!==location.origin)return;
+ event.respondWith((async()=>{try{const response=await fetch(request,{cache:'no-store'});if(response.ok){const cache=await caches.open(CACHE);cache.put(request,response.clone())}return response}catch{const cached=await caches.match(request);if(cached)return cached;throw new Error('offline')}})());
+});
