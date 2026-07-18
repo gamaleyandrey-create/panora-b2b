@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null;
   const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
   const refreshSession=async()=>{
     if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
@@ -60,15 +60,13 @@
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:Object.fromEntries((row.order_items||[]).map(item=>[item.product_id,Number(item.unit_price)])),taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   };
   async function loadOrders(){
-    const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');
-    const local=JSON.parse(localStorage.getItem('panora-orders')||'[]');
-    if(rows?.length){orders=rows.map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows.length} заказов`)}
-    else if(local.length){orders=local;ready=true;await saveOrdersNow()}
+    if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
+    loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');orders=(rows||[]).map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
   async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}
   async function saveOrdersNow(){
-    if(!ready||typeof orders==='undefined')return;
-    status('Синхронизация…');
+    if(!ready||typeof orders==='undefined')return;if(savingOrders)return savingOrders;
+    savingOrders=(async()=>{status('Синхронизация…');
     let days=await bakeDayMap();
     const missing=orders.some(order=>!days.has(order.date));
     if(missing){await savePlansNow();days=await bakeDayMap()}
@@ -82,7 +80,7 @@
         if(items.length)await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
       }
     }
-    status('Облако ✓');
+    status('Облако ✓');})().finally(()=>savingOrders=null);return savingOrders
   }
   const localDate=value=>String(value||'').slice(0,10);
   const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||''}};
