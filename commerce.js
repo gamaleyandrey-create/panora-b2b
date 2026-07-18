@@ -2,7 +2,7 @@ const cRead=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||f
 let restaurants=cRead('panora-restaurants',[]),orders=cRead('panora-orders',[]),payments=cRead('panora-payments',[]),deliveryNotes=cRead('panora-delivery-notes',[]);
 let bakerySettings=cRead('panora-bakery-settings',{legalName:'Panora',taxId:'',address:'',email:'gamaley1@gmail.com',phone:'+34611187640',taxRate:0});
 let reminderLog=cRead('panora-reminder-log',{});
-const cSave=(key,value)=>{localStorage.setItem(key,JSON.stringify(value));if(key==='panora-restaurants')window.panoraCloud?.queueRestaurants()};
+const cSave=(key,value)=>{localStorage.setItem(key,JSON.stringify(value));if(key==='panora-restaurants')window.panoraCloud?.queueRestaurants();if(key==='panora-orders')window.panoraCloud?.queueOrders();if(key==='panora-production-plans')window.panoraCloud?.queuePlans()};
 const commerceDateTimeValue=date=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
 const euro=n=>{const value=new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
 const restaurant=id=>restaurants.find(r=>r.id===id);

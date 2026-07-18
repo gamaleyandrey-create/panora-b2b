@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0;
   const status=(text,error=false)=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060'}};
   const request=async(path,options={})=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
@@ -48,6 +48,37 @@
     if(prices.length)await request('restaurant_prices?on_conflict=restaurant_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(prices)});
     status('Облако ✓');
   }
+  const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
+  const parseOrderMeta=value=>{try{return JSON.parse(value||'{}')}catch{return{comment:value||''}}};
+  const rowOrder=row=>{
+    const meta=parseOrderMeta(row.comment),day=row.bake_days||{},items=(row.order_items||[]).map(item=>({product:item.product_id,quantity:Number(item.quantity)}));
+    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:Object.fromEntries((row.order_items||[]).map(item=>[item.product_id,Number(item.unit_price)])),taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
+  };
+  async function loadOrders(){
+    const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');
+    const local=JSON.parse(localStorage.getItem('panora-orders')||'[]');
+    if(rows?.length){orders=rows.map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll()}
+    else if(local.length){orders=local;ready=true;await saveOrdersNow()}
+  }
+  async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}
+  async function saveOrdersNow(){
+    if(!ready||typeof orders==='undefined')return;
+    status('Синхронизация…');
+    let days=await bakeDayMap();
+    const missing=orders.some(order=>!days.has(order.date));
+    if(missing){await savePlansNow();days=await bakeDayMap()}
+    const valid=orders.filter(order=>days.has(order.date)&&restaurants.some(r=>r.id===order.restaurantId));
+    if(valid.length){
+      const payload=valid.map(order=>({id:order.id,order_number:Number(order.number)||undefined,restaurant_id:order.restaurantId,bake_day_id:days.get(order.date),status:order.status||'submitted',comment:orderMeta(order),cancelled_reason:order.cancellationReason||null,created_by:session.user?.id||null,updated_at:new Date().toISOString()}));
+      await request('orders?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+      for(const order of valid){
+        await request(`order_items?order_id=eq.${encodeURIComponent(order.id)}`,{method:'DELETE'});
+        const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>({order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0)}));
+        if(items.length)await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
+      }
+    }
+    status('Облако ✓');
+  }
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc');
@@ -78,12 +109,13 @@
   function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),350)}
+  function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>{console.error(error);status('Ошибка облака',true)}),500)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    try{await loadProducts();await loadPlans();await loadRestaurants();ready=true;status('Облако ✓')}catch(error){console.error('Panora cloud sync',error);status('Ошибка облака',true)}
+    try{await loadProducts();await loadPlans();await loadRestaurants();await loadOrders();ready=true;status('Облако ✓')}catch(error){console.error('Panora cloud sync',error);status('Ошибка облака',true)}
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
