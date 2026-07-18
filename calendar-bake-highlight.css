@@ -1,0 +1,6 @@
+.calendar-day.has-bake{position:relative!important;border:2px solid #315b42!important;background:#e8f1e9!important;box-shadow:0 5px 14px rgba(36,75,51,.14)!important}
+.calendar-day.has-bake::before{content:'';position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;background:#315b42;box-shadow:0 0 0 4px rgba(49,91,66,.13)}
+.calendar-day.has-bake>em{color:#244b34;font-weight:800!important}
+.calendar-day.has-bake>span{background:#fff!important;border-left:4px solid #315b42!important;border-radius:9px!important;padding:9px!important}
+.calendar-day.has-bake:hover{background:#dfece1!important;transform:translateY(-1px)!important}
+.calendar-day.has-bake.weekend>em{color:#b2473e!important}
