@@ -1,0 +1,2 @@
+.bake-date-info{cursor:default!important;user-select:text}.bake-date-info:hover{transform:none!important}.bake-date-info::after{content:none!important}
+@media(max-width:720px){.bake-dates{display:grid!important;grid-template-columns:1fr!important;overflow:visible!important}.bake-date-info{width:100%!important;min-width:0!important}}
