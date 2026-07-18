@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0;
   const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
   const request=async(path,options={})=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
@@ -79,6 +79,44 @@
     }
     status('Облако ✓');
   }
+  const localDate=value=>String(value||'').slice(0,10);
+  const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||''}};
+  async function loadDeliveryNotes(){
+    const rows=await request('delivery_notes?select=*&order=note_number.asc');
+    const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
+    if(rows?.length){deliveryNotes=rows.map(rowNote);localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));if(typeof renderCommerce==='function')renderCommerce()}
+    else if(local.length){deliveryNotes=local;ready=true;await saveDeliveryNotesNow()}
+  }
+  async function saveDeliveryNotesNow(){
+    if(!ready||typeof deliveryNotes==='undefined')return;
+    const valid=deliveryNotes.filter(note=>orders.some(order=>order.id===note.orderId)&&restaurants.some(r=>r.id===note.restaurantId));
+    if(!valid.length)return;
+    status('Синхронизация…');
+    const payload=valid.map(note=>({id:note.id,note_number:Number(note.number)||undefined,order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,total:Number(note.total||0),customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null}));
+    const rows=await request('delivery_notes?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
+    (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
+    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));status('Облако ✓');
+  }
+  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==='confirmed',confirmedAt:row.confirmed_at||null,status:row.status});
+  async function loadPayments(){
+    const rows=await request('payments?select=*&order=received_at.asc');
+    const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
+    if(rows?.length){payments=rows.map(rowPayment);localStorage.setItem('panora-payments',JSON.stringify(payments));recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}
+    else if(local.length){payments=local;ready=true;await savePaymentsNow()}
+  }
+  async function savePaymentsNow(){
+    if(!ready||typeof payments==='undefined')return;
+    const valid=payments.filter(payment=>restaurants.some(r=>r.id===payment.restaurantId)&&Number(payment.amount)>0);
+    if(!valid.length)return;
+    status('Синхронизация…');
+    const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':payment.confirmed===false?'pending':'confirmed',received_at:`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmed===false?null:payment.confirmedAt||new Date().toISOString(),confirmed_by:payment.confirmed===false?null:session.user?.id||null}));
+    await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});status('Облако ✓');
+  }
+  function recalculateBalances(){
+    if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return;
+    const running={};deliveryNotes.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(note=>{running[note.restaurantId]=(running[note.restaurantId]||0)+Number(note.total||0);const paid=payments.filter(p=>p.restaurantId===note.restaurantId&&p.confirmed!==false&&String(p.date)<=String(note.date)).reduce((sum,p)=>sum+Number(p.amount||0),0);note.paid=payments.filter(p=>p.deliveryNoteId===note.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);note.balanceAfter=running[note.restaurantId]-paid});
+    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+  }
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc');
@@ -111,15 +149,16 @@
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>fail('товары',error)),350)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
   function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
+  function queueFinance(){clearTimeout(financeTimer);financeTimer=setTimeout(async()=>{try{await saveDeliveryNotesNow();await savePaymentsNow();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}catch(error){fail('оплаты',error)}},550)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders]],errors=[];
+    const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
