@@ -95,6 +95,18 @@
   const oldLogout=logoutAccount;logoutAccount=async function(){try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:authHeaders()})}catch{}saveSession(null);oldLogout()};
   const oldRender=renderAccountModal;renderAccountModal=function(){oldRender();if(account){decorateCloudState();return}const form=$('#accountLogin');if(!form||form.querySelector('[data-cloud-signup]'))return;const input=form.elements.code;if(input){input.type='password';input.minLength=6}const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=lang==='ru'?'Первый вход — создать пароль':lang==='es'?'Primer acceso — crear contraseña':'First sign-in — create password';button.onclick=async()=>{const data=new FormData(form),email=String(data.get('email')).trim().toLowerCase(),password=String(data.get('code')).trim();try{await authenticate(email,password,true);closePanels();showToast(account.name)}catch(error){const el=$('#accountError');el.textContent=error.message;el.classList.add('show')}};form.append(button)};
   const oldShowShare=showShare;showShare=function(order){oldShowShare(order);let saved=portalOrders().find(o=>o.sourceId===order.id);if(!saved&&account){const schedule=productionPlans().find(p=>p.bakeDate===order.date);saved={id:crypto.randomUUID(),sourceId:order.id,number:1,restaurantId:account.id,date:order.date,deliveryDate:schedule?.deliveryDate||order.date,items:(order.items||[]).map(i=>({product:i.id,quantity:Number(i.quantityPieces)})).filter(i=>i.quantity>0),prices:structuredClone(account.prices),taxRate:0,status:'submitted',comment:order.comment||''};const list=portalOrders();list.push(saved);localStorage.setItem('panora-orders',JSON.stringify(list));renderAccountModal()}if(saved)uploadOrder(saved);else setCloudState('error',lang==='ru'?'Не удалось подготовить заказ к отправке':'Could not prepare order')};
+  const checkoutForm=document.querySelector('#checkoutForm');
+  checkoutForm?.addEventListener('submit',event=>{
+    if(!account)return;
+    setTimeout(()=>{
+      if(event.defaultPrevented&&!(localStorage.getItem('panora-last-order')))return;
+      let last=null;try{last=JSON.parse(localStorage.getItem('panora-last-order')||'null')}catch{}
+      if(!last?.id||!last?.date||!Array.isArray(last.items))return setCloudState('error',lang==='ru'?'Форма не создала заказ. Попробуйте ещё раз.':'The form did not create an order.');
+      let saved=portalOrders().find(o=>o.sourceId===last.id);
+      if(!saved){const schedule=productionPlans().find(p=>p.bakeDate===last.date);saved={id:crypto.randomUUID(),sourceId:last.id,number:1,restaurantId:account.id,date:last.date,deliveryDate:schedule?.deliveryDate||last.date,items:last.items.map(i=>({product:i.id,quantity:Number(i.quantityPieces)})).filter(i=>i.quantity>0),prices:structuredClone(account.prices),taxRate:0,status:'submitted',comment:last.comment||''};const list=portalOrders();list.push(saved);localStorage.setItem('panora-orders',JSON.stringify(list));renderAccountModal()}
+      uploadOrder(saved);
+    },120);
+  },true);
   const oldCancel=restaurantCancelOrder;restaurantCancelOrder=function(id){const before=portalOrders().find(o=>o.id===id)?.status;oldCancel(id);const after=portalOrders().find(o=>o.id===id)?.status;if(before!==after&&after==='cancelled')cancelOrder(id)};
   const callback=new URLSearchParams(location.hash.replace(/^#/,''));
   if(callback.get('access_token')){saveSession({access_token:callback.get('access_token'),refresh_token:callback.get('refresh_token'),token_type:callback.get('token_type')||'bearer',expires_in:Number(callback.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
