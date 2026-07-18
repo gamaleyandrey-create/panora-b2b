@@ -1,0 +1,1 @@
+.page-close{position:fixed;top:14px;right:14px;z-index:10;width:48px;height:48px;padding:0;border:0;border-radius:50%;background:#31543e;color:#fff;font:30px/1 Arial;cursor:pointer}.back-link{display:block;margin:0 0 18px;padding:0;border:0;background:transparent;color:#31543e;font:800 16px Arial;cursor:pointer}@media print{.page-close,.back-link{display:none!important}}

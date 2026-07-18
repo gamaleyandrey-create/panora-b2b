@@ -25,11 +25,11 @@
     base.searchParams.set('d',base64url(confirmationData(note,order,client)));
     return base.href;
   }
-  window.printNote=function(orderId){
+  window.printNote=async function(orderId){
     const note=deliveryNotes.find(item=>item.orderId===orderId),order=orders.find(item=>item.id===orderId);
     if(!note){alert('Накладная не найдена.');return}
     const client=restaurant(note.restaurantId),bakery=note.bakery||bakerySettings,url=confirmationUrl(note,order,client);
-    const qr=`https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(url)}`;
+    let qr;try{qr=await window.PanoraQRCode.toDataURL(url,{width:260,margin:2,errorCorrectionLevel:'M',color:{dark:'#17231c',light:'#ffffff'}})}catch{qr=`https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(url)}`}
     const w=window.open('','_blank');
     if(!w){alert('Разрешите всплывающие окна, чтобы открыть накладную.');return}
     w.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Накладная DN-${note.number}</title><style>

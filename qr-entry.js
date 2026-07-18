@@ -1,0 +1,1 @@
+window.PanoraQRCode=require('qrcode');
