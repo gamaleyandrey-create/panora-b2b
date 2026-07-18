@@ -36,8 +36,8 @@ const PRODUCTS=[
 try{
  const managedProducts=JSON.parse(localStorage.getItem('panora-products')||'[]');
  if(managedProducts.length){
-  const defaults=new Map(PRODUCTS.map(p=>[p.id,p]));
-  PRODUCTS.splice(0,PRODUCTS.length,...managedProducts.filter(p=>p.active!==false).map(p=>{const base=defaults.get(p.id)||{};return{id:p.id,category:'yeastfree',price:Number(p.basePrice||0),pieces:12,weight:Number(p.weight||750),image:p.image||base.image||'icon.svg',bg:base.bg||'#e9dfca',text:{ru:[p.names?.ru||p.id,p.descriptions?.ru||'',p.names?.ru||p.id],en:[p.names?.en||p.names?.ru||p.id,p.descriptions?.en||p.descriptions?.ru||'',p.names?.en||p.names?.ru||p.id],es:[p.names?.es||p.names?.ru||p.id,p.descriptions?.es||p.descriptions?.ru||'',p.names?.es||p.names?.ru||p.id]}}}));
+  const builtIns=PRODUCTS.slice(),managedById=new Map(managedProducts.map(p=>[p.id,p])),combined=[...builtIns.map(base=>managedById.get(base.id)||base),...managedProducts.filter(p=>!builtIns.some(base=>base.id===p.id))];
+  PRODUCTS.splice(0,PRODUCTS.length,...combined.filter(p=>p.active!==false).map(p=>{const base=builtIns.find(x=>x.id===p.id)||p;return{id:p.id,category:'yeastfree',price:Number(p.basePrice??p.price??0),pieces:12,weight:Number(p.weight||base.weight||750),image:p.image||base.image||'icon.svg',bg:base.bg||'#e9dfca',text:p.text||{ru:[p.names?.ru||p.id,p.descriptions?.ru||'',p.names?.ru||p.id],en:[p.names?.en||p.names?.ru||p.id,p.descriptions?.en||p.descriptions?.ru||'',p.names?.en||p.names?.ru||p.id],es:[p.names?.es||p.names?.ru||p.id,p.descriptions?.es||p.descriptions?.ru||'',p.names?.es||p.names?.ru||p.id]}}}));
  }
 }catch(error){console.warn('Product cards could not be loaded',error)}
 const MIN_PIECES=12,MAX_PIECES_PER_PRODUCT=200,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48;let SHOW_PRICES=false;
