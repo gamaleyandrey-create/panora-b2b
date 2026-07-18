@@ -35,6 +35,7 @@
     layer.hidden=true;
     const button=document.querySelector('#adminLogout');
     if(button)button.onclick=()=>signOut(session);
+    window.dispatchEvent(new CustomEvent('panora:authenticated',{detail:session}));
   }
   async function validate(session){
     if(!session)return false;
