@@ -1,10 +1,15 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0;
+  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null;
   const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
-  const request=async(path,options={})=>{
+  const refreshSession=async()=>{
+    if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
+    refreshing=fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(async response=>{if(!response.ok)throw new Error('Войдите в экран пекарни повторно');session=await response.json();localStorage.setItem('panora-supabase-session',JSON.stringify(session));window.panoraSupabaseSession=session;return session}).finally(()=>refreshing=null);return refreshing
+  };
+  const request=async(path,options={},retried=false)=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
     const response=await fetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json',...(options.headers||{})}});
+    if(response.status===401&&!retried){await refreshSession();return request(path,options,true)}
     if(!response.ok){const detail=await response.text();throw new Error(detail||`Supabase: ${response.status}`)}
     if(response.status===204)return null;
     const text=await response.text();return text?JSON.parse(text):null;
@@ -156,7 +161,7 @@
     const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
-    clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),12000);
+    clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,get ready(){return ready}};
