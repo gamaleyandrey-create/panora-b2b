@@ -59,7 +59,17 @@
     }catch(error){console.error('Panora restaurant cloud order',error);showToast((lang==='ru'?'Заказ сохранён на устройстве, но не отправлен: ':'Cloud order failed: ')+error.message)}finally{uploading=false}
   }
   async function cancelOrder(id){try{await rest(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await hydrate()}catch(error){showToast(error.message)}}
+  function recoverLastOrder(){
+    if(!account||portalOrders().some(o=>o.restaurantId===account.id))return null;
+    let last=null;try{last=JSON.parse(localStorage.getItem('panora-last-order')||'null')}catch{}
+    if(!last?.id||!last?.date||!Array.isArray(last.items)||!last.items.length)return null;
+    const marker=`panora-recovered-${account.id}-${last.id}`;let id=localStorage.getItem(marker);if(!id){id=crypto.randomUUID();localStorage.setItem(marker,id)}
+    const schedule=productionPlans().find(p=>p.bakeDate===last.date),saved={id,sourceId:last.id,number:1,restaurantId:account.id,date:last.date,deliveryDate:schedule?.deliveryDate||last.date,items:last.items.map(i=>({product:i.id,quantity:Number(i.quantityPieces)})).filter(i=>i.quantity>0),prices:structuredClone(account.prices),taxRate:0,status:'submitted',comment:last.comment||''};
+    if(saved.items.reduce((sum,item)=>sum+item.quantity,0)<12)return null;
+    const orders=portalOrders();orders.push(saved);localStorage.setItem('panora-orders',JSON.stringify(orders));renderAccountModal();return saved;
+  }
   async function retryPending(){for(const order of portalOrders().filter(o=>o.sourceId&&o.restaurantId===account?.id&&o.status==='submitted'))await uploadOrder(order)}
+  async function restoreAndRetry(){const recovered=recoverLastOrder();if(recovered)showToast(lang==='ru'?'Восстанавливаем последний заказ…':lang==='es'?'Restaurando el último pedido…':'Restoring the last order…');await retryPending()}
   const oldLogin=loginAccount;loginAccount=async function(e){
     e.preventDefault();const form=new FormData(e.target),email=String(form.get('email')).trim().toLowerCase(),password=String(form.get('code')).trim(),button=e.target.querySelector('button[type="submit"],button:not([type])');if(button)button.disabled=true;
     try{await authenticate(email,password,false);closePanels();showToast(account.name);if(checkoutAfterLogin){checkoutAfterLogin=false;setTimeout(openCheckoutForAccount,220)}}catch(error){const el=$('#accountError');el.textContent=error.message;el.classList.add('show')}finally{if(button)button.disabled=false}
@@ -70,7 +80,7 @@
   const oldCancel=restaurantCancelOrder;restaurantCancelOrder=function(id){const before=portalOrders().find(o=>o.id===id)?.status;oldCancel(id);const after=portalOrders().find(o=>o.id===id)?.status;if(before!==after&&after==='cancelled')cancelOrder(id)};
   const callback=new URLSearchParams(location.hash.replace(/^#/,''));
   if(callback.get('access_token')){saveSession({access_token:callback.get('access_token'),refresh_token:callback.get('refresh_token'),token_type:callback.get('token_type')||'bearer',expires_in:Number(callback.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
-  session=readSession();if(session?.access_token){if(!session.user){fetch(`${cfg.url}/auth/v1/user`,{headers:authHeaders()}).then(r=>r.json()).then(async user=>{session.user=user;saveSession(session);await hydrate();await retryPending()}).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else hydrate().then(retryPending).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else renderAccountModal();
+  session=readSession();if(session?.access_token){if(!session.user){fetch(`${cfg.url}/auth/v1/user`,{headers:authHeaders()}).then(r=>r.json()).then(async user=>{session.user=user;saveSession(session);await hydrate();await restoreAndRetry()}).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else hydrate().then(restoreAndRetry).catch(error=>{console.error(error);renderAccountModal()})}else renderAccountModal();
   setInterval(()=>{if(session?.access_token)hydrate().catch(()=>{})},15000);
   window.panoraPortalCloud={uploadOrder,hydrate,retry:retryPending};
 })();
