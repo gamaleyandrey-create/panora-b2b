@@ -4,15 +4,27 @@
   const APP_URL='https://gamaleyandrey-create.github.io/panora-b2b/';
   const SESSION_KEY='panora-restaurant-cloud-session';
   let session=null,uploading=false;
+  let refreshing=null;
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}};
   const saveSession=value=>{session=value;if(value)localStorage.setItem(SESSION_KEY,JSON.stringify(value));else localStorage.removeItem(SESSION_KEY)};
   const authHeaders=()=>({apikey:cfg.publishableKey,Authorization:`Bearer ${session?.access_token||''}`,'Content-Type':'application/json'});
   async function jsonFetch(url,options={}){
     const response=await fetch(url,options),text=await response.text();
-    if(!response.ok){let message=text;try{const body=JSON.parse(text);message=body.msg||body.message||body.error_description||body.error||text}catch{}throw new Error(message||`HTTP ${response.status}`)}
+    if(!response.ok){let message=text;try{const body=JSON.parse(text);message=body.msg||body.message||body.error_description||body.error||text}catch{}const error=new Error(message||`HTTP ${response.status}`);error.status=response.status;throw error}
     return text?JSON.parse(text):null;
   }
-  const rest=(path,options={})=>jsonFetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{...authHeaders(),...(options.headers||{})}});
+  async function refreshSession(){
+    if(refreshing)return refreshing;
+    if(!session?.refresh_token)throw new Error('Сессия истекла. Войдите снова.');
+    refreshing=jsonFetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(next=>{saveSession(next);return next}).finally(()=>refreshing=null);
+    return refreshing;
+  }
+  async function ensureSession(){if(!session?.access_token)throw new Error('Войдите в кабинет ресторана');const expires=Number(session.expires_at||0)*1000;if(expires&&Date.now()>expires-60000)await refreshSession()}
+  async function rest(path,options={}){
+    await ensureSession();
+    try{return await jsonFetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{...authHeaders(),...(options.headers||{})}})}
+    catch(error){if(error.status!==401)throw error;await refreshSession();return jsonFetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{...authHeaders(),...(options.headers||{})}})}
+  }
   async function authenticate(email,password,signup=false){
     const pendingLocal=typeof portalOrders==='function'?portalOrders().filter(o=>o.status==='submitted'):[];
     const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password';
