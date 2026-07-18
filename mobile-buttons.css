@@ -1,0 +1,28 @@
+@media(max-width:720px){
+  .button.button-primary,
+  .button.button-primary:visited,
+  .button.button-primary:hover,
+  .button.button-primary:focus,
+  .button.button-primary:disabled,
+  #checkoutButton,
+  #checkoutForm button[type="submit"],
+  #shareModal .button-primary{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-height:56px!important;
+    width:100%!important;
+    padding:14px 18px!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    font-size:17px!important;
+    font-weight:700!important;
+    line-height:1.2!important;
+    text-align:center!important;
+    white-space:normal!important;
+    opacity:1!important;
+    visibility:visible!important;
+    overflow:visible!important;
+  }
+  .button.button-primary:disabled,#checkoutButton:disabled{opacity:.55!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+}
