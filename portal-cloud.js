@@ -1,6 +1,7 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   if(!cfg)return;
+  const APP_URL='https://gamaleyandrey-create.github.io/panora-b2b/';
   const SESSION_KEY='panora-restaurant-cloud-session';
   let session=null,uploading=false;
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}};
@@ -14,7 +15,7 @@
   const rest=(path,options={})=>jsonFetch(`${cfg.url}/rest/v1/${path}`,{...options,headers:{...authHeaders(),...(options.headers||{})}});
   async function authenticate(email,password,signup=false){
     const pendingLocal=typeof portalOrders==='function'?portalOrders().filter(o=>o.status==='submitted'):[];
-    const path=signup?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
+    const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password';
     const body=signup?{email,password,data:{display_name:email}}:{email,password};
     const data=await jsonFetch(`${cfg.url}${path}`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const next=data.access_token?data:data.session;
@@ -70,7 +71,9 @@
   const oldRender=renderAccountModal;renderAccountModal=function(){oldRender();if(account)return;const form=$('#accountLogin');if(!form||form.querySelector('[data-cloud-signup]'))return;const input=form.elements.code;if(input){input.type='password';input.minLength=6}const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=lang==='ru'?'Первый вход — создать пароль':lang==='es'?'Primer acceso — crear contraseña':'First sign-in — create password';button.onclick=async()=>{const data=new FormData(form),email=String(data.get('email')).trim().toLowerCase(),password=String(data.get('code')).trim();try{await authenticate(email,password,true);closePanels();showToast(account.name)}catch(error){const el=$('#accountError');el.textContent=error.message;el.classList.add('show')}};form.append(button)};
   const oldShowShare=showShare;showShare=function(order){oldShowShare(order);const saved=portalOrders().find(o=>o.sourceId===order.id);if(saved)uploadOrder(saved)};
   const oldCancel=restaurantCancelOrder;restaurantCancelOrder=function(id){const before=portalOrders().find(o=>o.id===id)?.status;oldCancel(id);const after=portalOrders().find(o=>o.id===id)?.status;if(before!==after&&after==='cancelled')cancelOrder(id)};
-  session=readSession();if(session?.access_token)hydrate().catch(error=>{console.error(error);saveSession(null);renderAccountModal()});else renderAccountModal();
+  const callback=new URLSearchParams(location.hash.replace(/^#/,''));
+  if(callback.get('access_token')){saveSession({access_token:callback.get('access_token'),refresh_token:callback.get('refresh_token'),token_type:callback.get('token_type')||'bearer',expires_in:Number(callback.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
+  session=readSession();if(session?.access_token){if(!session.user){fetch(`${cfg.url}/auth/v1/user`,{headers:authHeaders()}).then(r=>r.json()).then(user=>{session.user=user;saveSession(session);return hydrate()}).catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else hydrate().catch(error=>{console.error(error);saveSession(null);renderAccountModal()})}else renderAccountModal();
   setInterval(()=>{if(session?.access_token)hydrate().catch(()=>{})},15000);
   window.panoraPortalCloud={uploadOrder,hydrate};
 })();
