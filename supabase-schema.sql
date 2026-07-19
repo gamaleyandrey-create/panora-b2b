@@ -353,3 +353,8 @@ revoke all on function public.panora_delivery_confirmation(uuid) from public, an
 revoke all on function public.panora_confirm_delivery(uuid, text) from public, anon;
 grant execute on function public.panora_delivery_confirmation(uuid) to authenticated;
 grant execute on function public.panora_confirm_delivery(uuid, text) to authenticated;
+
+alter table public.delivery_notes
+  add column if not exists offline_received_at timestamptz,
+  add column if not exists offline_receiver text,
+  add column if not exists offline_signature text;
