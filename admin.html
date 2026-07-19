@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#24382c">
   <title>Panora — управление пекарней</title>
   <link rel="stylesheet" href="admin.css">
-  <link rel="stylesheet" href="commerce.css">
+  <link rel="stylesheet" href="commerce.css?v=210">
   <link rel="stylesheet" href="settings.css">
   <link rel="stylesheet" href="export.css">
   <link rel="stylesheet" href="recipe-actions.css">
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="calendar-bake-highlight.css?v=76">
   <link rel="stylesheet" href="calendar-labels.css?v=77">
   <link rel="stylesheet" href="calendar-text-restore.css?v=78">
-  <link rel="stylesheet" href="mobile-admin-orders.css?v=79">
+  <link rel="stylesheet" href="mobile-admin-orders.css?v=209">
   <link rel="stylesheet" href="mobile-admin-all.css?v=80">
   <link rel="stylesheet" href="mobile-admin-menu.css?v=81">
   <link rel="stylesheet" href="responsive.css?v=59">
@@ -162,7 +162,7 @@
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=208').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=210').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
