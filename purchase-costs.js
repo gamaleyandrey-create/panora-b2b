@@ -8,8 +8,9 @@
  function availableDates(){return [...new Set(plans.map(plan=>plan.bakeDate))].sort()}
  function fillFilter(){const dates=availableDates(),chosen=sharedDates().filter(date=>dates.includes(date));if(chosen.length&&selected==='all')selected='selected';if(selected!=='all'&&selected!=='selected'&&!dates.includes(selected))selected='all';if(selected==='selected'&&!chosen.length)selected='all';filter.innerHTML=`<option value="all">Все даты вместе</option>${chosen.length?`<option value="selected">Выбранные даты (${chosen.length}) — ${chosen.map(date=>fmt(date,{day:'numeric',month:'short'})).join(', ')}</option>`:''}`+dates.map((date,index)=>`<option value="${date}">${index===0?'Ближайшая выпечка':`Выпечка ${index+1}`} — ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('');filter.value=selected}
  function periodPlans(){if(selected==='all')return plans;if(selected==='selected'){const chosen=new Set(sharedDates());return plans.filter(plan=>chosen.has(plan.bakeDate))}return plans.filter(plan=>plan.bakeDate===selected)}
+ function currentRecipes(){try{const latest=JSON.parse(localStorage.getItem('panora-recipes')||'null');return latest&&typeof latest==='object'?latest:recipes}catch{return recipes}}
  function totals(){
-  const rows={},priceMap=costs();periodPlans().forEach(plan=>(recipes[plan.product]||[]).forEach(item=>{const key=`${item.name}|${item.unit}`;rows[key]??={key,name:item.name,unit:item.unit,required:0,stock:Number(item.stock||0),margin:Number(item.margin||5),price:Number(priceMap[key]||0)};rows[key].required+=Number(plan.planned||0)*Number(item.qty||0)}));return Object.values(rows)
+  const rows={},priceMap=costs(),latest=currentRecipes();periodPlans().forEach(plan=>(latest[plan.product]||[]).forEach(item=>{const key=`${item.name}|${item.unit}`;rows[key]??={key,name:item.name,unit:item.unit,required:0,stock:Number(item.stock||0),margin:Number(item.margin||5),price:Number(priceMap[key]||0)};rows[key].required+=Number(plan.planned||0)*Number(item.qty||0)}));return Object.values(rows)
  }
  renderPurchase=function(){
   fillFilter();
@@ -21,5 +22,6 @@
  };
  filter.onchange=()=>{selected=filter.value;renderPurchase()};
  window.panoraSetPurchaseDates=dates=>{window.panoraPurchaseSelection=dates;localStorage.setItem(selectionKey,JSON.stringify(dates));selected='selected';renderPurchase()};
+ window.addEventListener('panora:recipes-changed',()=>renderPurchase());
  renderPurchase();
 })();
