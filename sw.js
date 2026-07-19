@@ -1,4 +1,4 @@
-const CACHE='panora-v215';
+const CACHE='panora-v216';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key!==CACHE)await caches.delete(key);await self.clients.claim()})()));
 self.addEventListener('fetch',event=>{
