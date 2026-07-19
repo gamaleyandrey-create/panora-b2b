@@ -143,7 +143,7 @@
   <dialog id="accountDetailDialog" class="account-detail-dialog"><div class="account-detail-shell"><button type="button" class="dialog-close" id="closeAccountDetail" aria-label="Закрыть">×</button><span class="kicker">PANORA</span><h2 id="accountDetailName">Ресторан</h2><p id="accountDetailContact"></p><div class="account-detail-summary"><article><span>Задолженность</span><strong id="accountDetailDebt">0 €</strong></article><article><span>Отгружено</span><strong id="accountDetailShipped">0 €</strong></article><article><span>Оплачено</span><strong id="accountDetailPaid">0 €</strong></article></div><div class="account-detail-head"><h3>История операций</h3><button type="button" class="primary" id="accountDetailPayment">+ Принять оплату</button></div><div id="accountDetailHistory" class="account-detail-history"></div></div></dialog>
   <script src="supabase-config.js?v=113"></script>
   <script src="admin-auth.js?v=113"></script>
-  <script src="admin.js?v=58"></script>
+  <script src="admin.js?v=219"></script>
   <script src="commerce.js?v=218"></script>
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=206"></script>
@@ -160,12 +160,12 @@
   <script src="account-detail.js?v=111"></script>
   <script src="order-notifications.js?v=111"></script>
   <script src="order-communication.js?v=111"></script>
-  <script src="cloud-sync.js?v=201"></script>
+  <script src="cloud-sync.js?v=219"></script>
   <script src="daily-order-summary.js?v=217"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=218').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=219').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>

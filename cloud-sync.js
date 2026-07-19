@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null;
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null;
   const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
   const refreshSession=async()=>{
     if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
@@ -32,6 +32,24 @@
     if(!ready||typeof productRegistry==='undefined')return;
     status('Синхронизация…');
     await request('products?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(productRegistry.map(productRow))});
+    status('Облако ✓');
+  }
+  async function loadRecipes(){
+    const rows=await request('recipe_items?select=*&order=product_id.asc,position.asc');
+    const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
+    if(rows?.length){
+      const remote={};
+      rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0)})});
+      recipes=remote;localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-1');
+      if(typeof renderAll==='function')renderAll();
+    }else if(Object.keys(local).length){recipes=local;ready=true;await saveRecipesNow()}
+  }
+  async function saveRecipesNow(){
+    if(!ready||typeof recipes==='undefined')return;
+    status('Синхронизация рецептур…');
+    await request('recipe_items?id=not.is.null',{method:'DELETE'});
+    const payload=Object.entries(recipes).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),updated_at:new Date().toISOString()})));
+    if(payload.length)await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
     status('Облако ✓');
   }
   const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,telegram:r.telegram||null,address:r.address||null,language:r.language||'ru',active:!r.deletedAt,updated_at:new Date().toISOString()});
@@ -160,19 +178,20 @@
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>fail('товары',error)),350)}
+  function queueRecipes(){clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>saveRecipesNow().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
   function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
   function queueFinance(){clearTimeout(financeTimer);financeTimer=setTimeout(async()=>{try{await saveDeliveryNotesNow();await savePaymentsNow();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}catch(error){fail('оплаты',error)}},550)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
+    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,updateOrderStatus,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,updateOrderStatus,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();

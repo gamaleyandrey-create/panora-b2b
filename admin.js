@@ -24,7 +24,7 @@ if(localStorage.getItem('panora-recipes-version')!=='3'){
 let movements=read('panora-stock-movements',[]);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], t=k=>TEXT[lang][k]||k;
 function read(key,fallback){try{return JSON.parse(localStorage.getItem(key))||structuredClone(fallback)}catch{return structuredClone(fallback)}}
-function store(key,value){localStorage.setItem(key,JSON.stringify(value));$('#saveState').textContent=lang==='ru'?'Сохранено':lang==='es'?'Guardado':'Saved';if(key==='panora-production-plans')window.panoraCloud?.queuePlans()}
+function store(key,value){localStorage.setItem(key,JSON.stringify(value));$('#saveState').textContent=lang==='ru'?'Сохранено':lang==='es'?'Guardado':'Saved';if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes')window.panoraCloud?.queueRecipes()}
 function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`}
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}
