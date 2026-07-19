@@ -2,7 +2,7 @@
 (()=>{
   const root=document.querySelector('#dailyOrderSummary');if(!root)return;
   const text=()=>({
-    ru:{title:'Сводный план по дням выпечки',subtitle:'Общее количество по всем ресторанам. Новые заказы включены в итог и выделены отдельно.',restaurants:'ресторанов',new:'Новые',confirmed:'Подтверждено',total:'Всего к выпечке',details:'Заказчики и состав',empty:'Нет предстоящих заказов',ingredients:'Рассчитать ингредиенты',pcs:'шт.',cancelled:'Отменён',shipped:'Отгружен'},
+    ru:{title:'Сводный план производства',subtitle:'Общее количество по всем ресторанам. Новые заказы включены в итог и выделены отдельно.',restaurants:'ресторанов',new:'Новые',confirmed:'Подтверждено',total:'Всего к выпечке',details:'Заказчики и состав',empty:'Нет предстоящих заказов',ingredients:'Рассчитать ингредиенты',pcs:'шт.',cancelled:'Отменён',shipped:'Отгружен'},
     en:{title:'Consolidated bake plan',subtitle:'Total demand from all restaurants. New orders are included and shown separately.',restaurants:'restaurants',new:'New',confirmed:'Confirmed',total:'Total to bake',details:'Customers and items',empty:'No upcoming orders',ingredients:'Calculate ingredients',pcs:'pcs',cancelled:'Cancelled',shipped:'Shipped'},
     es:{title:'Plan consolidado de horneado',subtitle:'Demanda total de todos los restaurantes. Los pedidos nuevos están incluidos y separados.',restaurants:'restaurantes',new:'Nuevos',confirmed:'Confirmados',total:'Total a hornear',details:'Clientes y productos',empty:'No hay pedidos próximos',ingredients:'Calcular ingredientes',pcs:'uds.',cancelled:'Cancelado',shipped:'Enviado'}
   })[typeof lang==='string'?lang:'ru'];
