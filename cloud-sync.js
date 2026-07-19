@@ -40,7 +40,7 @@
     if(rows?.length){
       const remote={};
       rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0)})});
-      recipes=remote;localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-1');
+      recipes=remote;localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-2');window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
       if(typeof renderAll==='function')renderAll();
     }else if(Object.keys(local).length){recipes=local;ready=true;await saveRecipesNow()}
   }
