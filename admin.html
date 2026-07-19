@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=92">
   <link rel="stylesheet" href="purchase-costs.css?v=95">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=97">
+  <link rel="stylesheet" href="daily-order-summary.css?v=207">
   <link rel="stylesheet" href="account-detail.css?v=110">
   <link rel="stylesheet" href="order-prices.css?v=114">
   <link rel="stylesheet" href="order-notifications.css?v=114">
@@ -73,6 +74,7 @@
           <div class="date-jump"><label><span id="planDateJumpLabel">Выбрать дату</span><input id="planDateJump" type="date"></label><button id="goToPlanDate">Показать неделю</button></div>
         </div>
         <div class="summary-grid"><article><span data-t="planned">Запланировано</span><strong id="plannedPieces">0 шт.</strong></article><article><span data-t="ordered">Заказано</span><strong id="orderedPieces">0 шт.</strong></article><article><span data-t="reserve">Свободно</span><strong id="freePieces">0 шт.</strong></article></div>
+        <section class="daily-order-summary" id="dailyOrderSummary"></section>
         <div id="planList" class="plan-list"></div>
       </div>
       <div class="view" id="view-recipes">
@@ -156,10 +158,11 @@
   <script src="order-notifications.js?v=111"></script>
   <script src="order-communication.js?v=111"></script>
   <script src="cloud-sync.js?v=201"></script>
+  <script src="daily-order-summary.js?v=207"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=206').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=207').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
