@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="order-prices.css?v=114">
   <link rel="stylesheet" href="admin-order-polish.css?v=215">
   <link rel="stylesheet" href="order-notifications.css?v=114">
+  <link rel="stylesheet" href="reminder-hours.css?v=218">
   <link rel="stylesheet" href="admin-auth.css?v=113">
 </head>
 <body class="auth-pending">
@@ -109,7 +110,7 @@
       <div class="view" id="view-reminders">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Напоминания клиентам</h2><p>Готовые сообщения ресторанам перед закрытием приёма заказов.</p></div><button class="secondary" id="refreshReminders">Обновить список</button></div>
         <div class="reminder-summary"><article><span>Нужно напомнить</span><strong id="reminderDue">0</strong></article><article><span>Уже заказали</span><strong id="reminderOrdered">0</strong></article><article><span>Отправлено</span><strong id="reminderSent">0</strong></article></div>
-        <div class="reminder-info">Рекомендуемый график: первое напоминание за 72 часа, повторное — за 54 часа. Приём заказов закрывается за 48 часов до выпечки.</div>
+        <div class="reminder-info">Первое напоминание — за 72 часа, повторное — за 54 часа до закрытия заказов. Отправка разрешена только днём, с 12:00 до 20:00 по времени Мадрида. Приём заказов закрывается за 48 часов до выпечки.</div>
         <div id="reminderList" class="reminder-list"></div>
       </div>
       <div class="view" id="view-accounting">
@@ -143,7 +144,7 @@
   <script src="supabase-config.js?v=113"></script>
   <script src="admin-auth.js?v=113"></script>
   <script src="admin.js?v=58"></script>
-  <script src="commerce.js?v=205"></script>
+  <script src="commerce.js?v=218"></script>
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=206"></script>
   <script src="admin-localization.js?v=51"></script>
@@ -164,7 +165,7 @@
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=217').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=218').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
