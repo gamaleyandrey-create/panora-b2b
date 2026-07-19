@@ -139,14 +139,14 @@
   <script src="supabase-config.js?v=113"></script>
   <script src="admin-auth.js?v=113"></script>
   <script src="admin.js?v=58"></script>
-  <script src="commerce.js?v=201"></script>
+  <script src="commerce.js?v=205"></script>
   <script src="invoice-settings.js?v=48"></script>
-  <script src="invoice-tax-display.js?v=50"></script>
+  <script src="invoice-tax-display.js?v=205"></script>
   <script src="admin-localization.js?v=51"></script>
   <script src="product-admin.js?v=106"></script>
   <script src="calendar-plan.js?v=90"></script>
   <script src="qrcode-browser.js?v=94"></script>
-  <script src="delivery-qr.js?v=94"></script>
+  <script src="delivery-qr.js?v=205"></script>
   <script src="mobile-admin-nav.js?v=85"></script>
   <script src="admin-status-sync.js?v=89"></script>
   <script src="admin-mobile-tabs.js?v=96"></script>
@@ -159,7 +159,7 @@
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=204').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=205').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
