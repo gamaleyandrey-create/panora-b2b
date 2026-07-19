@@ -61,7 +61,7 @@ begin
     jsonb_build_object('deliveryDate', coalesce(p_delivery_date,p_bake_date), 'taxRate', 0, 'comment', coalesce(p_comment,''))::text,
     auth.uid()
   )
-  on conflict (id) do nothing;
+  on conflict on constraint orders_pkey do nothing;
 
   if not exists(select 1 from public.orders o where o.id=p_order_id and o.restaurant_id=v_restaurant) then
     raise exception 'Order identifier belongs to another restaurant';

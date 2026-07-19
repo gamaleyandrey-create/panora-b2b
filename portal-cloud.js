@@ -120,7 +120,7 @@
     try{
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
       try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
-      catch(error){const missingRpc=error.status===404||/panora_create_order|schema cache|PGRST202/i.test(error.message);if(!missingRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
+      catch(error){const unusableRpc=error.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(error.message);if(!unusableRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
       if(!created)throw new Error('Order was not created');
       const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
