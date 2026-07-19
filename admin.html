@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="reminder-hours.css?v=218">
   <link rel="stylesheet" href="admin-auth.css?v=113">
   <link rel="stylesheet" href="delivery-qr.css?v=221">
+  <link rel="stylesheet" href="delivery-offline.css?v=222">
 </head>
 <body class="auth-pending">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -154,6 +155,7 @@
   <script src="calendar-plan.js?v=220"></script>
   <script src="qrcode-browser.js?v=94"></script>
   <script src="delivery-qr.js?v=221"></script>
+  <script src="delivery-offline.js?v=222"></script>
   <script src="mobile-admin-nav.js?v=85"></script>
   <script src="admin-status-sync.js?v=89"></script>
   <script src="admin-mobile-tabs.js?v=96"></script>
@@ -162,12 +164,12 @@
   <script src="account-detail.js?v=111"></script>
   <script src="order-notifications.js?v=111"></script>
   <script src="order-communication.js?v=111"></script>
-  <script src="cloud-sync.js?v=221"></script>
+  <script src="cloud-sync.js?v=222"></script>
   <script src="daily-order-summary.js?v=217"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=221').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=222').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
