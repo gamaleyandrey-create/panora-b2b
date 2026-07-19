@@ -41,7 +41,12 @@
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity)})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   }
   async function loadAll(force=false){
-    if(loadPromise)return loadPromise;
+    /* A forced refresh must run AFTER any older request. Reusing an in-flight
+       response here used to make a newly created order appear and disappear. */
+    if(loadPromise){
+      if(!force)return loadPromise;
+      try{await loadPromise}catch{}
+    }
     loadPromise=(async()=>{
       const uid=session?.user?.id;if(!uid)return;
       const profiles=await api(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`),profile=profiles?.[0];
@@ -81,6 +86,9 @@
   logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
   const form=document.querySelector('#checkoutForm');
+  /* Disable app.js' legacy localStorage submit path. Cloud orders are only
+     considered successful after panora_create_order commits in Supabase. */
+  if(form)form.onsubmit=null;
   form?.addEventListener('submit',async event=>{
     event.preventDefault();event.stopImmediatePropagation();
     if(submitting)return;if(!account){openPanel(document.querySelector('#profileModal'));return}
@@ -91,7 +99,9 @@
     try{
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:plan?.deliveryDate||date,p_items:items,p_comment:String(data.get('comment')||'')})}),created=rows?.[0];
       if(!created)throw new Error('Order was not created');
-      await loadAll(true);cart={};localStorage.removeItem('panora-cart');closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
+      const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
+      if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
+      cart={};localStorage.removeItem('panora-cart');closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}

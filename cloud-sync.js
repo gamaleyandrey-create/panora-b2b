@@ -63,6 +63,16 @@
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');orders=(rows||[]).map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
+  async function updateOrderStatus(id,nextStatus,cancelledReason=null){
+    if(!ready)throw new Error('Облако ещё загружается');
+    if(loadingOrders)await loadingOrders;
+    clearTimeout(orderTimer);orderTimer=0;
+    await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:nextStatus,cancelled_reason:cancelledReason,updated_at:new Date().toISOString()})});
+    await loadOrders();
+    const saved=orders.find(order=>order.id===id);
+    if(!saved||saved.status!==nextStatus)throw new Error('Supabase не подтвердил изменение статуса заказа');
+    return saved;
+  }
   async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}
   async function saveOrdersNow(){
     if(!ready||typeof orders==='undefined')return;if(savingOrders)return savingOrders;
@@ -162,7 +172,7 @@
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRestaurants,queueOrders,queueFinance,updateOrderStatus,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
