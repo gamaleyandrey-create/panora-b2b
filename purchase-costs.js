@@ -3,10 +3,11 @@
  const saveCosts=value=>localStorage.setItem('panora-ingredient-costs',JSON.stringify(value));
  const euroCost=value=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' €';
  const factor=unit=>unit==='g'||unit==='ml'?1000:1;
- const filter=$('#costBakeFilter');if(!filter)return;let selected='all';
+ const filter=$('#costBakeFilter');if(!filter)return;const selectionKey='panora-purchase-selected-dates';let selected='all';
+ const sharedDates=()=>{try{return (window.panoraPurchaseSelection||JSON.parse(localStorage.getItem(selectionKey)||'[]')).filter(Boolean)}catch{return[]}};
  function availableDates(){return [...new Set(plans.map(plan=>plan.bakeDate))].sort()}
- function fillFilter(){const dates=availableDates();if(selected!=='all'&&!dates.includes(selected))selected='all';filter.innerHTML=`<option value="all">Все даты вместе</option>`+dates.map((date,index)=>`<option value="${date}">${index===0?'Ближайшая выпечка':`Выпечка ${index+1}`} — ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('');filter.value=selected}
- function periodPlans(){return selected==='all'?plans:plans.filter(plan=>plan.bakeDate===selected)}
+ function fillFilter(){const dates=availableDates(),chosen=sharedDates().filter(date=>dates.includes(date));if(chosen.length&&selected==='all')selected='selected';if(selected!=='all'&&selected!=='selected'&&!dates.includes(selected))selected='all';if(selected==='selected'&&!chosen.length)selected='all';filter.innerHTML=`<option value="all">Все даты вместе</option>${chosen.length?`<option value="selected">Выбранные даты (${chosen.length}) — ${chosen.map(date=>fmt(date,{day:'numeric',month:'short'})).join(', ')}</option>`:''}`+dates.map((date,index)=>`<option value="${date}">${index===0?'Ближайшая выпечка':`Выпечка ${index+1}`} — ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('');filter.value=selected}
+ function periodPlans(){if(selected==='all')return plans;if(selected==='selected'){const chosen=new Set(sharedDates());return plans.filter(plan=>chosen.has(plan.bakeDate))}return plans.filter(plan=>plan.bakeDate===selected)}
  function totals(){
   const rows={},priceMap=costs();periodPlans().forEach(plan=>(recipes[plan.product]||[]).forEach(item=>{const key=`${item.name}|${item.unit}`;rows[key]??={key,name:item.name,unit:item.unit,required:0,stock:Number(item.stock||0),margin:Number(item.margin||5),price:Number(priceMap[key]||0)};rows[key].required+=Number(plan.planned||0)*Number(item.qty||0)}));return Object.values(rows)
  }
@@ -19,5 +20,6 @@
   $$('[data-cost-stock],[data-cost-margin]').forEach(input=>input.onchange=()=>{const row=rows[Number(input.dataset.costStock??input.dataset.costMargin)];Object.values(recipes).flat().filter(item=>item.name===row.name&&item.unit===row.unit).forEach(item=>{if(input.dataset.costStock!==undefined)item.stock=Math.max(0,Number(input.value||0));else item.margin=Math.max(0,Number(input.value||0))});store('panora-recipes',recipes);renderPurchase()})
  };
  filter.onchange=()=>{selected=filter.value;renderPurchase()};
+ window.panoraSetPurchaseDates=dates=>{window.panoraPurchaseSelection=dates;localStorage.setItem(selectionKey,JSON.stringify(dates));selected='selected';renderPurchase()};
  renderPurchase();
 })();
