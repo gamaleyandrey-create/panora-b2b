@@ -1,3 +1,6 @@
 .recipe-row{grid-template-columns:1fr 100px 60px 36px}
 .recipe-delete{border:1px solid #e5cbc7;background:#fff4f2;color:#a34d42;border-radius:7px;font-size:20px;cursor:pointer}
+.recipe-product-weight{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:12px 0 18px;padding:14px 16px;border:1px solid #d7ddd4;border-radius:10px;background:#f3f7f1;font-weight:700;color:#2e523d}
+.recipe-product-weight>span:last-child{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.recipe-product-weight input{width:110px;padding:10px 12px;border:1px solid #bac8bc;border-radius:7px;background:#fff;font:700 16px Manrope,Arial,sans-serif;color:#183124;text-align:right}
 @media(max-width:520px){.recipe-row{grid-template-columns:1fr 80px 58px 34px}}
