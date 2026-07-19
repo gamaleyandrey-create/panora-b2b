@@ -1,0 +1,12 @@
+.daily-order-summary>header{gap:18px}
+.daily-summary-selection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.daily-summary-selection strong{color:var(--green)}
+.daily-summary-selection button{border:0;border-radius:10px;background:var(--green);color:#fff;padding:11px 15px;font-weight:700;cursor:pointer}
+.daily-summary-selection button:disabled{opacity:.42;cursor:not-allowed}
+.daily-summary-card.selected{border-color:var(--green);box-shadow:0 0 0 2px rgba(48,86,62,.1)}
+.daily-summary-head{position:relative}
+.daily-date-select{flex:0 0 auto;cursor:pointer}
+.daily-date-select input{position:absolute;opacity:0;pointer-events:none}
+.daily-date-select span{display:block;width:24px;height:24px;border:2px solid #9aa69b;border-radius:7px;background:#fff}
+.daily-date-select input:checked+span{border-color:var(--green);background:var(--green);box-shadow:inset 0 0 0 5px #fff}
+@media(max-width:700px){.daily-order-summary>header{display:grid;gap:12px}.daily-summary-selection{justify-content:stretch}.daily-summary-selection button{width:100%}.daily-summary-head{display:grid;grid-template-columns:auto 1fr auto}.daily-date-select span{width:26px;height:26px}}
