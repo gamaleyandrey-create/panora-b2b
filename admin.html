@@ -148,7 +148,7 @@
   <script src="supabase-config.js?v=113"></script>
   <script src="admin-auth.js?v=113"></script>
   <script src="admin.js?v=223"></script>
-  <script src="commerce.js?v=218"></script>
+  <script src="commerce.js?v=225"></script>
   <script src="invoice-settings.js?v=48"></script>
   <script src="invoice-tax-display.js?v=206"></script>
   <script src="invoice-preview.js?v=224"></script>
@@ -171,7 +171,7 @@
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=224').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=225').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
