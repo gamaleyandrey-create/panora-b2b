@@ -7,7 +7,8 @@ printNote=function(orderId){
   const prefix=b.notePrefix||'DN-',number=`${prefix}${String(n.number).padStart(4,'0')}`;
   const taxOn=n.taxEnabled!==undefined?Boolean(n.taxEnabled):Number(n.taxRate||0)>0;
   const subtotal=Number(n.subtotal??n.total),total=taxOn?Number(n.total):subtotal;
-  const paid=Number(n.paid||0),balanceAfter=Number(n.balanceAfter||0),previousDebt=balanceAfter-total+paid;
+  const noteHistory=deliveryNotes.filter(x=>x.restaurantId===n.restaurantId).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.number)-Number(b.number)),noteIndex=noteHistory.findIndex(x=>x.id===n.id),included=noteIndex<0?noteHistory:noteHistory.slice(0,noteIndex+1),historyTotal=included.reduce((sum,x)=>sum+Number(x.total||0),0),historyPaid=payments.filter(p=>p.restaurantId===n.restaurantId&&p.confirmed!==false&&String(p.date)<=String(n.date)).reduce((sum,p)=>sum+Number(p.amount||0),0),paid=payments.filter(p=>p.deliveryNoteId===n.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0),balanceAfter=Math.max(0,historyTotal-historyPaid),previousDebt=Math.max(0,balanceAfter-total+paid);
+  n.paid=paid;n.balanceAfter=balanceAfter;
   const totals=taxOn
     ? `${tx.net}: ${euro(subtotal)}<br>${b.showTax?`${tx.vat} ${n.taxRate||0}%: ${euro(n.tax||0)}<br>`:''}${tx.total}: <strong>${euro(total)}</strong>`
     : `${tx.total}: <strong>${euro(total)}</strong>`;
