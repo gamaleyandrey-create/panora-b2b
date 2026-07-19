@@ -1,0 +1,40 @@
+/* Calm order statuses and restaurant-style action buttons. */
+#view-orders .tag-new-order{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:0;padding:7px 11px;border:1px solid #e0aaa5;border-radius:999px;
+  color:#923f38;background:#fff1ef;box-shadow:none;
+  font-size:14px;font-weight:750;line-height:1.15;white-space:nowrap
+}
+#view-orders .tag-new-order::before{
+  content:"";width:8px;height:8px;margin-right:7px;border-radius:50%;
+  background:#c84238;box-shadow:0 0 0 3px rgba(200,66,56,.12)
+}
+#view-orders .tag-shipped-order,#view-orders .tag-confirmed-order,#view-orders .tag-cancelled-order{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:0;padding:7px 11px;border-radius:999px;box-shadow:none;
+  font-size:14px;font-weight:750;line-height:1.15;white-space:nowrap
+}
+#view-orders .tag-shipped-order{color:#315b42;background:#e8f1e9;border:1px solid #b8d0bd}
+#view-orders .tag-shipped-order::before{content:"✓";display:grid;place-items:center;width:18px;height:18px;margin-right:7px;border-radius:50%;color:#fff;background:#477456;font-size:12px;font-weight:900}
+#view-orders .tag-confirmed-order{color:#315774;background:#edf5fb;border:1px solid #bdd4e4}
+#view-orders .tag-confirmed-order::before{content:"";width:8px;height:8px;margin-right:7px;border-radius:50%;background:#5d8caf}
+#view-orders .tag-cancelled-order{color:#8e4b45;background:#f7efed;border:1px solid #dcc1bd}
+#view-orders button[data-confirm],#view-orders button[data-ship],
+#view-orders button[data-cancel-order],#view-orders button[data-note]{
+  min-height:50px;padding:10px 18px;border-radius:3px!important;
+  box-shadow:none!important;font-weight:700;line-height:1.15
+}
+#view-orders button[data-confirm],#view-orders button[data-ship]{
+  color:#fff!important;background:#315b42!important;border:1px solid #315b42!important
+}
+#view-orders button[data-cancel-order]{
+  color:#9d443b!important;background:#fffaf8!important;border:1px solid #d78579!important
+}
+#view-orders button[data-note]{
+  color:#315b42!important;background:#fff!important;border:1px solid #789581!important
+}
+@media(max-width:720px){
+  #view-orders .tag-new-order{min-height:34px!important;padding:7px 11px!important;font-size:14px!important}
+  #view-orders #orderRows td.order-action-cell{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
+  #view-orders #orderRows td.order-action-cell button{width:100%!important;min-height:52px!important;margin:0!important}
+}
