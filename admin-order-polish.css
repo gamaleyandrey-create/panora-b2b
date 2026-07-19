@@ -1,8 +1,8 @@
 /* Calm order statuses and restaurant-style action buttons. */
 #view-orders .tag-new-order{
   display:inline-flex;align-items:center;justify-content:center;
-  min-width:0;padding:7px 11px;border:1px solid #e0aaa5;border-radius:999px;
-  color:#9a4f20;background:#fff3e8;box-shadow:none;
+  min-width:0;padding:0;border:0;border-radius:0;
+  color:#994b19;background:transparent;box-shadow:none;
   font-size:14px;font-weight:750;line-height:1.15;white-space:nowrap
 }
 #view-orders .tag-new-order::before{
@@ -11,14 +11,15 @@
 }
 #view-orders .tag-shipped-order,#view-orders .tag-confirmed-order,#view-orders .tag-cancelled-order{
   display:inline-flex;align-items:center;justify-content:center;
-  min-width:0;padding:7px 11px;border-radius:999px;box-shadow:none;
+  min-width:0;padding:0;border:0;border-radius:0;box-shadow:none;
   font-size:14px;font-weight:750;line-height:1.15;white-space:nowrap
 }
-#view-orders .tag-shipped-order{color:#315b42;background:#e8f1e9;border:1px solid #b8d0bd}
-#view-orders .tag-shipped-order::before{content:"✓";display:grid;place-items:center;width:18px;height:18px;margin-right:7px;border-radius:50%;color:#fff;background:#477456;font-size:12px;font-weight:900}
-#view-orders .tag-confirmed-order{color:#315774;background:#edf5fb;border:1px solid #bdd4e4}
+#view-orders .tag-shipped-order{color:#315b42;background:transparent}
+#view-orders .tag-shipped-order::before{content:"✓";margin-right:7px;color:#477456;font-size:16px;font-weight:900}
+#view-orders .tag-confirmed-order{color:#315b42;background:transparent}
 #view-orders .tag-confirmed-order::before{content:"";width:8px;height:8px;margin-right:7px;border-radius:50%;background:#5d8caf}
-#view-orders .tag-cancelled-order{color:#87534e;background:#f3e9e7;border:1px solid #d5b6b1}
+#view-orders .tag-cancelled-order{color:#87534e;background:transparent}
+#view-orders .tag-cancelled-order::before{content:"×";margin-right:6px;color:#a45c54;font-size:18px;font-weight:800;line-height:1}
 #view-orders button[data-confirm],#view-orders button[data-ship],
 #view-orders button[data-cancel-order],#view-orders button[data-note]{
   min-height:50px;padding:10px 18px;border-radius:3px!important;
@@ -34,7 +35,7 @@
   color:#315b42!important;background:#fff!important;border:1px solid #789581!important
 }
 #view-orders tr.order-row>td{transition:background-color .18s;background:transparent}
-#view-orders tr.order-row-submitted{background:#fff8f0}
+#view-orders tr.order-row-submitted{background:#fbe8d5}
 #view-orders tr.order-row-submitted>td:first-child{box-shadow:inset 4px 0 0 #df7a40}
 #view-orders tr.order-row-confirmed{background:#f1f7f1}
 #view-orders tr.order-row-confirmed>td:first-child{box-shadow:inset 4px 0 0 #6e9a78}
@@ -44,10 +45,10 @@
 #view-orders tr.order-row td:nth-child(6){vertical-align:middle;text-align:center}
 #view-orders tr.order-row td:nth-child(6) .tag{margin-inline:auto}
 @media(max-width:720px){
-  #view-orders .tag-new-order{min-height:34px!important;padding:7px 11px!important;font-size:14px!important}
+  #view-orders .tag-new-order{min-height:0!important;padding:0!important;font-size:14px!important}
   #view-orders #orderRows td.order-action-cell{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
   #view-orders #orderRows td.order-action-cell button{width:100%!important;min-height:52px!important;margin:0!important}
-  #view-orders #orderRows tr.order-row-submitted{background:#fff8f0!important;border-color:#efc7a8!important}
+  #view-orders #orderRows tr.order-row-submitted{background:#fbe8d5!important;border-color:#e5b88f!important}
   #view-orders #orderRows tr.order-row-confirmed{background:#f1f7f1!important;border-color:#bfd2c2!important}
   #view-orders #orderRows tr.order-row-shipped{background:#fff!important;border-color:#d9ddd7!important}
   #view-orders #orderRows tr.order-row-cancelled{background:#f7f1f0!important;border-color:#d9bbb6!important}
