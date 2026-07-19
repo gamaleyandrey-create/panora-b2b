@@ -96,13 +96,26 @@
   const form=document.querySelector('#checkoutForm');
   /* Disable app.js' legacy localStorage submit path. Cloud orders are only
      considered successful after panora_create_order commits in Supabase. */
-  if(form)form.onsubmit=null;
+  if(form){form.onsubmit=null;form.noValidate=true}
   form?.addEventListener('submit',async event=>{
     event.preventDefault();event.stopImmediatePropagation();
     if(submitting)return;if(!account){openPanel(document.querySelector('#profileModal'));return}
+    /* Hidden returning-customer fields must never block mobile checkout. */
+    form.restaurant.value=String(form.restaurant.value||account.name||'').trim();
+    form.contact.value=String(form.contact.value||account.name||'').trim();
+    form.phone.value=String(form.phone.value||account.phone||'').trim();
+    form.email.value=String(form.email.value||account.email||'').trim();
+    const fulfillment=form.fulfillment.value||'delivery';
+    if(fulfillment==='delivery')form.address.value=String(form.address.value||account.address||'').trim();
     const data=new FormData(form),summary=cartData(),items=summary.rows.map(p=>({product:p.id,quantity:Number(p.quantityPieces)})).filter(i=>i.quantity>0),count=items.reduce((s,i)=>s+i.quantity,0),date=String(data.get('date')||selectedBakeDate||'');
+    const missing=[];
+    if(!form.restaurant.value)missing.push(labels('название ресторана','restaurant name','nombre del restaurante'));
+    if(!form.contact.value)missing.push(labels('контактное лицо','contact person','persona de contacto'));
+    if(!form.phone.value)missing.push(labels('телефон','phone','teléfono'));
+    if(fulfillment==='delivery'&&!form.address.value)missing.push(labels('адрес доставки','delivery address','dirección de entrega'));
+    if(!date)missing.push(labels('дату поставки','delivery date','fecha de entrega'));
+    if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
     if(count<MIN_PIECES)return showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
-    if(!date)return showToast(labels('Выберите дату','Choose a date','Elige una fecha'));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     try{
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
