@@ -85,6 +85,14 @@
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
+  async function createOrderDirect(id,date,deliveryDate,items,comment){
+    const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
+    if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
+    const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
+    const created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
+    await api('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:Number(account.prices[item.product])}))) });
+    return created;
+  }
   const form=document.querySelector('#checkoutForm');
   /* Disable app.js' legacy localStorage submit path. Cloud orders are only
      considered successful after panora_create_order commits in Supabase. */
@@ -97,7 +105,9 @@
     if(!date)return showToast(labels('Выберите дату','Choose a date','Elige una fecha'));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     try{
-      const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:plan?.deliveryDate||date,p_items:items,p_comment:String(data.get('comment')||'')})}),created=rows?.[0];
+      const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
+      try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
+      catch(error){const missingRpc=error.status===404||/panora_create_order|schema cache|PGRST202/i.test(error.message);if(!missingRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
       if(!created)throw new Error('Order was not created');
       const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
