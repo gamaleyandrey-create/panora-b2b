@@ -113,18 +113,24 @@
   const localDate=value=>String(value||'').slice(0,10);
   const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null}};
   const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,total:subtotal+tax,paid:0,balanceAfter:0,recovered:true}};
+  const deliveryNoteRow=(note,{includeId=true}={})=>{note.qrToken ||= crypto.randomUUID();const row={order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null};if(includeId&&note.id)row.id=note.id;if(Number(note.number)>0)row.note_number=Number(note.number);return row};
   async function repairMissingDeliveryNotes(){
     if(repairingFinance)return repairingFinance;
     repairingFinance=(async()=>{
-      const known=new Set((deliveryNotes||[]).map(note=>note.orderId));
-      const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!known.has(order.id));
-      if(!missing.length)return 0;
-      deliveryNotes.push(...missing.map(recoveredNote));
-      recalculateBalances();await saveDeliveryNotesNow();
-      const rows=await request(`delivery_notes?order_id=in.(${missing.map(order=>order.id).join(',')})&select=id,note_number,order_id,qr_token`);
-      const byOrder=new Map((rows||[]).map(row=>[row.order_id,row]));
-      for(const order of missing){const row=byOrder.get(order.id),note=deliveryNotes.find(item=>item.orderId===order.id);if(!row||!note)throw new Error(`Не удалось восстановить накладную заказа PN-${String(order.number||'—').padStart(4,'0')}`);note.id=row.id;note.number=Number(row.note_number);note.qrToken=row.qr_token}
-      recalculateBalances();return missing.length;
+      const remoteRows=await request('delivery_notes?select=*');
+      const remoteOrders=new Set((remoteRows||[]).map(row=>row.order_id));
+      const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!remoteOrders.has(order.id));
+      for(const order of missing){
+        const local=deliveryNotes.find(note=>note.orderId===order.id)||recoveredNote(order);
+        const rows=await request('delivery_notes?on_conflict=order_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(deliveryNoteRow(local,{includeId:false}))});
+        const saved=rows?.[0];if(!saved)throw new Error(`Не удалось восстановить накладную заказа PN-${String(order.number||'—').padStart(4,'0')}`);
+        const restored=rowNote(saved),index=deliveryNotes.findIndex(note=>note.orderId===order.id);
+        if(index>=0)deliveryNotes[index]=restored;else deliveryNotes.push(restored);
+      }
+      for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
+      recalculateBalances();localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+      if(typeof renderCommerce==='function')renderCommerce();
+      return missing.length;
     })().finally(()=>repairingFinance=null);
     return repairingFinance;
   }
@@ -134,7 +140,7 @@
     const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
     financeLoaded=true;localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
-    if(pending.length){ready=true;await saveDeliveryNotesNow()}
+    if(pending.length){ready=true;try{await saveDeliveryNotesNow()}catch(error){console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
     ready=true;await repairMissingDeliveryNotes();
     if(typeof renderCommerce==='function')renderCommerce()
   }
@@ -143,7 +149,7 @@
     const valid=deliveryNotes.filter(note=>orders.some(order=>order.id===note.orderId)&&restaurants.some(r=>r.id===note.restaurantId));
     if(!valid.length)return;
     status('Синхронизация…');
-    const payload=valid.map(note=>{note.qrToken ||= crypto.randomUUID();const row={id:note.id,order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null};if(Number(note.number)>0)row.note_number=Number(note.number);return row});
+    const payload=valid.map(note=>deliveryNoteRow(note));
     const rows=await request('delivery_notes?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));status('Облако ✓');
