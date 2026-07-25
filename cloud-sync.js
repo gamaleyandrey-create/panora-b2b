@@ -180,6 +180,16 @@
     localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));status('Облако ✓');
   }
   const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==='confirmed',confirmedAt:row.confirmed_at||null,status:row.status});
+  function cachePayment(row){
+    const payment=rowPayment(row);
+    const index=payments.findIndex(item=>item.id===payment.id);
+    if(index>=0)payments[index]=payment;
+    else payments.push(payment);
+    localStorage.setItem('panora-payments',JSON.stringify(payments));
+    recalculateBalances();
+    if(typeof renderCommerce==='function')renderCommerce();
+    return payment;
+  }
   async function loadPayments(){
     const rows=await request('payments?select=*&order=received_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
@@ -193,6 +203,29 @@
     status('Синхронизация…');
     const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':payment.confirmed===false?'pending':'confirmed',received_at:`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmed===false?null:payment.confirmedAt||new Date().toISOString(),confirmed_by:payment.confirmed===false?null:session.user?.id||null}));
     await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});status('Облако ✓');
+  }
+  async function recordPaymentAtomic(input){
+    if(!ready)throw new Error('Облако ещё загружается.');
+    const rows=await request('rpc/panora_record_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({
+      p_restaurant_id:input.restaurantId,
+      p_amount:Number(input.amount),
+      p_method:input.method||'Наличные',
+      p_note:input.note||null,
+      p_delivery_note_id:input.deliveryNoteId||null,
+      p_received_at:input.receivedAt||new Date().toISOString()
+    })});
+    const row=Array.isArray(rows)?rows[0]:rows;
+    if(!row?.id)throw new Error('Сервер не вернул сохранённую оплату.');
+    status('Облако ✓');
+    return cachePayment(row);
+  }
+  async function confirmPaymentAtomic(paymentId){
+    if(!ready)throw new Error('Облако ещё загружается.');
+    const rows=await request('rpc/panora_confirm_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({p_payment_id:paymentId})});
+    const row=Array.isArray(rows)?rows[0]:rows;
+    if(!row?.id)throw new Error('Сервер не подтвердил оплату.');
+    status('Облако ✓');
+    return cachePayment(row);
   }
   function recalculateBalances(){
     if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return;
@@ -263,7 +296,7 @@
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)queueFinance()});
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);

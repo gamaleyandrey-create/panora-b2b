@@ -783,40 +783,39 @@ document.querySelector("#addPayment").onclick = () => {
 document.querySelector("#savePayment").onclick = async (e) => {
   e.preventDefault();
   const button = e.currentTarget,
-    f = new FormData(document.querySelector("#paymentForm")),
+    form = document.querySelector("#paymentForm"),
+    f = new FormData(form),
     amount = Number(f.get("amount"));
   if (!Number.isFinite(amount) || amount <= 0)
     return alert("Введите сумму оплаты больше нуля.");
-  payments.push({
-    id: crypto.randomUUID(),
-    restaurantId: f.get("restaurant"),
-    deliveryNoteId: null,
-    date: iso(new Date()),
-    amount,
-    method: f.get("method"),
-    note: f.get("note"),
-    confirmed: false,
-    status: "pending",
-  });
-  cSave("panora-payments", payments);
+  if (
+    !window.panoraCloud?.ready ||
+    typeof window.panoraCloud.recordPaymentAtomic !== "function"
+  )
+    return alert(
+      "Облако ещё загружается. Подождите несколько секунд и повторите.",
+    );
   button.disabled = true;
   button.textContent = "Сохраняем…";
   try {
-    await window.panoraCloud?.syncFinance?.();
+    await window.panoraCloud.recordPaymentAtomic({
+      restaurantId: f.get("restaurant"),
+      amount,
+      method: f.get("method") || "Наличные",
+      note: f.get("note") || "",
+      receivedAt: new Date().toISOString(),
+    });
     document.querySelector("#paymentDialog").close();
-    document.querySelector("#paymentForm").reset();
+    form.reset();
     renderCommerce();
     alert(
       "Оплата сохранена в облаке и ожидает подтверждения получения средств.",
     );
   } catch (error) {
-    renderCommerce();
-    alert(
-      `Оплата сохранена на этом устройстве, но пока не отправлена в облако: ${error.message}`,
-    );
+    alert(`Оплата не сохранена: ${error.message}`);
   } finally {
     button.disabled = false;
-    button.textContent = "Записать оплату";
+    button.textContent = "Записать на подтверждение";
   }
 };
 function printNote(orderId) {
