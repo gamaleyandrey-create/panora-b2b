@@ -186,7 +186,28 @@
   function queueRecipes(){clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>saveRecipesNow().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
   function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
-  function queueFinance(){clearTimeout(financeTimer);financeTimer=setTimeout(async()=>{try{if(savingOrders)await savingOrders;else if(typeof orders!=='undefined')await saveOrdersNow();await saveDeliveryNotesNow();await savePaymentsNow();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}catch(error){fail('оплаты',error)}},550)}
+  async function syncFinanceNow(){
+    clearTimeout(financeTimer);
+    if(savingOrders)await savingOrders;
+    else if(typeof orders!=='undefined')await saveOrdersNow();
+    await saveDeliveryNotesNow();
+    await savePaymentsNow();
+    const remote=await request('delivery_notes?select=id,order_id,qr_token');
+    const remoteByOrder=new Map((remote||[]).map(row=>[row.order_id,row]));
+    for(const note of deliveryNotes||[]){
+      const saved=remoteByOrder.get(note.orderId);
+      if(!saved)throw new Error(`Накладная по заказу PN-${String(orders.find(order=>order.id===note.orderId)?.number||'—').padStart(4,'0')} не подтверждена облаком`);
+      note.qrToken=saved.qr_token||note.qrToken;
+    }
+    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+    recalculateBalances();
+    if(typeof renderCommerce==='function')renderCommerce();
+    return true;
+  }
+  function queueFinance(){
+    clearTimeout(financeTimer);
+    financeTimer=setTimeout(()=>syncFinanceNow().catch(error=>fail('накладные и оплаты',error)),120);
+  }
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
@@ -196,7 +217,7 @@
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,updateOrderStatus,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,updateOrderStatus,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)queueFinance()});
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);

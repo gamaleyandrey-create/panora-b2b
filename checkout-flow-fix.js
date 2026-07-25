@@ -1,4 +1,4 @@
-/* Panora v233: the basket opens customer details before validating them. */
+/* Panora v235: the basket always opens customer details before validating them. */
 (()=>{
   'use strict';
   const button=document.querySelector('#checkoutButton');
@@ -17,11 +17,21 @@
     if(form.date)form.date.value=selectedBakeDate||document.querySelector('#cartDeliveryDate')?.value||'';
     if(typeof toggleFulfillment==='function')toggleFulfillment();
     if(typeof updateMobileCheckoutSummary==='function')updateMobileCheckoutSummary();
+    const needsPhone=!String(form.phone.value||'').trim();
+    const needsAddress=(form.fulfillment?.value||'delivery')==='delivery'&&!String(form.address.value||'').trim();
+    if(needsPhone||needsAddress){
+      form.classList.remove('returning-checkout');
+      const savedSummary=document.querySelector('#savedCustomerSummary');
+      if(savedSummary)savedSummary.hidden=true;
+    }
     closePanels();
     window.setTimeout(()=>{
       openPanel(checkout);
-      const firstMissing=[form.contact,form.phone,form.address].find(field=>field&&field.required&&!field.value);
-      firstMissing?.focus({preventScroll:true});
+      const firstMissing=[form.contact,form.phone,form.address].find(field=>field&&field.required&&!String(field.value||'').trim());
+      if(firstMissing){
+        firstMissing.closest('label')?.scrollIntoView({behavior:'smooth',block:'center'});
+        firstMissing.focus({preventScroll:true});
+      }
     },120);
   };
 
