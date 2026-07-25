@@ -39,7 +39,14 @@
     const seconds=cooldownSeconds(error?.message);
     if(seconds)return startLoginCooldown(form,seconds);
     const el=form.querySelector('#accountError');
-    el.textContent=error?.message||labels('Не удалось войти','Could not sign in','No se pudo iniciar sesión');
+    const message=String(error?.message||'');
+    el.textContent=/email not confirmed/i.test(message)
+      ?labels(
+        'Учётная запись ожидает подтверждения email. Откройте письмо Panora, подтвердите адрес и затем нажмите «Войти». Проверьте папку «Спам».',
+        'Your account is waiting for email confirmation. Open the Panora email, confirm your address, then select “Sign in”. Check your spam folder.',
+        'La cuenta está pendiente de confirmación por email. Abre el correo de Panora, confirma tu dirección y pulsa «Entrar». Revisa la carpeta de spam.'
+      )
+      :(message||labels('Не удалось войти','Could not sign in','No se pudo iniciar sesión'));
     el.classList.add('show');
   }
   async function fetchJson(url,options={}){
@@ -99,9 +106,13 @@
     return loadPromise;
   }
   async function signIn(email,password,signup=false){
-    const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email}}:{})};
+    const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
     const result=await fetchJson(`${cfg.url}${path}`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body)}),next=result.access_token?result:result.session;
-    if(!next)throw new Error(labels('Подтвердите email по новому письму','Confirm your email','Confirma tu email'));
+    if(!next)throw new Error(labels(
+      'Учётная запись создана. Мы отправили письмо Panora: подтвердите email, затем вернитесь и нажмите «Войти». Проверьте папку «Спам».',
+      'Account created. We sent you a Panora email: confirm your address, return here, then select “Sign in”. Check your spam folder.',
+      'Cuenta creada. Te enviamos un correo de Panora: confirma tu email, vuelve aquí y pulsa «Entrar». Revisa la carpeta de spam.'
+    ));
     saveSession(next);await loadAll(true);
   }
   loginAccount=async event=>{
@@ -112,7 +123,8 @@
   renderAccountModal=function(){
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
-    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true);closePanels()}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
+    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
+    if(!form.querySelector('.account-confirm-hint')){const hint=document.createElement('p');hint.className='account-confirm-hint';hint.textContent=labels('При первом входе после создания пароля подтвердите email по письму Panora. Без подтверждения вход закрыт.','After creating a password for the first time, confirm your email using the Panora message. You cannot sign in until it is confirmed.','Después de crear la contraseña por primera vez, confirma tu email con el mensaje de Panora. No podrás entrar hasta confirmarlo.');form.querySelector('[data-cloud-signup]')?.before(hint)}
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;

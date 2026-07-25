@@ -1,0 +1,16 @@
+{{ if eq .Data.language "en" }}
+<h2>Confirm your Panora account</h2>
+<p>Your restaurant account has been created. Confirm your email address to sign in and view your orders, invoices, prices and balance.</p>
+<p><a href="{{ .ConfirmationURL }}">Confirm email</a></p>
+<p>If you did not request this account, you can ignore this message.</p>
+{{ else if eq .Data.language "es" }}
+<h2>Confirma tu cuenta de Panora</h2>
+<p>Se ha creado la cuenta de tu restaurante. Confirma tu email para entrar y consultar pedidos, albaranes, precios y saldo.</p>
+<p><a href="{{ .ConfirmationURL }}">Confirmar email</a></p>
+<p>Si no solicitaste esta cuenta, puedes ignorar este mensaje.</p>
+{{ else }}
+<h2>Подтвердите учётную запись Panora</h2>
+<p>Учётная запись ресторана создана. Подтвердите email, чтобы войти и видеть заказы, накладные, цены и задолженность.</p>
+<p><a href="{{ .ConfirmationURL }}">Подтвердить email</a></p>
+<p>Если вы не создавали эту учётную запись, просто проигнорируйте письмо.</p>
+{{ end }}
