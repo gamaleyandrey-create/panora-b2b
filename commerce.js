@@ -717,16 +717,17 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
   window.panoraDataChannel?.postMessage({ type: "order-shipped", id: o.id });
   button.disabled = true;
   button.textContent = "Сохраняем накладную…";
+  const shipmentDialog = document.querySelector("#shipmentDialog");
+  shipmentDialog.close();
+  renderCommerce();
+  renderStock();
+  printNote(o.id);
   try {
     await window.panoraCloud?.syncFinance?.();
-    document.querySelector("#shipmentDialog").close();
-    renderCommerce();
-    renderStock();
-    printNote(o.id);
     return true;
   } catch (error) {
     alert(
-      `Отгрузка сохранена на этом устройстве, но накладная пока не отправлена в облако: ${error.message}\\n\\nНе закрывайте приложение и проверьте соединение.`,
+      `Отгрузка и накладная сохранены на этом устройстве. Синхронизация с облаком будет повторена после восстановления соединения: ${error.message}`,
     );
     return false;
   } finally {
