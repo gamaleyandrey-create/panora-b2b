@@ -6,4 +6,24 @@ useTaxField.addEventListener('change',updateTaxControls);updateTaxControls();
 settingsForm.addEventListener('submit',()=>{const f=new FormData(settingsForm),useTax=f.get('useTax')==='on';Object.assign(bakerySettings,{useTax,taxRate:useTax?Number(f.get('taxRate')||0):0,notePrefix:f.get('notePrefix')||'DN-',nextNoteNumber:Math.max(1,Number(f.get('nextNoteNumber')||1)),noteTitle:f.get('noteTitle')||'Накладная',paymentTerms:f.get('paymentTerms')||'',noteFooter:f.get('noteFooter')||'',bakerySignature:f.get('bakerySignature')||'Panora',customerSignature:f.get('customerSignature')||'Ресторан',showTax:useTax&&f.get('showTax')==='on'});cSave('panora-bakery-settings',bakerySettings)});
 printNote=function(orderId){const n=deliveryNotes.find(x=>x.orderId===orderId),o=orders.find(x=>x.id===orderId);if(!n)return;const r=restaurant(n.restaurantId),b={...invoiceDefaults,...bakerySettings,...(n.bakery||{})},prefix=b.notePrefix||'DN-',number=`${prefix}${String(n.number).padStart(4,'0')}`,w=window.open('','_blank');w.document.write(`<title>${number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto;color:#17231b}h1{font:38px Georgia;margin-bottom:5px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:30px}.doc{text-align:right}table{width:100%;border-collapse:collapse;margin-top:28px}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:17px}.terms,.footer{margin-top:24px;padding:12px;background:#f4f4ef}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><div class="meta"><p><strong>${b.legalName||'Panora'}</strong><br>${b.taxId||''}<br>${b.address||''}<br>${b.email||''}<br>${b.phone||''}</p><div class="doc"><h2>${b.noteTitle||'Накладная'} ${number}</h2><p>${n.date}</p></div></div><p>Ресторан: <strong>${r.name}</strong><br>${r.address||'—'}<br>Выпечка: ${o?.date||n.date}<br>Доставка: ${o?.deliveryDate||o?.date||n.date}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map(i=>`<tr><td>${i.product==='plain'?'Обычный хлеб':'Хлеб из тыквы'}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity*n.prices[i.product])}</td></tr>`).join('')}</table><p class="total">Без налога: ${euro(n.subtotal??n.total)}<br>${b.showTax?`Налог ${n.taxRate||0}%: ${euro(n.tax||0)}<br>`:''}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid||0)}<br>Задолженность: ${euro(n.balanceAfter||0)}</p>${b.paymentTerms?`<p class="terms"><strong>Условия оплаты:</strong> ${b.paymentTerms}</p>`:''}${b.noteFooter?`<p class="footer">${b.noteFooter}</p>`:''}<div class="sign"><span>${b.bakerySignature||'Panora'} __________________</span><span>${b.customerSignature||'Ресторан'} __________________</span></div>`);w.document.close();w.print()};
 const baseShipmentWithInvoice=document.querySelector('#confirmShipment').onclick;
-document.querySelector('#confirmShipment').onclick=e=>{const orderId=new FormData(document.querySelector('#shipmentForm')).get('orderId'),before=deliveryNotes.length,customPrint=printNote;printNote=()=>{};baseShipmentWithInvoice(e);printNote=customPrint;if(deliveryNotes.length>before){const note=deliveryNotes.at(-1);note.number=Math.max(1,Number(bakerySettings.nextNoteNumber||1));note.bakery={...bakerySettings};bakerySettings.nextNoteNumber=note.number+1;cSave('panora-delivery-notes',deliveryNotes);cSave('panora-bakery-settings',bakerySettings);settingsForm.elements.nextNoteNumber.value=bakerySettings.nextNoteNumber;printNote(orderId)}};
+document.querySelector('#confirmShipment').onclick=async e=>{
+  const orderId=new FormData(document.querySelector('#shipmentForm')).get('orderId');
+  const before=deliveryNotes.length,customPrint=printNote;
+  printNote=()=>{};
+  let saved=false;
+  try{
+    saved=await baseShipmentWithInvoice(e);
+  }finally{
+    printNote=customPrint;
+  }
+  if(!saved||deliveryNotes.length<=before)return;
+  const note=deliveryNotes.at(-1);
+  note.number=Math.max(1,Number(bakerySettings.nextNoteNumber||1));
+  note.bakery={...bakerySettings};
+  bakerySettings.nextNoteNumber=note.number+1;
+  cSave('panora-delivery-notes',deliveryNotes);
+  cSave('panora-bakery-settings',bakerySettings);
+  settingsForm.elements.nextNoteNumber.value=bakerySettings.nextNoteNumber;
+  await window.panoraCloud?.syncFinance?.();
+  printNote(orderId);
+};

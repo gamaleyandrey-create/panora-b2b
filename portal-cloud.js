@@ -162,6 +162,18 @@
     if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
     if(count<MIN_PIECES)return showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
+    if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
+    account.phone=form.phone.value;
+    if(fulfillment==='delivery')account.address=form.address.value;
+    try{
+      await api(`restaurants?id=eq.${encodeURIComponent(account.id)}`,{
+        method:'PATCH',
+        headers:{Prefer:'return=minimal'},
+        body:JSON.stringify({phone:account.phone||null,address:account.address||null,updated_at:new Date().toISOString()})
+      });
+    }catch(error){
+      console.warn('Panora restaurant details were kept on this device:',error);
+    }
     try{
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
       try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}

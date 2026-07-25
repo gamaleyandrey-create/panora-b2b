@@ -37,6 +37,7 @@
 .restaurant-workspace .rw-footer{
   margin-top:20px;
 }
+.rw-finance{display:grid;gap:18px}.rw-finance>header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}.rw-finance h3{margin:4px 0 0;font:34px Georgia,serif}.rw-finance h4{margin:8px 0 0;font:25px Georgia,serif}.rw-finance-debt{display:grid;gap:3px;min-width:210px;padding:15px 18px;border-radius:14px;background:#304f3b;color:#fff}.rw-finance-debt strong{font:30px Georgia,serif}.rw-finance-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.rw-finance-stats article{display:grid;gap:7px;padding:16px;border:1px solid #d9dbd4;border-radius:14px;background:#fff}.rw-finance-stats span,.rw-operation small{color:#707870}.rw-finance-stats strong{font-size:22px}.rw-finance-history{display:grid;border:1px solid #d9dbd4;border-radius:14px;background:#fff;overflow:hidden}.rw-operation{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:15px 17px;border-bottom:1px solid #e1e2dd}.rw-operation:last-child{border-bottom:0}.rw-operation>div{display:grid;gap:4px}.rw-operation-amount{text-align:right}.rw-operation.payment .rw-operation-amount b{color:#31563e}.rw-operation.pending{background:#fff8ee}.rw-operation.pending .rw-operation-amount b{color:#946226}.rw-finance-empty{padding:28px;border:1px solid #d9dbd4;border-radius:14px;background:#fff;text-align:center;color:#707870}
 
 @media(max-width:720px){
   .restaurant-workspace,
@@ -107,4 +108,5 @@
     border:0;
     background:transparent;
   }
+  .rw-finance>header{display:grid;align-items:stretch}.rw-finance-debt{min-width:0}.rw-finance-stats{grid-template-columns:1fr}.rw-finance-stats article{grid-template-columns:1fr auto;align-items:center}.rw-operation{grid-template-columns:1fr}.rw-operation-amount{text-align:left}.rw-operation-amount small{font-size:12px}
 }

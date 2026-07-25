@@ -3,9 +3,9 @@
   'use strict';
   const previousRender=renderAccountModal;
   const tx={
-    ru:{title:'Кабинет ресторана',newOrder:'Новый заказ',orders:'Мои заказы',notes:'Накладные',payments:'Оплаты',profile:'Профиль',debt:'Задолженность',prices:'Персональные цены',emptyOrders:'Заказов пока нет',emptyNotes:'Накладных пока нет',emptyPayments:'Оплат пока нет',openNote:'Открыть накладную',bake:'Выпечка',delivery:'Поставка',pieces:'шт.',signOut:'Выйти',close:'Закрыть',pending:'Ожидает подтверждения',startOrder:'Выбрать хлеб и дату',orderHelp:'Выберите хлеб, затем подтвердите дату поставки в корзине.',phone:'Телефон',address:'Адрес доставки'},
-    en:{title:'Restaurant workspace',newOrder:'New order',orders:'My orders',notes:'Delivery notes',payments:'Payments',profile:'Profile',debt:'Balance due',prices:'Your prices',emptyOrders:'No orders yet',emptyNotes:'No delivery notes yet',emptyPayments:'No payments yet',openNote:'Open delivery note',bake:'Bake',delivery:'Delivery',pieces:'pcs',signOut:'Sign out',close:'Close',pending:'Awaiting confirmation',startOrder:'Choose bread and date',orderHelp:'Choose bread, then confirm the delivery date in the basket.',phone:'Phone',address:'Delivery address'},
-    es:{title:'Área del restaurante',newOrder:'Nuevo pedido',orders:'Mis pedidos',notes:'Albaranes',payments:'Pagos',profile:'Perfil',debt:'Deuda actual',prices:'Tus precios',emptyOrders:'Aún no hay pedidos',emptyNotes:'Aún no hay albaranes',emptyPayments:'Aún no hay pagos',openNote:'Abrir albarán',bake:'Horneado',delivery:'Entrega',pieces:'uds.',signOut:'Salir',close:'Cerrar',pending:'Pendiente de confirmación',startOrder:'Elegir pan y fecha',orderHelp:'Elige el pan y confirma la fecha de entrega en la cesta.',phone:'Teléfono',address:'Dirección de entrega'}
+    ru:{title:'Кабинет ресторана',newOrder:'Новый заказ',orders:'Мои заказы',notes:'Накладные',payments:'Оплаты',profile:'Профиль',debt:'Задолженность',prices:'Персональные цены',emptyOrders:'Заказов пока нет',emptyNotes:'Накладных пока нет',emptyPayments:'Операций пока нет',openNote:'Открыть накладную',bake:'Выпечка',delivery:'Поставка',pieces:'шт.',signOut:'Выйти',close:'Закрыть',pending:'Ожидает подтверждения',startOrder:'Выбрать хлеб и дату',orderHelp:'Выберите хлеб, затем подтвердите дату поставки в корзине.',phone:'Телефон',address:'Адрес доставки',finance:'Баланс и оплаты',deliveredTotal:'Поставлено',paidTotal:'Оплачено',pendingTotal:'Ожидает подтверждения',operationHistory:'История операций',payment:'Оплата',withoutNote:'без накладной',balanceAfter:'Остаток после операции'},
+    en:{title:'Restaurant workspace',newOrder:'New order',orders:'My orders',notes:'Delivery notes',payments:'Payments',profile:'Profile',debt:'Balance due',prices:'Your prices',emptyOrders:'No orders yet',emptyNotes:'No delivery notes yet',emptyPayments:'No transactions yet',openNote:'Open delivery note',bake:'Bake',delivery:'Delivery',pieces:'pcs',signOut:'Sign out',close:'Close',pending:'Awaiting confirmation',startOrder:'Choose bread and date',orderHelp:'Choose bread, then confirm the delivery date in the basket.',phone:'Phone',address:'Delivery address',finance:'Balance and payments',deliveredTotal:'Delivered',paidTotal:'Paid',pendingTotal:'Awaiting confirmation',operationHistory:'Transaction history',payment:'Payment',withoutNote:'without delivery note',balanceAfter:'Balance after transaction'},
+    es:{title:'Área del restaurante',newOrder:'Nuevo pedido',orders:'Mis pedidos',notes:'Albaranes',payments:'Pagos',profile:'Perfil',debt:'Deuda actual',prices:'Tus precios',emptyOrders:'Aún no hay pedidos',emptyNotes:'Aún no hay albaranes',emptyPayments:'Aún no hay movimientos',openNote:'Abrir albarán',bake:'Horneado',delivery:'Entrega',pieces:'uds.',signOut:'Salir',close:'Cerrar',pending:'Pendiente de confirmación',startOrder:'Elegir pan y fecha',orderHelp:'Elige el pan y confirma la fecha de entrega en la cesta.',phone:'Teléfono',address:'Dirección de entrega',finance:'Saldo y pagos',deliveredTotal:'Entregado',paidTotal:'Pagado',pendingTotal:'Pendiente de confirmar',operationHistory:'Historial de movimientos',payment:'Pago',withoutNote:'sin albarán',balanceAfter:'Saldo después del movimiento'}
   };
   const t=key=>(tx[lang]||tx.ru)[key];
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -50,13 +50,30 @@
     </article>`}).join('')}</section>`;
   }
   function paymentsHtml(){
-    const payments=ownPayments();
-    if(!payments.length)return `<section class="rw-empty"><h3>${t('emptyPayments')}</h3></section>`;
-    return `<section class="rw-list">${payments.map(payment=>`<article class="rw-payment">
-      <span><strong>${esc(payment.date)}</strong><small>${esc(payment.method||'')}${payment.note?` · ${esc(payment.note)}`:''}</small></span>
-      <b>${portalMoney(payment.amount)}</b>
-      <em class="${payment.confirmed===false?'pending':'confirmed'}">${payment.confirmed===false?t('pending'):(lang==='ru'?'Получено':lang==='es'?'Recibido':'Received')}</em>
-    </article>`).join('')}</section>`;
+    const payments=ownPayments(),notes=ownNotes();
+    const delivered=notes.reduce((sum,note)=>sum+Number(note.total||0),0);
+    const paid=payments.filter(payment=>payment.confirmed!==false&&payment.status!=='cancelled').reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const pending=payments.filter(payment=>payment.confirmed===false&&payment.status!=='cancelled').reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const operations=[
+      ...notes.map(note=>({date:note.date,kind:'delivery',amount:Number(note.total||0),label:noteNumber(note),note,sort:0})),
+      ...payments.filter(payment=>payment.status!=='cancelled').map(payment=>({date:payment.date,kind:'payment',amount:-Number(payment.amount||0),label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:'—'}):t('withoutNote'),payment,sort:1}))
+    ].sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.sort-b.sort);
+    let running=0;
+    operations.forEach(operation=>{if(operation.kind==='delivery'||operation.payment?.confirmed!==false)running+=operation.amount;operation.balance=running});
+    const history=operations.reverse();
+    return `<section class="rw-finance">
+      <header><div><span class="kicker">Panora</span><h3>${t('finance')}</h3></div><div class="rw-finance-debt"><span>${t('debt')}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong></div></header>
+      <div class="rw-finance-stats">
+        <article><span>${t('deliveredTotal')}</span><strong>${portalMoney(delivered)}</strong></article>
+        <article><span>${t('paidTotal')}</span><strong>${portalMoney(paid)}</strong></article>
+        <article><span>${t('pendingTotal')}</span><strong>${portalMoney(pending)}</strong></article>
+      </div>
+      <h4>${t('operationHistory')}</h4>
+      ${history.length?`<div class="rw-finance-history">${history.map(operation=>`<article class="rw-operation ${operation.kind}${operation.payment?.confirmed===false?' pending':''}">
+        <div><strong>${operation.kind==='delivery'?`${t('delivery')} · ${esc(operation.label)}`:`${t('payment')} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.payment?.method?` · ${esc(operation.payment.method)}`:''}${operation.payment?.note?` · ${esc(operation.payment.note)}`:''}</small></div>
+        <div class="rw-operation-amount"><b>${operation.amount<0?'−':'+'}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed===false?t('pending'):`${t('balanceAfter')}: ${portalMoney(Math.max(0,operation.balance))}`}</small></div>
+      </article>`).join('')}</div>`:`<p class="rw-finance-empty">${t('emptyPayments')}</p>`}
+    </section>`;
   }
   function pricesHtml(){
     const products=PRODUCTS.filter(product=>account.prices?.[product.id]!=null);
