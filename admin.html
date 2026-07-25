@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#24382c">
   <title>Panora — управление пекарней</title>
-  <link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin-v247.css?v=247">
   <link rel="stylesheet" href="commerce.css?v=238">
   <link rel="stylesheet" href="settings.css">
   <link rel="stylesheet" href="export.css">
@@ -126,6 +127,7 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
         <form id="bakerySettingsForm" class="settings-card"><label><span>Юридическое название</span><input name="legalName" value="Panora"></label><label><span>Налоговый номер</span><input name="taxId" placeholder="NIF / CIF"></label><label><span>Адрес</span><input name="address"></label><div class="settings-row"><label><span>Email</span><input name="email" type="email" value="gamaley1@gmail.com"></label><label><span>Телефон</span><input name="phone" value="+34611187640"></label></div><hr><h3>Налог и НДС</h3><label class="check tax-switch"><input name="useTax" type="checkbox"><span><strong>Начислять НДС</strong><small>Если отключено, налог не рассчитывается и не попадает в итог.</small></span></label><label id="taxRateLabel"><span>Ставка НДС, %</span><input name="taxRate" type="number" min="0" step="0.01" value="0"></label><hr><h3>Форма накладной</h3><div class="settings-row"><label><span>Префикс номера</span><input name="notePrefix" value="DN-"></label><label><span>Следующий номер</span><input name="nextNoteNumber" type="number" min="1" step="1" value="1"></label></div><label><span>Заголовок документа</span><input name="noteTitle" value="Накладная"></label><label><span>Условия оплаты</span><input name="paymentTerms" placeholder="Например: оплата в течение 7 дней"></label><label><span>Текст внизу накладной</span><textarea name="noteFooter" rows="3" placeholder="Спасибо за сотрудничество"></textarea></label><div class="settings-row"><label><span>Подпись пекарни</span><input name="bakerySignature" value="Panora"></label><label><span>Подпись получателя</span><input name="customerSignature" value="Ресторан"></label></div><label class="check"><input name="showTax" type="checkbox" checked><span>Показывать НДС отдельной строкой</span></label><button class="primary" type="submit">Сохранить настройки</button></form>
         <section class="export-card"><h3>Резервные копии и выгрузки</h3><p>Скачайте полную копию данных или отдельную таблицу для Excel.</p><div class="export-actions"><button class="secondary" id="exportBackup">Полная копия JSON</button><button class="secondary" id="restoreBackup">Восстановить из JSON</button><input id="restoreBackupFile" type="file" accept="application/json,.json" hidden><button class="secondary" id="exportOrders">Заказы CSV</button><button class="secondary" id="exportPayments">Оплаты и долги CSV</button><button class="secondary" id="exportStock">Склад CSV</button><button class="secondary" id="exportPlan">План выпечки CSV</button></div><p class="restore-status" id="restoreStatus"></p></section>
+        <section class="export-card audit-card"><div class="audit-card-head"><div><h3>Журнал действий</h3><p>Последние отгрузки, ошибки и восстановление связи.</p></div><button class="secondary" type="button" id="auditLogClear">Очистить журнал</button></div><div id="auditLogList" class="audit-log-list"><p class="audit-empty">Действий пока нет.</p></div></section>
       </div>
     </section>
   </main>
@@ -166,12 +168,13 @@
   <script src="account-detail.js?v=245"></script>
   <script src="order-notifications.js?v=111"></script>
   <script src="order-communication.js?v=111"></script>
-  <script src="cloud-sync.js?v=245"></script>
+<script src="audit-log.js?v=247"></script>
+<script src="cloud-sync.js?v=247"></script>
   <script src="daily-order-summary.js?v=217"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=245').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=247').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>

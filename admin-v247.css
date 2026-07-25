@@ -1,0 +1,77 @@
+#saveState[data-sync-state] {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+#saveState[data-sync-state]::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+#saveState[data-sync-state="syncing"] {
+  color: #b86d28;
+}
+
+#saveState[data-sync-state="error"] {
+  color: #a84539;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+#saveState[data-sync-state="offline"] {
+  color: #7a746b;
+}
+
+.audit-log-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.audit-entry {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border: 1px solid #d9ddd5;
+  border-left: 4px solid #365d46;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.audit-entry p {
+  margin: 4px 0 0;
+  color: #70786f;
+}
+
+.audit-entry time {
+  flex: 0 0 auto;
+  color: #70786f;
+  font-size: 13px;
+}
+
+.audit-entry.audit-warning {
+  border-left-color: #d8793b;
+  background: #fffaf5;
+}
+
+.audit-entry.audit-error {
+  border-left-color: #b7473e;
+  background: #fff6f4;
+}
+
+@media (max-width: 700px) {
+  .audit-entry {
+    display: block;
+  }
+
+  .audit-entry time {
+    display: block;
+    margin-top: 8px;
+  }
+}

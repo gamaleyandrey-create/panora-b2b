@@ -1,7 +1,16 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,financeLoaded=false,repairingFinance=null;
-  const status=(text,error=false,detail='')=>{const el=document.querySelector('#saveState');if(el){el.textContent=text;el.style.color=error?'#a5443c':'#598060';el.title=detail||'';el.style.cursor=detail?'pointer':'';el.onclick=detail?()=>alert(`${text}\n\n${detail}`):null}};
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,financeLoaded=false,repairingFinance=null,shippingLocks=new Set();
+  const audit=(action,details='',level='info')=>window.panoraAudit?.record(action,details,level);
+  const status=(text,error=false,detail='')=>{
+    const el=document.querySelector('#saveState');if(!el)return;
+    el.textContent=text;el.style.color='';el.title=detail||'';
+    const syncing=/загруз|синх|повтор|loading|sync|retry|cargando|sincron/i.test(text);
+    const local=/устройств|офлайн|offline|device|dispositivo/i.test(text);
+    el.dataset.syncState=error?'error':syncing?'syncing':local?'local':'synced';
+    el.style.cursor=error?'pointer':'';
+    el.onclick=error?()=>retrySync():null;
+  };
   const refreshSession=async()=>{
     if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
     refreshing=fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(async response=>{if(!response.ok)throw new Error('Войдите в экран пекарни повторно');session=await response.json();localStorage.setItem('panora-supabase-session',JSON.stringify(session));window.panoraSupabaseSession=session;return session}).finally(()=>refreshing=null);return refreshing
@@ -93,28 +102,41 @@
   }
   async function shipOrderAtomic({orderId,items,paymentAmount=0,paymentMethod='Наличные',paymentDueDate=null}){
     if(!ready)throw new Error('Нет соединения с облаком');
-    if(loadingOrders)await loadingOrders;
-    clearTimeout(orderTimer);orderTimer=0;
-    await request('rpc/panora_ship_order',{
-      method:'POST',
-      headers:{Prefer:'return=representation'},
-      body:JSON.stringify({
-        p_order_id:orderId,
-        p_items:(items||[]).map(item=>({
-          product_id:item.product,
-          quantity:Number(item.quantity||0)
-        })),
-        p_payment_amount:Number(paymentAmount||0),
-        p_payment_method:paymentMethod||'Наличные',
-        p_payment_due_date:paymentDueDate||null
-      })
-    });
-    await loadOrders();
-    await loadPayments();
-    await loadDeliveryNotes();
-    const note=deliveryNotes.find(entry=>entry.orderId===orderId);
-    if(!note)throw new Error('Supabase не вернул созданную накладную');
-    return note;
+    if(shippingLocks.has(orderId)){audit('shipment.duplicate_prevented',`Заказ ${orderId}: повторное нажатие заблокировано`,'warning');throw new Error('Отгрузка уже выполняется')}
+    const localNote=deliveryNotes.find(entry=>entry.orderId===orderId);
+    if(localNote){audit('shipment.duplicate_prevented',`Заказ ${orderId}: накладная уже существует`,'warning');return localNote}
+    shippingLocks.add(orderId);
+    try{
+      if(loadingOrders)await loadingOrders;
+      clearTimeout(orderTimer);orderTimer=0;
+      const existing=await request(`delivery_notes?order_id=eq.${encodeURIComponent(orderId)}&select=id,note_number&limit=1`);
+      if(existing?.length){
+        await loadDeliveryNotes();
+        const found=deliveryNotes.find(entry=>entry.orderId===orderId);
+        audit('shipment.duplicate_prevented',`Заказ ${orderId}: найдена существующая накладная ${existing[0].note_number}`,'warning');
+        if(found)return found;
+      }
+      await request('rpc/panora_ship_order',{
+        method:'POST',
+        headers:{Prefer:'return=representation'},
+        body:JSON.stringify({
+          p_order_id:orderId,
+          p_items:(items||[]).map(item=>({product_id:item.product,quantity:Number(item.quantity||0)})),
+          p_payment_amount:Number(paymentAmount||0),
+          p_payment_method:paymentMethod||'Наличные',
+          p_payment_due_date:paymentDueDate||null
+        })
+      });
+      await loadOrders();await loadPayments();await loadDeliveryNotes();
+      const note=deliveryNotes.find(entry=>entry.orderId===orderId);
+      if(!note)throw new Error('Supabase не вернул созданную накладную');
+      const order=orders.find(entry=>entry.id===orderId);
+      audit('shipment.completed',`${order?.number||orderId} · накладная ${note.number||note.noteNumber||''}`);
+      return note;
+    }catch(error){
+      audit('shipment.failed',`Заказ ${orderId}: ${error?.message||error}`,'error');
+      throw error;
+    }finally{shippingLocks.delete(orderId)}
   }
   async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}
   async function saveOrdersNow(){
@@ -320,7 +342,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
     status('Облако ✓');
   }
-  const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);status(`Ошибка: ${section}`,true,error?.message||String(error))};
+  const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>fail('товары',error)),350)}
   function queueRecipes(){clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>saveRecipesNow().catch(error=>fail('рецептуры',error)),400)}
@@ -348,6 +370,16 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearTimeout(financeTimer);
     financeTimer=setTimeout(()=>syncFinanceNow().catch(error=>fail('накладные и оплаты',error)),120);
   }
+  async function retrySync(){
+    if(!navigator.onLine){status('Сохранено на устройстве');return false}
+    if(!ready){status('Облако не подключено',true,'Сначала войдите в приложение');return false}
+    status('Повторная синхронизация…');
+    try{
+      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();
+      audit('sync.restored','Облачная синхронизация восстановлена');
+      status('Облако ✓');return true;
+    }catch(error){fail('повтор',error);return false}
+  }
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
@@ -357,8 +389,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
-  window.addEventListener('online',()=>{if(ready)queueFinance()});
+  window.addEventListener('online',()=>{if(ready)retrySync()});
+  window.addEventListener('offline',()=>status('Сохранено на устройстве'));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
