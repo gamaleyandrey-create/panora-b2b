@@ -12,6 +12,36 @@
   const write=(key,value)=>localStorage.setItem(storageKey(key),JSON.stringify(value));
   const saveSession=value=>{session=value;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
   const labels=(ru,en,es)=>lang==='es'?es:lang==='en'?en:ru;
+  let loginCooldownTimer=0,loginCooldownUntil=0;
+  function cooldownSeconds(message=''){
+    const match=String(message).match(/(?:after|через|después de)\s+(\d+)\s*(?:seconds?|сек|segundos?)/i);
+    return match?Math.max(1,Number(match[1])):0;
+  }
+  function startLoginCooldown(form,seconds){
+    loginCooldownUntil=Math.max(loginCooldownUntil,Date.now()+seconds*1000);
+    clearInterval(loginCooldownTimer);
+    const error=form.querySelector('#accountError'),buttons=[...form.querySelectorAll('button')];
+    const update=()=>{
+      const left=Math.max(0,Math.ceil((loginCooldownUntil-Date.now())/1000));
+      buttons.forEach(button=>button.disabled=left>0);
+      if(left){
+        error.textContent=labels(`Слишком много попыток. Повторите через ${left} сек.`,`Too many attempts. Try again in ${left} sec.`,`Demasiados intentos. Repite en ${left} s.`);
+        error.classList.add('show');
+      }else{
+        clearInterval(loginCooldownTimer);
+        error.textContent=labels('Теперь можно войти.','You can sign in now.','Ya puedes entrar.');
+        error.classList.add('show');
+      }
+    };
+    update();loginCooldownTimer=setInterval(update,1000);
+  }
+  function showLoginError(form,error){
+    const seconds=cooldownSeconds(error?.message);
+    if(seconds)return startLoginCooldown(form,seconds);
+    const el=form.querySelector('#accountError');
+    el.textContent=error?.message||labels('Не удалось войти','Could not sign in','No se pudo iniciar sesión');
+    el.classList.add('show');
+  }
   async function fetchJson(url,options={}){
     const response=await fetch(url,{cache:'no-store',...options}),text=await response.text();
     if(!response.ok){let message=text;try{const body=JSON.parse(text);message=body.message||body.msg||body.error_description||body.error||text}catch{}const error=new Error(message||`HTTP ${response.status}`);error.status=response.status;throw error}
@@ -76,13 +106,14 @@
   }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();showToast(account.name)}catch(error){const el=document.querySelector('#accountError');el.textContent=error.message;el.classList.add('show')}finally{button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(){
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
-    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true);closePanels()}catch(error){const el=document.querySelector('#accountError');el.textContent=error.message;el.classList.add('show')}};form.append(button)}
+    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true);closePanels()}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
+    if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
