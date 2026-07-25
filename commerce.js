@@ -1,66 +1,1029 @@
-const cRead=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback}catch{return fallback}};
-let restaurants=cRead('panora-restaurants',[]),orders=cRead('panora-orders',[]),payments=cRead('panora-payments',[]),deliveryNotes=cRead('panora-delivery-notes',[]);
-let bakerySettings=cRead('panora-bakery-settings',{legalName:'Panora',taxId:'',address:'',email:'gamaley1@gmail.com',phone:'+34611187640',taxRate:0});
-let reminderLog=cRead('panora-reminder-log',{});
-const cSave=(key,value)=>{localStorage.setItem(key,JSON.stringify(value));if(key==='panora-restaurants')window.panoraCloud?.queueRestaurants();if(key==='panora-orders')window.panoraCloud?.queueOrders();if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-delivery-notes'||key==='panora-payments')window.panoraCloud?.queueFinance()};
-const commerceDateTimeValue=date=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
-const orderDateLabel=(value,weekday=false)=>{if(!value)return'—';const date=new Date(`${value}T12:00:00`),locale=lang==='es'?'es-ES':lang==='en'?'en-GB':'ru-RU';return new Intl.DateTimeFormat(locale,{weekday:weekday?'long':undefined,day:'numeric',month:'long',year:'numeric'}).format(date)};
-const euro=n=>{const value=new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
-const restaurant=id=>restaurants.find(r=>r.id===id);
-const activeRestaurants=()=>restaurants.filter(r=>!r.deletedAt);
-const orderSubtotal=o=>o.items.reduce((sum,i)=>sum+i.quantity*Number((o.prices||restaurant(o.restaurantId).prices)[i.product]),0);
-const taxEnabled=o=>o.taxEnabled!==undefined?Boolean(o.taxEnabled):Number(o.taxRate??bakerySettings.taxRate)>0;
-const orderTotal=o=>orderSubtotal(o)*(1+(taxEnabled(o)?Number(o.taxRate??bakerySettings.taxRate):0)/100);
-const shippedFor=id=>deliveryNotes.filter(n=>n.restaurantId===id).reduce((s,n)=>s+n.total,0);
-const paymentConfirmed=payment=>payment.confirmed!==false;
-const paidFor=id=>payments.filter(p=>p.restaurantId===id&&paymentConfirmed(p)).reduce((s,p)=>s+p.amount,0);
-function syncPlansFromOrders(){
- const current=cRead('panora-production-plans',[]),grouped={};
- orders.filter(o=>o.status!=='cancelled').forEach(o=>o.items.forEach(i=>{const key=`${o.date}:${i.product}`;grouped[key]??={bakeDate:o.date,deliveryDate:o.deliveryDate||o.date,product:i.product,ordered:0};grouped[key].ordered+=Number(i.quantity||0)}));
- Object.values(grouped).forEach(g=>{let p=current.find(x=>x.bakeDate===g.bakeDate&&x.product===g.product);if(!p){const cutoff=new Date(`${g.bakeDate}T09:00:00`);cutoff.setHours(cutoff.getHours()-48);p={id:crypto.randomUUID(),bakeDate:g.bakeDate,deliveryDate:g.deliveryDate,product:g.product,planned:g.ordered,ordered:g.ordered,cutoff:commerceDateTimeValue(cutoff),open:cutoff>new Date()};current.push(p)}else{p.ordered=g.ordered;p.planned=Math.max(Number(p.planned||0),g.ordered);p.deliveryDate=p.deliveryDate||g.deliveryDate}});
- current.forEach(p=>{const key=`${p.bakeDate}:${p.product}`;if(!grouped[key])p.ordered=0});
- cSave('panora-production-plans',current);plans=current;return current
-}
-function fillRestaurants(){const options=activeRestaurants().map(r=>`<option value="${r.id}">${r.name}</option>`).join('');document.querySelector('#orderRestaurant').innerHTML=options;document.querySelector('#paymentRestaurant').innerHTML=options}
-function renderRestaurants(){const root=document.querySelector('#restaurantCards'),active=activeRestaurants(),removed=restaurants.filter(r=>r.deletedAt);root.innerHTML=(active.length?active.map(r=>`<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">Личный кабинет</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${r.name}</h3><p>${r.email}<br>${r.address||''}</p><label class="price-row"><span>Льняной бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:plain" type="number" min="0" step="0.01" value="${r.prices.plain.toFixed(2)}"> €</span></label><label class="price-row"><span>Тыквенный бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:pumpkin" type="number" min="0" step="0.01" value="${r.prices.pumpkin.toFixed(2)}"> €</span></label><div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id)-paidFor(r.id))}</strong></div></article>`).join(''):'<div class="empty-row">Добавьте первый ресторан и назначьте ему индивидуальные цены.</div>')+(removed.length?`<section class="removed-restaurants"><h3>Удалённые рестораны</h3>${removed.map(r=>`<div><span><strong>${r.name}</strong><small>${r.email}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join('')}</section>`:'');document.querySelectorAll('[data-price]').forEach(i=>i.onchange=()=>{const [id,pid]=i.dataset.price.split(':');restaurant(id).prices[pid]=Number(i.value);cSave('panora-restaurants',restaurants);renderCommerce()});document.querySelectorAll('[data-delete-restaurant]').forEach(b=>b.onclick=()=>deleteRestaurant(b.dataset.deleteRestaurant));document.querySelectorAll('[data-restore-restaurant]').forEach(b=>b.onclick=()=>restoreRestaurant(b.dataset.restoreRestaurant));fillRestaurants()}
-function deleteRestaurant(id){const r=restaurant(id);if(!r||!confirm(`Удалить ресторан «${r.name}» из активных клиентов? Заказы, накладные и задолженность сохранятся.`))return;r.deletedAt=new Date().toISOString();cSave('panora-restaurants',restaurants);renderCommerce()}
-function restoreRestaurant(id){const r=restaurant(id);if(!r)return;delete r.deletedAt;cSave('panora-restaurants',restaurants);renderCommerce()}
-function orderStatus(o){return{submitted:'Новый заказ',confirmed:'Подтверждён',shipped:'Отгружен',cancelled:'Отменён'}[o.status]||o.status}
-function orderActions(o){if(o.status==='shipped')return `<button class="action-small" data-note="${o.id}">Накладная</button> <button class="action-small ship" data-delivery-qr="${o.id}">QR-код</button>`;if(o.status==='cancelled')return '—';if(o.status==='submitted')return `<button class="action-small" data-confirm="${o.id}">Подтвердить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;return `<button class="action-small ship" data-ship="${o.id}">Отгрузить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`}
-function renderOrders(){const body=document.querySelector('#orderRows');body.innerHTML=orders.length?orders.slice().reverse().map(o=>`<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4,'0')}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date,true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate||o.date)}</small></div></td><td>${restaurant(o.restaurantId)?.name||'—'}</td><td><div class="order-items">${o.items.map(i=>`<div class="order-item"><strong>${i.product==='plain'?'Льняной бездрожжевой хлеб с семенами':'Тыквенный бездрожжевой хлеб с семенами'}</strong><span>${i.quantity} шт.</span></div>`).join('')}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span></td><td class="order-action-cell">${orderActions(o)}</td></tr>`).join(''):'<tr><td class="empty-row" colspan="7">Заказов пока нет.</td></tr>';document.querySelectorAll('[data-ship]').forEach(b=>b.onclick=()=>openShipment(b.dataset.ship));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>printNote(b.dataset.note));document.querySelectorAll('[data-delivery-qr]').forEach(b=>b.onclick=()=>window.showDeliveryQr?.(b.dataset.deliveryQr));document.querySelectorAll('[data-confirm]').forEach(b=>b.onclick=()=>confirmOrder(b.dataset.confirm));document.querySelectorAll('[data-cancel-order]').forEach(b=>b.onclick=()=>cancelOrder(b.dataset.cancelOrder))}
-async function confirmOrder(id){const o=orders.find(x=>x.id===id);if(!o||o.status!=='submitted')return;try{if(window.panoraCloud?.ready){await window.panoraCloud.updateOrderStatus(id,'confirmed')}else{o.status='confirmed';cSave('panora-orders',orders)}window.panoraDataChannel?.postMessage({type:'order-confirmed',id});renderCommerce()}catch(error){alert(`Не удалось подтвердить заказ: ${error.message}`)}}
-async function cancelOrder(id){const o=orders.find(x=>x.id===id);if(!o||o.status==='shipped'||o.status==='cancelled')return;if(!confirm('Отменить заказ и вернуть количество в свободный план?'))return;try{if(window.panoraCloud?.ready){await window.panoraCloud.updateOrderStatus(id,'cancelled','Cancelled by bakery')}else{o.status='cancelled';cSave('panora-orders',orders)}syncPlansFromOrders();renderCommerce();renderAll()}catch(error){alert(`Не удалось отменить заказ: ${error.message}`)}}
-function renderAccounting(){let shipped=0,paid=0;document.querySelector('#accountRows').innerHTML=restaurants.length?restaurants.map(r=>{const s=shippedFor(r.id),p=paidFor(r.id),last=[...deliveryNotes.filter(n=>n.restaurantId===r.id).map(n=>n.date),...payments.filter(x=>x.restaurantId===r.id).map(x=>x.date)].sort().pop()||'—';shipped+=s;paid+=p;return `<tr><td><strong>${r.name}</strong></td><td class="${s-p>0?'negative':''}"><strong>${euro(s-p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${last}</td></tr>`}).join(''):'<tr><td class="empty-row" colspan="5">Ресторанов пока нет.</td></tr>';document.querySelector('#totalShipped').textContent=euro(shipped);document.querySelector('#totalPaid').textContent=euro(paid);document.querySelector('#totalDebt').textContent=euro(shipped-paid)}
-const reminderCopy={
- ru:(r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${p.bakeDate} можно оформить до ${new Date(p.cutoff).toLocaleString('ru-RU')}. Минимальный заказ — 12 шт.`,
- en:(r,p)=>`Hello, ${r.name}! A reminder that your Panora order for the ${p.bakeDate} bake must be placed by ${new Date(p.cutoff).toLocaleString('en-GB')}. Minimum order: 12 pcs.`,
- es:(r,p)=>`¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${p.bakeDate} debe realizarse antes del ${new Date(p.cutoff).toLocaleString('es-ES')}. Pedido mínimo: 12 uds.`
+const cRead = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || fallback;
+  } catch {
+    return fallback;
+  }
 };
-const cleanPhone=value=>String(value||'').replace(/\D/g,'');
-const reminderSendWindow=()=>{const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hour12:false}).formatToParts(new Date()),hour=Number(parts.find(part=>part.type==='hour')?.value||0);return{allowed:hour>=12&&hour<20,hour}};
-function reminderRows(){const now=new Date(),upcoming=cRead('panora-production-plans',[]).filter(p=>{const hours=(new Date(p.cutoff)-now)/3600000;return p.open&&hours>0&&hours<=72}).sort((a,b)=>new Date(a.cutoff)-new Date(b.cutoff));const dates=[...new Set(upcoming.map(p=>p.bakeDate))];return dates.flatMap(date=>{const plan=upcoming.find(p=>p.bakeDate===date),hours=Math.round((new Date(plan.cutoff)-now)/3600000),stage=hours<=54?'repeat':'first';return activeRestaurants().map(r=>{const ordered=orders.some(o=>o.restaurantId===r.id&&o.date===date&&!['cancelled'].includes(o.status)),key=`${r.id}:${date}:${stage}`,sent=reminderLog[key];return{r,plan,key,ordered,sent,hours,stage}})})}
-function markReminder(key,channel){reminderLog[key]={sentAt:new Date().toISOString(),channel};cSave('panora-reminder-log',reminderLog);renderReminders()}
-function renderReminders(){const root=document.querySelector('#reminderList');if(!root)return;const rows=reminderRows(),windowState=reminderSendWindow(),due=rows.filter(x=>!x.ordered&&!x.sent),ordered=rows.filter(x=>x.ordered),sent=rows.filter(x=>x.sent);document.querySelector('#reminderDue').textContent=due.length;document.querySelector('#reminderOrdered').textContent=ordered.length;document.querySelector('#reminderSent').textContent=sent.length;root.innerHTML=rows.length?rows.map(x=>{const message=reminderCopy[x.r.language||'ru'](x.r,x.plan),subject=encodeURIComponent(`Panora · ${x.plan.bakeDate}`),body=encodeURIComponent(message),phone=cleanPhone(x.r.phone),waiting=!windowState.allowed&&!x.ordered&&!x.sent,status=x.ordered?'Заказ получен':x.sent?`Отправлено ${new Date(x.sent.sentAt).toLocaleString('ru-RU')}`:waiting?(windowState.hour<12?'Отправка доступна после 12:00':'Отложено до завтра, 12:00'):x.hours<=6?'Срочно':`До закрытия ${x.hours} ч.`,disabled=waiting?' reminder-disabled aria-disabled="true" tabindex="-1"':'';return `<article class="reminder-card ${x.ordered?'complete':''} ${waiting?'waiting':''}"><div><span class="tag">${x.stage==='repeat'?'Повторное · ':''}${status}</span><h3>${x.r.name}</h3><p>Выпечка: <strong>${x.plan.bakeDate}</strong> · заказ до ${new Date(x.plan.cutoff).toLocaleString('ru-RU')}</p></div><p class="reminder-message">${message}</p><div class="reminder-actions">${x.r.email?`<a class="${waiting?'reminder-disabled':''}" data-reminder="${x.key}:email" ${disabled} target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(x.r.email)}&su=${subject}&body=${body}">Email</a>`:''}${phone?`<a class="${waiting?'reminder-disabled':''}" data-reminder="${x.key}:whatsapp" ${disabled} target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${body}">WhatsApp</a>`:''}<a class="${waiting?'reminder-disabled':''}" data-reminder="${x.key}:telegram" ${disabled} target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${body}">Telegram</a><button class="${waiting?'reminder-disabled':''}" data-copy-reminder="${x.key}" ${waiting?'disabled':''}>Копировать</button></div></article>`}).join(''):'<div class="empty-row">Нет напоминаний: они появятся за 72 часа до закрытия заказов.</div>';document.querySelectorAll('[data-reminder]').forEach(a=>a.onclick=event=>{if(a.classList.contains('reminder-disabled')){event.preventDefault();return}const parts=a.dataset.reminder.split(':');markReminder(parts.slice(0,-1).join(':'),parts.at(-1))});document.querySelectorAll('[data-copy-reminder]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const x=rows.find(row=>row.key===b.dataset.copyReminder);copyText(reminderCopy[x.r.language||'ru'](x.r,x.plan)).then(()=>markReminder(x.key,'copy'))})}
-function renderCommerce(){renderRestaurants();renderOrders();renderAccounting();renderReminders()}
-document.querySelector('#addRestaurant').onclick=()=>document.querySelector('#restaurantDialog').showModal();
-document.querySelector('#saveRestaurant').onclick=e=>{e.preventDefault();const f=new FormData(document.querySelector('#restaurantForm'));restaurants.push({id:crypto.randomUUID(),name:f.get('name'),email:f.get('email'),accessCode:f.get('accessCode'),phone:f.get('phone'),telegram:String(f.get('telegram')||'').replace('@',''),language:f.get('language')||'ru',address:f.get('address'),prices:{plain:Number(f.get('plainPrice')),pumpkin:Number(f.get('pumpkinPrice'))}});cSave('panora-restaurants',restaurants);document.querySelector('#restaurantDialog').close();document.querySelector('#restaurantForm').reset();renderCommerce()};
-document.querySelector('#refreshReminders').onclick=renderReminders;
-document.querySelector('#adminLanguage').addEventListener('change',()=>setTimeout(renderCommerce));
-document.querySelector('#addOrder').onclick=()=>{if(!activeRestaurants().length){alert('Сначала добавьте активный ресторан.');return}const f=document.querySelector('#orderForm');f.reset();const d=new Date();d.setDate(d.getDate()+3);f.date.value=iso(d);document.querySelector('#orderDialog').showModal()};
-document.querySelector('#saveOrder').onclick=e=>{e.preventDefault();const f=new FormData(document.querySelector('#orderForm')),plain=Number(f.get('plain')),pumpkin=Number(f.get('pumpkin'));if(plain+pumpkin<12){alert('Минимальный заказ — 12 шт.');return}const items=[];if(plain)items.push({product:'plain',quantity:plain});if(pumpkin)items.push({product:'pumpkin',quantity:pumpkin});const r=restaurant(f.get('restaurant'));orders.push({id:crypto.randomUUID(),number:(orders.at(-1)?.number||0)+1,restaurantId:r.id,date:f.get('date'),deliveryDate:f.get('date'),items,prices:structuredClone(r.prices),taxRate:Number(bakerySettings.taxRate),status:'confirmed'});cSave('panora-orders',orders);syncPlansFromOrders();document.querySelector('#orderDialog').close();document.querySelector('#orderForm').reset();renderCommerce();renderAll()};
-function openShipment(id){const o=orders.find(x=>x.id===id),r=restaurant(o.restaurantId),prices=o.prices||r.prices,form=document.querySelector('#shipmentForm'),summary=document.querySelector('#shipmentSummary');form.orderId.value=id;summary.innerHTML=`<strong>PN-${String(o.number).padStart(4,'0')} · ${r.name}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map(i=>`<label class="shipment-item"><span><strong>${i.product==='plain'?'Льняной бездрожжевой хлеб с семенами':'Тыквенный бездрожжевой хлеб с семенами'}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join('')}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;const update=()=>{let subtotal=0;summary.querySelectorAll('[data-shipment-quantity]').forEach(input=>{const qty=Math.min(Number(input.dataset.max),Math.max(0,Number(input.value)||0));subtotal+=qty*Number(prices[input.dataset.product]||0)});const total=subtotal*(1+Number(o.taxRate??bakerySettings.taxRate)/100),paid=Math.min(total,Math.max(0,Number(form.paid.value)||0));document.querySelector('#shipmentActualTotal').textContent=euro(total);document.querySelector('#shipmentDebtAfter').textContent=euro(Math.max(0,shippedFor(r.id)-paidFor(r.id)+total-paid))};summary.querySelectorAll('[data-shipment-quantity]').forEach(input=>input.addEventListener('input',update));form.paid.value='';form.paid.oninput=update;update();document.querySelector('#shipmentDialog').showModal()}
-document.querySelector('#confirmShipment').onclick=async e=>{e.preventDefault();const form=document.querySelector('#shipmentForm'),button=document.querySelector('#confirmShipment'),f=new FormData(form),o=orders.find(x=>x.id===f.get('orderId'));if(!o)return false;const orderedItems=structuredClone(o.items),actualItems=orderedItems.map(i=>({...i,quantity:Number(form.querySelector(`[data-shipment-quantity][data-product="${i.product}"]`)?.value)})).filter(i=>Number.isFinite(i.quantity)&&i.quantity>0);if(!actualItems.length){alert('Укажите количество хотя бы одного хлеба.');return false}if(actualItems.some(i=>!Number.isInteger(i.quantity)||i.quantity>Number(orderedItems.find(x=>x.product===i.product)?.quantity||0))){alert('Количество должно быть целым и не больше заказанного.');return false}const changed=actualItems.length!==orderedItems.length||actualItems.some(i=>i.quantity!==orderedItems.find(x=>x.product===i.product)?.quantity);if(changed&&!confirm('Фактическая поставка меньше заказа. Создать накладную по указанному количеству?'))return false;o.orderedItems=o.orderedItems||orderedItems;o.items=actualItems;const subtotal=orderSubtotal(o),taxRate=Number(o.taxRate??bakerySettings.taxRate),tax=subtotal*taxRate/100,total=subtotal+tax,paid=Math.min(total,Math.max(0,Number(f.get('paid'))));o.status='shipped';const note={id:crypto.randomUUID(),number:deliveryNotes.length+1,orderId:o.id,restaurantId:o.restaurantId,date:iso(new Date()),items:structuredClone(actualItems),orderedItems:structuredClone(orderedItems),prices:structuredClone(o.prices||restaurant(o.restaurantId).prices),bakery:structuredClone(bakerySettings),subtotal,taxRate,tax,total,paid,balanceAfter:shippedFor(o.restaurantId)+total-paidFor(o.restaurantId)-paid};deliveryNotes.push(note);if(paid)payments.push({id:crypto.randomUUID(),restaurantId:o.restaurantId,deliveryNoteId:note.id,date:note.date,amount:paid,method:f.get('method'),note:`Оплата по накладной DN-${note.number}`,confirmed:true,confirmedAt:new Date().toISOString()});actualItems.forEach(i=>movements.push({id:crypto.randomUUID(),date:note.date,product:i.product,type:'shipped',quantity:i.quantity,note:`Накладная DN-${note.number}`}));cSave('panora-orders',orders);cSave('panora-delivery-notes',deliveryNotes);cSave('panora-payments',payments);store('panora-stock-movements',movements);window.panoraDataChannel?.postMessage({type:'order-shipped',id:o.id});button.disabled=true;button.textContent='Сохраняем накладную…';try{await window.panoraCloud?.syncFinance?.();document.querySelector('#shipmentDialog').close();renderCommerce();renderStock();printNote(o.id);return true}catch(error){alert(`Отгрузка сохранена на этом устройстве, но накладная пока не отправлена в облако: ${error.message}\\n\\nНе закрывайте приложение и проверьте соединение.`);return false}finally{button.disabled=false;button.textContent='Отгрузить и создать накладную'}};
-document.querySelector('#addPayment').onclick=()=>{if(!restaurants.length){alert('Сначала добавьте ресторан.');return}document.querySelector('#paymentDialog').showModal()};
-document.querySelector('#savePayment').onclick=async e=>{e.preventDefault();const button=e.currentTarget,f=new FormData(document.querySelector('#paymentForm')),amount=Number(f.get('amount'));if(!Number.isFinite(amount)||amount<=0)return alert('Введите сумму оплаты больше нуля.');payments.push({id:crypto.randomUUID(),restaurantId:f.get('restaurant'),deliveryNoteId:null,date:iso(new Date()),amount,method:f.get('method'),note:f.get('note'),confirmed:false,status:'pending'});cSave('panora-payments',payments);button.disabled=true;button.textContent='Сохраняем…';try{await window.panoraCloud?.syncFinance?.();document.querySelector('#paymentDialog').close();document.querySelector('#paymentForm').reset();renderCommerce();alert('Оплата сохранена в облаке и ожидает подтверждения получения средств.')}catch(error){renderCommerce();alert(`Оплата сохранена на этом устройстве, но пока не отправлена в облако: ${error.message}`)}finally{button.disabled=false;button.textContent='Записать оплату'}};
-function printNote(orderId){const n=deliveryNotes.find(x=>x.orderId===orderId),o=orders.find(x=>x.id===orderId),r=restaurant(n.restaurantId),b=n.bakery||bakerySettings,w=window.open('','_blank'),taxSummary=Number(n.taxRate)>0?`Сумма без НДС: ${euro(n.subtotal??n.total)}<br>НДС ${n.taxRate}%: ${euro(n.tax||0)}<br>`:'';w.document.write(`<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName||'Panora'}</strong><br>${b.taxId||''}<br>${b.address||''}<br>${b.email||''} ${b.phone||''}</p><h2>Накладная DN-${String(n.number).padStart(4,'0')}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date||n.date}<br>Дата доставки: ${o?.deliveryDate||o?.date||n.date}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address||'—'}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map(i=>`<tr><td>${i.product==='plain'?'Льняной бездрожжевой хлеб с семенами':'Тыквенный бездрожжевой хлеб с семенами'}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity*n.prices[i.product])}</td></tr>`).join('')}</table><p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`);w.document.close();w.print()}
-const settingsForm=document.querySelector('#bakerySettingsForm');Object.entries(bakerySettings).forEach(([key,value])=>{const field=settingsForm.elements[key];if(!field)return;if(field.type==='checkbox')field.checked=Boolean(value);else field.value=value});settingsForm.onsubmit=e=>{e.preventDefault();const f=new FormData(settingsForm),useTax=f.get('useTax')==='on';bakerySettings={...bakerySettings,legalName:f.get('legalName')||'Panora',taxId:f.get('taxId'),address:f.get('address'),email:f.get('email'),phone:f.get('phone'),useTax,taxRate:useTax?Number(f.get('taxRate')||0):0};cSave('panora-bakery-settings',bakerySettings);renderCommerce();alert(useTax?'Настройки сохранены. НДС включён.':'Настройки сохранены. НДС отключён.')};
-function downloadFile(name,content,type='text/csv;charset=utf-8'){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-const csvCell=value=>`"${String(value??'').replaceAll('"','""')}"`;
-function csv(rows){return '\ufeff'+rows.map(row=>row.map(csvCell).join(';')).join('\n')}
-document.querySelector('#exportBackup').onclick=()=>{const keys=['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-production-plans','panora-recipes','panora-stock-movements','panora-bakery-settings','panora-reminder-log','panora-ingredient-costs'],data={exportedAt:new Date().toISOString(),version:1};keys.forEach(k=>data[k]=cRead(k,[]));downloadFile(`panora-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(data,null,2),'application/json')};
-const restoreInput=document.querySelector('#restoreBackupFile'),restoreStatus=document.querySelector('#restoreStatus');document.querySelector('#restoreBackup').onclick=()=>restoreInput.click();restoreInput.onchange=async()=>{restoreStatus.className='restore-status';restoreStatus.textContent='';const file=restoreInput.files[0];if(!file)return;try{const data=JSON.parse(await file.text()),keys=['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-production-plans','panora-recipes','panora-stock-movements','panora-bakery-settings'];if(data.version!==1||!keys.every(k=>Object.hasOwn(data,k)))throw new Error('Неверный формат резервной копии');if(!Array.isArray(data['panora-restaurants'])||!Array.isArray(data['panora-orders'])||!Array.isArray(data['panora-payments'])||!Array.isArray(data['panora-delivery-notes'])||!Array.isArray(data['panora-production-plans'])||!Array.isArray(data['panora-stock-movements']))throw new Error('Повреждённые данные');if(!confirm(`Восстановить копию от ${data.exportedAt||'неизвестной даты'}? Текущие данные будут заменены.`)){restoreInput.value='';return}keys.forEach(k=>localStorage.setItem(k,JSON.stringify(data[k])));restoreStatus.classList.add('success');restoreStatus.textContent='Данные восстановлены. Перезагрузка…';setTimeout(()=>location.reload(),700)}catch(error){restoreStatus.classList.add('error');restoreStatus.textContent=`Не удалось восстановить: ${error.message}`;restoreInput.value=''}};
-document.querySelector('#exportOrders').onclick=()=>downloadFile('panora-orders.csv',csv([['Номер','Выпечка','Доставка','Ресторан','Статус','Льняной, шт.','Тыквенный, шт.','Без налога, EUR','Налог, %','Итого, EUR'],...orders.map(o=>[o.number,o.date,o.deliveryDate||o.date,restaurant(o.restaurantId)?.name,orderStatus(o),o.items.find(i=>i.product==='plain')?.quantity||0,o.items.find(i=>i.product==='pumpkin')?.quantity||0,orderSubtotal(o).toFixed(2),o.taxRate??bakerySettings.taxRate,orderTotal(o).toFixed(2)])]));
-document.querySelector('#exportPayments').onclick=()=>{const rows=[...deliveryNotes.map(n=>[restaurant(n.restaurantId)?.name,n.date,'Отгрузка',n.total.toFixed(2),'',`DN-${n.number}`,'Проведено']),...payments.map(p=>[restaurant(p.restaurantId)?.name,p.date,'Оплата',(-p.amount).toFixed(2),p.method,p.note,paymentConfirmed(p)?'Подтверждена':'Ожидает подтверждения'])].sort((a,b)=>String(a[1]).localeCompare(String(b[1])));downloadFile('panora-payments-debts.csv',csv([['Ресторан','Дата','Тип','Сумма, EUR','Способ','Примечание','Статус'],...rows]))};
-document.querySelector('#exportStock').onclick=()=>downloadFile('panora-stock.csv',csv([['Дата','Хлеб','Операция','Количество, шт.','Примечание'],...movements.map(m=>[m.date,m.product==='plain'?'Льняной бездрожжевой хлеб с семенами':'Тыквенный бездрожжевой хлеб с семенами',m.type,signed(m),m.note])]));
-document.querySelector('#exportPlan').onclick=()=>downloadFile('panora-production-plan.csv',csv([['Дата выпечки','Дата доставки','Хлеб','План, шт.','Заказано, шт.','Свободно, шт.','Приём заказов до','Открыто'],...plans.map(p=>[p.bakeDate,p.deliveryDate,p.product==='plain'?'Льняной бездрожжевой хлеб с семенами':'Тыквенный бездрожжевой хлеб с семенами',p.planned,p.ordered||0,Math.max(0,p.planned-(p.ordered||0)),p.cutoff,p.open?'Да':'Нет'])]));
-syncPlansFromOrders();renderCommerce();renderAll();
+let restaurants = cRead("panora-restaurants", []),
+  orders = cRead("panora-orders", []),
+  payments = cRead("panora-payments", []),
+  deliveryNotes = cRead("panora-delivery-notes", []);
+let bakerySettings = cRead("panora-bakery-settings", {
+  legalName: "Panora",
+  taxId: "",
+  address: "",
+  email: "gamaley1@gmail.com",
+  phone: "+34611187640",
+  taxRate: 0,
+});
+let reminderLog = cRead("panora-reminder-log", {});
+const cSave = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+  if (key === "panora-restaurants") window.panoraCloud?.queueRestaurants();
+  if (key === "panora-orders") window.panoraCloud?.queueOrders();
+  if (key === "panora-production-plans") window.panoraCloud?.queuePlans();
+  if (key === "panora-delivery-notes" || key === "panora-payments")
+    window.panoraCloud?.queueFinance();
+};
+const commerceDateTimeValue = (date) =>
+  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+const orderDateLabel = (value, weekday = false) => {
+  if (!value) return "—";
+  const date = new Date(`${value}T12:00:00`),
+    locale = lang === "es" ? "es-ES" : lang === "en" ? "en-GB" : "ru-RU";
+  return new Intl.DateTimeFormat(locale, {
+    weekday: weekday ? "long" : undefined,
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+const euro = (n) => {
+  const value = new Intl.NumberFormat(
+    lang === "ru" ? "ru-RU" : lang === "es" ? "es-ES" : "en-GB",
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+  ).format(Number(n) || 0);
+  return lang === "ru" ? `${value} €` : `€ ${value}`;
+};
+const restaurant = (id) => restaurants.find((r) => r.id === id);
+const activeRestaurants = () => restaurants.filter((r) => !r.deletedAt);
+const orderSubtotal = (o) =>
+  o.items.reduce(
+    (sum, i) =>
+      sum +
+      i.quantity *
+        Number((o.prices || restaurant(o.restaurantId).prices)[i.product]),
+    0,
+  );
+const taxEnabled = (o) =>
+  o.taxEnabled !== undefined
+    ? Boolean(o.taxEnabled)
+    : Number(o.taxRate ?? bakerySettings.taxRate) > 0;
+const orderTotal = (o) =>
+  orderSubtotal(o) *
+  (1 + (taxEnabled(o) ? Number(o.taxRate ?? bakerySettings.taxRate) : 0) / 100);
+const shippedFor = (id) =>
+  deliveryNotes
+    .filter((n) => n.restaurantId === id)
+    .reduce((s, n) => s + n.total, 0);
+const paymentConfirmed = (payment) => payment.confirmed !== false;
+const paidFor = (id) =>
+  payments
+    .filter((p) => p.restaurantId === id && paymentConfirmed(p))
+    .reduce((s, p) => s + p.amount, 0);
+function syncPlansFromOrders() {
+  const current = cRead("panora-production-plans", []),
+    grouped = {};
+  orders
+    .filter((o) => o.status !== "cancelled")
+    .forEach((o) =>
+      o.items.forEach((i) => {
+        const key = `${o.date}:${i.product}`;
+        grouped[key] ??= {
+          bakeDate: o.date,
+          deliveryDate: o.deliveryDate || o.date,
+          product: i.product,
+          ordered: 0,
+        };
+        grouped[key].ordered += Number(i.quantity || 0);
+      }),
+    );
+  Object.values(grouped).forEach((g) => {
+    let p = current.find(
+      (x) => x.bakeDate === g.bakeDate && x.product === g.product,
+    );
+    if (!p) {
+      const cutoff = new Date(`${g.bakeDate}T09:00:00`);
+      cutoff.setHours(cutoff.getHours() - 48);
+      p = {
+        id: crypto.randomUUID(),
+        bakeDate: g.bakeDate,
+        deliveryDate: g.deliveryDate,
+        product: g.product,
+        planned: g.ordered,
+        ordered: g.ordered,
+        cutoff: commerceDateTimeValue(cutoff),
+        open: cutoff > new Date(),
+      };
+      current.push(p);
+    } else {
+      p.ordered = g.ordered;
+      p.planned = Math.max(Number(p.planned || 0), g.ordered);
+      p.deliveryDate = p.deliveryDate || g.deliveryDate;
+    }
+  });
+  current.forEach((p) => {
+    const key = `${p.bakeDate}:${p.product}`;
+    if (!grouped[key]) p.ordered = 0;
+  });
+  cSave("panora-production-plans", current);
+  plans = current;
+  return current;
+}
+function fillRestaurants() {
+  const options = activeRestaurants()
+    .map((r) => `<option value="${r.id}">${r.name}</option>`)
+    .join("");
+  document.querySelector("#orderRestaurant").innerHTML = options;
+  document.querySelector("#paymentRestaurant").innerHTML = options;
+}
+function renderRestaurants() {
+  const root = document.querySelector("#restaurantCards"),
+    active = activeRestaurants(),
+    removed = restaurants.filter((r) => r.deletedAt);
+  root.innerHTML =
+    (active.length
+      ? active
+          .map(
+            (r) =>
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">Личный кабинет</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${r.name}</h3><p>${r.email}<br>${r.address || ""}</p><label class="price-row"><span>Льняной бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:plain" type="number" min="0" step="0.01" value="${r.prices.plain.toFixed(2)}"> €</span></label><label class="price-row"><span>Тыквенный бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:pumpkin" type="number" min="0" step="0.01" value="${r.prices.pumpkin.toFixed(2)}"> €</span></label><div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+          )
+          .join("")
+      : '<div class="empty-row">Добавьте первый ресторан и назначьте ему индивидуальные цены.</div>') +
+    (removed.length
+      ? `<section class="removed-restaurants"><h3>Удалённые рестораны</h3>${removed.map((r) => `<div><span><strong>${r.name}</strong><small>${r.email}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
+      : "");
+  document.querySelectorAll("[data-price]").forEach(
+    (i) =>
+      (i.onchange = () => {
+        const [id, pid] = i.dataset.price.split(":");
+        restaurant(id).prices[pid] = Number(i.value);
+        cSave("panora-restaurants", restaurants);
+        renderCommerce();
+      }),
+  );
+  document
+    .querySelectorAll("[data-delete-restaurant]")
+    .forEach(
+      (b) => (b.onclick = () => deleteRestaurant(b.dataset.deleteRestaurant)),
+    );
+  document
+    .querySelectorAll("[data-restore-restaurant]")
+    .forEach(
+      (b) => (b.onclick = () => restoreRestaurant(b.dataset.restoreRestaurant)),
+    );
+  fillRestaurants();
+}
+function deleteRestaurant(id) {
+  const r = restaurant(id);
+  if (
+    !r ||
+    !confirm(
+      `Удалить ресторан «${r.name}» из активных клиентов? Заказы, накладные и задолженность сохранятся.`,
+    )
+  )
+    return;
+  r.deletedAt = new Date().toISOString();
+  cSave("panora-restaurants", restaurants);
+  renderCommerce();
+}
+function restoreRestaurant(id) {
+  const r = restaurant(id);
+  if (!r) return;
+  delete r.deletedAt;
+  cSave("panora-restaurants", restaurants);
+  renderCommerce();
+}
+function orderStatus(o) {
+  return (
+    {
+      submitted: "Новый заказ",
+      confirmed: "Подтверждён",
+      shipped: "Отгружен",
+      cancelled: "Отменён",
+    }[o.status] || o.status
+  );
+}
+function orderActions(o) {
+  if (o.status === "shipped")
+    return `<button class="action-small" data-note="${o.id}">Накладная</button> <button class="action-small ship" data-delivery-qr="${o.id}">QR-код</button>`;
+  if (o.status === "cancelled") return "—";
+  if (o.status === "submitted")
+    return `<button class="action-small" data-confirm="${o.id}">Подтвердить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
+  return `<button class="action-small ship" data-ship="${o.id}">Отгрузить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
+}
+function renderOrders() {
+  const body = document.querySelector("#orderRows");
+  body.innerHTML = orders.length
+    ? orders
+        .slice()
+        .reverse()
+        .map((o) => {
+          const note = deliveryNotes.find((n) => n.orderId === o.id);
+          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${restaurant(o.restaurantId)?.name || "—"}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span></td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+        })
+        .join("")
+    : '<tr><td class="empty-row" colspan="7">Заказов пока нет.</td></tr>';
+  document
+    .querySelectorAll("[data-ship]")
+    .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
+  document
+    .querySelectorAll("[data-note]")
+    .forEach((b) => (b.onclick = () => printNote(b.dataset.note)));
+  document
+    .querySelectorAll("[data-delivery-qr]")
+    .forEach(
+      (b) => (b.onclick = () => window.showDeliveryQr?.(b.dataset.deliveryQr)),
+    );
+  document
+    .querySelectorAll("[data-confirm]")
+    .forEach((b) => (b.onclick = () => confirmOrder(b.dataset.confirm)));
+  document
+    .querySelectorAll("[data-cancel-order]")
+    .forEach((b) => (b.onclick = () => cancelOrder(b.dataset.cancelOrder)));
+}
+async function confirmOrder(id) {
+  const o = orders.find((x) => x.id === id);
+  if (!o || o.status !== "submitted") return;
+  try {
+    if (window.panoraCloud?.ready) {
+      await window.panoraCloud.updateOrderStatus(id, "confirmed");
+    } else {
+      o.status = "confirmed";
+      cSave("panora-orders", orders);
+    }
+    window.panoraDataChannel?.postMessage({ type: "order-confirmed", id });
+    renderCommerce();
+  } catch (error) {
+    alert(`Не удалось подтвердить заказ: ${error.message}`);
+  }
+}
+async function cancelOrder(id) {
+  const o = orders.find((x) => x.id === id);
+  if (!o || o.status === "shipped" || o.status === "cancelled") return;
+  if (!confirm("Отменить заказ и вернуть количество в свободный план?")) return;
+  try {
+    if (window.panoraCloud?.ready) {
+      await window.panoraCloud.updateOrderStatus(
+        id,
+        "cancelled",
+        "Cancelled by bakery",
+      );
+    } else {
+      o.status = "cancelled";
+      cSave("panora-orders", orders);
+    }
+    syncPlansFromOrders();
+    renderCommerce();
+    renderAll();
+  } catch (error) {
+    alert(`Не удалось отменить заказ: ${error.message}`);
+  }
+}
+function renderAccounting() {
+  let shipped = 0,
+    paid = 0;
+  document.querySelector("#accountRows").innerHTML = restaurants.length
+    ? restaurants
+        .map((r) => {
+          const s = shippedFor(r.id),
+            p = paidFor(r.id),
+            last =
+              [
+                ...deliveryNotes
+                  .filter((n) => n.restaurantId === r.id)
+                  .map((n) => n.date),
+                ...payments
+                  .filter((x) => x.restaurantId === r.id)
+                  .map((x) => x.date),
+              ]
+                .sort()
+                .pop() || "—";
+          shipped += s;
+          paid += p;
+          return `<tr><td><strong>${r.name}</strong></td><td class="${s - p > 0 ? "negative" : ""}"><strong>${euro(s - p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${last}</td></tr>`;
+        })
+        .join("")
+    : '<tr><td class="empty-row" colspan="5">Ресторанов пока нет.</td></tr>';
+  document.querySelector("#totalShipped").textContent = euro(shipped);
+  document.querySelector("#totalPaid").textContent = euro(paid);
+  document.querySelector("#totalDebt").textContent = euro(shipped - paid);
+}
+const reminderCopy = {
+  ru: (r, p) =>
+    `Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${p.bakeDate} можно оформить до ${new Date(p.cutoff).toLocaleString("ru-RU")}. Минимальный заказ — 12 шт.`,
+  en: (r, p) =>
+    `Hello, ${r.name}! A reminder that your Panora order for the ${p.bakeDate} bake must be placed by ${new Date(p.cutoff).toLocaleString("en-GB")}. Minimum order: 12 pcs.`,
+  es: (r, p) =>
+    `¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${p.bakeDate} debe realizarse antes del ${new Date(p.cutoff).toLocaleString("es-ES")}. Pedido mínimo: 12 uds.`,
+};
+const cleanPhone = (value) => String(value || "").replace(/\D/g, "");
+const reminderSendWindow = () => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date()),
+    hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+  return { allowed: hour >= 12 && hour < 20, hour };
+};
+function reminderRows() {
+  const now = new Date(),
+    upcoming = cRead("panora-production-plans", [])
+      .filter((p) => {
+        const hours = (new Date(p.cutoff) - now) / 3600000;
+        return p.open && hours > 0 && hours <= 72;
+      })
+      .sort((a, b) => new Date(a.cutoff) - new Date(b.cutoff));
+  const dates = [...new Set(upcoming.map((p) => p.bakeDate))];
+  return dates.flatMap((date) => {
+    const plan = upcoming.find((p) => p.bakeDate === date),
+      hours = Math.round((new Date(plan.cutoff) - now) / 3600000),
+      stage = hours <= 54 ? "repeat" : "first";
+    return activeRestaurants().map((r) => {
+      const ordered = orders.some(
+          (o) =>
+            o.restaurantId === r.id &&
+            o.date === date &&
+            !["cancelled"].includes(o.status),
+        ),
+        key = `${r.id}:${date}:${stage}`,
+        sent = reminderLog[key];
+      return { r, plan, key, ordered, sent, hours, stage };
+    });
+  });
+}
+const paymentReminderCopy = {
+  ru: (row) =>
+    `Здравствуйте, ${row.r.name}! Напоминаем об оплате ${euro(row.balance)} по накладной DN-${String(row.note.number).padStart(4, "0")}. Плановая дата оплаты: ${row.note.paymentDueDate}.`,
+  en: (row) =>
+    `Hello, ${row.r.name}! This is a reminder to pay ${euro(row.balance)} for delivery note DN-${String(row.note.number).padStart(4, "0")}. Expected payment date: ${row.note.paymentDueDate}.`,
+  es: (row) =>
+    `¡Hola, ${row.r.name}! Te recordamos el pago de ${euro(row.balance)} del albarán DN-${String(row.note.number).padStart(4, "0")}. Fecha prevista de pago: ${row.note.paymentDueDate}.`,
+};
+function paymentReminderRows() {
+  const today = iso(new Date());
+  return deliveryNotes
+    .filter((note) => note.paymentDueDate)
+    .map((note) => {
+      const r = restaurant(note.restaurantId);
+      if (!r) return null;
+      const paid = payments
+        .filter(
+          (payment) =>
+            payment.deliveryNoteId === note.id &&
+            payment.confirmed !== false &&
+            payment.status !== "cancelled",
+        )
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const balance = Math.max(0, Number(note.total || 0) - paid);
+      if (balance <= 0) return null;
+      const days = Math.round(
+        (new Date(`${note.paymentDueDate}T12:00:00`) -
+          new Date(`${today}T12:00:00`)) /
+          86400000,
+      );
+      const key = `payment-${note.id}-${note.paymentDueDate}`;
+      return { note, r, balance, days, key, sent: reminderLog[key] };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      String(a.note.paymentDueDate).localeCompare(
+        String(b.note.paymentDueDate),
+      ),
+    );
+}
+function markReminder(key, channel) {
+  reminderLog[key] = { sentAt: new Date().toISOString(), channel };
+  cSave("panora-reminder-log", reminderLog);
+  renderReminders();
+}
+function renderReminders() {
+  const root = document.querySelector("#reminderList");
+  if (!root) return;
+  const rows = reminderRows(),
+    paymentRows = paymentReminderRows(),
+    windowState = reminderSendWindow(),
+    due = rows.filter((x) => !x.ordered && !x.sent),
+    ordered = rows.filter((x) => x.ordered),
+    sent = rows.filter((x) => x.sent);
+  document.querySelector("#reminderDue").textContent =
+    due.length + paymentRows.filter((x) => !x.sent).length;
+  document.querySelector("#reminderOrdered").textContent = ordered.length;
+  document.querySelector("#reminderSent").textContent =
+    sent.length + paymentRows.filter((x) => x.sent).length;
+  const paymentCards = paymentRows
+    .map((x) => {
+      const message = paymentReminderCopy[x.r.language || "ru"](x),
+        subject = encodeURIComponent(
+          `Panora · оплата DN-${String(x.note.number).padStart(4, "0")}`,
+        ),
+        body = encodeURIComponent(message),
+        phone = cleanPhone(x.r.phone),
+        waiting = !windowState.allowed && !x.sent,
+        status = x.sent
+          ? `Отправлено ${new Date(x.sent.sentAt).toLocaleString("ru-RU")}`
+          : x.days < 0
+            ? `Просрочено на ${Math.abs(x.days)} дн.`
+            : x.days === 0
+              ? "Оплата сегодня"
+              : `До оплаты ${x.days} дн.`,
+        disabled = waiting
+          ? ' reminder-disabled aria-disabled="true" tabindex="-1"'
+          : "";
+      return `<article class="reminder-card payment-reminder ${x.days < 0 ? "overdue" : ""} ${waiting ? "waiting" : ""}"><div><span class="tag">${status}</span><h3>${x.r.name}</h3><p>Накладная: <strong>DN-${String(x.note.number).padStart(4, "0")}</strong> · оплатить до <strong>${x.note.paymentDueDate}</strong> · ${euro(x.balance)}</p></div><p class="reminder-message">${message}</p><div class="reminder-actions">${x.r.email ? `<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:email" ${disabled} target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(x.r.email)}&su=${subject}&body=${body}">Email</a>` : ""}${phone ? `<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:whatsapp" ${disabled} target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${body}">WhatsApp</a>` : ""}<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:telegram" ${disabled} target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${body}">Telegram</a><button class="${waiting ? "reminder-disabled" : ""}" data-copy-payment-reminder="${x.key}" ${waiting ? "disabled" : ""}>Копировать</button></div></article>`;
+    })
+    .join("");
+  root.innerHTML = paymentCards + (rows.length
+    ? rows
+        .map((x) => {
+          const message = reminderCopy[x.r.language || "ru"](x.r, x.plan),
+            subject = encodeURIComponent(`Panora · ${x.plan.bakeDate}`),
+            body = encodeURIComponent(message),
+            phone = cleanPhone(x.r.phone),
+            waiting = !windowState.allowed && !x.ordered && !x.sent,
+            status = x.ordered
+              ? "Заказ получен"
+              : x.sent
+                ? `Отправлено ${new Date(x.sent.sentAt).toLocaleString("ru-RU")}`
+                : waiting
+                  ? windowState.hour < 12
+                    ? "Отправка доступна после 12:00"
+                    : "Отложено до завтра, 12:00"
+                  : x.hours <= 6
+                    ? "Срочно"
+                    : `До закрытия ${x.hours} ч.`,
+            disabled = waiting
+              ? ' reminder-disabled aria-disabled="true" tabindex="-1"'
+              : "";
+          return `<article class="reminder-card ${x.ordered ? "complete" : ""} ${waiting ? "waiting" : ""}"><div><span class="tag">${x.stage === "repeat" ? "Повторное · " : ""}${status}</span><h3>${x.r.name}</h3><p>Выпечка: <strong>${x.plan.bakeDate}</strong> · заказ до ${new Date(x.plan.cutoff).toLocaleString("ru-RU")}</p></div><p class="reminder-message">${message}</p><div class="reminder-actions">${x.r.email ? `<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:email" ${disabled} target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(x.r.email)}&su=${subject}&body=${body}">Email</a>` : ""}${phone ? `<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:whatsapp" ${disabled} target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${body}">WhatsApp</a>` : ""}<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:telegram" ${disabled} target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${body}">Telegram</a><button class="${waiting ? "reminder-disabled" : ""}" data-copy-reminder="${x.key}" ${waiting ? "disabled" : ""}>Копировать</button></div></article>`;
+        })
+        .join("")
+    : paymentRows.length
+      ? ""
+      : '<div class="empty-row">Нет напоминаний: они появятся перед закрытием заказов или при наступлении срока оплаты.</div>');
+  document.querySelectorAll("[data-reminder]").forEach(
+    (a) =>
+      (a.onclick = (event) => {
+        if (a.classList.contains("reminder-disabled")) {
+          event.preventDefault();
+          return;
+        }
+        const parts = a.dataset.reminder.split(":");
+        markReminder(parts.slice(0, -1).join(":"), parts.at(-1));
+      }),
+  );
+  document.querySelectorAll("[data-copy-reminder]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (b.disabled) return;
+        const x = rows.find((row) => row.key === b.dataset.copyReminder);
+        copyText(reminderCopy[x.r.language || "ru"](x.r, x.plan)).then(() =>
+          markReminder(x.key, "copy"),
+        );
+      }),
+  );
+  document.querySelectorAll("[data-payment-reminder]").forEach(
+    (link) =>
+      (link.onclick = (event) => {
+        if (link.classList.contains("reminder-disabled")) {
+          event.preventDefault();
+          return;
+        }
+        const parts = link.dataset.paymentReminder.split(":");
+        markReminder(parts.slice(0, -1).join(":"), parts.at(-1));
+      }),
+  );
+  document.querySelectorAll("[data-copy-payment-reminder]").forEach(
+    (button) =>
+      (button.onclick = () => {
+        const row = paymentRows.find(
+          (item) => item.key === button.dataset.copyPaymentReminder,
+        );
+        if (!row || button.disabled) return;
+        copyText(paymentReminderCopy[row.r.language || "ru"](row)).then(() =>
+          markReminder(row.key, "copy"),
+        );
+      }),
+  );
+}
+function renderCommerce() {
+  renderRestaurants();
+  renderOrders();
+  renderAccounting();
+  renderReminders();
+}
+document.querySelector("#addRestaurant").onclick = () =>
+  document.querySelector("#restaurantDialog").showModal();
+document.querySelector("#saveRestaurant").onclick = (e) => {
+  e.preventDefault();
+  const f = new FormData(document.querySelector("#restaurantForm"));
+  restaurants.push({
+    id: crypto.randomUUID(),
+    name: f.get("name"),
+    email: f.get("email"),
+    accessCode: f.get("accessCode"),
+    phone: f.get("phone"),
+    telegram: String(f.get("telegram") || "").replace("@", ""),
+    language: f.get("language") || "ru",
+    address: f.get("address"),
+    prices: {
+      plain: Number(f.get("plainPrice")),
+      pumpkin: Number(f.get("pumpkinPrice")),
+    },
+  });
+  cSave("panora-restaurants", restaurants);
+  document.querySelector("#restaurantDialog").close();
+  document.querySelector("#restaurantForm").reset();
+  renderCommerce();
+};
+document.querySelector("#refreshReminders").onclick = renderReminders;
+document
+  .querySelector("#adminLanguage")
+  .addEventListener("change", () => setTimeout(renderCommerce));
+document.querySelector("#addOrder").onclick = () => {
+  if (!activeRestaurants().length) {
+    alert("Сначала добавьте активный ресторан.");
+    return;
+  }
+  const f = document.querySelector("#orderForm");
+  f.reset();
+  const d = new Date();
+  d.setDate(d.getDate() + 3);
+  f.date.value = iso(d);
+  document.querySelector("#orderDialog").showModal();
+};
+document.querySelector("#saveOrder").onclick = (e) => {
+  e.preventDefault();
+  const f = new FormData(document.querySelector("#orderForm")),
+    plain = Number(f.get("plain")),
+    pumpkin = Number(f.get("pumpkin"));
+  if (plain + pumpkin < 12) {
+    alert("Минимальный заказ — 12 шт.");
+    return;
+  }
+  const items = [];
+  if (plain) items.push({ product: "plain", quantity: plain });
+  if (pumpkin) items.push({ product: "pumpkin", quantity: pumpkin });
+  const r = restaurant(f.get("restaurant"));
+  orders.push({
+    id: crypto.randomUUID(),
+    number: (orders.at(-1)?.number || 0) + 1,
+    restaurantId: r.id,
+    date: f.get("date"),
+    deliveryDate: f.get("date"),
+    items,
+    prices: structuredClone(r.prices),
+    taxRate: Number(bakerySettings.taxRate),
+    status: "confirmed",
+  });
+  cSave("panora-orders", orders);
+  syncPlansFromOrders();
+  document.querySelector("#orderDialog").close();
+  document.querySelector("#orderForm").reset();
+  renderCommerce();
+  renderAll();
+};
+function openShipment(id) {
+  const o = orders.find((x) => x.id === id),
+    r = restaurant(o.restaurantId),
+    prices = o.prices || r.prices,
+    form = document.querySelector("#shipmentForm"),
+    summary = document.querySelector("#shipmentSummary");
+  form.orderId.value = id;
+  form.paymentDueDate.value = "";
+  summary.innerHTML = `<strong>PN-${String(o.number).padStart(4, "0")} · ${r.name}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
+  const update = () => {
+    let subtotal = 0;
+    summary.querySelectorAll("[data-shipment-quantity]").forEach((input) => {
+      const qty = Math.min(
+        Number(input.dataset.max),
+        Math.max(0, Number(input.value) || 0),
+      );
+      subtotal += qty * Number(prices[input.dataset.product] || 0);
+    });
+    const total =
+        subtotal * (1 + Number(o.taxRate ?? bakerySettings.taxRate) / 100),
+      paid = Math.min(total, Math.max(0, Number(form.paid.value) || 0));
+    document.querySelector("#shipmentActualTotal").textContent = euro(total);
+    document.querySelector("#shipmentDebtAfter").textContent = euro(
+      Math.max(0, shippedFor(r.id) - paidFor(r.id) + total - paid),
+    );
+  };
+  summary
+    .querySelectorAll("[data-shipment-quantity]")
+    .forEach((input) => input.addEventListener("input", update));
+  form.paid.value = "";
+  form.paid.oninput = update;
+  update();
+  document.querySelector("#shipmentDialog").showModal();
+}
+document.querySelector("#confirmShipment").onclick = async (e) => {
+  e.preventDefault();
+  const form = document.querySelector("#shipmentForm"),
+    button = document.querySelector("#confirmShipment"),
+    f = new FormData(form),
+    o = orders.find((x) => x.id === f.get("orderId"));
+  if (!o) return false;
+  const orderedItems = structuredClone(o.items),
+    actualItems = orderedItems
+      .map((i) => ({
+        ...i,
+        quantity: Number(
+          form.querySelector(
+            `[data-shipment-quantity][data-product="${i.product}"]`,
+          )?.value,
+        ),
+      }))
+      .filter((i) => Number.isFinite(i.quantity) && i.quantity > 0);
+  if (!actualItems.length) {
+    alert("Укажите количество хотя бы одного хлеба.");
+    return false;
+  }
+  if (
+    actualItems.some(
+      (i) =>
+        !Number.isInteger(i.quantity) ||
+        i.quantity >
+          Number(
+            orderedItems.find((x) => x.product === i.product)?.quantity || 0,
+          ),
+    )
+  ) {
+    alert("Количество должно быть целым и не больше заказанного.");
+    return false;
+  }
+  const changed =
+    actualItems.length !== orderedItems.length ||
+    actualItems.some(
+      (i) =>
+        i.quantity !==
+        orderedItems.find((x) => x.product === i.product)?.quantity,
+    );
+  if (
+    changed &&
+    !confirm(
+      "Фактическая поставка меньше заказа. Создать накладную по указанному количеству?",
+    )
+  )
+    return false;
+  o.orderedItems = o.orderedItems || orderedItems;
+  o.items = actualItems;
+  const subtotal = orderSubtotal(o),
+    taxRate = Number(o.taxRate ?? bakerySettings.taxRate),
+    tax = (subtotal * taxRate) / 100,
+    total = subtotal + tax,
+    paid = Math.min(total, Math.max(0, Number(f.get("paid"))));
+  o.status = "shipped";
+  const note = {
+    id: crypto.randomUUID(),
+    number: deliveryNotes.length + 1,
+    orderId: o.id,
+    restaurantId: o.restaurantId,
+    date: iso(new Date()),
+    paymentDueDate: f.get("paymentDueDate") || "",
+    items: structuredClone(actualItems),
+    orderedItems: structuredClone(orderedItems),
+    prices: structuredClone(o.prices || restaurant(o.restaurantId).prices),
+    bakery: structuredClone(bakerySettings),
+    subtotal,
+    taxRate,
+    tax,
+    total,
+    paid,
+    balanceAfter:
+      shippedFor(o.restaurantId) + total - paidFor(o.restaurantId) - paid,
+  };
+  deliveryNotes.push(note);
+  if (paid)
+    payments.push({
+      id: crypto.randomUUID(),
+      restaurantId: o.restaurantId,
+      deliveryNoteId: note.id,
+      date: note.date,
+      amount: paid,
+      method: f.get("method"),
+      note: `Оплата по накладной DN-${note.number}`,
+      confirmed: true,
+      confirmedAt: new Date().toISOString(),
+    });
+  actualItems.forEach((i) =>
+    movements.push({
+      id: crypto.randomUUID(),
+      date: note.date,
+      product: i.product,
+      type: "shipped",
+      quantity: i.quantity,
+      note: `Накладная DN-${note.number}`,
+    }),
+  );
+  cSave("panora-orders", orders);
+  cSave("panora-delivery-notes", deliveryNotes);
+  cSave("panora-payments", payments);
+  store("panora-stock-movements", movements);
+  window.panoraDataChannel?.postMessage({ type: "order-shipped", id: o.id });
+  button.disabled = true;
+  button.textContent = "Сохраняем накладную…";
+  try {
+    await window.panoraCloud?.syncFinance?.();
+    document.querySelector("#shipmentDialog").close();
+    renderCommerce();
+    renderStock();
+    printNote(o.id);
+    return true;
+  } catch (error) {
+    alert(
+      `Отгрузка сохранена на этом устройстве, но накладная пока не отправлена в облако: ${error.message}\\n\\nНе закрывайте приложение и проверьте соединение.`,
+    );
+    return false;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Отгрузить и создать накладную";
+  }
+};
+document.querySelector("#addPayment").onclick = () => {
+  if (!restaurants.length) {
+    alert("Сначала добавьте ресторан.");
+    return;
+  }
+  document.querySelector("#paymentDialog").showModal();
+};
+document.querySelector("#savePayment").onclick = async (e) => {
+  e.preventDefault();
+  const button = e.currentTarget,
+    f = new FormData(document.querySelector("#paymentForm")),
+    amount = Number(f.get("amount"));
+  if (!Number.isFinite(amount) || amount <= 0)
+    return alert("Введите сумму оплаты больше нуля.");
+  payments.push({
+    id: crypto.randomUUID(),
+    restaurantId: f.get("restaurant"),
+    deliveryNoteId: null,
+    date: iso(new Date()),
+    amount,
+    method: f.get("method"),
+    note: f.get("note"),
+    confirmed: false,
+    status: "pending",
+  });
+  cSave("panora-payments", payments);
+  button.disabled = true;
+  button.textContent = "Сохраняем…";
+  try {
+    await window.panoraCloud?.syncFinance?.();
+    document.querySelector("#paymentDialog").close();
+    document.querySelector("#paymentForm").reset();
+    renderCommerce();
+    alert(
+      "Оплата сохранена в облаке и ожидает подтверждения получения средств.",
+    );
+  } catch (error) {
+    renderCommerce();
+    alert(
+      `Оплата сохранена на этом устройстве, но пока не отправлена в облако: ${error.message}`,
+    );
+  } finally {
+    button.disabled = false;
+    button.textContent = "Записать оплату";
+  }
+};
+function printNote(orderId) {
+  const n = deliveryNotes.find((x) => x.orderId === orderId),
+    o = orders.find((x) => x.id === orderId),
+    r = restaurant(n.restaurantId),
+    b = n.bakery || bakerySettings,
+    w = window.open("", "_blank"),
+    taxSummary =
+      Number(n.taxRate) > 0
+        ? `Сумма без НДС: ${euro(n.subtotal ?? n.total)}<br>НДС ${n.taxRate}%: ${euro(n.tax || 0)}<br>`
+        : "",
+    paymentDueLine = n.paymentDueDate
+      ? `<br><strong>Плановая дата оплаты: ${n.paymentDueDate}</strong>`
+      : "";
+  w.document.write(
+    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table><p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
+  );
+  w.document.close();
+  w.print();
+}
+const settingsForm = document.querySelector("#bakerySettingsForm");
+Object.entries(bakerySettings).forEach(([key, value]) => {
+  const field = settingsForm.elements[key];
+  if (!field) return;
+  if (field.type === "checkbox") field.checked = Boolean(value);
+  else field.value = value;
+});
+settingsForm.onsubmit = (e) => {
+  e.preventDefault();
+  const f = new FormData(settingsForm),
+    useTax = f.get("useTax") === "on";
+  bakerySettings = {
+    ...bakerySettings,
+    legalName: f.get("legalName") || "Panora",
+    taxId: f.get("taxId"),
+    address: f.get("address"),
+    email: f.get("email"),
+    phone: f.get("phone"),
+    useTax,
+    taxRate: useTax ? Number(f.get("taxRate") || 0) : 0,
+  };
+  cSave("panora-bakery-settings", bakerySettings);
+  renderCommerce();
+  alert(
+    useTax
+      ? "Настройки сохранены. НДС включён."
+      : "Настройки сохранены. НДС отключён.",
+  );
+};
+function downloadFile(name, content, type = "text/csv;charset=utf-8") {
+  const blob = new Blob([content], { type }),
+    url = URL.createObjectURL(blob),
+    a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const csvCell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+function csv(rows) {
+  return "\ufeff" + rows.map((row) => row.map(csvCell).join(";")).join("\n");
+}
+document.querySelector("#exportBackup").onclick = () => {
+  const keys = [
+      "panora-restaurants",
+      "panora-orders",
+      "panora-payments",
+      "panora-delivery-notes",
+      "panora-production-plans",
+      "panora-recipes",
+      "panora-stock-movements",
+      "panora-bakery-settings",
+      "panora-reminder-log",
+      "panora-ingredient-costs",
+    ],
+    data = { exportedAt: new Date().toISOString(), version: 1 };
+  keys.forEach((k) => (data[k] = cRead(k, [])));
+  downloadFile(
+    `panora-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    JSON.stringify(data, null, 2),
+    "application/json",
+  );
+};
+const restoreInput = document.querySelector("#restoreBackupFile"),
+  restoreStatus = document.querySelector("#restoreStatus");
+document.querySelector("#restoreBackup").onclick = () => restoreInput.click();
+restoreInput.onchange = async () => {
+  restoreStatus.className = "restore-status";
+  restoreStatus.textContent = "";
+  const file = restoreInput.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text()),
+      keys = [
+        "panora-restaurants",
+        "panora-orders",
+        "panora-payments",
+        "panora-delivery-notes",
+        "panora-production-plans",
+        "panora-recipes",
+        "panora-stock-movements",
+        "panora-bakery-settings",
+      ];
+    if (data.version !== 1 || !keys.every((k) => Object.hasOwn(data, k)))
+      throw new Error("Неверный формат резервной копии");
+    if (
+      !Array.isArray(data["panora-restaurants"]) ||
+      !Array.isArray(data["panora-orders"]) ||
+      !Array.isArray(data["panora-payments"]) ||
+      !Array.isArray(data["panora-delivery-notes"]) ||
+      !Array.isArray(data["panora-production-plans"]) ||
+      !Array.isArray(data["panora-stock-movements"])
+    )
+      throw new Error("Повреждённые данные");
+    if (
+      !confirm(
+        `Восстановить копию от ${data.exportedAt || "неизвестной даты"}? Текущие данные будут заменены.`,
+      )
+    ) {
+      restoreInput.value = "";
+      return;
+    }
+    keys.forEach((k) => localStorage.setItem(k, JSON.stringify(data[k])));
+    restoreStatus.classList.add("success");
+    restoreStatus.textContent = "Данные восстановлены. Перезагрузка…";
+    setTimeout(() => location.reload(), 700);
+  } catch (error) {
+    restoreStatus.classList.add("error");
+    restoreStatus.textContent = `Не удалось восстановить: ${error.message}`;
+    restoreInput.value = "";
+  }
+};
+document.querySelector("#exportOrders").onclick = () =>
+  downloadFile(
+    "panora-orders.csv",
+    csv([
+      [
+        "Номер",
+        "Выпечка",
+        "Доставка",
+        "Ресторан",
+        "Статус",
+        "Льняной, шт.",
+        "Тыквенный, шт.",
+        "Без налога, EUR",
+        "Налог, %",
+        "Итого, EUR",
+      ],
+      ...orders.map((o) => [
+        o.number,
+        o.date,
+        o.deliveryDate || o.date,
+        restaurant(o.restaurantId)?.name,
+        orderStatus(o),
+        o.items.find((i) => i.product === "plain")?.quantity || 0,
+        o.items.find((i) => i.product === "pumpkin")?.quantity || 0,
+        orderSubtotal(o).toFixed(2),
+        o.taxRate ?? bakerySettings.taxRate,
+        orderTotal(o).toFixed(2),
+      ]),
+    ]),
+  );
+document.querySelector("#exportPayments").onclick = () => {
+  const rows = [
+    ...deliveryNotes.map((n) => [
+      restaurant(n.restaurantId)?.name,
+      n.date,
+      "Отгрузка",
+      n.total.toFixed(2),
+      "",
+      `DN-${n.number}`,
+      "Проведено",
+    ]),
+    ...payments.map((p) => [
+      restaurant(p.restaurantId)?.name,
+      p.date,
+      "Оплата",
+      (-p.amount).toFixed(2),
+      p.method,
+      p.note,
+      paymentConfirmed(p) ? "Подтверждена" : "Ожидает подтверждения",
+    ]),
+  ].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+  downloadFile(
+    "panora-payments-debts.csv",
+    csv([
+      [
+        "Ресторан",
+        "Дата",
+        "Тип",
+        "Сумма, EUR",
+        "Способ",
+        "Примечание",
+        "Статус",
+      ],
+      ...rows,
+    ]),
+  );
+};
+document.querySelector("#exportStock").onclick = () =>
+  downloadFile(
+    "panora-stock.csv",
+    csv([
+      ["Дата", "Хлеб", "Операция", "Количество, шт.", "Примечание"],
+      ...movements.map((m) => [
+        m.date,
+        m.product === "plain"
+          ? "Льняной бездрожжевой хлеб с семенами"
+          : "Тыквенный бездрожжевой хлеб с семенами",
+        m.type,
+        signed(m),
+        m.note,
+      ]),
+    ]),
+  );
+document.querySelector("#exportPlan").onclick = () =>
+  downloadFile(
+    "panora-production-plan.csv",
+    csv([
+      [
+        "Дата выпечки",
+        "Дата доставки",
+        "Хлеб",
+        "План, шт.",
+        "Заказано, шт.",
+        "Свободно, шт.",
+        "Приём заказов до",
+        "Открыто",
+      ],
+      ...plans.map((p) => [
+        p.bakeDate,
+        p.deliveryDate,
+        p.product === "plain"
+          ? "Льняной бездрожжевой хлеб с семенами"
+          : "Тыквенный бездрожжевой хлеб с семенами",
+        p.planned,
+        p.ordered || 0,
+        Math.max(0, p.planned - (p.ordered || 0)),
+        p.cutoff,
+        p.open ? "Да" : "Нет",
+      ]),
+    ]),
+  );
+syncPlansFromOrders();
+renderCommerce();
+renderAll();

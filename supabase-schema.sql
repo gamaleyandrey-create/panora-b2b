@@ -128,6 +128,7 @@ create table if not exists public.delivery_notes (
   order_id uuid not null unique references public.orders(id),
   restaurant_id uuid not null references public.restaurants(id),
   delivered_at timestamptz not null default now(),
+  payment_due_date date,
   total numeric(12,2) not null check (total >= 0),
   qr_token uuid not null default gen_random_uuid() unique,
   customer_confirmed_at timestamptz,

@@ -110,3 +110,8 @@
   }
   .rw-finance>header{display:grid;align-items:stretch}.rw-finance-debt{min-width:0}.rw-finance-stats{grid-template-columns:1fr}.rw-finance-stats article{grid-template-columns:1fr auto;align-items:center}.rw-operation{grid-template-columns:1fr}.rw-operation-amount{text-align:left}.rw-operation-amount small{font-size:12px}
 }
+.rw-payment-due{
+  display:block;
+  margin-top:5px;
+  color:#9b4a3f;
+}
