@@ -6,8 +6,10 @@
   const SESSION_KEY='panora-restaurant-cloud-session';
   const APP_URL='https://gamaleyandrey-create.github.io/panora-b2b/';
   let session=null,refreshPromise=null,loadPromise=null,submitting=false,lastState={type:'ok',text:'Соединение установлено'};
-  const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
-  const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+  const privateKeys=new Set(['panora-restaurants','panora-orders','panora-delivery-notes','panora-payments']);
+  const storageKey=key=>privateKeys.has(key)?`panora-portal-${key.slice(7)}`:key;
+  const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(storageKey(key))||'null')??fallback}catch{return fallback}};
+  const write=(key,value)=>localStorage.setItem(storageKey(key),JSON.stringify(value));
   const saveSession=value=>{session=value;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
   const labels=(ru,en,es)=>lang==='es'?es:lang==='en'?en:ru;
   async function fetchJson(url,options={}){
