@@ -227,11 +227,72 @@
     status('Облако ✓');
     return cachePayment(row);
   }
-  function recalculateBalances(){
-    if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return;
-    const running={};deliveryNotes.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(note=>{running[note.restaurantId]=(running[note.restaurantId]||0)+Number(note.total||0);const paid=payments.filter(p=>p.restaurantId===note.restaurantId&&p.confirmed!==false&&String(p.date)<=String(note.date)).reduce((sum,p)=>sum+Number(p.amount||0),0);note.paid=payments.filter(p=>p.deliveryNoteId===note.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);note.balanceAfter=running[note.restaurantId]-paid});
-    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
-  }
+function financeTimeline(restaurantId){
+  if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return[];
+  const notes=deliveryNotes.filter(note=>note.restaurantId===restaurantId);
+  const noteById=new Map(notes.map(note=>[note.id,note]));
+  const events=[
+    ...notes.map(note=>({
+      id:`delivery:${note.id}`,
+      date:String(note.date||''),
+      kind:'delivery',
+      sequence:Number(note.number||0)*2,
+      note,
+      amount:Number(note.total||0)
+    })),
+    ...payments.filter(payment=>payment.restaurantId===restaurantId&&payment.status!=='cancelled').map(payment=>{
+      const linkedNote=noteById.get(payment.deliveryNoteId);
+      const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
+      return{
+        id:`payment:${payment.id}`,
+        date:String(payment.date||''),
+        kind:'payment',
+        sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1000000,
+        payment,
+        amount:Number(payment.amount||0),
+        linkedNote:linkedNote||null
+      };
+    })
+  ].sort((a,b)=>a.date.localeCompare(b.date)||a.sequence-b.sequence||a.id.localeCompare(b.id));
+
+  let running=0;
+  events.forEach(event=>{
+    if(event.kind==='delivery'){
+      event.note.balanceBefore=running;
+      running+=event.amount;
+      event.note.balanceAfter=running;
+    }else if(event.payment.confirmed!==false){
+      running=Math.max(0,running-event.amount);
+      if(event.linkedNote&&event.date===String(event.linkedNote.date||'')){
+        event.linkedNote.balanceAfter=running;
+      }
+    }
+    event.balanceAfter=running;
+  });
+
+  notes.forEach(note=>{
+    const linked=payments.filter(payment=>
+      payment.deliveryNoteId===note.id&&
+      payment.confirmed!==false&&
+      payment.status!=='cancelled'
+    );
+    note.paid=linked.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    note.paidAtShipment=linked
+      .filter(payment=>String(payment.date||'')===String(note.date||''))
+      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+  });
+  return events;
+}
+function recalculateBalances(){
+  if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return;
+  new Set([
+    ...deliveryNotes.map(note=>note.restaurantId),
+    ...payments.map(payment=>payment.restaurantId)
+  ].filter(Boolean)).forEach(financeTimeline);
+  localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+}
+window.panoraFinanceTimeline=financeTimeline;
+window.panoraRecalculateBalances=recalculateBalances;
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc');

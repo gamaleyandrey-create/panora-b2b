@@ -15,6 +15,34 @@
   }
 
   function historyFor(id) {
+    window.panoraRecalculateBalances?.();
+    if (typeof window.panoraFinanceTimeline === "function") {
+      return window.panoraFinanceTimeline(id).slice().reverse().map((event) =>
+        event.kind === "delivery"
+          ? {
+              date: event.date,
+              type: "Отгрузка",
+              number: `DN-${String(event.note.number).padStart(4, "0")}`,
+              amount: event.amount,
+              className: "shipment",
+              balanceAfter: event.balanceAfter,
+            }
+          : {
+              id: event.payment.id,
+              date: event.date,
+              type: paymentConfirmed(event.payment)
+                ? "Оплата подтверждена"
+                : "Ожидает подтверждения",
+              number: event.payment.note || event.payment.method || "",
+              amount: -event.amount,
+              className: paymentConfirmed(event.payment)
+                ? "payment"
+                : "payment pending",
+              balanceAfter: event.balanceAfter,
+            },
+      );
+    }
+    let running = 0;
     return [
       ...deliveryNotes
         .filter((note) => note.restaurantId === id)
@@ -24,6 +52,7 @@
           number: `DN-${String(note.number).padStart(4, "0")}`,
           amount: note.total,
           className: "shipment",
+          sort: 0,
         })),
       ...payments
         .filter((payment) => payment.restaurantId === id)
@@ -38,8 +67,23 @@
           className: paymentConfirmed(payment)
             ? "payment"
             : "payment pending",
+          sort: 1,
         })),
-    ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    ]
+      .sort(
+        (a, b) =>
+          String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
+      )
+      .map((item) => {
+        if (
+          item.className === "shipment" ||
+          !item.className.includes("pending")
+        )
+          running += Number(item.amount || 0);
+        item.balanceAfter = Math.max(0, running);
+        return item;
+      })
+      .reverse();
   }
 
   function open(id) {
@@ -64,7 +108,7 @@
       ? history
           .map(
             (item) =>
-              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${item.date}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value"><b>${item.amount < 0 ? "−" : "+"}${euro(Math.abs(item.amount))}</b>${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
+              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${item.date}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value"><b>${item.amount < 0 ? "−" : "+"}${euro(Math.abs(item.amount))}</b><small>Задолженность после операции: ${euro(Math.max(0, Number(item.balanceAfter || 0)))}</small>${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
           )
           .join("")
       : '<p class="empty-row">Операций пока нет.</p>';
