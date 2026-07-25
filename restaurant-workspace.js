@@ -196,8 +196,13 @@
       .join("")}</section>`;
   }
   function paymentsHtml() {
+    window.panoraRecalculateBalances?.();
     const payments = ownPayments(),
       notes = ownNotes();
+    const sharedTimeline =
+      typeof window.panoraFinanceTimeline === "function"
+        ? window.panoraFinanceTimeline(account.id)
+        : null;
     const delivered = notes.reduce(
       (sum, note) => sum + Number(note.total || 0),
       0,
@@ -214,7 +219,35 @@
           payment.confirmed === false && payment.status !== "cancelled",
       )
       .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    const operations = [
+    const operations = sharedTimeline
+      ? sharedTimeline.map((event) =>
+          event.kind === "delivery"
+            ? {
+                date: event.date,
+                kind: "delivery",
+                amount: event.amount,
+                label: noteNumber(event.note),
+                note: event.note,
+                sort: 0,
+                balanceAfter: event.balanceAfter,
+              }
+            : {
+                date: event.date,
+                kind: "payment",
+                amount: -event.amount,
+                label: event.payment.deliveryNoteId
+                  ? noteNumber(
+                      notes.find(
+                        (note) => note.id === event.payment.deliveryNoteId,
+                      ) || { number: "—" },
+                    )
+                  : t("withoutNote"),
+                payment: event.payment,
+                sort: 1,
+                balanceAfter: event.balanceAfter,
+              },
+        )
+      : [
       ...notes.map((note) => ({
         date: note.date,
         kind: "delivery",
@@ -239,19 +272,22 @@
           payment,
           sort: 1,
         })),
-    ].sort(
-      (a, b) => String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
-    );
-    let running = 0;
-    operations.forEach((operation) => {
-      if (
-        operation.kind === "delivery" ||
-        operation.payment?.confirmed !== false
-      )
-        running += operation.amount;
-      operation.balance = running;
-    });
-    const history = operations.reverse();
+        ].sort(
+          (a, b) =>
+            String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
+        );
+    if (!sharedTimeline) {
+      let running = 0;
+      operations.forEach((operation) => {
+        if (
+          operation.kind === "delivery" ||
+          operation.payment?.confirmed !== false
+        )
+          running += operation.amount;
+        operation.balanceAfter = Math.max(0, running);
+      });
+    }
+    const history = operations.slice().reverse();
     return `<section class="rw-finance">
       <header><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${t("debt")}</span><strong>${portalMoney(Math.max(0, delivered - paid))}</strong></div></header>
       <div class="rw-finance-stats">
@@ -268,7 +304,7 @@
                   operation,
                 ) => `<article class="rw-operation ${operation.kind}${operation.payment?.confirmed === false ? " pending" : ""}">
         <div><strong>${operation.kind === "delivery" ? `${t("delivery")} · ${esc(operation.label)}` : `${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate ? ` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}` : ""}${operation.payment?.method ? ` · ${esc(operation.payment.method)}` : ""}${operation.payment?.note ? ` · ${esc(operation.payment.note)}` : ""}</small></div>
-        <div class="rw-operation-amount"><b>${operation.amount < 0 ? "−" : "+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed === false ? t("pending") : `${t("balanceAfter")}: ${portalMoney(Math.max(0, operation.balance))}`}</small></div>
+        <div class="rw-operation-amount"><b>${operation.amount < 0 ? "−" : "+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed === false ? t("pending") : `${t("balanceAfter")}: ${portalMoney(Math.max(0, operation.balanceAfter))}`}</small></div>
       </article>`,
               )
               .join("")}</div>`
