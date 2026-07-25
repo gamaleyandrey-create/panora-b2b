@@ -660,74 +660,112 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     )
   )
     return false;
-  o.orderedItems = o.orderedItems || orderedItems;
-  o.items = actualItems;
-  const subtotal = orderSubtotal(o),
+  const prices = structuredClone(
+      o.prices || restaurant(o.restaurantId).prices,
+    ),
+    subtotal = actualItems.reduce(
+      (sum, item) =>
+        sum + item.quantity * Number(prices[item.product] || 0),
+      0,
+    ),
     taxRate = Number(o.taxRate ?? bakerySettings.taxRate),
     tax = (subtotal * taxRate) / 100,
     total = subtotal + tax,
     paid = Math.min(total, Math.max(0, Number(f.get("paid"))));
-  o.status = "shipped";
-  const note = {
-    id: crypto.randomUUID(),
-    number: deliveryNotes.length + 1,
-    orderId: o.id,
-    restaurantId: o.restaurantId,
-    date: iso(new Date()),
-    paymentDueDate: f.get("paymentDueDate") || "",
-    items: structuredClone(actualItems),
-    orderedItems: structuredClone(orderedItems),
-    prices: structuredClone(o.prices || restaurant(o.restaurantId).prices),
-    bakery: structuredClone(bakerySettings),
-    subtotal,
-    taxRate,
-    tax,
-    total,
-    paid,
-    balanceAfter:
-      shippedFor(o.restaurantId) + total - paidFor(o.restaurantId) - paid,
-  };
-  deliveryNotes.push(note);
-  if (paid)
-    payments.push({
-      id: crypto.randomUUID(),
-      restaurantId: o.restaurantId,
-      deliveryNoteId: note.id,
-      date: note.date,
-      amount: paid,
-      method: f.get("method"),
-      note: `Оплата по накладной DN-${note.number}`,
-      confirmed: true,
-      confirmedAt: new Date().toISOString(),
-    });
-  actualItems.forEach((i) =>
-    movements.push({
-      id: crypto.randomUUID(),
-      date: note.date,
-      product: i.product,
-      type: "shipped",
-      quantity: i.quantity,
-      note: `Накладная DN-${note.number}`,
-    }),
-  );
-  cSave("panora-orders", orders);
-  cSave("panora-delivery-notes", deliveryNotes);
-  cSave("panora-payments", payments);
-  store("panora-stock-movements", movements);
-  window.panoraDataChannel?.postMessage({ type: "order-shipped", id: o.id });
   button.disabled = true;
   button.textContent = "Сохраняем накладную…";
   const shipmentDialog = document.querySelector("#shipmentDialog");
-  shipmentDialog.close();
-  renderCommerce();
-  renderStock();
-  printNote(o.id);
   try {
-    await window.panoraCloud?.syncFinance?.();
+    const cloudConfigured = Boolean(
+      window.PANORA_SUPABASE?.url &&
+        window.PANORA_SUPABASE?.publishableKey,
+    );
+    let note;
+    if (cloudConfigured) {
+      if (
+        !window.panoraCloud?.ready ||
+        !window.panoraCloud?.shipOrderAtomic
+      )
+        throw new Error(
+          "Нет соединения с Supabase. Отгрузка не была проведена.",
+        );
+      note = await window.panoraCloud.shipOrderAtomic({
+        orderId: o.id,
+        items: actualItems,
+        paymentAmount: paid,
+        paymentMethod: f.get("method") || "Наличные",
+        paymentDueDate: f.get("paymentDueDate") || null,
+      });
+    } else {
+      o.orderedItems = o.orderedItems || orderedItems;
+      o.items = actualItems;
+      o.status = "shipped";
+      note = {
+        id: crypto.randomUUID(),
+        number: deliveryNotes.length + 1,
+        orderId: o.id,
+        restaurantId: o.restaurantId,
+        date: iso(new Date()),
+        paymentDueDate: f.get("paymentDueDate") || "",
+        items: structuredClone(actualItems),
+        orderedItems: structuredClone(orderedItems),
+        prices,
+        bakery: structuredClone(bakerySettings),
+        subtotal,
+        taxRate,
+        tax,
+        total,
+        paid,
+        balanceAfter:
+          shippedFor(o.restaurantId) + total - paidFor(o.restaurantId) - paid,
+      };
+      deliveryNotes.push(note);
+      if (paid)
+        payments.push({
+          id: crypto.randomUUID(),
+          restaurantId: o.restaurantId,
+          deliveryNoteId: note.id,
+          date: note.date,
+          amount: paid,
+          method: f.get("method") || "Наличные",
+          note: `Оплата по накладной DN-${note.number}`,
+          confirmed: true,
+          confirmedAt: new Date().toISOString(),
+        });
+      cSave("panora-orders", orders);
+      cSave("panora-delivery-notes", deliveryNotes);
+      cSave("panora-payments", payments);
+    }
+    if (
+      !movements.some(
+        (movement) =>
+          movement.type === "shipped" && movement.orderId === o.id,
+      )
+    )
+      actualItems.forEach((item) =>
+        movements.push({
+          id: crypto.randomUUID(),
+          orderId: o.id,
+          date: note.date,
+          product: item.product,
+          type: "shipped",
+          quantity: item.quantity,
+          note: `Накладная DN-${note.number}`,
+        }),
+      );
+    store("panora-stock-movements", movements);
+    window.panoraDataChannel?.postMessage({
+      type: "order-shipped",
+      id: o.id,
+    });
+    shipmentDialog.close();
+    renderCommerce();
+    renderStock();
+    printNote(o.id);
     return true;
   } catch (error) {
     alert(
-      `Отгрузка и накладная сохранены на этом устройстве. Синхронизация с облаком будет повторена после восстановления соединения: ${error.message}`,
+      `Отгрузка не выполнена. Заказ остался подтверждённым.\n\n${error.message}`,
     );
     return false;
   } finally {

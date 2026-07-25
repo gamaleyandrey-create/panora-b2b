@@ -91,6 +91,31 @@
     if(!saved||saved.status!==nextStatus)throw new Error('Supabase не подтвердил изменение статуса заказа');
     return saved;
   }
+  async function shipOrderAtomic({orderId,items,paymentAmount=0,paymentMethod='Наличные',paymentDueDate=null}){
+    if(!ready)throw new Error('Нет соединения с облаком');
+    if(loadingOrders)await loadingOrders;
+    clearTimeout(orderTimer);orderTimer=0;
+    await request('rpc/panora_ship_order',{
+      method:'POST',
+      headers:{Prefer:'return=representation'},
+      body:JSON.stringify({
+        p_order_id:orderId,
+        p_items:(items||[]).map(item=>({
+          product_id:item.product,
+          quantity:Number(item.quantity||0)
+        })),
+        p_payment_amount:Number(paymentAmount||0),
+        p_payment_method:paymentMethod||'Наличные',
+        p_payment_due_date:paymentDueDate||null
+      })
+    });
+    await loadOrders();
+    await loadPayments();
+    await loadDeliveryNotes();
+    const note=deliveryNotes.find(entry=>entry.orderId===orderId);
+    if(!note)throw new Error('Supabase не вернул созданную накладную');
+    return note;
+  }
   async function bakeDayMap(){const days=await request('bake_days?select=id,bake_date');return new Map((days||[]).map(day=>[day.bake_date,day.id]))}
   async function saveOrdersNow(){
     if(!ready||typeof orders==='undefined')return;if(savingOrders)return savingOrders;
@@ -238,7 +263,7 @@
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)queueFinance()});
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
