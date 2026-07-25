@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="portal.css?v=231">
-  <link rel="stylesheet" href="restaurant-workspace.css?v=232">
+  <link rel="stylesheet" href="restaurant-workspace.css?v=233">
   <link rel="stylesheet" href="quantity.css">
   <link rel="stylesheet" href="account-state.css">
   <link rel="stylesheet" href="account-documents.css">
@@ -108,7 +108,7 @@
         <div><span data-i18n="cart.delivery">Доставка</span><strong data-i18n="cart.free">Бесплатно</strong></div>
         <div class="summary-total"><span data-i18n="cart.total">Итого</span><strong id="summaryTotal">0 €</strong></div>
         <p class="minimum-hint" id="minimumHint"></p>
-        <button class="button button-primary full" id="checkoutButton" data-i18n="cart.checkout">Оформить поставку</button>
+        <button class="button button-primary full" id="checkoutButton" type="button" data-i18n="cart.checkout">Оформить поставку</button>
       </div>
     </aside>
 
@@ -143,13 +143,14 @@
     </div>
     <div class="toast" id="toast" role="status"></div>
   </div>
-  <script src="app.js?v=231"></script>
+  <script src="app.js?v=233"></script>
   <script src="portal.js?v=226"></script>
   <script src="supabase-config.js?v=201"></script>
   <script src="portal-cloud.js?v=231"></script>
   <script src="dynamic-products.js?v=52"></script>
   <script src="invoice-close.js?v=93"></script>
   <script src="install-guide.js?v=100"></script>
-  <script src="restaurant-workspace.js?v=232"></script>
+  <script src="restaurant-workspace.js?v=233"></script>
+  <script src="checkout-flow-fix.js?v=233"></script>
 </body>
 </html>
