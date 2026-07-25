@@ -115,8 +115,13 @@
   async function loadDeliveryNotes(){
     const rows=await request('delivery_notes?select=*&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
-    if(rows?.length){deliveryNotes=rows.map(rowNote);localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));if(typeof renderCommerce==='function')renderCommerce()}
-    else if(local.length){deliveryNotes=local;ready=true;await saveDeliveryNotesNow()}
+    const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
+    deliveryNotes=[...remote,...pending];
+    let nextNumber=Math.max(0,...deliveryNotes.map(note=>Number(note.number)||0))+1;
+    const recovered=orders.filter(order=>order.status==='shipped'&&!deliveryNotes.some(note=>note.orderId===order.id)).map(order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:crypto.randomUUID(),number:nextNumber++,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,total:subtotal+tax,paid:0,balanceAfter:0,recovered:true}});
+    deliveryNotes.push(...recovered);localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+    if(pending.length||recovered.length){ready=true;await saveDeliveryNotesNow()}
+    if(typeof renderCommerce==='function')renderCommerce()
   }
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;
@@ -181,7 +186,7 @@
   function queueRecipes(){clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>saveRecipesNow().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
   function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
-  function queueFinance(){clearTimeout(financeTimer);financeTimer=setTimeout(async()=>{try{await saveDeliveryNotesNow();await savePaymentsNow();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}catch(error){fail('оплаты',error)}},550)}
+  function queueFinance(){clearTimeout(financeTimer);financeTimer=setTimeout(async()=>{try{if(savingOrders)await savingOrders;else if(typeof orders!=='undefined')await saveOrdersNow();await saveDeliveryNotesNow();await savePaymentsNow();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}catch(error){fail('оплаты',error)}},550)}
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
