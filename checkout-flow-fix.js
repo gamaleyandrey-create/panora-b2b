@@ -1,10 +1,19 @@
-/* Panora v235: the basket always opens customer details before validating them. */
+/* Panora v249: the basket opens checkout before validating customer details. */
 (()=>{
   'use strict';
-  const button=document.querySelector('#checkoutButton');
+  const oldButton=document.querySelector('#checkoutButton');
   const form=document.querySelector('#checkoutForm');
   const checkout=document.querySelector('#checkoutModal');
-  if(!button||!form||!checkout)return;
+  if(!oldButton||!form||!checkout)return;
+
+  /*
+   * Replace the node after all older scripts have loaded. This removes stale
+   * onclick/capture listeners which validated phone/address while the basket
+   * was still open (most visible in iOS standalone mode).
+   */
+  const button=oldButton.cloneNode(true);
+  button.type='button';
+  oldButton.replaceWith(button);
 
   const message=(ru,en,es)=>lang==='en'?en:lang==='es'?es:ru;
   const openDetails=()=>{
@@ -25,19 +34,11 @@
       if(savedSummary)savedSummary.hidden=true;
     }
     closePanels();
-    window.setTimeout(()=>{
-      openPanel(checkout);
-      const firstMissing=[form.contact,form.phone,form.address].find(field=>field&&field.required&&!String(field.value||'').trim());
-      if(firstMissing){
-        firstMissing.closest('label')?.scrollIntoView({behavior:'smooth',block:'center'});
-        firstMissing.focus({preventScroll:true});
-      }
-    },120);
+    openPanel(checkout);
   };
 
-  button.addEventListener('click',event=>{
+  button.onclick=event=>{
     event.preventDefault();
-    event.stopImmediatePropagation();
     const count=cartData().count;
     if(count<MIN_PIECES){
       showToast(message(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
@@ -56,5 +57,5 @@
       return;
     }
     openDetails();
-  },true);
+  };
 })();

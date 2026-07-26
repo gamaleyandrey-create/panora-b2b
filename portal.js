@@ -610,8 +610,18 @@ function updateMobileCheckoutSummary() {
   try {
     saved = JSON.parse(localStorage.getItem(checkoutProfileKey()) || "{}");
   } catch {}
+  const effective = {
+    contact:
+      String(saved.contact || form.contact.value || account?.name || "").trim(),
+    phone:
+      String(saved.phone || form.phone.value || account?.phone || "").trim(),
+    email:
+      String(saved.email || form.email.value || account?.email || "").trim(),
+    address:
+      String(saved.address || form.address.value || account?.address || "").trim(),
+  };
   const complete = Boolean(
-    account && saved.contact && saved.phone && saved.address,
+    account && effective.contact && effective.phone && effective.address,
   );
   form.classList.toggle("returning-checkout", complete);
   form
@@ -638,7 +648,7 @@ function updateMobileCheckoutSummary() {
       '<div><strong></strong><span></span></div><button type="button"></button>';
     summary.querySelector("strong").textContent = account.name;
     summary.querySelector("span").textContent =
-      `${saved.contact} · ${saved.phone} · ${saved.address}`;
+      `${effective.contact} · ${effective.phone} · ${effective.address}`;
     summary.querySelector("button").textContent =
       lang === "ru" ? "Изменить" : lang === "es" ? "Editar" : "Edit";
     summary.querySelector("button").onclick = () => {
