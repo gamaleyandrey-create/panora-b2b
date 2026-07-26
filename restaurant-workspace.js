@@ -35,6 +35,9 @@
       withoutNote: "без накладной",
       balanceAfter: "Остаток после операции",
       paymentDue: "Оплатить до",
+      traysDelivered: "Передано лотков",
+      traysReturned: "Возвращено",
+      trayBalance: "Осталось у вас",
     },
     en: {
       title: "Restaurant workspace",
@@ -68,6 +71,9 @@
       withoutNote: "without delivery note",
       balanceAfter: "Balance after transaction",
       paymentDue: "Payment due",
+      traysDelivered: "Delivered trays",
+      traysReturned: "Returned",
+      trayBalance: "At your restaurant",
     },
     es: {
       title: "Área del restaurante",
@@ -101,6 +107,9 @@
       withoutNote: "sin albarán",
       balanceAfter: "Saldo después del movimiento",
       paymentDue: "Pagar antes del",
+      traysDelivered: "Bandejas entregadas",
+      traysReturned: "Devueltas",
+      trayBalance: "En tu restaurante",
     },
   };
   const t = (key) => (tx[lang] || tx.ru)[key];
@@ -188,7 +197,7 @@
       .map((note) => {
         const order = orders.find((item) => item.id === note.orderId);
         return `<article class="rw-document">
-      <span><strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(order?.deliveryDate || note.date)}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(note.paymentDueDate)}</strong></small>` : ""}</span>
+      <span><strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(order?.deliveryDate || note.date)}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(note.paymentDueDate)}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")}</button>
     </article>`;

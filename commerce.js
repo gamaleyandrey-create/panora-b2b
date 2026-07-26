@@ -577,14 +577,28 @@ document.querySelector("#saveOrder").onclick = (e) => {
   renderCommerce();
   renderAll();
 };
+function traysAtRestaurant(restaurantId) {
+  return deliveryNotes
+    .filter((note) => note.restaurantId === restaurantId)
+    .reduce(
+      (sum, note) =>
+        sum +
+        Number(note.traysDelivered || 0) -
+        Number(note.traysReturned || 0),
+      0,
+    );
+}
 function openShipment(id) {
   const o = orders.find((x) => x.id === id),
     r = restaurant(o.restaurantId),
     prices = o.prices || r.prices,
     form = document.querySelector("#shipmentForm"),
-    summary = document.querySelector("#shipmentSummary");
+    summary = document.querySelector("#shipmentSummary"),
+    previousTrays = traysAtRestaurant(r.id);
   form.orderId.value = id;
   form.paymentDueDate.value = "";
+  form.traysDelivered.value = "";
+  form.traysReturned.value = "";
   summary.innerHTML = `<strong>PN-${String(o.number).padStart(4, "0")} · ${r.name}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
   const update = () => {
     let subtotal = 0;
@@ -597,17 +611,29 @@ function openShipment(id) {
     });
     const total =
         subtotal * (1 + Number(o.taxRate ?? bakerySettings.taxRate) / 100),
-      paid = Math.min(total, Math.max(0, Number(form.paid.value) || 0));
+      paid = Math.min(total, Math.max(0, Number(form.paid.value) || 0)),
+      traysDelivered = Math.max(
+        0,
+        Math.trunc(Number(form.traysDelivered.value) || 0),
+      ),
+      traysReturned = Math.max(
+        0,
+        Math.trunc(Number(form.traysReturned.value) || 0),
+      );
     document.querySelector("#shipmentActualTotal").textContent = euro(total);
     document.querySelector("#shipmentDebtAfter").textContent = euro(
       Math.max(0, shippedFor(r.id) - paidFor(r.id) + total - paid),
     );
+    document.querySelector("#shipmentTrayBalance").textContent =
+      `${Math.max(0, previousTrays + traysDelivered - traysReturned)} шт.`;
   };
   summary
     .querySelectorAll("[data-shipment-quantity]")
     .forEach((input) => input.addEventListener("input", update));
   form.paid.value = "";
   form.paid.oninput = update;
+  form.traysDelivered.oninput = update;
+  form.traysReturned.oninput = update;
   update();
   document.querySelector("#shipmentDialog").showModal();
 }
@@ -671,7 +697,24 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     taxRate = Number(o.taxRate ?? bakerySettings.taxRate),
     tax = (subtotal * taxRate) / 100,
     total = subtotal + tax,
-    paid = Math.min(total, Math.max(0, Number(f.get("paid"))));
+    paid = Math.min(total, Math.max(0, Number(f.get("paid")))),
+    traysDelivered = Math.max(
+      0,
+      Math.trunc(Number(f.get("traysDelivered")) || 0),
+    ),
+    traysReturned = Math.max(
+      0,
+      Math.trunc(Number(f.get("traysReturned")) || 0),
+    ),
+    previousTrayBalance = traysAtRestaurant(o.restaurantId),
+    availableTrays = previousTrayBalance + traysDelivered,
+    trayBalanceAfter = availableTrays - traysReturned;
+  if (traysReturned > availableTrays) {
+    alert(
+      "Нельзя вернуть больше лотков, чем числится у ресторана с учётом этой поставки.",
+    );
+    return false;
+  }
   button.disabled = true;
   button.textContent = "Сохраняем накладную…";
   const shipmentDialog = document.querySelector("#shipmentDialog");
@@ -695,6 +738,9 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
         paymentAmount: paid,
         paymentMethod: f.get("method") || "Наличные",
         paymentDueDate: f.get("paymentDueDate") || null,
+        traysDelivered,
+        traysReturned,
+        trayBalanceAfter,
       });
     } else {
       o.orderedItems = o.orderedItems || orderedItems;
@@ -716,6 +762,9 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
         tax,
         total,
         paid,
+        traysDelivered,
+        traysReturned,
+        trayBalanceAfter,
         balanceAfter:
           shippedFor(o.restaurantId) + total - paidFor(o.restaurantId) - paid,
       };
