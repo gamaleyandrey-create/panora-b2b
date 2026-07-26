@@ -116,9 +116,9 @@
       <div class="modal-head"><div><span class="kicker" data-i18n="checkout.kicker">Последний шаг</span><h2 data-i18n="checkout.title">Оформление поставки</h2></div><button class="close-button" data-close>×</button></div>
       <form id="checkoutForm">
         <label><span data-i18n="checkout.restaurant">Название ресторана</span><input name="restaurant" required data-i18n-placeholder="checkout.restaurantPlaceholder" placeholder="Название ресторана"></label>
-        <div class="form-row"><label><span data-i18n="checkout.contact">Контактное лицо</span><input name="contact" required data-i18n-placeholder="checkout.contactPlaceholder" placeholder="Имя и фамилия"></label><label><span data-i18n="checkout.phone">Телефон</span><input name="phone" type="tel" required placeholder="+34 …"></label></div>
+        <div class="form-row"><label><span data-i18n="checkout.contact">Контактное лицо</span><input name="contact" required autocomplete="name" data-i18n-placeholder="checkout.contactPlaceholder" placeholder="Имя и фамилия"></label><label><span data-i18n="checkout.phone">Телефон</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+34 …"></label></div>
         <label><span>Email</span><input name="email" type="email" placeholder="restaurant@example.com"></label>
-        <label id="deliveryAddressLabel"><span data-i18n="checkout.address">Адрес доставки</span><input name="address" required data-i18n-placeholder="checkout.addressPlaceholder" placeholder="Улица, дом, вход"></label>
+        <label id="deliveryAddressLabel"><span data-i18n="checkout.address">Адрес доставки</span><input name="address" required autocomplete="street-address" data-i18n-placeholder="checkout.addressPlaceholder" placeholder="Улица, дом, вход"></label>
         <div class="form-row">
           <label><span data-i18n="checkout.bakeDay">День выпечки</span><select name="date" required id="deliveryDate"></select></label>
           <label id="deliveryTimeLabel"><span data-i18n="checkout.interval">Интервал</span><select name="time"><option>08:00–10:00</option><option>10:00–11:00</option><option>11:00–12:00</option></select></label>
@@ -144,13 +144,13 @@
     <div class="toast" id="toast" role="status"></div>
   </div>
   <script src="app.js?v=233"></script>
-<script src="portal.js?v=249"></script>
+<script src="portal.js?v=251"></script>
   <script src="supabase-config.js?v=201"></script>
-  <script src="portal-cloud.js?v=250"></script>
+  <script src="portal-cloud.js?v=251"></script>
   <script src="dynamic-products.js?v=52"></script>
   <script src="invoice-close.js?v=93"></script>
   <script src="install-guide.js?v=100"></script>
   <script src="restaurant-workspace.js?v=245"></script>
-<script src="checkout-flow-fix.js?v=250"></script>
+<script src="checkout-flow-fix.js?v=251"></script>
 </body>
 </html>
