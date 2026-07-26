@@ -573,52 +573,71 @@ showShare = function (order) {
 function checkoutProfileKey() {
   return `panora-checkout-profile-${account?.id || "guest"}`;
 }
-function saveCheckoutProfile() {
+
+const checkoutProfileFields = [
+  "contact",
+  "phone",
+  "email",
+  "address",
+  "fulfillment",
+  "time",
+];
+
+function readCheckoutProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(checkoutProfileKey()) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveCheckoutProfile(event) {
   if (!account) return;
   const form = $("#checkoutForm");
-  localStorage.setItem(
-    checkoutProfileKey(),
-    JSON.stringify({
-      contact: form.contact.value,
-      phone: form.phone.value,
-      email: form.email.value,
-      address: form.address.value,
-      fulfillment: form.fulfillment.value,
-      time: form.time.value,
-    }),
-  );
+  const saved = readCheckoutProfile();
+  const changedField = event?.target?.name;
+  if (changedField && checkoutProfileFields.includes(changedField)) {
+    saved[changedField] = event.target.value;
+  } else {
+    checkoutProfileFields.forEach((field) => {
+      const control = form.elements.namedItem(field);
+      if (!control) return;
+      const value = control.value;
+      if (value || !(field in saved)) saved[field] = value;
+    });
+  }
+  localStorage.setItem(checkoutProfileKey(), JSON.stringify(saved));
 }
 function restoreCheckoutProfile() {
   if (!account) return;
   const form = $("#checkoutForm");
-  let saved = {};
-  try {
-    saved = JSON.parse(localStorage.getItem(checkoutProfileKey()) || "{}");
-  } catch {}
-  form.contact.value = saved.contact || form.contact.value || account.name;
-  form.phone.value = saved.phone || form.phone.value || account.phone || "";
-  form.email.value = saved.email || form.email.value || account.email || "";
-  form.address.value =
-    saved.address || form.address.value || account.address || "";
+  const saved = readCheckoutProfile();
+  const fillEmpty = (field, value) => {
+    const control = form.elements.namedItem(field);
+    if (control && !String(control.value || "").trim()) {
+      control.value = value || "";
+    }
+  };
+  fillEmpty("contact", saved.contact || account.name);
+  fillEmpty("phone", saved.phone || account.phone);
+  fillEmpty("email", saved.email || account.email);
+  fillEmpty("address", saved.address || account.address);
   if (saved.fulfillment) form.fulfillment.value = saved.fulfillment;
   if (saved.time) form.time.value = saved.time;
   toggleFulfillment();
 }
 function updateMobileCheckoutSummary() {
   const form = $("#checkoutForm");
-  let saved = {};
-  try {
-    saved = JSON.parse(localStorage.getItem(checkoutProfileKey()) || "{}");
-  } catch {}
+  const saved = readCheckoutProfile();
   const effective = {
     contact:
-      String(saved.contact || form.contact.value || account?.name || "").trim(),
+      String(form.contact.value || saved.contact || account?.name || "").trim(),
     phone:
-      String(saved.phone || form.phone.value || account?.phone || "").trim(),
+      String(form.phone.value || saved.phone || account?.phone || "").trim(),
     email:
-      String(saved.email || form.email.value || account?.email || "").trim(),
+      String(form.email.value || saved.email || account?.email || "").trim(),
     address:
-      String(saved.address || form.address.value || account?.address || "").trim(),
+      String(form.address.value || saved.address || account?.address || "").trim(),
   };
   const complete = Boolean(
     account && effective.contact && effective.phone && effective.address,
