@@ -134,6 +134,19 @@
       audit('shipment.completed',`${order?.number||orderId} · накладная ${note.number||note.noteNumber||''}`);
       return note;
     }catch(error){
+      try{
+        const existing=await request(`delivery_notes?order_id=eq.${encodeURIComponent(orderId)}&select=id,note_number&limit=1`);
+        if(existing?.length){
+          await loadOrders();await loadPayments();await loadDeliveryNotes();
+          const recovered=deliveryNotes.find(entry=>entry.orderId===orderId);
+          if(recovered){
+            const order=orders.find(entry=>entry.id===orderId);
+            audit('shipment.recovered',`${order?.number||orderId} · накладная ${recovered.number||existing[0].note_number}`,'warning');
+            status('Облако ✓');
+            return recovered;
+          }
+        }
+      }catch(recoveryError){console.warn('Panora shipment recovery failed',recoveryError)}
       audit('shipment.failed',`Заказ ${orderId}: ${error?.message||error}`,'error');
       throw error;
     }finally{shippingLocks.delete(orderId)}
@@ -370,12 +383,23 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearTimeout(financeTimer);
     financeTimer=setTimeout(()=>syncFinanceNow().catch(error=>fail('накладные и оплаты',error)),120);
   }
+  async function loadOperationEvents(){
+    try{
+      const rows=await request('operation_events?select=id,event_type,entity_type,entity_id,restaurant_id,payload,created_at&order=created_at.desc&limit=200');
+      window.panoraAudit?.mergeCloud(rows||[]);
+      return rows||[];
+    }catch(error){
+      const message=String(error?.message||error);
+      if(!/operation_events|42P01|PGRST205/i.test(message))console.warn('Panora operation journal',error);
+      return [];
+    }
+  }
   async function retrySync(){
     if(!navigator.onLine){status('Сохранено на устройстве');return false}
     if(!ready){status('Облако не подключено',true,'Сначала войдите в приложение');return false}
     status('Повторная синхронизация…');
     try{
-      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();
+      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){fail('повтор',error);return false}
@@ -383,13 +407,13 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments]],errors=[];
+    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
     clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
   window.addEventListener('offline',()=>status('Сохранено на устройстве'));
