@@ -1,4 +1,4 @@
-/* Panora v249: the basket opens checkout before validating customer details. */
+/* Panora v250: the basket always opens checkout before customer validation. */
 (()=>{
   'use strict';
   const oldButton=document.querySelector('#checkoutButton');
@@ -13,6 +13,7 @@
    */
   const button=oldButton.cloneNode(true);
   button.type='button';
+  button.setAttribute('type','button');
   oldButton.replaceWith(button);
 
   const message=(ru,en,es)=>lang==='en'?en:lang==='es'?es:ru;
@@ -37,8 +38,10 @@
     openPanel(checkout);
   };
 
-  button.onclick=event=>{
+  const startCheckout=event=>{
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
     const count=cartData().count;
     if(count<MIN_PIECES){
       showToast(message(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
@@ -58,4 +61,14 @@
     }
     openDetails();
   };
+
+  /*
+   * iOS standalone mode can restore an older form association for a button
+   * after a cached page is revived. Catch the click before any legacy handler
+   * can turn it into a checkoutForm submit.
+   */
+  document.addEventListener('click',event=>{
+    if(!event.target.closest?.('#checkoutButton'))return;
+    startCheckout(event);
+  },true);
 })();

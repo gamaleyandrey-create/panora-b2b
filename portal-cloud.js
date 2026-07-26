@@ -144,6 +144,15 @@
   if(form){form.onsubmit=null;form.noValidate=true}
   form?.addEventListener('submit',async event=>{
     event.preventDefault();event.stopImmediatePropagation();
+    /*
+     * Customer details belong to the second checkout screen. Never validate
+     * phone/address while the basket drawer is still visible.
+     */
+    const checkoutModal=document.querySelector('#checkoutModal');
+    if(!checkoutModal?.classList.contains('open')||checkoutModal.getAttribute('aria-hidden')!=='false'){
+      document.querySelector('#checkoutButton')?.click();
+      return;
+    }
     if(submitting)return;if(!account){openPanel(document.querySelector('#profileModal'));return}
     /* Hidden returning-customer fields must never block mobile checkout. */
     form.restaurant.value=String(form.restaurant.value||account.name||'').trim();
