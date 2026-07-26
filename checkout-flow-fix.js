@@ -22,8 +22,8 @@
     form.restaurant.value=String(form.restaurant.value||account?.name||'').trim();
     form.contact.value=String(form.contact.value||account?.name||'').trim();
     form.email.value=String(form.email.value||account?.email||'').trim();
-    form.phone.value=String(form.phone.value||account?.phone||'').trim();
-    form.address.value=String(form.address.value||account?.address||'').trim();
+    form.phone.value=String(form.phone.value||(typeof checkoutContactValue==='function'?checkoutContactValue('phone',account?.phone):account?.phone)||'').trim();
+    form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account?.address):account?.address)||'').trim();
     if(form.date)form.date.value=selectedBakeDate||document.querySelector('#cartDeliveryDate')?.value||'';
     if(typeof toggleFulfillment==='function')toggleFulfillment();
     if(typeof updateMobileCheckoutSummary==='function')updateMobileCheckoutSummary();
