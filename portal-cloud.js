@@ -157,10 +157,10 @@
     /* Hidden returning-customer fields must never block mobile checkout. */
     form.restaurant.value=String(form.restaurant.value||account.name||'').trim();
     form.contact.value=String(form.contact.value||account.name||'').trim();
-    form.phone.value=String(form.phone.value||account.phone||'').trim();
+    form.phone.value=String(form.phone.value||(typeof checkoutContactValue==='function'?checkoutContactValue('phone',account.phone):account.phone)||'').trim();
     form.email.value=String(form.email.value||account.email||'').trim();
     const fulfillment=form.fulfillment.value||'delivery';
-    if(fulfillment==='delivery')form.address.value=String(form.address.value||account.address||'').trim();
+    form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account.address):account.address)||'').trim();
     const data=new FormData(form),summary=cartData(),items=summary.rows.map(p=>({product:p.id,quantity:Number(p.quantityPieces)})).filter(i=>i.quantity>0),count=items.reduce((s,i)=>s+i.quantity,0),date=String(data.get('date')||selectedBakeDate||'');
     const missing=[];
     if(!form.restaurant.value)missing.push(labels('название ресторана','restaurant name','nombre del restaurante'));
@@ -172,13 +172,16 @@
     if(count<MIN_PIECES)return showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
-    account.phone=form.phone.value;
-    if(fulfillment==='delivery')account.address=form.address.value;
+    if(form.phone.value)account.phone=form.phone.value;
+    if(form.address.value)account.address=form.address.value;
     try{
+      const restaurantPatch={updated_at:new Date().toISOString()};
+      if(account.phone)restaurantPatch.phone=account.phone;
+      if(account.address)restaurantPatch.address=account.address;
       await api(`restaurants?id=eq.${encodeURIComponent(account.id)}`,{
         method:'PATCH',
         headers:{Prefer:'return=minimal'},
-        body:JSON.stringify({phone:account.phone||null,address:account.address||null,updated_at:new Date().toISOString()})
+        body:JSON.stringify(restaurantPatch)
       });
     }catch(error){
       console.warn('Panora restaurant details were kept on this device:',error);

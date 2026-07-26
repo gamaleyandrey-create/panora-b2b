@@ -591,19 +591,45 @@ function readCheckoutProfile() {
   }
 }
 
+function checkoutFieldKey(field) {
+  return `${checkoutProfileKey()}-${field}`;
+}
+
+function checkoutContactValue(field, fallback = "") {
+  const direct = localStorage.getItem(checkoutFieldKey(field));
+  if (String(direct || "").trim()) return String(direct).trim();
+  const saved = readCheckoutProfile();
+  return String(saved[field] || fallback || "").trim();
+}
+
 function saveCheckoutProfile(event) {
   if (!account) return;
   const form = $("#checkoutForm");
   const saved = readCheckoutProfile();
   const changedField = event?.target?.name;
   if (changedField && checkoutProfileFields.includes(changedField)) {
-    saved[changedField] = event.target.value;
+    const value = String(event.target.value || "").trim();
+    if (changedField === "phone" || changedField === "address") {
+      if (value) {
+        saved[changedField] = value;
+        localStorage.setItem(checkoutFieldKey(changedField), value);
+      }
+    } else {
+      saved[changedField] = event.target.value;
+    }
   } else {
     checkoutProfileFields.forEach((field) => {
       const control = form.elements.namedItem(field);
       if (!control) return;
-      const value = control.value;
-      if (value || !(field in saved)) saved[field] = value;
+      const value = String(control.value || "").trim();
+      if (field === "phone" || field === "address") {
+        if (value) {
+          saved[field] = value;
+          localStorage.setItem(checkoutFieldKey(field), value);
+        }
+      } else if (value || !(field in saved)) {
+        saved[field] = control.value;
+      }
     });
   }
   localStorage.setItem(checkoutProfileKey(), JSON.stringify(saved));
@@ -619,9 +645,9 @@ function restoreCheckoutProfile() {
     }
   };
   fillEmpty("contact", saved.contact || account.name);
-  fillEmpty("phone", saved.phone || account.phone);
+  fillEmpty("phone", checkoutContactValue("phone", account.phone));
   fillEmpty("email", saved.email || account.email);
-  fillEmpty("address", saved.address || account.address);
+  fillEmpty("address", checkoutContactValue("address", account.address));
   if (saved.fulfillment) form.fulfillment.value = saved.fulfillment;
   if (saved.time) form.time.value = saved.time;
   toggleFulfillment();
@@ -633,11 +659,15 @@ function updateMobileCheckoutSummary() {
     contact:
       String(form.contact.value || saved.contact || account?.name || "").trim(),
     phone:
-      String(form.phone.value || saved.phone || account?.phone || "").trim(),
+      String(
+        form.phone.value || checkoutContactValue("phone", account?.phone),
+      ).trim(),
     email:
       String(form.email.value || saved.email || account?.email || "").trim(),
     address:
-      String(form.address.value || saved.address || account?.address || "").trim(),
+      String(
+        form.address.value || checkoutContactValue("address", account?.address),
+      ).trim(),
   };
   const complete = Boolean(
     account && effective.contact && effective.phone && effective.address,
