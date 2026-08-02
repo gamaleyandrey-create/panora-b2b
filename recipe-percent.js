@@ -86,7 +86,7 @@
     // Background order/plan refreshes call renderAll(). Never replace the recipe
     // inputs while the mobile keyboard is open: doing so removes the focused
     // element and makes the user appear to be "thrown out" of gram editing.
-    if(!force&&root.dataset.recipeEditing==='true'&&root.children.length)return;
+    if(!force&&(window.panoraRecipeEditing||root.dataset.recipeEditing==='true'||document.activeElement?.closest?.('#recipeList'))&&root.children.length)return;
     root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
       <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span></div>
       <label class="recipe-product-weight"><span>${L().weight}</span><span><input data-recipe-weight="${pid}" type="number" min="1" step="1" value="${Number(product?.weight||750)}"> g</span></label>
@@ -114,8 +114,11 @@
       });
       card.querySelector('.recipe-save').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await saveCard(card)}finally{button.disabled=false}};
     });
-    root.onfocusin=()=>{root.dataset.recipeEditing='true'};
-    root.onfocusout=()=>setTimeout(()=>{if(!root.contains(document.activeElement))root.dataset.recipeEditing='false'},300);
+    const lockEditing=()=>{window.panoraRecipeEditing=true;root.dataset.recipeEditing='true'};
+    root.onpointerdown=lockEditing;
+    root.ontouchstart=lockEditing;
+    root.onfocusin=lockEditing;
+    root.onfocusout=()=>setTimeout(()=>{if(!root.contains(document.activeElement)){root.dataset.recipeEditing='false';window.panoraRecipeEditing=false}},800);
     root.querySelectorAll('[data-add-ingredient]').forEach(button=>button.onclick=()=>{const pid=button.dataset.addIngredient;recipes[pid]=recipes[pid]||[];recipes[pid].push({name:L().ingredient,qty:0,unit:'g',stock:0,margin:5});store('panora-recipes',recipes);professionalRender(true)});
     root.querySelectorAll('[data-delete-ingredient]').forEach(button=>button.onclick=()=>{if(!confirm(L().delete))return;const [pid,index]=button.dataset.deleteIngredient.split(':');recipes[pid].splice(Number(index),1);store('panora-recipes',recipes);professionalRender(true)});
   }

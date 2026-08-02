@@ -3,6 +3,7 @@
  const sharedKeys=new Set(['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-production-plans','panora-stock-movements','panora-bakery-settings']);
  let refreshing=false,lastRefresh=0;
  function refresh(){
+  if(window.panoraRecipeEditing||document.activeElement?.closest?.('#recipeList'))return;
   if(refreshing||Date.now()-lastRefresh<120)return;refreshing=true;lastRefresh=Date.now();
   try{
    restaurants=cRead('panora-restaurants',[]);orders=cRead('panora-orders',[]);payments=cRead('panora-payments',[]);deliveryNotes=cRead('panora-delivery-notes',[]);
