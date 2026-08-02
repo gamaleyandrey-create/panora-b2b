@@ -1,0 +1,47 @@
+/* Panora v276 — one consistent touch standard for bakery and restaurant UI. */
+:root{--control-radius:8px;--control-height:48px;--control-primary-height:52px}
+
+button,.button,input:not([type="checkbox"]):not([type="radio"]),select,textarea{border-radius:var(--control-radius)}
+
+@media(max-width:850px){
+  button,.button,select,input:not([type="checkbox"]):not([type="radio"]){touch-action:manipulation}
+
+  /* Bakery: section menu and account actions. */
+  .admin-nav button{min-height:56px!important;border-radius:var(--control-radius)!important}
+  .admin-menu-toggle,.admin-logout,#adminLanguage{min-height:48px!important;border-radius:var(--control-radius)!important}
+
+  /* Bakery: common and primary actions. */
+  .primary,.secondary,.page-head button,.head-actions button,.dialog-actions button,
+  .week-navigation button,.date-jump button,.bake-calendar header button,
+  .recipe-actions button,.product-admin-card button{min-height:48px!important;border-radius:var(--control-radius)!important}
+  .primary,.page-head .primary,.recipe-save{min-height:52px!important}
+  .icon-delete,.recipe-delete,.close-button{min-width:48px!important;min-height:48px!important;border-radius:var(--control-radius)!important}
+  .week-navigation,.date-jump{gap:8px!important}
+  .week-navigation button,.date-jump button{padding:10px 14px!important}
+}
+
+@media(max-width:720px){
+  /* Restaurant: category filters and product quantity controls. */
+  .chip{min-height:48px!important;padding:0 18px!important;border-radius:var(--control-radius)!important;font-size:13px!important}
+  .add-button{min-height:52px!important;padding:0 18px!important;border-radius:var(--control-radius)!important;font-size:14px!important}
+  .qty-control{min-height:48px!important;height:48px!important;border-radius:var(--control-radius)!important;overflow:hidden}
+  .qty-control button{min-width:48px!important;width:48px!important;min-height:48px!important}
+  .cart-item .qty-control{height:48px!important}
+  .cart-item .qty-control button{width:48px!important}
+  .icon-button,.close-button{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important}
+
+  /* Main actions fill the available mobile width. */
+  .product-buy{align-items:stretch!important;flex-wrap:wrap}
+  .product-buy .add-button{flex:1 1 100%}
+  .hero-actions{flex-direction:column}
+  .hero-actions .button{width:100%;min-height:52px!important}
+  .mobile-nav{min-height:56px!important}
+  .mobile-nav a,.mobile-nav button{min-height:56px!important}
+}
+
+@media(max-width:520px){
+  .week-navigation,.date-jump{display:grid!important;grid-template-columns:1fr 1fr!important}
+  .week-navigation strong,.date-jump label{grid-column:1/-1}
+  .week-navigation button,.date-jump button{width:100%!important;min-height:48px!important}
+  .page-head>button,.head-actions,.head-actions button{width:100%!important}
+}
