@@ -2,6 +2,16 @@
 let shownMonth=new Date();shownMonth.setDate(1);
 const navigation=document.querySelector('.plan-navigation');navigation.hidden=true;
 navigation.insertAdjacentHTML('beforebegin',`<section class="bake-calendar" id="bakeCalendar"><header><button id="calendarPrev">← Предыдущий месяц</button><h3 id="calendarTitle"></h3><button id="calendarToday">Сегодня</button><button id="calendarNext">Следующий месяц →</button></header><div class="calendar-weekdays" id="calendarWeekdays"></div><div class="calendar-grid" id="calendarGrid"></div><p class="calendar-help">Нажмите на пустую дату, чтобы запланировать выпечку.</p></section>`);
+const mobileLayout=window.matchMedia('(max-width:850px)');
+function placeBakeCalendar(){
+ const calendar=document.querySelector('#bakeCalendar'),planList=document.querySelector('#planList');
+ if(!calendar||!planList)return;
+ if(mobileLayout.matches)planList.insertAdjacentElement('afterend',calendar);
+ else navigation.insertAdjacentElement('beforebegin',calendar);
+}
+placeBakeCalendar();
+if(typeof mobileLayout.addEventListener==='function')mobileLayout.addEventListener('change',placeBakeCalendar);
+else mobileLayout.addListener(placeBakeCalendar);
 const locales={ru:'ru-RU',en:'en-GB',es:'es-ES'};
 function language(){return document.querySelector('#adminLanguage').value}
 function monthTitle(){return new Intl.DateTimeFormat(locales[language()],{month:'long',year:'numeric'}).format(shownMonth)}

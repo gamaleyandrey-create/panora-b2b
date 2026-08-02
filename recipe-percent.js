@@ -8,12 +8,13 @@
   const L=()=>words[typeof lang==='string'&&words[lang]?lang:'ru'];
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const flourName=name=>/(^|\s)(мук\w*|flour|harina|farina|farine)(\s|$)/i.test(String(name||'').trim());
+  const numeric=value=>Number(String(value??'').replace(',','.').trim())||0;
   const round=(value,digits=2)=>{const p=10**digits;return Math.round((Number(value)||0)*p)/p};
   const display=value=>String(round(value,2)).replace('.',',');
   const flourTotal=card=>[...card.querySelectorAll('.recipe-percent-row')].reduce((sum,row)=>{
     const name=row.querySelector('[data-role="name"]')?.value||'';
     const unit=row.querySelector('[data-role="unit"]')?.value||'';
-    const qty=Number(row.querySelector('[data-role="qty"]')?.value)||0;
+    const qty=numeric(row.querySelector('[data-role="qty"]')?.value);
     return sum+(unit==='g'&&flourName(name)?qty:0);
   },0);
   function updateCard(card,preservePercent=null){
@@ -21,7 +22,7 @@
     card.querySelector('[data-flour-total]').textContent=total?`${L().flour} · ${display(total)} g`:L().flour;
     warning.hidden=total>0;
     card.querySelectorAll('.recipe-percent-row').forEach(row=>{
-      const pct=row.querySelector('[data-role="percent"]'),qty=Number(row.querySelector('[data-role="qty"]').value)||0;
+      const pct=row.querySelector('[data-role="percent"]'),qty=numeric(row.querySelector('[data-role="qty"]').value);
       const unit=row.querySelector('[data-role="unit"]').value,isBase=unit==='g'&&flourName(row.querySelector('[data-role="name"]').value);
       pct.readOnly=!total||unit==='pcs'||isBase;
       pct.title=isBase?L().flour:'';
@@ -29,10 +30,10 @@
     });
     const dough=[...card.querySelectorAll('.recipe-percent-row')].reduce((sum,row)=>{
       const unit=row.querySelector('[data-role="unit"]')?.value;
-      const qty=Number(row.querySelector('[data-role="qty"]')?.value)||0;
+      const qty=numeric(row.querySelector('[data-role="qty"]')?.value);
       return sum+(unit==='g'||unit==='ml'?qty:0);
     },0);
-    const finished=Math.max(0,Number(card.querySelector('[data-recipe-weight]')?.value)||0);
+    const finished=Math.max(0,numeric(card.querySelector('[data-recipe-weight]')?.value));
     const formula=total?dough/total*100:0;
     const loss=dough?Math.max(0,(dough-finished)/dough*100):0;
     const productYield=dough?finished/dough*100:0;
@@ -52,7 +53,7 @@
     const pid=card.dataset.recipeCard,previous=recipes[pid]||[];
     recipes[pid]=[...card.querySelectorAll('.recipe-percent-row')].map((row,index)=>({
       name:row.querySelector('[data-role="name"]').value.trim()||L().ingredient,
-      qty:Math.max(0,round(row.querySelector('[data-role="qty"]').value,3)),
+      qty:Math.max(0,round(numeric(row.querySelector('[data-role="qty"]').value),3)),
       unit:row.querySelector('[data-role="unit"]').value,
       stock:Number(previous[index]?.stock)||0,
       margin:Number(previous[index]?.margin??5)||0
@@ -70,7 +71,7 @@
   }
   function rowHtml(pid,item,index){return `<div class="recipe-row recipe-percent-row" data-index="${index}">
     <label class="recipe-field recipe-field-name"><small>${L().ingredient}</small><input data-role="name" value="${esc(item.name)}" aria-label="${L().ingredient}"></label>
-    <label class="recipe-field"><small>${L().amount}</small><input data-role="qty" type="number" min="0" step="0.01" value="${Number(item.qty)||0}" aria-label="${L().amount}"></label>
+    <label class="recipe-field"><small>${L().amount}</small><input data-role="qty" type="text" inputmode="decimal" value="${Number(item.qty)||0}" aria-label="${L().amount}"></label>
     <label class="recipe-field recipe-percent-suffix"><small>${L().percent}</small><input data-role="percent" type="text" inputmode="decimal" aria-label="${L().percent}"></label>
     <label class="recipe-field"><small>${L().unit}</small><select data-role="unit" aria-label="${L().unit}"><option ${item.unit==='g'?'selected':''}>g</option><option ${item.unit==='ml'?'selected':''}>ml</option><option ${item.unit==='pcs'?'selected':''}>pcs</option></select></label>
     <button class="recipe-delete" data-delete-ingredient="${pid}:${index}" type="button" aria-label="${L().delete}">×</button>
@@ -95,10 +96,11 @@
     </article>`}).join('');
     root.querySelectorAll('.recipe-card').forEach(card=>{
       updateCard(card);
-      card.querySelectorAll('[data-role="name"],[data-role="qty"],[data-role="unit"]').forEach(el=>el.addEventListener('input',()=>updateCard(card)));
+      const updateDraft=()=>{const pid=card.dataset.recipeCard,previous=recipes[pid]||[];recipes[pid]=[...card.querySelectorAll('.recipe-percent-row')].map((row,index)=>({name:row.querySelector('[data-role="name"]').value,qty:numeric(row.querySelector('[data-role="qty"]').value),unit:row.querySelector('[data-role="unit"]').value,stock:Number(previous[index]?.stock)||0,margin:Number(previous[index]?.margin??5)||0}))};
+      card.querySelectorAll('[data-role="name"],[data-role="qty"],[data-role="unit"]').forEach(el=>el.addEventListener('input',()=>{updateDraft();updateCard(card)}));
       card.querySelector('[data-recipe-weight]')?.addEventListener('input',()=>updateCard(card));
       card.querySelectorAll('[data-role="percent"]').forEach(pct=>{
-        pct.addEventListener('input',()=>{if(pct.readOnly)return;const total=flourTotal(card),row=pct.closest('.recipe-percent-row'),raw=String(pct.value).replace(',','.').trim(),value=Number(raw);if(raw!==''&&total&&Number.isFinite(value)&&value>=0){row.querySelector('[data-role="qty"]').value=round(total*value/100,3);updateCard(card,pct)}});
+        pct.addEventListener('input',()=>{if(pct.readOnly)return;const total=flourTotal(card),row=pct.closest('.recipe-percent-row'),raw=String(pct.value).replace(',','.').trim(),value=Number(raw);if(raw!==''&&total&&Number.isFinite(value)&&value>=0){row.querySelector('[data-role="qty"]').value=round(total*value/100,3);updateDraft();updateCard(card,pct)}});
         pct.addEventListener('blur',()=>updateCard(card));
       });
       card.querySelector('.recipe-save').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await saveCard(card)}finally{button.disabled=false}};
