@@ -214,7 +214,10 @@ function customerConfirmationHtml(order) {
       timeStyle: "short",
     });
   } catch (_) {}
-  return `<small class="customer-confirmed">✓ Получено рестораном${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}</small>`;
+  const trayInfo = note.customerTraysReceived == null
+    ? ""
+    : `<br>Лотки: принято ${Number(note.customerTraysReceived)} · возвращено ${Number(note.customerTraysReturned || 0)} · осталось ${Number(note.trayBalanceAfter || 0)}`;
+  return `<small class="customer-confirmed">✓ Получено рестораном${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}${trayInfo}</small>`;
 }
 function orderActions(o) {
   if (o.status === "shipped")
@@ -906,9 +909,10 @@ function printNote(orderId) {
         : "",
     paymentDueLine = n.paymentDueDate
       ? `<br><strong>Плановая дата оплаты: ${n.paymentDueDate}</strong>`
-      : "";
+      : "",
+    trayLine = `<p><strong>Возвратные лотки</strong><br>Пекарня выдала: ${Number(n.traysDelivered || 0)} шт.<br>${n.customerTraysReceived == null ? `Плановый возврат пустых: ${Number(n.traysReturned || 0)} шт.` : `Ресторан подтвердил: принято ${Number(n.customerTraysReceived)} шт., возвращено ${Number(n.customerTraysReturned || 0)} шт.<br>Осталось у ресторана: ${Number(n.trayBalanceAfter || 0)} шт.`}</p>`;
   w.document.write(
-    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table><p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
+    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table>${trayLine}<p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
   );
   w.document.close();
   w.print();

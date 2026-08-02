@@ -90,9 +90,9 @@
     return Array.isArray(value) ? value : [];
   }
 
-  function savePending(receiver) {
+  function savePending(receiver, traysReceived, traysReturned) {
     const queue = queued().filter(item => item.token !== token);
-    queue.push({ token, receiver, createdAt: new Date().toISOString() });
+    queue.push({ token, receiver, traysReceived, traysReturned, createdAt: new Date().toISOString() });
     localStorage.setItem(queueKey, JSON.stringify(queue));
   }
 
@@ -103,7 +103,9 @@
       try {
         const rows = await rpc('panora_confirm_delivery', {
           p_token: item.token,
-          p_receiver: item.receiver
+          p_receiver: item.receiver,
+          p_trays_received: Number(item.traysReceived || 0),
+          p_trays_returned: Number(item.traysReturned || 0)
         });
         if (!rows?.length) throw new Error('NOT_CONFIRMED');
       } catch {
@@ -115,6 +117,12 @@
 
   function render(delivery) {
     const items = Array.isArray(delivery.items) ? delivery.items : [];
+    const traysDelivered = Math.max(0, Number(delivery.trays_delivered || 0));
+    const traysReturnedPlanned = Math.max(0, Number(delivery.trays_returned || 0));
+    const balanceAfter = Math.max(0, Number(delivery.tray_balance_after || 0));
+    const previousBalance = Math.max(0, balanceAfter - traysDelivered + traysReturnedPlanned);
+    const actualReceived = delivery.customer_trays_received == null ? null : Math.max(0, Number(delivery.customer_trays_received));
+    const actualReturned = delivery.customer_trays_returned == null ? null : Math.max(0, Number(delivery.customer_trays_returned));
     root.innerHTML = `${delivery.customer_confirmed_at
       ? `<div class="success"><strong>Поставка подтверждена</strong><br>${new Date(delivery.customer_confirmed_at).toLocaleString('ru-RU')}</div>`
       : ''}
@@ -123,6 +131,15 @@
         <div><small>Заказ</small><strong>PN-${String(delivery.order_number).padStart(4, '0')}</strong></div>
         <div><small>Дата поставки</small><strong>${esc(delivery.delivery_date || String(delivery.delivered_at).slice(0, 10))}</strong></div>
       </div>
+      <section class="tray-card">
+        <h3>Возвратные лотки</h3>
+        <div><span>Пекарня выдаёт</span><strong>${traysDelivered} шт.</strong></div>
+        <div><span>Ожидается возврат пустых</span><strong>${traysReturnedPlanned} шт.</strong></div>
+        ${delivery.customer_confirmed_at ? `
+          <div><span>Ресторан принял</span><strong>${actualReceived ?? traysDelivered} шт.</strong></div>
+          <div><span>Ресторан вернул</span><strong>${actualReturned ?? traysReturnedPlanned} шт.</strong></div>
+          <div class="tray-balance"><span>Осталось у ресторана</span><strong>${balanceAfter} шт.</strong></div>` : ''}
+      </section>
       <table class="items">
         <thead><tr><th>Товар</th><th>Количество</th></tr></thead>
         <tbody>${items.map(item => `<tr><td>${esc(item.name_ru || item.product_id)}</td><td>${item.quantity} шт.</td></tr>`).join('')}</tbody>
@@ -130,24 +147,42 @@
       ${delivery.customer_confirmed_at ? '' : `
         <form id="confirmForm" class="confirm-form">
           <label><span>Имя получателя</span><input name="receiver" minlength="2" maxlength="120" autocomplete="name" required></label>
-          <label class="check"><input name="accepted" type="checkbox" required><span>Количество и состояние товара проверены. Подтверждаю получение.</span></label>
+          <div class="tray-inputs">
+            <label><span>Принято лотков, шт.</span><input name="traysReceived" type="number" inputmode="numeric" min="0" max="${traysDelivered}" step="1" value="${traysDelivered}" required></label>
+            <label><span>Возвращено пустых, шт.</span><input name="traysReturned" type="number" inputmode="numeric" min="0" max="${previousBalance + traysDelivered}" step="1" value="${Math.min(traysReturnedPlanned, previousBalance + traysDelivered)}" required></label>
+          </div>
+          <p class="tray-help">До поставки у ресторана: ${previousBalance} шт. После подтверждения остаток будет пересчитан.</p>
+          <label class="check"><input name="accepted" type="checkbox" required><span>Количество хлеба и лотков проверено. Подтверждаю получение.</span></label>
           <button>Подтвердить получение</button>
         </form>`}`;
 
     document.querySelector('#confirmForm')?.addEventListener('submit', async event => {
       event.preventDefault();
       const form = event.currentTarget;
-      const receiver = String(new FormData(form).get('receiver')).trim();
+      const data = new FormData(form);
+      const receiver = String(data.get('receiver')).trim();
+      const traysReceived = Number(data.get('traysReceived'));
+      const traysReturned = Number(data.get('traysReturned'));
+      if (!Number.isInteger(traysReceived) || traysReceived < 0 || traysReceived > traysDelivered ||
+          !Number.isInteger(traysReturned) || traysReturned < 0 || traysReturned > previousBalance + traysReceived) {
+        show('Проверьте количество лотков', 'Принятых лотков не может быть больше, чем выдаёт пекарня, а возвращённых — больше доступного количества.');
+        return;
+      }
       const button = form.querySelector('button');
       button.disabled = true;
       try {
         if (!navigator.onLine) {
-          savePending(receiver);
+          savePending(receiver, traysReceived, traysReturned);
           root.insertAdjacentHTML('afterbegin', '<div class="pending"><strong>Ожидает отправки</strong><br>Подтверждение сохранено и будет проверено после появления интернета.</div>');
           form.remove();
           return;
         }
-        const rows = await rpc('panora_confirm_delivery', { p_token: token, p_receiver: receiver });
+        const rows = await rpc('panora_confirm_delivery', {
+          p_token: token,
+          p_receiver: receiver,
+          p_trays_received: traysReceived,
+          p_trays_returned: traysReturned
+        });
         if (!rows?.length) throw serverError('NOT_CONFIRMED', 403);
         await load();
       } catch (error) {
