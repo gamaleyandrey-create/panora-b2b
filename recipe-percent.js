@@ -1,9 +1,9 @@
 /* Professional recipe editor: baker's percentages with total flour = 100%. */
 (()=>{
   const words={
-    ru:{weight:'Вес готового изделия',flour:'Мука',ingredient:'Ингредиент',amount:'Количество',percent:'Пекарский %',unit:'Ед.',add:'+ Добавить ингредиент',save:'Сохранить рецептуру',saving:'Сохранение…',saved:'Рецептура сохранена в облаке',localSaved:'Сохранено на устройстве. Облако недоступно.',help:'Вся мука вместе принимается за 100%. Остальные ингредиенты можно менять в количестве или пекарских процентах.',noFlour:'Добавьте ингредиент с названием «мука» и единицей g — без него проценты рассчитать нельзя.',delete:'Удалить ингредиент?',stock:'Остаток и запас учитываются в разделе «Закупка».',dough:'Расчётная масса замеса',formula:'Сумма формулы',loss:'Потери при выпечке',yield:'Выход изделия',approx:'Для жидкостей используется технологическое приближение 1 ml ≈ 1 g.',batch:'Текущая партия',pieces:'шт.',batchEmpty:'Нет запланированной выпечки',invalidMass:'Вес готового хлеба больше массы замеса. Проверьте ингредиенты или вес изделия.'},
-    en:{weight:'Finished product weight',flour:'Flour',ingredient:'Ingredient',amount:'Amount',percent:"Baker's %",unit:'Unit',add:'+ Add ingredient',save:'Save recipe',saving:'Saving…',saved:'Recipe saved to cloud',localSaved:'Saved on this device. Cloud is unavailable.',help:"All flour combined is 100%. Other ingredients can be edited by amount or baker's percentage.",noFlour:'Add an ingredient named “flour” with unit g to calculate percentages.',delete:'Delete ingredient?',stock:'Stock and safety margin are used in Purchasing.',dough:'Estimated dough weight',formula:'Total formula',loss:'Baking loss',yield:'Product yield',approx:'Liquids use the technological approximation 1 ml ≈ 1 g.',batch:'Current batch',pieces:'pcs',batchEmpty:'No bake is planned',invalidMass:'Finished bread weight exceeds dough weight. Check the ingredients or product weight.'},
-    es:{weight:'Peso del producto terminado',flour:'Harina',ingredient:'Ingrediente',amount:'Cantidad',percent:'% panadero',unit:'Ud.',add:'+ Añadir ingrediente',save:'Guardar receta',saving:'Guardando…',saved:'Receta guardada en la nube',localSaved:'Guardado en este dispositivo. La nube no está disponible.',help:'Toda la harina combinada representa el 100 %. Los demás ingredientes se pueden editar por cantidad o porcentaje panadero.',noFlour:'Añada un ingrediente llamado “harina” con unidad g para calcular porcentajes.',delete:'¿Eliminar ingrediente?',stock:'Las existencias y el margen se usan en Compras.',dough:'Peso estimado de la masa',formula:'Fórmula total',loss:'Merma de horneado',yield:'Rendimiento del producto',approx:'Para líquidos se usa la aproximación tecnológica 1 ml ≈ 1 g.',batch:'Lote actual',pieces:'uds.',batchEmpty:'No hay horneado planificado',invalidMass:'El peso del pan terminado supera el peso de la masa. Revise los ingredientes o el peso del producto.'}
+    ru:{weight:'Вес готового изделия',flour:'Мука',ingredient:'Ингредиент',amount:'Количество',percent:'Пекарский %',unit:'Ед.',add:'+ Добавить ингредиент',save:'Сохранить рецептуру',saving:'Сохранение…',saved:'Рецептура сохранена в облаке',localSaved:'Сохранено на устройстве. Облако недоступно.',help:'Вся мука вместе принимается за 100%. Остальные ингредиенты можно менять в количестве или пекарских процентах.',noFlour:'Добавьте ингредиент с названием «мука» и единицей g — без него проценты рассчитать нельзя.',delete:'Удалить ингредиент?',stock:'Остаток и запас учитываются в разделе «Закупка».',dough:'Вес теста на 1 хлеб',formula:'Сумма формулы',loss:'Потери при выпечке',yield:'Выход изделия',hydration:'Гидратация',cost:'Себестоимость 1 хлеба',approx:'Для жидкостей используется технологическое приближение 1 ml ≈ 1 g.',batch:'Текущая партия',pieces:'шт.',batchEmpty:'Нет запланированной выпечки',invalidMass:'Вес готового хлеба больше массы замеса. Проверьте ингредиенты или вес изделия.',missingWater:'В рецептуре не найдена вода.',missingSalt:'В рецептуре не найдена соль.',saltRange:'Соль обычно составляет 1–3% от массы муки. Проверьте значение.',priceHint:'Заполните цены ингредиентов в разделе «Закупка», чтобы увидеть себестоимость.'},
+    en:{weight:'Finished product weight',flour:'Flour',ingredient:'Ingredient',amount:'Amount',percent:"Baker's %",unit:'Unit',add:'+ Add ingredient',save:'Save recipe',saving:'Saving…',saved:'Recipe saved to cloud',localSaved:'Saved on this device. Cloud is unavailable.',help:"All flour combined is 100%. Other ingredients can be edited by amount or baker's percentage.",noFlour:'Add an ingredient named “flour” with unit g to calculate percentages.',delete:'Delete ingredient?',stock:'Stock and safety margin are used in Purchasing.',dough:'Dough weight per loaf',formula:'Total formula',loss:'Baking loss',yield:'Product yield',hydration:'Hydration',cost:'Cost per loaf',approx:'Liquids use the technological approximation 1 ml ≈ 1 g.',batch:'Current batch',pieces:'pcs',batchEmpty:'No bake is planned',invalidMass:'Finished bread weight exceeds dough weight. Check the ingredients or product weight.',missingWater:'No water was found in the recipe.',missingSalt:'No salt was found in the recipe.',saltRange:'Salt is usually 1–3% of total flour. Check the amount.',priceHint:'Enter ingredient prices in Purchasing to calculate the cost.'},
+    es:{weight:'Peso del producto terminado',flour:'Harina',ingredient:'Ingrediente',amount:'Cantidad',percent:'% panadero',unit:'Ud.',add:'+ Añadir ingrediente',save:'Guardar receta',saving:'Guardando…',saved:'Receta guardada en la nube',localSaved:'Guardado en este dispositivo. La nube no está disponible.',help:'Toda la harina combinada representa el 100 %. Los demás ingredientes se pueden editar por cantidad o porcentaje panadero.',noFlour:'Añada un ingrediente llamado “harina” con unidad g para calcular porcentajes.',delete:'¿Eliminar ingrediente?',stock:'Las existencias y el margen se usan en Compras.',dough:'Peso de masa por pan',formula:'Fórmula total',loss:'Merma de horneado',yield:'Rendimiento del producto',hydration:'Hidratación',cost:'Coste por pan',approx:'Para líquidos se usa la aproximación tecnológica 1 ml ≈ 1 g.',batch:'Lote actual',pieces:'uds.',batchEmpty:'No hay horneado planificado',invalidMass:'El peso del pan terminado supera el peso de la masa. Revise los ingredientes o el peso del producto.',missingWater:'No se ha encontrado agua en la receta.',missingSalt:'No se ha encontrado sal en la receta.',saltRange:'La sal suele ser el 1–3% de la harina total. Revise la cantidad.',priceHint:'Introduzca los precios en Compras para calcular el coste.'}
   };
   const L=()=>words[typeof lang==='string'&&words[lang]?lang:'ru'];
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -13,6 +13,9 @@
     return /(^|[^\p{L}])(мук|муки|мучн|пшенич|ржан|гречнев|овсян|полб|flour|wheat|rye|spelt|oat|buckwheat|harina|trigo|centeno|espelta|avena|farina|farine)/iu.test(value);
   };
   const gramUnit=unit=>normalizeText(unit).replace(/[.\s]/g,'')==='g';
+  const named=(name,pattern)=>pattern.test(normalizeText(name));
+  const waterName=name=>named(name,/(^|\s)(вода|воды|water|agua)(\s|$)/iu);
+  const saltName=name=>named(name,/(^|\s)(соль|соли|salt|sal)(\s|$)/iu);
   const numeric=value=>Number(String(value??'').replace(',','.').trim())||0;
   const round=(value,digits=2)=>{const p=10**digits;return Math.round((Number(value)||0)*p)/p};
   const display=value=>String(round(value,2)).replace('.',',');
@@ -43,13 +46,26 @@
     const formula=total?dough/total*100:0;
     const loss=dough?Math.max(0,(dough-finished)/dough*100):0;
     const productYield=dough?finished/dough*100:0;
+    const rows=[...card.querySelectorAll('.recipe-percent-row')];
+    const water=rows.reduce((sum,row)=>sum+(waterName(row.querySelector('[data-role="name"]')?.value||'')?numeric(row.querySelector('[data-role="qty"]')?.value):0),0);
+    const salt=rows.reduce((sum,row)=>sum+(saltName(row.querySelector('[data-role="name"]')?.value||'')?numeric(row.querySelector('[data-role="qty"]')?.value):0),0);
+    const hydration=total?water/total*100:0,saltPercent=total?salt/total*100:0;
+    let prices={};try{prices=JSON.parse(localStorage.getItem('panora-ingredient-costs')||'{}')||{}}catch{}
+    let recipeCost=0,priced=0,costable=0;
+    rows.forEach(row=>{const name=row.querySelector('[data-role="name"]')?.value||'',unit=row.querySelector('[data-role="unit"]')?.value||'g',qty=numeric(row.querySelector('[data-role="qty"]')?.value),price=Number(prices[`${name}|${unit}`]||0);if(qty>0){costable++;if(price>0){priced++;recipeCost+=qty/(unit==='g'||unit==='ml'?1000:1)*price}}});
     const set=(name,value)=>{const el=card.querySelector(`[data-tech-stat="${name}"]`);if(el)el.textContent=value};
     set('dough',`${display(dough)} g`);
     set('formula',total?`${display(formula)}%`:'—');
     set('loss',dough?`${display(loss)}%`:'—');
     set('yield',dough?`${display(productYield)}%`:'—');
+    set('hydration',total?`${display(hydration)}%`:'—');
+    set('cost',priced?`${display(recipeCost)} €`:'—');
     const massWarning=card.querySelector('.recipe-mass-warning');
     if(massWarning)massWarning.hidden=!dough||finished<=dough;
+    const waterWarning=card.querySelector('[data-warning="water"]');if(waterWarning)waterWarning.hidden=!total||water>0;
+    const saltWarning=card.querySelector('[data-warning="salt"]');if(saltWarning)saltWarning.hidden=!total||salt>0;
+    const saltRangeWarning=card.querySelector('[data-warning="salt-range"]');if(saltRangeWarning)saltRangeWarning.hidden=!total||!salt||saltPercent>=1&&saltPercent<=3;
+    const costHint=card.querySelector('[data-warning="cost"]');if(costHint)costHint.hidden=!costable||priced===costable;
     const pieces=productionPieces(card.dataset.recipeCard),batch=card.querySelector('[data-recipe-batch]');
     if(batch)batch.innerHTML=pieces?`<strong>${L().batch}: ${display(pieces)} ${L().pieces}</strong><span>${[...card.querySelectorAll('.recipe-percent-row')].map(row=>{const name=esc(row.querySelector('[data-role="name"]').value),qty=numeric(row.querySelector('[data-role="qty"]').value),unit=esc(row.querySelector('[data-role="unit"]').value);return `${name}: <b>${display(qty*pieces)} ${unit}</b>`}).join(' · ')}</span>`:`<strong>${L().batch}</strong><span>${L().batchEmpty}</span>`;
   }
@@ -101,9 +117,15 @@
         <div><small>${L().formula}</small><strong data-tech-stat="formula">—</strong></div>
         <div><small>${L().yield}</small><strong data-tech-stat="yield">—</strong></div>
         <div><small>${L().loss}</small><strong data-tech-stat="loss">—</strong></div>
+        <div><small>${L().hydration}</small><strong data-tech-stat="hydration">—</strong></div>
+        <div><small>${L().cost}</small><strong data-tech-stat="cost">—</strong></div>
       </div>
       <p class="recipe-tech-note">${L().approx}</p>
       <p class="recipe-warning recipe-mass-warning" hidden>${L().invalidMass}</p>
+      <p class="recipe-warning" data-warning="water" hidden>${L().missingWater}</p>
+      <p class="recipe-warning" data-warning="salt" hidden>${L().missingSalt}</p>
+      <p class="recipe-warning" data-warning="salt-range" hidden>${L().saltRange}</p>
+      <p class="recipe-cost-hint" data-warning="cost" hidden>${L().priceHint}</p>
       <div class="recipe-batch-summary" data-recipe-batch></div>
       <div class="recipe-column-heads"><span>${L().ingredient}</span><span>${L().amount}</span><span>${L().percent}</span><span>${L().unit}</span><span></span></div>
       <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index,initialFlour)).join('')}</div>
@@ -136,4 +158,5 @@
   renderRecipes=professionalRender;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',professionalRender);else professionalRender();
   window.addEventListener('panora:recipes-changed',()=>{if(!document.activeElement?.closest?.('#recipeList'))professionalRender()});
+  window.addEventListener('panora:ingredient-costs-changed',()=>{if(!document.activeElement?.closest?.('#recipeList'))professionalRender()});
 })();
