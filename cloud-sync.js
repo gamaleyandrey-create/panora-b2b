@@ -419,7 +419,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['рестораны',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     ready=true;
-    clearInterval(orderPoll);orderPoll=setInterval(()=>loadOrders().catch(error=>fail('заказы',error)),4000);
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};

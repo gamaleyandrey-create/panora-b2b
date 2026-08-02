@@ -197,6 +197,25 @@ function orderStatus(o) {
     }[o.status] || o.status
   );
 }
+function customerConfirmationHtml(order) {
+  const note = deliveryNotes.find((item) => item.orderId === order.id);
+  const confirmedAt = note?.customerConfirmedAt || note?.offlineProof?.receivedAt;
+  if (!confirmedAt) return "";
+  const safe = (value) =>
+    String(value || "").replace(
+      /[&<>"']/g,
+      (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char],
+    );
+  const receiver = note.customerReceiver || note.offlineProof?.receiver || "";
+  let date = confirmedAt;
+  try {
+    date = new Date(confirmedAt).toLocaleString("ru-RU", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  } catch (_) {}
+  return `<small class="customer-confirmed">✓ Получено рестораном${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}</small>`;
+}
 function orderActions(o) {
   if (o.status === "shipped")
     return `<button class="action-small" data-note="${o.id}">Накладная</button> <button class="action-small ship" data-delivery-qr="${o.id}">QR-код</button>`;
@@ -213,7 +232,7 @@ function renderOrders() {
         .reverse()
         .map((o) => {
           const note = deliveryNotes.find((n) => n.orderId === o.id);
-          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${restaurant(o.restaurantId)?.name || "—"}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span></td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${restaurant(o.restaurantId)?.name || "—"}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="7">Заказов пока нет.</td></tr>';
@@ -578,9 +597,17 @@ document.querySelector("#saveOrder").onclick = (e) => {
   renderAll();
 };
 function traysAtRestaurant(restaurantId) {
-  return deliveryNotes
+  const notes = deliveryNotes
     .filter((note) => note.restaurantId === restaurantId)
-    .reduce(
+    .sort((a, b) =>
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      Number(a.number || 0) - Number(b.number || 0),
+    );
+  const latest = notes.at(-1);
+  if (latest && Number.isFinite(Number(latest.trayBalanceAfter))) {
+    return Math.max(0, Number(latest.trayBalanceAfter));
+  }
+  return notes.reduce(
       (sum, note) =>
         sum +
         Number(note.traysDelivered || 0) -
