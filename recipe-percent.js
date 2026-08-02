@@ -102,7 +102,7 @@
       <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index,initialFlour)).join('')}</div>
       <p class="recipe-warning" hidden>${L().noFlour}</p>
       <div class="recipe-actions"><button class="secondary" data-add-ingredient="${pid}" type="button">${L().add}</button><span class="recipe-save-status" aria-live="polite"></span><button class="primary recipe-save" type="button">${L().save}</button></div>
-      <div class="product-manage"><label><input type="checkbox" data-product-active="${pid}" ${productRegistry.find(p=>p.id===pid)?.active!==false?'checked':''}> В каталоге</label><button type="button" class="product-delete-button" data-delete-product="${pid}">Удалить хлеб</button></div>
+      <div class="product-manage"><label><input type="checkbox" data-product-active="${pid}" ${productRegistry.find(p=>p.id===pid)?.active!==false?'checked':''}> В каталоге</label><button type="button" class="product-delete-button" data-delete-product="${pid}">Удалить товар</button></div>
     </article>`}).join('');
     root.querySelectorAll('.recipe-card').forEach(card=>{
       updateCard(card);
