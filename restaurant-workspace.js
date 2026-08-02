@@ -113,6 +113,13 @@
     },
   };
   const t = (key) => (tx[lang] || tx.ru)[key];
+  const localDate = (value) => {
+    if (!value) return "—";
+    const raw = String(value).slice(0, 10);
+    const date = new Date(`${raw}T12:00:00`);
+    const locale = lang === "es" ? "es-ES" : lang === "en" ? "en-GB" : "ru-RU";
+    return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
+  };
   const esc = (value) =>
     String(value ?? "").replace(
       /[&<>"']/g,
@@ -180,10 +187,10 @@
     return `<section class="rw-list">${rows
       .map(
         (order) => `<article class="rw-order">
-      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(order.deliveryDate || order.date)}</small></span><b>${portalMoney(orderTotal(order))}</b></header>
+      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small></span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(order.status)}">${esc(status(order))}</div>
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
-      <footer><span>${t("bake")}: <strong>${esc(order.date)}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>
+      <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>
     </article>`,
       )
       .join("")}</section>`;
@@ -197,7 +204,7 @@
       .map((note) => {
         const order = orders.find((item) => item.id === note.orderId);
         return `<article class="rw-document">
-      <span><strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(order?.deliveryDate || note.date)}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(note.paymentDueDate)}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
+      <span><strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")}</button>
     </article>`;

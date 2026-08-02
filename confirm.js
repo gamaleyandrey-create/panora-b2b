@@ -116,6 +116,12 @@
   }
 
   function render(delivery) {
+    const formatDate = value => {
+      if (!value) return '—';
+      const raw = String(value).slice(0, 10);
+      const date = new Date(`${raw}T12:00:00`);
+      return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    };
     const items = Array.isArray(delivery.items) ? delivery.items : [];
     const traysDelivered = Math.max(0, Number(delivery.trays_delivered || 0));
     const traysReturnedPlanned = Math.max(0, Number(delivery.trays_returned || 0));
@@ -129,7 +135,7 @@
       <h2>Поставка DN-${String(delivery.note_number).padStart(4, '0')}</h2>
       <div class="meta">
         <div><small>Заказ</small><strong>PN-${String(delivery.order_number).padStart(4, '0')}</strong></div>
-        <div><small>Дата поставки</small><strong>${esc(delivery.delivery_date || String(delivery.delivered_at).slice(0, 10))}</strong></div>
+        <div><small>Дата поставки</small><strong>${esc(formatDate(delivery.delivery_date || delivery.delivered_at))}</strong></div>
       </div>
       <section class="tray-card">
         <h3>Возвратные лотки</h3>
