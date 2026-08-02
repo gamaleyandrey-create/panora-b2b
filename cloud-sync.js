@@ -56,6 +56,22 @@
     if(productDirty)return saveProducts();
     return true;
   }
+  async function saveProductConfirmed(product){
+    if(!product?.id)throw new Error('Не удалось определить новый товар');
+    if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите сохранение.');
+    if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
+    status('Сохранение товара…');
+    const rows=await request('products?on_conflict=id',{
+      method:'POST',
+      headers:{Prefer:'resolution=merge-duplicates,return=representation'},
+      body:JSON.stringify(productRow(product))
+    });
+    const saved=rows?.find(row=>row.id===product.id);
+    if(!saved)throw new Error('Supabase не подтвердил создание товара');
+    productDirty=false;
+    status('Товар сохранён ✓');
+    return rowProduct(saved,product);
+  }
   async function loadRecipes(){
     const rows=await request('recipe_items?select=*&order=product_id.asc,position.asc');
     const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
@@ -451,7 +467,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
   window.addEventListener('offline',()=>status('Сохранено на устройстве'));
