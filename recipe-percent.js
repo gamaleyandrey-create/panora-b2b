@@ -7,7 +7,12 @@
   };
   const L=()=>words[typeof lang==='string'&&words[lang]?lang:'ru'];
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const flourName=name=>/(^|[\s,(/-])(мук\w*|пшенич\w*|ржан\w*|гречнев\w*|овсян\w*|полб\w*|flour|wheat|rye|spelt|oat|buckwheat|harina|trigo|centeno|espelta|avena|trigo\s+sarraceno|farina|farine)(?=$|[\s,)/-])/i.test(String(name||'').trim());
+  const normalizeText=value=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase();
+  const flourName=name=>{
+    const value=normalizeText(name).replace(/[\u00a0\s]+/g,' ');
+    return /(^|[^\p{L}])(мук|муки|мучн|пшенич|ржан|гречнев|овсян|полб|flour|wheat|rye|spelt|oat|buckwheat|harina|trigo|centeno|espelta|avena|farina|farine)/iu.test(value);
+  };
+  const gramUnit=unit=>normalizeText(unit).replace(/[.\s]/g,'')==='g';
   const numeric=value=>Number(String(value??'').replace(',','.').trim())||0;
   const round=(value,digits=2)=>{const p=10**digits;return Math.round((Number(value)||0)*p)/p};
   const display=value=>String(round(value,2)).replace('.',',');
@@ -15,7 +20,7 @@
     const name=row.querySelector('[data-role="name"]')?.value||'';
     const unit=row.querySelector('[data-role="unit"]')?.value||'';
     const qty=numeric(row.querySelector('[data-role="qty"]')?.value);
-    return sum+(unit==='g'&&flourName(name)?qty:0);
+    return sum+(gramUnit(unit)&&flourName(name)?qty:0);
   },0);
   function updateCard(card,preservePercent=null){
     const total=flourTotal(card), warning=card.querySelector('.recipe-warning');
@@ -23,7 +28,7 @@
     warning.hidden=total>0;
     card.querySelectorAll('.recipe-percent-row').forEach(row=>{
       const pct=row.querySelector('[data-role="percent"]'),qty=numeric(row.querySelector('[data-role="qty"]').value);
-      const unit=row.querySelector('[data-role="unit"]').value,isBase=unit==='g'&&flourName(row.querySelector('[data-role="name"]').value);
+      const unit=row.querySelector('[data-role="unit"]').value,isBase=gramUnit(unit)&&flourName(row.querySelector('[data-role="name"]').value);
       pct.readOnly=!total||unit==='pcs'||isBase;
       pct.title=isBase?L().flour:'';
       if(pct!==preservePercent)pct.value=total&&unit!=='pcs'?display(qty/total*100):'';
@@ -69,7 +74,7 @@
     setTimeout(()=>{if(status)status.textContent=''},3500);
     updateCard(card);
   }
-  function rowHtml(pid,item,index,total){const unit=item.unit||'g',qty=numeric(item.qty),isBase=unit==='g'&&flourName(item.name),percent=total&&unit!=='pcs'?display(qty/total*100):'';return `<div class="recipe-row recipe-percent-row" data-index="${index}">
+  function rowHtml(pid,item,index,total){const unit=item.unit||'g',qty=numeric(item.qty),isBase=gramUnit(unit)&&flourName(item.name),percent=total&&unit!=='pcs'?display(qty/total*100):'';return `<div class="recipe-row recipe-percent-row" data-index="${index}">
     <label class="recipe-field recipe-field-name"><small>${L().ingredient}</small><input data-role="name" value="${esc(item.name)}" aria-label="${L().ingredient}"></label>
     <label class="recipe-field"><small>${L().amount}</small><input data-role="qty" type="text" inputmode="decimal" value="${Number(item.qty)||0}" aria-label="${L().amount}"></label>
     <label class="recipe-field recipe-percent-suffix"><small>${L().percent}</small><input data-role="percent" type="text" inputmode="decimal" value="${percent}" ${!total||unit==='pcs'||isBase?'readonly':''} aria-label="${L().percent}"></label>
@@ -82,7 +87,7 @@
     // inputs while the mobile keyboard is open: doing so removes the focused
     // element and makes the user appear to be "thrown out" of gram editing.
     if(!force&&root.dataset.recipeEditing==='true'&&root.children.length)return;
-    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(item.unit==='g'&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
+    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
       <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span></div>
       <label class="recipe-product-weight"><span>${L().weight}</span><span><input data-recipe-weight="${pid}" type="number" min="1" step="1" value="${Number(product?.weight||750)}"> g</span></label>
       <p class="recipe-help"><strong>${L().percent}.</strong> ${L().help} ${L().stock}</p>
@@ -114,7 +119,7 @@
     root.querySelectorAll('[data-add-ingredient]').forEach(button=>button.onclick=()=>{const pid=button.dataset.addIngredient;recipes[pid]=recipes[pid]||[];recipes[pid].push({name:L().ingredient,qty:0,unit:'g',stock:0,margin:5});store('panora-recipes',recipes);professionalRender(true)});
     root.querySelectorAll('[data-delete-ingredient]').forEach(button=>button.onclick=()=>{if(!confirm(L().delete))return;const [pid,index]=button.dataset.deleteIngredient.split(':');recipes[pid].splice(Number(index),1);store('panora-recipes',recipes);professionalRender(true)});
   }
-  window.panoraBakersPercent={flourName,round};
+  window.panoraBakersPercent={flourName,gramUnit,round};
   renderRecipes=professionalRender;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',professionalRender);else professionalRender();
   window.addEventListener('panora:recipes-changed',()=>{if(!document.activeElement?.closest?.('#recipeList'))professionalRender()});
