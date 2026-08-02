@@ -1,6 +1,6 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,financeLoaded=false,repairingFinance=null,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingRecipes=null,recipeDirty=false,recipeRevision=0,financeLoaded=false,repairingFinance=null,shippingLocks=new Set();
   const audit=(action,details='',level='info')=>window.panoraAudit?.record(action,details,level);
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
@@ -46,20 +46,35 @@
   async function loadRecipes(){
     const rows=await request('recipe_items?select=*&order=product_id.asc,position.asc');
     const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
+    if(recipeDirty||savingRecipes){await flushRecipes();return}
     if(rows?.length){
       const remote={};
       rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0)})});
       recipes=remote;localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-2');window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
       if(typeof renderAll==='function')renderAll();
-    }else if(Object.keys(local).length){recipes=local;ready=true;await saveRecipesNow()}
+    }else if(Object.keys(local).length){recipes=local;ready=true;recipeDirty=true;recipeRevision++;await flushRecipes()}
   }
   async function saveRecipesNow(){
-    if(!ready||typeof recipes==='undefined')return;
-    status('Синхронизация рецептур…');
-    await request('recipe_items?id=not.is.null',{method:'DELETE'});
-    const payload=Object.entries(recipes).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),updated_at:new Date().toISOString()})));
-    if(payload.length)await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
-    status('Облако ✓');
+    if(!ready||typeof recipes==='undefined')return false;
+    if(savingRecipes)return savingRecipes;
+    const revision=recipeRevision,snapshot=JSON.parse(JSON.stringify(recipes));
+    savingRecipes=(async()=>{
+      status('Синхронизация рецептур…');
+      await request('recipe_items?id=not.is.null',{method:'DELETE'});
+      const payload=Object.entries(snapshot).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),updated_at:new Date().toISOString()})));
+      if(payload.length)await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+      if(recipeRevision===revision)recipeDirty=false;
+      status('Облако ✓');return true;
+    })().finally(()=>savingRecipes=null);
+    const result=await savingRecipes;
+    if(recipeDirty)return saveRecipesNow();
+    return result;
+  }
+  async function flushRecipes(){
+    clearTimeout(recipeTimer);recipeTimer=0;
+    if(!ready)return false;
+    while(recipeDirty||savingRecipes){if(savingRecipes)await savingRecipes;else await saveRecipesNow()}
+    return true;
   }
   const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,telegram:r.telegram||null,address:r.address||null,language:r.language||'ru',active:!r.deletedAt,updated_at:new Date().toISOString()});
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',telegram:row.telegram||'',address:row.address||'',language:row.language||'ru',accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
@@ -367,7 +382,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
   function queueProducts(){clearTimeout(productTimer);productTimer=setTimeout(()=>saveProducts().catch(error=>fail('товары',error)),350)}
-  function queueRecipes(){clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>saveRecipesNow().catch(error=>fail('рецептуры',error)),400)}
+  function queueRecipes(){recipeDirty=true;recipeRevision++;clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('рестораны',error)),350)}
   function queueOrders(){clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().catch(error=>fail('заказы',error)),500)}
   async function syncFinanceNow(){
@@ -422,7 +437,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
   window.addEventListener('offline',()=>status('Сохранено на устройстве'));
