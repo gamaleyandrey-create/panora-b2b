@@ -7,7 +7,7 @@
   };
   const L=()=>words[typeof lang==='string'&&words[lang]?lang:'ru'];
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const flourName=name=>/(^|\s)(мук\w*|flour|harina|farina|farine)(\s|$)/i.test(String(name||'').trim());
+  const flourName=name=>/(^|[\s,(/-])(мук\w*|пшенич\w*|ржан\w*|гречнев\w*|овсян\w*|полб\w*|flour|wheat|rye|spelt|oat|buckwheat|harina|trigo|centeno|espelta|avena|trigo\s+sarraceno|farina|farine)(?=$|[\s,)/-])/i.test(String(name||'').trim());
   const numeric=value=>Number(String(value??'').replace(',','.').trim())||0;
   const round=(value,digits=2)=>{const p=10**digits;return Math.round((Number(value)||0)*p)/p};
   const display=value=>String(round(value,2)).replace('.',',');
@@ -69,16 +69,20 @@
     setTimeout(()=>{if(status)status.textContent=''},3500);
     updateCard(card);
   }
-  function rowHtml(pid,item,index){return `<div class="recipe-row recipe-percent-row" data-index="${index}">
+  function rowHtml(pid,item,index,total){const unit=item.unit||'g',qty=numeric(item.qty),isBase=unit==='g'&&flourName(item.name),percent=total&&unit!=='pcs'?display(qty/total*100):'';return `<div class="recipe-row recipe-percent-row" data-index="${index}">
     <label class="recipe-field recipe-field-name"><small>${L().ingredient}</small><input data-role="name" value="${esc(item.name)}" aria-label="${L().ingredient}"></label>
     <label class="recipe-field"><small>${L().amount}</small><input data-role="qty" type="text" inputmode="decimal" value="${Number(item.qty)||0}" aria-label="${L().amount}"></label>
-    <label class="recipe-field recipe-percent-suffix"><small>${L().percent}</small><input data-role="percent" type="text" inputmode="decimal" aria-label="${L().percent}"></label>
-    <label class="recipe-field"><small>${L().unit}</small><select data-role="unit" aria-label="${L().unit}"><option ${item.unit==='g'?'selected':''}>g</option><option ${item.unit==='ml'?'selected':''}>ml</option><option ${item.unit==='pcs'?'selected':''}>pcs</option></select></label>
+    <label class="recipe-field recipe-percent-suffix"><small>${L().percent}</small><input data-role="percent" type="text" inputmode="decimal" value="${percent}" ${!total||unit==='pcs'||isBase?'readonly':''} aria-label="${L().percent}"></label>
+    <label class="recipe-field recipe-unit-field"><small>${L().unit}</small><select data-role="unit" aria-label="${L().unit}"><option ${item.unit==='g'?'selected':''}>g</option><option ${item.unit==='ml'?'selected':''}>ml</option><option ${item.unit==='pcs'?'selected':''}>pcs</option></select></label>
     <button class="recipe-delete" data-delete-ingredient="${pid}:${index}" type="button" aria-label="${L().delete}">×</button>
   </div>`}
-  function professionalRender(){
+  function professionalRender(force=false){
     const root=document.querySelector('#recipeList');if(!root)return;
-    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[];return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
+    // Background order/plan refreshes call renderAll(). Never replace the recipe
+    // inputs while the mobile keyboard is open: doing so removes the focused
+    // element and makes the user appear to be "thrown out" of gram editing.
+    if(!force&&root.dataset.recipeEditing==='true'&&root.children.length)return;
+    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(item.unit==='g'&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
       <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span></div>
       <label class="recipe-product-weight"><span>${L().weight}</span><span><input data-recipe-weight="${pid}" type="number" min="1" step="1" value="${Number(product?.weight||750)}"> g</span></label>
       <p class="recipe-help"><strong>${L().percent}.</strong> ${L().help} ${L().stock}</p>
@@ -90,7 +94,7 @@
       </div>
       <p class="recipe-tech-note">${L().approx}</p>
       <div class="recipe-column-heads"><span>${L().ingredient}</span><span>${L().amount}</span><span>${L().percent}</span><span>${L().unit}</span><span></span></div>
-      <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index)).join('')}</div>
+      <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index,initialFlour)).join('')}</div>
       <p class="recipe-warning" hidden>${L().noFlour}</p>
       <div class="recipe-actions"><button class="secondary" data-add-ingredient="${pid}" type="button">${L().add}</button><span class="recipe-save-status" aria-live="polite"></span><button class="primary recipe-save" type="button">${L().save}</button></div>
     </article>`}).join('');
@@ -105,8 +109,10 @@
       });
       card.querySelector('.recipe-save').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await saveCard(card)}finally{button.disabled=false}};
     });
-    root.querySelectorAll('[data-add-ingredient]').forEach(button=>button.onclick=()=>{const pid=button.dataset.addIngredient;recipes[pid]=recipes[pid]||[];recipes[pid].push({name:L().ingredient,qty:0,unit:'g',stock:0,margin:5});store('panora-recipes',recipes);professionalRender()});
-    root.querySelectorAll('[data-delete-ingredient]').forEach(button=>button.onclick=()=>{if(!confirm(L().delete))return;const [pid,index]=button.dataset.deleteIngredient.split(':');recipes[pid].splice(Number(index),1);store('panora-recipes',recipes);professionalRender()});
+    root.onfocusin=()=>{root.dataset.recipeEditing='true'};
+    root.onfocusout=()=>setTimeout(()=>{if(!root.contains(document.activeElement))root.dataset.recipeEditing='false'},300);
+    root.querySelectorAll('[data-add-ingredient]').forEach(button=>button.onclick=()=>{const pid=button.dataset.addIngredient;recipes[pid]=recipes[pid]||[];recipes[pid].push({name:L().ingredient,qty:0,unit:'g',stock:0,margin:5});store('panora-recipes',recipes);professionalRender(true)});
+    root.querySelectorAll('[data-delete-ingredient]').forEach(button=>button.onclick=()=>{if(!confirm(L().delete))return;const [pid,index]=button.dataset.deleteIngredient.split(':');recipes[pid].splice(Number(index),1);store('panora-recipes',recipes);professionalRender(true)});
   }
   window.panoraBakersPercent={flourName,round};
   renderRecipes=professionalRender;
