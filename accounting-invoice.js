@@ -51,6 +51,10 @@
       access: "Эта накладная недоступна данному ресторану.",
       missing: "Накладная не найдена.",
       choose: "Выберите экземпляр",
+      albaran: "Albarán",
+      factura: "Factura",
+      taxableBase: "Налоговая база",
+      vat: "IVA",
     },
     en: {
       title: "Invoice",
@@ -82,6 +86,10 @@
       access: "This delivery note does not belong to this restaurant.",
       missing: "Delivery note not found.",
       choose: "Select copy",
+      albaran: "Delivery note (Albarán)",
+      factura: "Invoice (Factura)",
+      taxableBase: "Taxable base",
+      vat: "IVA",
     },
     es: {
       title: "Factura",
@@ -113,6 +121,10 @@
       access: "Este albarán no pertenece a este restaurante.",
       missing: "No se encontró el albarán.",
       choose: "Seleccionar copia",
+      albaran: "Albarán",
+      factura: "Factura",
+      taxableBase: "Base imponible",
+      vat: "IVA",
     },
   };
   const text = (key) => (words[currentLanguage()] || words.ru)[key];
@@ -309,24 +321,34 @@ ${lines}
       return;
     }
     const order = findOrder(note.orderId);
-    const client = findRestaurant(note.restaurantId);
-    const bakery = bakeryData(note);
-    const prefix = bakery.notePrefix || "DN-";
-    const number = `${prefix}${String(note.number).padStart(4, "0")}`;
+    const meta = options.documentData || {};
+    const variant = options.variant === "albaran" ? "albaran" : "factura";
+    const baseClient = findRestaurant(note.restaurantId);
+    const baseBakery = bakeryData(note);
+    const client = {...baseClient, legalName: meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerAddress || baseClient.billingAddress || baseClient.address};
+    const bakery = {...baseBakery, legalName: meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
+    const prefix = variant === "albaran" ? "ALB-" : "F-";
+    const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
+    const rate = variant === "factura" ? Number(meta.ivaRate || 0) : 0;
+    const gross = Number(note.total || 0);
+    const pricesIncludeTax = meta.pricesIncludeTax !== false;
+    const taxableBase = variant === "factura" && pricesIncludeTax ? gross / (1 + rate / 100) : gross;
+    const vatAmount = variant === "factura" ? taxableBase * rate / 100 : 0;
+    const documentTotal = variant === "factura" && !pricesIncludeTax ? taxableBase + vatAmount : gross;
     const paid = paidAmount(note);
-    const due = Math.max(0, Number(note.total || 0) - paid);
+    const due = Math.max(0, documentTotal - paid);
     document.querySelector("#accountingInvoiceDialog")?.remove();
     const dialog = document.createElement("dialog");
     dialog.id = "accountingInvoiceDialog";
     dialog.className = "accounting-dialog";
     const side = options.side || (options.context === "restaurant" ? "restaurant" : "bakery");
     dialog.innerHTML = `<div class="accounting-toolbar">
-      <span><strong>${esc(text("title"))}</strong><small>${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</small></span>
+      <span><strong>${esc(text(variant))}</strong><small>${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</small></span>
       ${options.context !== "restaurant" ? `<label>${esc(text("choose"))}<select class="accounting-side"><option value="bakery"${side === "bakery" ? " selected" : ""}>${esc(text("bakeryCopy"))}</option><option value="restaurant"${side === "restaurant" ? " selected" : ""}>${esc(text("restaurantCopy"))}</option></select></label>` : ""}
       <button type="button" class="accounting-x" aria-label="${esc(text("close"))}">×</button>
     </div>
     <article class="accounting-sheet">
-      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(text("title"))}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(note.date || "—")}</dd></div><div><dt>${esc(text("deliveryDate"))}</dt><dd>${esc(order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
+      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(text(variant))}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(note.date || "—")}</dd></div><div><dt>${esc(text("deliveryDate"))}</dt><dd>${esc(order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
       <section class="accounting-parties">
         <div><h2>${esc(text("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(text("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(text("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(text("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
         <div><h2>${esc(text("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(text("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(text("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(text("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
@@ -335,10 +357,10 @@ ${lines}
         const price = Number(note.prices?.[item.product] || 0);
         return `<div class="accounting-line"><strong>${esc(productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(Number(item.quantity) * price))}</strong></div>`;
       }).join("")}</div>
-      <section class="accounting-summary"><dl><div><dt>${esc(text("total"))}</dt><dd>${esc(money(note.total))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
+      <section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
       <footer><span>${esc(text("bakerySignature"))} __________________</span><span>${esc(text("restaurantSignature"))} __________________</span></footer>
     </article>
-<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(text("close"))}</button><button type="button" class="secondary accounting-csv">${esc(text("csv"))}</button><button type="button" class="secondary accounting-edi">${esc(text("edi"))}</button><button type="button" class="primary accounting-print">${esc(text("print"))}</button></div>`;
+<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(text("close"))}</button><button type="button" class="secondary accounting-csv">${esc(text("csv"))}</button>${variant === "factura" ? `<button type="button" class="secondary accounting-edi">${esc(text("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(text("print"))}</button></div>`;
     document.body.appendChild(dialog);
     const close = () => dialog.close();
     dialog.querySelector(".accounting-x").onclick = close;
@@ -346,8 +368,8 @@ ${lines}
     dialog.querySelector(".accounting-print").onclick = () => window.print();
     dialog.querySelector(".accounting-csv").onclick = () =>
       downloadCsv(note, order, client, bakery, number);
-    dialog.querySelector(".accounting-edi").onclick = () =>
-      downloadUbl(note, order, client, bakery, number);
+    dialog.querySelector(".accounting-edi")?.addEventListener("click", () =>
+      downloadUbl(note, order, client, bakery, number));
     dialog.querySelector(".accounting-side")?.addEventListener("change", (event) => {
       const label = dialog.querySelector(".accounting-copy-label");
       label.textContent =

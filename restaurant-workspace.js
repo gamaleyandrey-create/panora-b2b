@@ -370,7 +370,10 @@
           const note = ownNotes().find(
             (item) => item.id === button.dataset.rwNote,
           );
-          if (note) portalPrintNote(note);
+          if (note) {
+            if (window.openPanoraDocumentLibrary) window.openPanoraDocumentLibrary(note, { context: "restaurant" });
+            else portalPrintNote(note);
+          }
         }),
     );
   }
