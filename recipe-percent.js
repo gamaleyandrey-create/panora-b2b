@@ -1,9 +1,9 @@
 /* Professional recipe editor: baker's percentages with total flour = 100%. */
 (()=>{
   const words={
-    ru:{weight:'Вес готового изделия',flour:'Мука: 100%',ingredient:'Ингредиент',amount:'Количество',percent:'Пекарский %',unit:'Ед.',add:'+ Добавить ингредиент',save:'Сохранить рецептуру',saved:'Рецептура сохранена',help:'Вся мука вместе принимается за 100%. Остальные ингредиенты можно менять в количестве или пекарских процентах.',noFlour:'Добавьте ингредиент с названием «мука» и единицей g — без него проценты рассчитать нельзя.',delete:'Удалить ингредиент?',stock:'Остаток и запас учитываются в разделе «Закупка».',dough:'Расчётная масса замеса',formula:'Сумма формулы',loss:'Потери при выпечке',yield:'Выход изделия',approx:'Для жидкостей используется технологическое приближение 1 ml ≈ 1 g.'},
-    en:{weight:'Finished product weight',flour:'Flour: 100%',ingredient:'Ingredient',amount:'Amount',percent:"Baker's %",unit:'Unit',add:'+ Add ingredient',save:'Save recipe',saved:'Recipe saved',help:"All flour combined is 100%. Other ingredients can be edited by amount or baker's percentage.",noFlour:'Add an ingredient named “flour” with unit g to calculate percentages.',delete:'Delete ingredient?',stock:'Stock and safety margin are used in Purchasing.',dough:'Estimated dough weight',formula:'Total formula',loss:'Baking loss',yield:'Product yield',approx:'Liquids use the technological approximation 1 ml ≈ 1 g.'},
-    es:{weight:'Peso del producto terminado',flour:'Harina: 100%',ingredient:'Ingrediente',amount:'Cantidad',percent:'% panadero',unit:'Ud.',add:'+ Añadir ingrediente',save:'Guardar receta',saved:'Receta guardada',help:'Toda la harina combinada representa el 100 %. Los demás ingredientes se pueden editar por cantidad o porcentaje panadero.',noFlour:'Añada un ingrediente llamado “harina” con unidad g para calcular porcentajes.',delete:'¿Eliminar ingrediente?',stock:'Las existencias y el margen se usan en Compras.',dough:'Peso estimado de la masa',formula:'Fórmula total',loss:'Merma de horneado',yield:'Rendimiento del producto',approx:'Para líquidos se usa la aproximación tecnológica 1 ml ≈ 1 g.'}
+    ru:{weight:'Вес готового изделия',flour:'Мука: 100%',ingredient:'Ингредиент',amount:'Количество',percent:'Пекарский %',unit:'Ед.',add:'+ Добавить ингредиент',save:'Сохранить рецептуру',saving:'Сохранение…',saved:'Рецептура сохранена в облаке',localSaved:'Сохранено на устройстве. Облако недоступно.',help:'Вся мука вместе принимается за 100%. Остальные ингредиенты можно менять в количестве или пекарских процентах.',noFlour:'Добавьте ингредиент с названием «мука» и единицей g — без него проценты рассчитать нельзя.',delete:'Удалить ингредиент?',stock:'Остаток и запас учитываются в разделе «Закупка».',dough:'Расчётная масса замеса',formula:'Сумма формулы',loss:'Потери при выпечке',yield:'Выход изделия',approx:'Для жидкостей используется технологическое приближение 1 ml ≈ 1 g.'},
+    en:{weight:'Finished product weight',flour:'Flour: 100%',ingredient:'Ingredient',amount:'Amount',percent:"Baker's %",unit:'Unit',add:'+ Add ingredient',save:'Save recipe',saving:'Saving…',saved:'Recipe saved to cloud',localSaved:'Saved on this device. Cloud is unavailable.',help:"All flour combined is 100%. Other ingredients can be edited by amount or baker's percentage.",noFlour:'Add an ingredient named “flour” with unit g to calculate percentages.',delete:'Delete ingredient?',stock:'Stock and safety margin are used in Purchasing.',dough:'Estimated dough weight',formula:'Total formula',loss:'Baking loss',yield:'Product yield',approx:'Liquids use the technological approximation 1 ml ≈ 1 g.'},
+    es:{weight:'Peso del producto terminado',flour:'Harina: 100%',ingredient:'Ingrediente',amount:'Cantidad',percent:'% panadero',unit:'Ud.',add:'+ Añadir ingrediente',save:'Guardar receta',saving:'Guardando…',saved:'Receta guardada en la nube',localSaved:'Guardado en este dispositivo. La nube no está disponible.',help:'Toda la harina combinada representa el 100 %. Los demás ingredientes se pueden editar por cantidad o porcentaje panadero.',noFlour:'Añada un ingrediente llamado “harina” con unidad g para calcular porcentajes.',delete:'¿Eliminar ingrediente?',stock:'Las existencias y el margen se usan en Compras.',dough:'Peso estimado de la masa',formula:'Fórmula total',loss:'Merma de horneado',yield:'Rendimiento del producto',approx:'Para líquidos se usa la aproximación tecnológica 1 ml ≈ 1 g.'}
   };
   const L=()=>words[typeof lang==='string'&&words[lang]?lang:'ru'];
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -16,7 +16,7 @@
     const qty=Number(row.querySelector('[data-role="qty"]')?.value)||0;
     return sum+(unit==='g'&&flourName(name)?qty:0);
   },0);
-  function updateCard(card){
+  function updateCard(card,preservePercent=null){
     const total=flourTotal(card), warning=card.querySelector('.recipe-warning');
     card.querySelector('[data-flour-total]').textContent=total?`${L().flour} · ${display(total)} g`:L().flour;
     warning.hidden=total>0;
@@ -25,7 +25,7 @@
       const unit=row.querySelector('[data-role="unit"]').value,isBase=unit==='g'&&flourName(row.querySelector('[data-role="name"]').value);
       pct.readOnly=!total||unit==='pcs'||isBase;
       pct.title=isBase?L().flour:'';
-      pct.value=total&&unit!=='pcs'?display(qty/total*100):'';
+      if(pct!==preservePercent)pct.value=total&&unit!=='pcs'?display(qty/total*100):'';
     });
     const dough=[...card.querySelectorAll('.recipe-percent-row')].reduce((sum,row)=>{
       const unit=row.querySelector('[data-role="unit"]')?.value;
@@ -48,7 +48,7 @@
     if(typeof saveProducts==='function')saveProducts();
     else{const all=JSON.parse(localStorage.getItem('panora-products')||'[]'),saved=all.find(p=>p.id===product.id);if(saved){saved.weight=product.weight;localStorage.setItem('panora-products',JSON.stringify(all));window.panoraCloud?.queueProducts?.()}}
   }
-  function saveCard(card){
+  async function saveCard(card){
     const pid=card.dataset.recipeCard,previous=recipes[pid]||[];
     recipes[pid]=[...card.querySelectorAll('.recipe-percent-row')].map((row,index)=>({
       name:row.querySelector('[data-role="name"]').value.trim()||L().ingredient,
@@ -59,7 +59,13 @@
     }));
     saveWeight(pid,card.querySelector('[data-recipe-weight]').value);
     store('panora-recipes',recipes);if(typeof renderPurchase==='function')renderPurchase();
-    const status=card.querySelector('.recipe-save-status');status.textContent='✓ '+L().saved;setTimeout(()=>{if(status)status.textContent=''},2200);
+    const status=card.querySelector('.recipe-save-status');status.textContent=L().saving;
+    try{
+      if(navigator.onLine&&window.panoraCloud?.ready&&window.panoraCloud?.flushRecipes){await window.panoraCloud.flushRecipes();status.textContent='✓ '+L().saved}
+      else status.textContent=L().localSaved;
+    }
+    catch(error){console.error('Panora recipe save',error);status.textContent=L().localSaved}
+    setTimeout(()=>{if(status)status.textContent=''},3500);
     updateCard(card);
   }
   function rowHtml(pid,item,index){return `<div class="recipe-row recipe-percent-row" data-index="${index}">
@@ -91,8 +97,11 @@
       updateCard(card);
       card.querySelectorAll('[data-role="name"],[data-role="qty"],[data-role="unit"]').forEach(el=>el.addEventListener('input',()=>updateCard(card)));
       card.querySelector('[data-recipe-weight]')?.addEventListener('input',()=>updateCard(card));
-      card.querySelectorAll('[data-role="percent"]').forEach(pct=>pct.addEventListener('change',()=>{if(pct.readOnly)return;const total=flourTotal(card),row=pct.closest('.recipe-percent-row'),value=Number(String(pct.value).replace(',','.'));if(total&&Number.isFinite(value)){row.querySelector('[data-role="qty"]').value=round(total*value/100,3);updateCard(card)}}));
-      card.querySelector('.recipe-save').onclick=()=>saveCard(card);
+      card.querySelectorAll('[data-role="percent"]').forEach(pct=>{
+        pct.addEventListener('input',()=>{if(pct.readOnly)return;const total=flourTotal(card),row=pct.closest('.recipe-percent-row'),raw=String(pct.value).replace(',','.').trim(),value=Number(raw);if(raw!==''&&total&&Number.isFinite(value)&&value>=0){row.querySelector('[data-role="qty"]').value=round(total*value/100,3);updateCard(card,pct)}});
+        pct.addEventListener('blur',()=>updateCard(card));
+      });
+      card.querySelector('.recipe-save').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await saveCard(card)}finally{button.disabled=false}};
     });
     root.querySelectorAll('[data-add-ingredient]').forEach(button=>button.onclick=()=>{const pid=button.dataset.addIngredient;recipes[pid]=recipes[pid]||[];recipes[pid].push({name:L().ingredient,qty:0,unit:'g',stock:0,margin:5});store('panora-recipes',recipes);professionalRender()});
     root.querySelectorAll('[data-delete-ingredient]').forEach(button=>button.onclick=()=>{if(!confirm(L().delete))return;const [pid,index]=button.dataset.deleteIngredient.split(':');recipes[pid].splice(Number(index),1);store('panora-recipes',recipes);professionalRender()});
