@@ -44,7 +44,7 @@
   <link rel="stylesheet" href="invoice-preview.css?v=254">
   <link rel="stylesheet" href="accounting-invoice.css?v=258">
   <link rel="stylesheet" href="document-library.css?v=258">
-  <link rel="stylesheet" href="recipe-percent.css?v=266">
+  <link rel="stylesheet" href="recipe-percent.css?v=275">
 </head>
 <body class="auth-pending">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -175,12 +175,12 @@
   <script src="order-communication.js?v=111"></script>
 <script src="audit-log.js?v=248"></script>
 <script src="cloud-sync.js?v=270"></script>
-  <script src="recipe-percent.js?v=273"></script>
+  <script src="recipe-percent.js?v=275"></script>
   <script src="daily-order-summary.js?v=217"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=272').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=275').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>
