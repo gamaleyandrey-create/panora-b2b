@@ -10,7 +10,7 @@
   #purchaseRows td::before,#movementRows td::before,#accountRows td::before{color:#778078;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
   #purchaseRows td:nth-child(1)::before{content:'Ингредиент'}#purchaseRows td:nth-child(2)::before{content:'Нужно'}#purchaseRows td:nth-child(3)::before{content:'Остаток'}#purchaseRows td:nth-child(4)::before{content:'Запас'}#purchaseRows td:nth-child(5)::before{content:'Купить'}
   #movementRows td:nth-child(1)::before{content:'Дата'}#movementRows td:nth-child(2)::before{content:'Хлеб'}#movementRows td:nth-child(3)::before{content:'Операция'}#movementRows td:nth-child(4)::before{content:'Количество'}#movementRows td:nth-child(5)::before{content:'Примечание'}
-  #accountRows td:nth-child(1)::before{content:'Ресторан'}#accountRows td:nth-child(2)::before{content:'Задолженность'}#accountRows td:nth-child(3)::before{content:'Отгрузки'}#accountRows td:nth-child(4)::before{content:'Оплаты'}#accountRows td:nth-child(5)::before{content:'Последняя операция'}
+  #accountRows td:nth-child(1)::before{content:'Партнёр'}#accountRows td:nth-child(2)::before{content:'Задолженность'}#accountRows td:nth-child(3)::before{content:'Отгрузки'}#accountRows td:nth-child(4)::before{content:'Оплаты'}#accountRows td:nth-child(5)::before{content:'Последняя операция'}
   #purchaseRows td:last-child,#movementRows td:last-child,#accountRows td:last-child{border-bottom:0!important}
   #purchaseRows td[colspan],#movementRows td[colspan],#accountRows td[colspan]{display:block!important;text-align:center!important}#purchaseRows td[colspan]::before,#movementRows td[colspan]::before,#accountRows td[colspan]::before{content:none!important}
   #purchaseRows input{width:100%!important;min-width:0!important}

@@ -18,7 +18,7 @@
       emptyPayments: "Операций пока нет",
       openNote: "Открыть накладную",
       noteLibrary: "Библиотека накладных",
-      noteLibraryHint: "Рабочие накладные Panora и архив поставок вашего ресторана.",
+      noteLibraryHint: "Рабочие накладные Panora и архив поставок вашей организации.",
       mainNote: "Основная для работы",
       otherForms: "Другие формы",
       bake: "Выпечка",
@@ -32,7 +32,7 @@
       phone: "Телефон",
       address: "Адрес доставки",
       partnerType: "Тип партнёра", restaurant: "Ресторан", shop: "Магазин", hotel: "Отель", cafe: "Кафе", catering: "Кейтеринг", other: "Другое",
-      restaurantName: "Название партнёра", email: "Email для входа", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Мессенджеры", messengersHint: "Укажите контакты, по которым Panora может быстро связаться с вами.", telegramHint: "Имя пользователя, например @panora", whatsappHint: "Номер с кодом страны, например +34 600 000 000", billingDetails: "Реквизиты", billingHint: "Данные для накладных и счетов.", legalName: "Юридическое название", taxId: "NIF / CIF", billingAddress: "Адрес для счетов", language: "Язык сообщений", profileData: "Данные партнёра", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
+      restaurantName: "Название партнёра", email: "Email для входа", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Мессенджеры", messengersHint: "Добавьте удобные способы связи. Пустые необязательные поля можно не заполнять.", telegramHint: "Имя пользователя, например @panora", whatsappHint: "Номер с кодом страны, например +34 600 000 000", otherMessengers: "Другие мессенджеры", addMessenger: "Добавить мессенджер", messengerName: "Название", messengerContact: "Номер или имя пользователя", removeMessenger: "Удалить", incompleteMessenger: "Укажите и название мессенджера, и контакт либо удалите пустую строку.", invalidPhone: "Проверьте номер телефона", invalidTelegram: "Используйте имя вида @username или ссылку", invalidTaxId: "Проверьте NIF / CIF", saveError: "Не удалось сохранить. Данные остались в форме — проверьте поля и повторите.", billingDetails: "Реквизиты", billingHint: "Данные для накладных и счетов.", legalName: "Юридическое название", taxId: "NIF / CIF", billingAddress: "Адрес для счетов", language: "Язык сообщений", profileData: "Данные партнёра", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
       finance: "Баланс и оплаты",
       deliveredTotal: "Поставлено",
       paidTotal: "Оплачено",
@@ -87,7 +87,7 @@
       phone: "Phone",
       address: "Delivery address",
       partnerType: "Partner type", restaurant: "Restaurant", shop: "Shop", hotel: "Hotel", cafe: "Cafe", catering: "Catering", other: "Other",
-      restaurantName: "Partner name", email: "Sign-in email", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Messengers", messengersHint: "Add the contacts Panora can use to reach you quickly.", telegramHint: "Username, for example @panora", whatsappHint: "Number with country code, for example +34 600 000 000", billingDetails: "Billing details", billingHint: "Details used on delivery notes and invoices.", legalName: "Legal name", taxId: "NIF / CIF", billingAddress: "Billing address", language: "Message language", profileData: "Partner details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
+      restaurantName: "Partner name", email: "Sign-in email", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Messengers", messengersHint: "Add the contact methods you prefer. Optional fields may be left empty.", telegramHint: "Username, for example @panora", whatsappHint: "Number with country code, for example +34 600 000 000", otherMessengers: "Other messengers", addMessenger: "Add messenger", messengerName: "Name", messengerContact: "Number or username", removeMessenger: "Remove", incompleteMessenger: "Enter both the messenger name and contact, or remove the empty row.", invalidPhone: "Check the phone number", invalidTelegram: "Use @username or a link", invalidTaxId: "Check the NIF / CIF", saveError: "Could not save. Your entries remain in the form — check the fields and try again.", billingDetails: "Billing details", billingHint: "Details used on delivery notes and invoices.", legalName: "Legal name", taxId: "NIF / CIF", billingAddress: "Billing address", language: "Message language", profileData: "Partner details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
       finance: "Balance and payments",
       deliveredTotal: "Delivered",
       paidTotal: "Paid",
@@ -131,7 +131,7 @@
       phone: "Teléfono",
       address: "Dirección de entrega",
       partnerType: "Tipo de socio", restaurant: "Restaurante", shop: "Tienda", hotel: "Hotel", cafe: "Cafetería", catering: "Catering", other: "Otro",
-      restaurantName: "Nombre del socio", email: "Email de acceso", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Mensajería", messengersHint: "Añade los contactos que Panora puede usar para comunicarse contigo.", telegramHint: "Usuario, por ejemplo @panora", whatsappHint: "Número con prefijo, por ejemplo +34 600 000 000", billingDetails: "Datos fiscales", billingHint: "Datos para albaranes y facturas.", legalName: "Razón social", taxId: "NIF / CIF", billingAddress: "Dirección de facturación", language: "Idioma de mensajes", profileData: "Datos del socio", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
+      restaurantName: "Nombre del socio", email: "Email de acceso", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Mensajería", messengersHint: "Añade las formas de contacto que prefieras. Los campos opcionales pueden quedar vacíos.", telegramHint: "Usuario, por ejemplo @panora", whatsappHint: "Número con prefijo, por ejemplo +34 600 000 000", otherMessengers: "Otros mensajeros", addMessenger: "Añadir mensajero", messengerName: "Nombre", messengerContact: "Número o usuario", removeMessenger: "Eliminar", incompleteMessenger: "Indica el nombre y el contacto, o elimina la fila vacía.", invalidPhone: "Revisa el número de teléfono", invalidTelegram: "Usa @usuario o un enlace", invalidTaxId: "Revisa el NIF / CIF", saveError: "No se pudo guardar. Los datos siguen en el formulario; revísalos e inténtalo de nuevo.", billingDetails: "Datos fiscales", billingHint: "Datos para albaranes y facturas.", legalName: "Razón social", taxId: "NIF / CIF", billingAddress: "Dirección de facturación", language: "Idioma de mensajes", profileData: "Datos del socio", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
       finance: "Saldo y pagos",
       deliveredTotal: "Entregado",
       paidTotal: "Pagado",
@@ -171,6 +171,11 @@
   let orderToReveal = "";
   let noteQuery = "";
   let noteMonth = "";
+  const messengerRow = (item = {}) => `<div class="rw-extra-messenger" data-rw-messenger-row>
+    <label><span>${t("messengerName")}</span><input data-rw-messenger-name maxlength="40" value="${esc(item.name || "")}" placeholder="Signal, Viber, LINE…"><small data-rw-messenger-error></small></label>
+    <label><span>${t("messengerContact")}</span><input data-rw-messenger-contact maxlength="120" value="${esc(item.contact || "")}" placeholder="@username, +34…, https://…"><small></small></label>
+    <button type="button" class="rw-remove-messenger" data-rw-remove-messenger aria-label="${t("removeMessenger")}" title="${t("removeMessenger")}">×</button>
+  </div>`;
 
   const ownOrders = () =>
     portalOrders()
@@ -242,17 +247,18 @@
       <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
       <div class="rw-profile-grid">
         <label><span>${t("partnerType")}</span><select name="partnerType">${["restaurant", "shop", "hotel", "cafe", "catering", "other"].map((type) => `<option value="${type}"${(account.partnerType || "restaurant") === type ? " selected" : ""}>${t(type)}</option>`).join("")}</select></label>
-        <label><span>${t("restaurantName")} *</span><input name="name" required value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
-        <label><span>${t("phone")} *</span><input name="phone" required type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
-        <label class="rw-profile-wide"><span>${t("address")} *</span><input name="address" required autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
+        <label><span>${t("restaurantName")} *</span><input name="name" required maxlength="120" value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
+        <label><span>${t("phone")} *</span><input name="phone" required maxlength="30" type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
+        <label class="rw-profile-wide"><span>${t("address")} *</span><input name="address" required maxlength="300" autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
         <label><span>${t("language")}</span><select name="language"><option value="ru"${account.language === "ru" ? " selected" : ""}>Русский</option><option value="es"${account.language === "es" ? " selected" : ""}>Español</option><option value="en"${account.language === "en" ? " selected" : ""}>English</option></select></label>
       </div>
       <section class="rw-messengers" aria-labelledby="rw-messengers-title">
         <header><span class="rw-messenger-mark" aria-hidden="true">✦</span><div><h4 id="rw-messengers-title">${t("messengers")}</h4><p>${t("messengersHint")}</p></div></header>
         <div class="rw-messenger-grid">
-          <label><span class="rw-messenger-label"><i aria-hidden="true">W</i>${t("whatsapp")}</span><input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.whatsapp || "")}" placeholder="+34 600 000 000"><small>${t("whatsappHint")}</small></label>
-          <label><span class="rw-messenger-label"><i aria-hidden="true">T</i>${t("telegram")}</span><input name="telegram" autocapitalize="none" autocomplete="off" spellcheck="false" value="${esc(account.telegram || "")}" placeholder="@panora"><small>${t("telegramHint")}</small></label>
+          <label><span class="rw-messenger-label"><i aria-hidden="true">W</i>${t("whatsapp")}</span><input name="whatsapp" maxlength="30" type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.whatsapp || "")}" placeholder="+34 600 000 000"><small>${t("whatsappHint")}</small></label>
+          <label><span class="rw-messenger-label"><i aria-hidden="true">T</i>${t("telegram")}</span><input name="telegram" maxlength="120" autocapitalize="none" autocomplete="off" spellcheck="false" value="${esc(account.telegram || "")}" placeholder="@panora"><small>${t("telegramHint")}</small></label>
         </div>
+        <div class="rw-extra-messengers"><h5>${t("otherMessengers")}</h5><div data-rw-messenger-list>${(account.extraMessengers || []).map(messengerRow).join("")}</div><button type="button" class="button button-ghost rw-add-messenger" data-rw-add-messenger>＋ ${t("addMessenger")}</button></div>
       </section>
       <section class="rw-billing-details" aria-labelledby="rw-billing-title">
         <header><span aria-hidden="true">▤</span><div><h4 id="rw-billing-title">${t("billingDetails")}</h4><p>${t("billingHint")}</p></div></header>
@@ -445,15 +451,30 @@
       renderAccountModal();
     });
     const profileForm = modal.querySelector("[data-rw-profile-form]");
+    const messengerList = profileForm?.querySelector("[data-rw-messenger-list]");
+    const bindMessengerRows = () => messengerList?.querySelectorAll("[data-rw-remove-messenger]").forEach((button) => button.onclick = () => button.closest("[data-rw-messenger-row]")?.remove());
+    bindMessengerRows();
+    profileForm?.querySelector("[data-rw-add-messenger]")?.addEventListener("click", () => {
+      if ((messengerList?.children.length || 0) >= 10) return;
+      messengerList?.insertAdjacentHTML("beforeend", messengerRow());
+      bindMessengerRows();
+      messengerList?.lastElementChild?.querySelector("input")?.focus();
+    });
     if (profileForm) profileForm.onsubmit = async (event) => {
       event.preventDefault();
       const button = profileForm.querySelector('[type="submit"]'), result = profileForm.querySelector('[data-rw-profile-result]');
       let valid = true;
       ["name", "phone", "address"].forEach((field) => { const input = profileForm.elements[field], error = profileForm.querySelector(`[data-rw-field-error="${field}"]`), missing = !String(input.value || "").trim(); input.classList.toggle("invalid", missing); error.textContent = missing ? t("required") : ""; valid = valid && !missing; });
-      if (!valid) return profileForm.querySelector(".invalid")?.focus();
+      const phoneLike = (value) => !value || /^[+()\d][\d\s().-]{5,24}$/.test(value);
+      const telegram = String(profileForm.elements.telegram.value || "").trim();
+      const taxId = String(profileForm.elements.taxId.value || "").trim();
+      [["phone", phoneLike(profileForm.elements.phone.value), t("invalidPhone")], ["whatsapp", phoneLike(profileForm.elements.whatsapp.value), t("invalidPhone")], ["telegram", !telegram || /^(@[A-Za-z0-9_]{4,32}|https?:\/\/\S+)$/i.test(telegram), t("invalidTelegram")], ["taxId", !taxId || /^[A-Za-z0-9][A-Za-z0-9 .\/-]{2,24}$/.test(taxId), t("invalidTaxId")]].forEach(([field, ok, message]) => { const input = profileForm.elements[field]; input.classList.toggle("invalid", !ok); if (!ok) { const small = input.closest("label")?.querySelector("small"); if (small) small.textContent = message; valid = false; } });
+      const extraMessengers = [...profileForm.querySelectorAll("[data-rw-messenger-row]")].map((row) => ({ name: row.querySelector("[data-rw-messenger-name]").value.trim(), contact: row.querySelector("[data-rw-messenger-contact]").value.trim(), row })).filter((item) => item.name || item.contact);
+      extraMessengers.forEach((item) => { const complete = item.name && item.contact; item.row.classList.toggle("invalid", !complete); item.row.querySelector("[data-rw-messenger-error]").textContent = complete ? "" : t("incompleteMessenger"); if (!complete) valid = false; });
+      if (!valid) return profileForm.querySelector(".invalid input, input.invalid")?.focus();
       button.disabled = true; button.textContent = t("savingProfile"); result.textContent = "";
-      try { await window.panoraRestaurantProfile.save(Object.fromEntries(new FormData(profileForm))); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
-      catch (error) { result.textContent = error.message || String(error); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
+      try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
+      catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
     };
     modal.querySelectorAll("[data-rw-tab]").forEach(
       (button) =>

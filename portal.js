@@ -62,7 +62,7 @@ function accountText(key) {
       profile: "Профиль партнёра",
       phone: "Телефон",
       address: "Адрес доставки",
-      login: "Вход для ресторана",
+      login: "Вход для партнёра",
       email: "Email",
       code: "Код доступа",
       enter: "Войти",
