@@ -50,6 +50,20 @@ const euro = (n) => {
 };
 const restaurant = (id) => restaurants.find((r) => r.id === id);
 const activeRestaurants = () => restaurants.filter((r) => !r.deletedAt);
+const commerceProducts = () => {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem("panora-products") || "[]"); } catch {}
+  const registry = typeof productRegistry !== "undefined" && Array.isArray(productRegistry)
+    ? productRegistry
+    : saved;
+  return registry.filter((product) => product && product.active !== false && !product.deletedAt);
+};
+const commerceProductLabel = (id) => {
+  const product = commerceProducts().find((entry) => entry.id === id);
+  return product?.names?.[lang] || product?.names?.ru || product?.name ||
+    (id === "plain" ? "Льняной бездрожжевой хлеб с семенами" :
+      id === "pumpkin" ? "Тыквенный бездрожжевой хлеб с семенами" : id);
+};
 const orderSubtotal = (o) =>
   o.items.reduce(
     (sum, i) =>
@@ -139,7 +153,7 @@ function renderRestaurants() {
       ? active
           .map(
             (r) =>
-              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">Личный кабинет</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${r.name}</h3><p>${r.email}<br>${r.address || ""}</p><label class="price-row"><span>Льняной бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:plain" type="number" min="0" step="0.01" value="${r.prices.plain.toFixed(2)}"> €</span></label><label class="price-row"><span>Тыквенный бездрожжевой хлеб с семенами</span><span><input data-price="${r.id}:pumpkin" type="number" min="0" step="0.01" value="${r.prices.pumpkin.toFixed(2)}"> €</span></label><div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">Личный кабинет</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${r.name}</h3><p>${r.email}<br>${r.address || ""}</p>${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}</span><span><input data-price="${r.id}:${product.id}" type="number" min="0" step="0.01" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
           )
           .join("")
       : '<div class="empty-row">Добавьте первый ресторан и назначьте ему индивидуальные цены.</div>') +
@@ -235,7 +249,7 @@ function renderOrders() {
         .reverse()
         .map((o) => {
           const note = deliveryNotes.find((n) => n.orderId === o.id);
-          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${restaurant(o.restaurantId)?.name || "—"}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${restaurant(o.restaurantId)?.name || "—"}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="7">Заказов пока нет.</td></tr>';
@@ -629,7 +643,7 @@ function openShipment(id) {
   form.paymentDueDate.value = "";
   form.traysDelivered.value = "";
   form.traysReturned.value = "";
-  summary.innerHTML = `<strong>PN-${String(o.number).padStart(4, "0")} · ${r.name}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
+  summary.innerHTML = `<strong>PN-${String(o.number).padStart(4, "0")} · ${r.name}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${commerceProductLabel(i.product)}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
   const update = () => {
     let subtotal = 0;
     summary.querySelectorAll("[data-shipment-quantity]").forEach((input) => {
@@ -912,7 +926,7 @@ function printNote(orderId) {
       : "",
     trayLine = `<p><strong>Возвратные лотки</strong><br>Пекарня выдала: ${Number(n.traysDelivered || 0)} шт.<br>${n.customerTraysReceived == null ? `Плановый возврат пустых: ${Number(n.traysReturned || 0)} шт.` : `Ресторан подтвердил: принято ${Number(n.customerTraysReceived)} шт., возвращено ${Number(n.customerTraysReturned || 0)} шт.<br>Осталось у ресторана: ${Number(n.trayBalanceAfter || 0)} шт.`}</p>`;
   w.document.write(
-    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${i.product === "plain" ? "Льняной бездрожжевой хлеб с семенами" : "Тыквенный бездрожжевой хлеб с семенами"}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table>${trayLine}<p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
+    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${r.name}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${commerceProductLabel(i.product)}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table>${trayLine}<p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
   );
   w.document.close();
   w.print();
@@ -1031,7 +1045,11 @@ restoreInput.onchange = async () => {
     restoreInput.value = "";
   }
 };
-document.querySelector("#exportOrders").onclick = () =>
+document.querySelector("#exportOrders").onclick = () => {
+  const productIds = [...new Set([
+    ...commerceProducts().map((product) => product.id),
+    ...orders.flatMap((order) => order.items.map((item) => item.product)),
+  ])];
   downloadFile(
     "panora-orders.csv",
     csv([
@@ -1041,8 +1059,7 @@ document.querySelector("#exportOrders").onclick = () =>
         "Доставка",
         "Ресторан",
         "Статус",
-        "Льняной, шт.",
-        "Тыквенный, шт.",
+        ...productIds.map((id) => `${commerceProductLabel(id)}, шт.`),
         "Без налога, EUR",
         "Налог, %",
         "Итого, EUR",
@@ -1053,14 +1070,14 @@ document.querySelector("#exportOrders").onclick = () =>
         o.deliveryDate || o.date,
         restaurant(o.restaurantId)?.name,
         orderStatus(o),
-        o.items.find((i) => i.product === "plain")?.quantity || 0,
-        o.items.find((i) => i.product === "pumpkin")?.quantity || 0,
+        ...productIds.map((id) => o.items.find((i) => i.product === id)?.quantity || 0),
         orderSubtotal(o).toFixed(2),
         o.taxRate ?? bakerySettings.taxRate,
         orderTotal(o).toFixed(2),
       ]),
     ]),
   );
+};
 document.querySelector("#exportPayments").onclick = () => {
   const rows = [
     ...deliveryNotes.map((n) => [
@@ -1105,9 +1122,7 @@ document.querySelector("#exportStock").onclick = () =>
       ["Дата", "Хлеб", "Операция", "Количество, шт.", "Примечание"],
       ...movements.map((m) => [
         m.date,
-        m.product === "plain"
-          ? "Льняной бездрожжевой хлеб с семенами"
-          : "Тыквенный бездрожжевой хлеб с семенами",
+        commerceProductLabel(m.product),
         m.type,
         signed(m),
         m.note,
@@ -1131,9 +1146,7 @@ document.querySelector("#exportPlan").onclick = () =>
       ...plans.map((p) => [
         p.bakeDate,
         p.deliveryDate,
-        p.product === "plain"
-          ? "Льняной бездрожжевой хлеб с семенами"
-          : "Тыквенный бездрожжевой хлеб с семенами",
+        commerceProductLabel(p.product),
         p.planned,
         p.ordered || 0,
         Math.max(0, p.planned - (p.ordered || 0)),

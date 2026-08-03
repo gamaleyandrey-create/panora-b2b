@@ -376,8 +376,7 @@ function portalPrintNote(note) {
     previous = Math.max(0, balance - Number(note.total || 0) + paidHere),
     w = window.open("", "_blank");
   if (!w) return;
-  const product = (i) =>
-      i.product === "plain" ? accountText("plain") : accountText("pumpkin"),
+  const product = (i) => portalProduct(i.product),
     previousLabel =
       lang === "ru"
         ? "Задолженность до поставки"

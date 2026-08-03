@@ -44,7 +44,7 @@
   <link rel="stylesheet" href="invoice-preview.css?v=254">
   <link rel="stylesheet" href="accounting-invoice.css?v=258">
   <link rel="stylesheet" href="document-library.css?v=258">
-  <link rel="stylesheet" href="recipe-percent.css?v=279">
+  <link rel="stylesheet" href="recipe-percent.css?v=278">
   <link rel="stylesheet" href="unified-controls.css?v=276">
 </head>
 <body class="auth-pending">
@@ -154,8 +154,8 @@
   <script src="supabase-config.js?v=113"></script>
   <script src="admin-auth.js?v=113"></script>
   <script src="admin.js?v=223"></script>
-  <script src="commerce.js?v=256"></script>
-  <script src="invoice-settings.js?v=235"></script>
+  <script src="commerce.js?v=280"></script>
+  <script src="invoice-settings.js?v=280"></script>
   <script src="invoice-tax-display.js?v=206"></script>
   <script src="accounting-invoice.js?v=258"></script>
   <script src="document-library.js?v=258"></script>
@@ -164,7 +164,7 @@
   <script src="product-admin.js?v=273"></script>
   <script src="calendar-plan.js?v=262"></script>
   <script src="qrcode-browser.js?v=228"></script>
-  <script src="delivery-qr.js?v=229"></script>
+  <script src="delivery-qr.js?v=280"></script>
   <script src="delivery-offline.js?v=222"></script>
   <script src="mobile-admin-nav.js?v=85"></script>
   <script src="admin-status-sync.js?v=270"></script>
@@ -176,12 +176,12 @@
   <script src="order-communication.js?v=111"></script>
 <script src="audit-log.js?v=248"></script>
 <script src="cloud-sync.js?v=278"></script>
-  <script src="recipe-percent.js?v=279"></script>
+  <script src="recipe-percent.js?v=278"></script>
   <script src="daily-order-summary.js?v=217"></script>
   <script>
     /* Inline fallback: the category menu still works if a separate JS file is cached or omitted. */
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=279').then(reg=>reg.update()).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=278').then(reg=>reg.update()).catch(()=>{});
   </script>
 </body>
 </html>

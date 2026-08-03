@@ -1,6 +1,6 @@
 /* QR contains only an opaque token. Delivery data always comes from Supabase after RLS verification. */
 (function(){
-  const name=p=>p==='plain'?'Льняной бездрожжевой хлеб с семенами':p==='pumpkin'?'Тыквенный бездрожжевой хлеб с семенами':p;
+  const name=p=>typeof commerceProductLabel==='function'?commerceProductLabel(p):(p==='plain'?'Льняной бездрожжевой хлеб с семенами':p==='pumpkin'?'Тыквенный бездрожжевой хлеб с семенами':p);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function token(note){
     note.qrToken ||= crypto.randomUUID();
