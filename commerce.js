@@ -280,7 +280,11 @@ function renderOrders() {
         .reverse()
         .map((o) => {
           const note = deliveryNotes.find((n) => n.orderId === o.id);
-          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${orderPartnerHtml(restaurant(o.restaurantId))}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+          const partner=restaurant(o.restaurantId);
+          const itemHtml=o.items.map((i)=>typeof orderLine==='function'
+            ? orderLine(o,i)
+            : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
+          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td><td><div class="order-items">${itemHtml}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
         })
         .join("")
     : `<tr><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
