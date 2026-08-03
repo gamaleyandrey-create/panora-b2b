@@ -1,11 +1,21 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
-  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285';
+  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',backupKey='panora-cloud-backups-v286';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
   let revisions=readObject(revisionKey),conflicts=readObject(conflictKey);
+  const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
+  const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+  const saveBackup=(sections,reason='sync')=>{
+    const data={};
+    sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
+    if(!Object.keys(data).length)return null;
+    const snapshot={id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,at:new Date().toISOString(),reason,data};
+    const backups=[snapshot,...readBackups()].slice(0,10);localStorage.setItem(backupKey,JSON.stringify(backups));
+    audit('sync.backup_created',`Резерв: ${Object.keys(data).join(', ')}`);return snapshot;
+  };
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
@@ -507,7 +517,23 @@ window.panoraRecalculateBalances=recalculateBalances;
     const sections=Object.keys(conflicts);if(!sections.length)return retrySync();
     const names=sections.join(', '),keepLocal=confirm(`Обнаружены изменения с другого устройства: ${names}.\n\nOK — применить данные этого устройства поверх облака.\nОтмена — оставить облачную версию.`);
     if(keepLocal){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
-    try{for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status('Облачная версия загружена ✓');return true}catch(error){fail('разрешение конфликта',error);return false}
+    try{const backup=saveBackup(sections,'conflict-cloud');for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
+  }
+  async function restoreLatestBackup(){
+    const snapshot=readBackups()[0];if(!snapshot)return false;
+    const sections=Object.keys(snapshot.data||{});if(!sections.length)return false;
+    if(!confirm(`Восстановить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}?\n\nРазделы: ${sections.join(', ')}. После восстановления данные будут отправлены в облако.`))return false;
+    try{
+      sections.forEach(section=>{const key=sectionKeys[section];if(!key)return;localStorage.setItem(key,snapshot.data[section]);markPending(section);forceSections.add(section)});
+      if(snapshot.data.products&&typeof productRegistry!=='undefined')productRegistry=JSON.parse(snapshot.data.products);
+      if(snapshot.data.recipes&&typeof recipes!=='undefined'){recipes=JSON.parse(snapshot.data.recipes);recipeDirty=true;recipeRevision++}
+      if(snapshot.data.restaurants&&typeof restaurants!=='undefined')restaurants=JSON.parse(snapshot.data.restaurants);
+      if(snapshot.data.plans&&typeof plans!=='undefined')plans=JSON.parse(snapshot.data.plans);
+      if(snapshot.data.products)productDirty=true;
+      audit('sync.backup_restored',`Восстановлен резерв: ${sections.join(', ')}`,'warning');
+      if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();if(typeof renderAll==='function')renderAll();
+      return retrySync();
+    }catch(error){fail('восстановление резерва',error);return false}
   }
   async function retrySync(){
     if(retrying)return retrying;
@@ -538,7 +564,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
