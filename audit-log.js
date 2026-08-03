@@ -17,6 +17,7 @@
     'sync.conflict_cloud':'Выбрана облачная версия',
     'sync.backup_created':'Создан резерв данных',
     'sync.backup_restored':'Восстановлен резерв данных',
+    'sync.backup_deleted':'Удалён резерв данных',
     'sync.restored':'Связь с облаком восстановлена'
   };
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

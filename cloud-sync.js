@@ -8,6 +8,8 @@
   let revisions=readObject(revisionKey),conflicts=readObject(conflictKey);
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+  const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Рестораны',plans:'План производства'};
+  const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией'};
   const saveBackup=(sections,reason='sync')=>{
     const data={};
     sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
@@ -519,10 +521,10 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(keepLocal){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
     try{const backup=saveBackup(sections,'conflict-cloud');for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
   }
-  async function restoreLatestBackup(){
-    const snapshot=readBackups()[0];if(!snapshot)return false;
+  async function restoreBackup(snapshot){
+    if(!snapshot)return false;
     const sections=Object.keys(snapshot.data||{});if(!sections.length)return false;
-    if(!confirm(`Восстановить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}?\n\nРазделы: ${sections.join(', ')}. После восстановления данные будут отправлены в облако.`))return false;
+    if(!confirm(`Восстановить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}?\n\nРазделы: ${sections.map(section=>backupSectionNames[section]||section).join(', ')}. После восстановления данные будут отправлены в облако.`))return false;
     try{
       sections.forEach(section=>{const key=sectionKeys[section];if(!key)return;localStorage.setItem(key,snapshot.data[section]);markPending(section);forceSections.add(section)});
       if(snapshot.data.products&&typeof productRegistry!=='undefined')productRegistry=JSON.parse(snapshot.data.products);
@@ -530,10 +532,30 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(snapshot.data.restaurants&&typeof restaurants!=='undefined')restaurants=JSON.parse(snapshot.data.restaurants);
       if(snapshot.data.plans&&typeof plans!=='undefined')plans=JSON.parse(snapshot.data.plans);
       if(snapshot.data.products)productDirty=true;
-      audit('sync.backup_restored',`Восстановлен резерв: ${sections.join(', ')}`,'warning');
+      audit('sync.backup_restored',`Восстановлен резерв: ${sections.map(section=>backupSectionNames[section]||section).join(', ')}`,'warning');
+      closeBackupHistory();
       if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();if(typeof renderAll==='function')renderAll();
       return retrySync();
     }catch(error){fail('восстановление резерва',error);return false}
+  }
+  async function restoreLatestBackup(){return restoreBackup(readBackups()[0])}
+  function closeBackupHistory(){const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=true}
+  function renderBackupHistory(){
+    const root=document.querySelector('#syncBackupList');if(!root)return;
+    const backups=readBackups();
+    root.innerHTML=backups.length?backups.map(snapshot=>{const sections=Object.keys(snapshot.data||{}).map(section=>backupSectionNames[section]||section).join(', ');return `<article class="sync-backup-item"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'}</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}">Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
+  }
+  function openBackupHistory(){renderBackupHistory();const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=false}
+  function deleteBackup(id){
+    const backups=readBackups(),snapshot=backups.find(item=>item.id===id);if(!snapshot)return;
+    if(!confirm(`Удалить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}? Это действие нельзя отменить.`))return;
+    localStorage.setItem(backupKey,JSON.stringify(backups.filter(item=>item.id!==id)));audit('sync.backup_deleted','Удалён резерв данных','warning');renderBackupHistory();
+  }
+  function initBackupHistory(){
+    document.querySelector('#syncBackupHistory')?.addEventListener('click',openBackupHistory);document.querySelector('#syncBackupClose')?.addEventListener('click',closeBackupHistory);
+    document.querySelector('#syncBackupModal')?.addEventListener('click',event=>{if(event.target.id==='syncBackupModal')closeBackupHistory()});
+    document.querySelector('#syncBackupList')?.addEventListener('click',event=>{const restore=event.target.closest('[data-backup-restore]'),remove=event.target.closest('[data-backup-delete]');if(restore)restoreBackup(readBackups().find(item=>item.id===restore.dataset.backupRestore));if(remove)deleteBackup(remove.dataset.backupDelete)});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeBackupHistory()});
   }
   async function retrySync(){
     if(retrying)return retrying;
@@ -564,7 +586,8 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
