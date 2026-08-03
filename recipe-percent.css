@@ -1,4 +1,14 @@
 .recipe-card-professional{display:flex;flex-direction:column;gap:14px}
+.recipe-tech-card{border:1px solid #d8dfda;border-radius:8px;padding:14px;background:#f8faf8}
+.recipe-tech-card summary{font-weight:800;font-size:17px;cursor:pointer;margin:-2px 0 14px}
+.recipe-tech-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.recipe-tech-fields label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.recipe-tech-fields label span{font-size:13px;color:#526158}
+.recipe-tech-fields .wide{grid-column:1/-1}
+.recipe-tech-fields input,.recipe-tech-fields textarea{width:100%;box-sizing:border-box;min-height:48px;border:1px solid #bbc7bf;border-radius:8px;padding:11px 12px;font:inherit;background:#fff}
+.recipe-tech-fields textarea{resize:vertical;line-height:1.45}
+.recipe-print{margin-top:12px;min-height:48px}
+@media(max-width:680px){.recipe-tech-fields{grid-template-columns:1fr}.recipe-tech-fields .wide{grid-column:auto}.recipe-print{width:100%}}
 .recipe-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .recipe-card-head h3{margin:0}
 .recipe-flour-summary{padding:9px 12px;border-radius:9px;background:#edf3eb;color:#304b39;font-weight:700;white-space:nowrap}
