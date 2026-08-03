@@ -535,7 +535,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function resolveConflicts(){
     const sections=Object.keys(conflicts);if(!sections.length)return retrySync();
-    const names=sections.join(', '),keepLocal=confirm(`Обнаружены изменения с другого устройства: ${names}.\n\nOK — применить данные этого устройства поверх облака.\nОтмена — оставить облачную версию.`);
+    const sectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'},names=sections.map(section=>sectionNames[section]||section).join(', '),keepLocal=confirm(`Конфликт синхронизации в разделе: ${names}.\n\nНажмите «OK», если последние изменения сделаны НА ЭТОМ УСТРОЙСТВЕ — они заменят облачную версию.\n\nНажмите «Отмена», если последние изменения сделаны НА ДРУГОМ УСТРОЙСТВЕ — будет загружена облачная версия и сохранена резервная копия текущих локальных данных.`);
     if(keepLocal){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
     try{const backup=saveBackup(sections,'conflict-cloud');for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
   }

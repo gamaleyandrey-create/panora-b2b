@@ -139,6 +139,10 @@ function syncPlansFromOrders() {
 }
 const commerceEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[type]||'Партнёр');
+let orderPartnerTypeFilter='all';
+const orderPartnerHtml=partner=>partner
+  ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${commerceEscape(partner.partnerType||'other')}">${partnerTypeLabel(partner.partnerType)}</span></div>`
+  : '<span>—</span>';
 const partnerContactHtml=r=>{
   const rows=[r.phone&&['Телефон',r.phone],r.whatsapp&&['WhatsApp',r.whatsapp],r.telegram&&['Telegram',r.telegram],...(Array.isArray(r.extraMessengers)?r.extraMessengers:[]).map(item=>[item.name,item.contact])].filter(Boolean);
   return rows.length?`<div class="partner-contacts">${rows.map(([name,value])=>`<span><b>${commerceEscape(name)}</b><small>${commerceEscape(value)}</small></span>`).join('')}</div>`:'<p class="partner-empty">Контакты не указаны</p>';
@@ -249,16 +253,24 @@ function orderActions(o) {
 }
 function renderOrders() {
   const body = document.querySelector("#orderRows");
-  body.innerHTML = orders.length
-    ? orders
+  const select=document.querySelector('#orderPartnerTypeFilter');
+  if(select){
+    select.value=orderPartnerTypeFilter;
+    select.onchange=()=>{orderPartnerTypeFilter=select.value;renderOrders()};
+  }
+  const visibleOrders=orders.filter(order=>orderPartnerTypeFilter==='all'||(restaurant(order.restaurantId)?.partnerType||'other')===orderPartnerTypeFilter);
+  const summary=document.querySelector('#orderPartnerFilterSummary');
+  if(summary)summary.textContent=orderPartnerTypeFilter==='all'?`Все заказы: ${orders.length}`:`${partnerTypeLabel(orderPartnerTypeFilter)}: ${visibleOrders.length}`;
+  body.innerHTML = visibleOrders.length
+    ? visibleOrders
         .slice()
         .reverse()
         .map((o) => {
           const note = deliveryNotes.find((n) => n.orderId === o.id);
-          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${commerceEscape(restaurant(o.restaurantId)?.name || "—")}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${orderPartnerHtml(restaurant(o.restaurantId))}</td><td><div class="order-items">${o.items.map((i) => `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("")}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
         })
         .join("")
-    : '<tr><td class="empty-row" colspan="7">Заказов пока нет.</td></tr>';
+    : `<tr><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
