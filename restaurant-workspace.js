@@ -552,7 +552,7 @@
       payments: ownPayments().length,
     };
     modal.classList.add("restaurant-workspace");
-    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><p class="rw-partner-name">${partnerTypeLabel()} · ${esc(account.name)}</p></div><button class="close-button" data-portal-close>×</button></div>
+    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><button type="button" class="rw-partner-name" data-rw-mobile-profile>${partnerTypeLabel()} · ${esc(account.name)} <span aria-hidden="true">›</span></button></div><button class="close-button" data-portal-close>×</button></div>
       <div class="rw-layout">
         <nav class="rw-nav" aria-label="${t("title")}">
           ${[
@@ -573,6 +573,7 @@
       </div>
       <footer class="rw-footer"><button class="button button-ghost" data-rw-logout>${t("signOut")}</button><button class="button button-primary" data-portal-close>${t("close")}</button></footer>`;
     bind(modal);
+    modal.querySelector("[data-rw-mobile-profile]")?.addEventListener("click", () => { activeTab = "profile"; renderAccountModal(); });
     if (activeTab === "orders" && orderToReveal) {
       const targetId = orderToReveal;
       orderToReveal = "";

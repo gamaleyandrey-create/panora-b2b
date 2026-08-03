@@ -145,6 +145,8 @@ function updateCheckoutAccess() {
   $("#checkoutButton").textContent = checkoutLabel();
   $("#profileButton").classList.toggle("account-active", Boolean(account));
   $("#profileButton").title = account ? account.name : accountText("login");
+  const label = $("#profileButton").querySelector(".account-entry-label");
+  if (label) label.textContent = lang === "es" ? "Área" : lang === "en" ? "Account" : "Кабинет";
 }
 function restoreAccount() {
   const id = localStorage.getItem("panora-account-id");

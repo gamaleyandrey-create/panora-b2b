@@ -95,7 +95,7 @@
       const [restaurantRows,prices,orderRows,notes,payments,days,products]=await Promise.all([
         api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'})
       ]);
-      if(!restaurantRows?.[0])throw new Error('Restaurant not found');
+      if(!restaurantRows?.[0])throw new Error('Partner not found');
       const own=mapRestaurant(restaurantRows[0],prices||[]),orders=(orderRows||[]).map(mapOrder);
       write('panora-restaurants',[own]);write('panora-orders',orders);
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
@@ -130,7 +130,7 @@
   };
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
-  restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
+  restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
@@ -182,11 +182,11 @@
     if(count<MIN_PIECES)return showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
-    if(form.phone.value)account.phone=form.phone.value;
-    if(form.address.value)account.address=form.address.value;
+    const nextPhone=String(form.phone.value||'').trim(),nextAddress=String(form.address.value||'').trim();
+    const contactChanged=(nextPhone&&nextPhone!==String(account.phone||''))||(nextAddress&&nextAddress!==String(account.address||''));
     try{
-      if((form.phone.value&&form.phone.value!==account.phone)||(form.address.value&&form.address.value!==account.address)){
-        await window.panoraRestaurantProfile.save({name:account.name,phone:form.phone.value||account.phone,address:form.address.value||account.address,whatsapp:account.whatsapp,telegram:account.telegram,extraMessengers:account.extraMessengers,legalName:account.legalName,taxId:account.taxId,billingAddress:account.billingAddress,language:account.language,partnerType:account.partnerType});
+      if(contactChanged){
+        await window.panoraRestaurantProfile.save({name:account.name,phone:nextPhone||account.phone,address:nextAddress||account.address,whatsapp:account.whatsapp,telegram:account.telegram,extraMessengers:account.extraMessengers,legalName:account.legalName,taxId:account.taxId,billingAddress:account.billingAddress,language:account.language,partnerType:account.partnerType});
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
@@ -195,7 +195,7 @@
       if(!created)throw new Error('Order was not created');
       const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
-      cart={};localStorage.removeItem('panora-cart');closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
+      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}

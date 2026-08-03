@@ -4,31 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#2f4937">
-  <meta name="description" content="Panora — bakery pre-orders for restaurants">
-  <link rel="manifest" href="manifest.webmanifest?v=305">
-  <link rel="stylesheet" href="styles.css?v=305">
-  <link rel="stylesheet" href="portal.css?v=305">
-  <link rel="stylesheet" href="restaurant-workspace.css?v=305">
-  <link rel="stylesheet" href="accounting-invoice.css?v=305">
-  <link rel="stylesheet" href="document-library.css?v=305">
-  <link rel="stylesheet" href="quantity.css?v=305">
-  <link rel="stylesheet" href="account-state.css?v=305">
-  <link rel="stylesheet" href="account-documents.css?v=305">
-  <link rel="stylesheet" href="cart-date.css?v=305">
-  <link rel="stylesheet" href="responsive.css?v=305">
-  <link rel="stylesheet" href="mobile-catalog.css?v=305">
-  <link rel="stylesheet" href="bake-info.css?v=305">
-  <link rel="stylesheet" href="mobile-buttons.css?v=305">
-  <link rel="stylesheet" href="first-order.css?v=305">
-  <link rel="stylesheet" href="mobile-nav-icons.css?v=305">
-  <link rel="stylesheet" href="mobile-checkout.css?v=305">
-  <link rel="stylesheet" href="checkout-feedback.css?v=305">
-  <link rel="stylesheet" href="mobile-cart-button.css?v=305">
-  <link rel="stylesheet" href="mobile-checkout-stable.css?v=305">
-  <link rel="stylesheet" href="install-guide.css?v=305">
-  <link rel="stylesheet" href="mobile-cart-layout.css?v=305">
-  <link rel="stylesheet" href="mobile-cart-flex.css?v=305">
-  <link rel="stylesheet" href="unified-controls.css?v=305">
+  <meta name="description" content="Panora — bakery pre-orders for partners">
+  <link rel="manifest" href="manifest.webmanifest?v=306">
+  <link rel="stylesheet" href="styles.css?v=306">
+  <link rel="stylesheet" href="portal.css?v=306">
+  <link rel="stylesheet" href="restaurant-workspace.css?v=306">
+  <link rel="stylesheet" href="accounting-invoice.css?v=306">
+  <link rel="stylesheet" href="document-library.css?v=306">
+  <link rel="stylesheet" href="quantity.css?v=306">
+  <link rel="stylesheet" href="account-state.css?v=306">
+  <link rel="stylesheet" href="account-documents.css?v=306">
+  <link rel="stylesheet" href="cart-date.css?v=306">
+  <link rel="stylesheet" href="responsive.css?v=306">
+  <link rel="stylesheet" href="mobile-catalog.css?v=306">
+  <link rel="stylesheet" href="bake-info.css?v=306">
+  <link rel="stylesheet" href="mobile-buttons.css?v=306">
+  <link rel="stylesheet" href="first-order.css?v=306">
+  <link rel="stylesheet" href="mobile-nav-icons.css?v=306">
+  <link rel="stylesheet" href="mobile-checkout.css?v=306">
+  <link rel="stylesheet" href="checkout-feedback.css?v=306">
+  <link rel="stylesheet" href="mobile-cart-button.css?v=306">
+  <link rel="stylesheet" href="mobile-checkout-stable.css?v=306">
+  <link rel="stylesheet" href="install-guide.css?v=306">
+  <link rel="stylesheet" href="mobile-cart-layout.css?v=306">
+  <link rel="stylesheet" href="mobile-cart-flex.css?v=306">
+  <link rel="stylesheet" href="unified-controls.css?v=306">
   <title>Panora — хлеб для партнёров</title>
 </head>
 <body>
@@ -38,7 +38,7 @@
         <span class="brand-mark">P</span>
         <span>Panora</span>
       </a>
-      <div class="top-actions"><select class="language-select" id="languageSelect" aria-label="Language"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><button class="icon-button" id="profileButton" aria-label="Кабинет партнёра" title="Кабинет партнёра"><svg viewBox="0 0 24 24" width="42" height="42" aria-hidden="true"><circle cx="12" cy="7.6" r="4.8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M2.8 21c.9-5.2 3.9-7.8 9.2-7.8s8.3 2.6 9.2 7.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+      <div class="top-actions"><select class="language-select" id="languageSelect" aria-label="Language"><option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option></select><button class="icon-button account-entry" id="profileButton" aria-label="Кабинет партнёра" title="Кабинет партнёра"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.6" r="4.8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M2.8 21c.9-5.2 3.9-7.8 9.2-7.8s8.3 2.6 9.2 7.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="account-entry-label">Кабинет</span></button></div>
     </header>
 
     <main id="top">
@@ -121,7 +121,7 @@
         <label><span data-i18n="checkout.restaurant">Название партнёра</span><input name="restaurant" required data-i18n-placeholder="checkout.restaurantPlaceholder" placeholder="Название партнёра"></label>
         <label><span data-i18n="checkout.contact">Контактное лицо</span><input name="contact" required autocomplete="name" data-i18n-placeholder="checkout.contactPlaceholder" placeholder="Имя и фамилия"></label>
         <label><span data-i18n="checkout.phone">Телефон</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+34 …"></label>
-        <label><span>Email</span><input name="email" type="email" placeholder="restaurant@example.com"></label>
+        <label><span>Email</span><input name="email" type="email" placeholder="partner@example.com"></label>
         <label id="deliveryAddressLabel"><span data-i18n="checkout.address">Адрес доставки</span><input name="address" required autocomplete="street-address" data-i18n-placeholder="checkout.addressPlaceholder" placeholder="Улица, дом, вход"></label>
         <div class="form-row">
           <label><span data-i18n="checkout.bakeDay">День выпечки</span><select name="date" required id="deliveryDate"></select></label>
@@ -147,17 +147,17 @@
     </div>
     <div class="toast" id="toast" role="status"></div>
   </div>
-  <script src="app.js?v=305"></script>
-<script src="portal.js?v=305"></script>
-  <script src="supabase-config.js?v=305"></script>
-  <script src="portal-cloud.js?v=305"></script>
-  <script src="accounting-invoice.js?v=305"></script>
-  <script src="document-library.js?v=305"></script>
-  <script src="dynamic-products.js?v=305"></script>
-  <script src="invoice-close.js?v=305"></script>
-  <script src="install-guide.js?v=305"></script>
-  <script src="restaurant-workspace.js?v=305"></script>
-<script src="checkout-flow-fix.js?v=305"></script>
-<script src="input-stability.js?v=305"></script>
+  <script src="app.js?v=306"></script>
+<script src="portal.js?v=306"></script>
+  <script src="supabase-config.js?v=306"></script>
+  <script src="portal-cloud.js?v=306"></script>
+  <script src="accounting-invoice.js?v=306"></script>
+  <script src="document-library.js?v=306"></script>
+  <script src="dynamic-products.js?v=306"></script>
+  <script src="invoice-close.js?v=306"></script>
+  <script src="install-guide.js?v=306"></script>
+  <script src="restaurant-workspace.js?v=306"></script>
+<script src="checkout-flow-fix.js?v=306"></script>
+<script src="input-stability.js?v=306"></script>
 </body>
 </html>
