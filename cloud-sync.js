@@ -9,7 +9,7 @@
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Рестораны',plans:'План производства'};
-  const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией'};
+  const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией','before-restore':'Перед восстановлением снимка',imported:'Импортировано с другого устройства'};
   const saveBackup=(sections,reason='sync')=>{
     const data={};
     sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
@@ -526,6 +526,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const sections=Object.keys(snapshot.data||{});if(!sections.length)return false;
     if(!confirm(`Восстановить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}?\n\nРазделы: ${sections.map(section=>backupSectionNames[section]||section).join(', ')}. После восстановления данные будут отправлены в облако.`))return false;
     try{
+      saveBackup(sections,'before-restore');
       sections.forEach(section=>{const key=sectionKeys[section];if(!key)return;localStorage.setItem(key,snapshot.data[section]);markPending(section);forceSections.add(section)});
       if(snapshot.data.products&&typeof productRegistry!=='undefined')productRegistry=JSON.parse(snapshot.data.products);
       if(snapshot.data.recipes&&typeof recipes!=='undefined'){recipes=JSON.parse(snapshot.data.recipes);recipeDirty=true;recipeRevision++}
@@ -540,10 +541,39 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function restoreLatestBackup(){return restoreBackup(readBackups()[0])}
   function closeBackupHistory(){const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=true}
+  function downloadBackup(snapshot){
+    if(!snapshot)return;
+    const payload={type:'panora-sync-backup',version:1,exportedAt:new Date().toISOString(),snapshot};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=`panora-reserve-${String(snapshot.at||'').slice(0,10)||'backup'}.json`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    audit('sync.backup_exported','Экспортирован резерв данных');
+  }
+  function validateImportedBackup(value){
+    const snapshot=value?.type==='panora-sync-backup'?value.snapshot:value?.snapshot||value;
+    if(!snapshot||typeof snapshot!=='object'||!snapshot.data||typeof snapshot.data!=='object')throw new Error('Файл не содержит резерв Panora');
+    const data={};
+    for(const [section,raw] of Object.entries(snapshot.data)){
+      if(!sectionKeys[section]||typeof raw!=='string')continue;
+      const parsed=JSON.parse(raw),valid=section==='recipes'?Boolean(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)):Array.isArray(parsed);
+      if(!valid)throw new Error(`Неверная структура раздела «${backupSectionNames[section]}»`);
+      data[section]=raw;
+    }
+    if(!Object.keys(data).length)throw new Error('В резерве нет поддерживаемых разделов');
+    const at=new Date(snapshot.at);return{id:`${Date.now()}-import-${Math.random().toString(36).slice(2)}`,at:Number.isNaN(at.getTime())?new Date().toISOString():at.toISOString(),reason:'imported',data};
+  }
+  async function importBackupFile(file){
+    if(!file)return;
+    try{
+      if(file.size>5*1024*1024)throw new Error('Размер файла превышает 5 МБ');
+      const snapshot=validateImportedBackup(JSON.parse(await file.text())),backups=[snapshot,...readBackups()].slice(0,10);
+      localStorage.setItem(backupKey,JSON.stringify(backups));audit('sync.backup_imported',`Импортирован резерв: ${Object.keys(snapshot.data).join(', ')}`);renderBackupHistory();
+      if(confirm('Резерв проверен и добавлен в историю. Восстановить его сейчас?'))await restoreBackup(snapshot);
+    }catch(error){alert(`Не удалось импортировать резерв. ${error.message||'Проверьте выбранный файл.'}`);audit('sync.backup_import_failed',String(error.message||error),'warning')}
+  }
   function renderBackupHistory(){
     const root=document.querySelector('#syncBackupList');if(!root)return;
     const backups=readBackups();
-    root.innerHTML=backups.length?backups.map(snapshot=>{const sections=Object.keys(snapshot.data||{}).map(section=>backupSectionNames[section]||section).join(', ');return `<article class="sync-backup-item"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'}</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}">Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
+    root.innerHTML=backups.length?backups.map(snapshot=>{const sections=Object.keys(snapshot.data||{}).map(section=>backupSectionNames[section]||section).join(', ');return `<article class="sync-backup-item"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'}</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary" data-backup-export="${snapshot.id}">Экспорт</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}">Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
   }
   function openBackupHistory(){renderBackupHistory();const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=false}
   function deleteBackup(id){
@@ -552,9 +582,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     localStorage.setItem(backupKey,JSON.stringify(backups.filter(item=>item.id!==id)));audit('sync.backup_deleted','Удалён резерв данных','warning');renderBackupHistory();
   }
   function initBackupHistory(){
-    document.querySelector('#syncBackupHistory')?.addEventListener('click',openBackupHistory);document.querySelector('#syncBackupClose')?.addEventListener('click',closeBackupHistory);
+    document.querySelector('#syncBackupHistory')?.addEventListener('click',openBackupHistory);document.querySelector('#syncBackupClose')?.addEventListener('click',closeBackupHistory);document.querySelector('#syncBackupImport')?.addEventListener('click',()=>document.querySelector('#syncBackupImportFile')?.click());document.querySelector('#syncBackupImportFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];event.target.value='';importBackupFile(file)});
     document.querySelector('#syncBackupModal')?.addEventListener('click',event=>{if(event.target.id==='syncBackupModal')closeBackupHistory()});
-    document.querySelector('#syncBackupList')?.addEventListener('click',event=>{const restore=event.target.closest('[data-backup-restore]'),remove=event.target.closest('[data-backup-delete]');if(restore)restoreBackup(readBackups().find(item=>item.id===restore.dataset.backupRestore));if(remove)deleteBackup(remove.dataset.backupDelete)});
+    document.querySelector('#syncBackupList')?.addEventListener('click',event=>{const restore=event.target.closest('[data-backup-restore]'),download=event.target.closest('[data-backup-export]'),remove=event.target.closest('[data-backup-delete]');if(restore)restoreBackup(readBackups().find(item=>item.id===restore.dataset.backupRestore));if(download)downloadBackup(readBackups().find(item=>item.id===download.dataset.backupExport));if(remove)deleteBackup(remove.dataset.backupDelete)});
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closeBackupHistory()});
   }
   async function retrySync(){
