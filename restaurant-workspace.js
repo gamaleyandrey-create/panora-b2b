@@ -16,6 +16,10 @@
       emptyNotes: "Накладных пока нет",
       emptyPayments: "Операций пока нет",
       openNote: "Открыть накладную",
+      noteLibrary: "Библиотека накладных",
+      noteLibraryHint: "Рабочие накладные Panora и архив поставок вашего ресторана.",
+      mainNote: "Основная для работы",
+      otherForms: "Другие формы",
       bake: "Выпечка",
       delivery: "Поставка",
       pieces: "шт.",
@@ -52,6 +56,10 @@
       emptyNotes: "No delivery notes yet",
       emptyPayments: "No transactions yet",
       openNote: "Open delivery note",
+      noteLibrary: "Delivery note library",
+      noteLibraryHint: "Working Panora delivery notes and your restaurant delivery archive.",
+      mainNote: "Main working document",
+      otherForms: "Other formats",
       bake: "Bake",
       delivery: "Delivery",
       pieces: "pcs",
@@ -88,6 +96,10 @@
       emptyNotes: "Aún no hay albaranes",
       emptyPayments: "Aún no hay movimientos",
       openNote: "Abrir albarán",
+      noteLibrary: "Biblioteca de albaranes",
+      noteLibraryHint: "Albaranes Panora de trabajo y archivo de entregas de tu restaurante.",
+      mainNote: "Documento principal",
+      otherForms: "Otros formatos",
       bake: "Horneado",
       delivery: "Entrega",
       pieces: "uds.",
@@ -200,16 +212,17 @@
       orders = ownOrders();
     if (!notes.length)
       return `<section class="rw-empty"><h3>${t("emptyNotes")}</h3></section>`;
-    return `<section class="rw-list">${notes
+    return `<section class="rw-note-library"><header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header><div class="rw-list">${notes
       .map((note) => {
         const order = orders.find((item) => item.id === note.orderId);
-        return `<article class="rw-document">
-      <span><strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
+        const isMain = note.id === notes[0].id;
+        return `<article class="rw-document${isMain ? " rw-document-main" : ""}">
+      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
-      <button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")}</button>
+      <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
       })
-      .join("")}</section>`;
+      .join("")}</div></section>`;
   }
   function paymentsHtml() {
     window.panoraRecalculateBalances?.();
@@ -378,9 +391,18 @@
             (item) => item.id === button.dataset.rwNote,
           );
           if (note) {
-            if (window.openPanoraDocumentLibrary) window.openPanoraDocumentLibrary(note, { context: "restaurant" });
-            else portalPrintNote(note);
+            portalPrintNote(note);
           }
+        }),
+    );
+    modal.querySelectorAll("[data-rw-forms]").forEach(
+      (button) =>
+        (button.onclick = () => {
+          const note = ownNotes().find(
+            (item) => item.id === button.dataset.rwForms,
+          );
+          if (note && window.openPanoraDocumentLibrary)
+            window.openPanoraDocumentLibrary(note, { context: "restaurant" });
         }),
     );
   }
