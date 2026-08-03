@@ -541,12 +541,18 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function restoreLatestBackup(){return restoreBackup(readBackups()[0])}
   function closeBackupHistory(){const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=true}
-  function downloadBackup(snapshot){
+  const checksumText=async text=>{
+    if(!window.crypto?.subtle)throw new Error('Проверка целостности не поддерживается этим браузером');
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('');
+  };
+  async function downloadBackup(snapshot){
     if(!snapshot)return;
-    const payload={type:'panora-sync-backup',version:1,exportedAt:new Date().toISOString(),snapshot};
+    const snapshotText=JSON.stringify(snapshot),checksum=await checksumText(snapshotText);
+    const payload={type:'panora-sync-backup',version:2,exportedAt:new Date().toISOString(),integrity:{algorithm:'SHA-256',checksum},snapshot};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download=`panora-reserve-${String(snapshot.at||'').slice(0,10)||'backup'}.json`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    audit('sync.backup_exported','Экспортирован резерв данных');
+    audit('sync.backup_exported','Экспортирован резерв с контрольной суммой SHA-256');
   }
   function validateImportedBackup(value){
     const snapshot=value?.type==='panora-sync-backup'?value.snapshot:value?.snapshot||value;
@@ -565,7 +571,19 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!file)return;
     try{
       if(file.size>5*1024*1024)throw new Error('Размер файла превышает 5 МБ');
-      const snapshot=validateImportedBackup(JSON.parse(await file.text())),backups=[snapshot,...readBackups()].slice(0,10);
+      const value=JSON.parse(await file.text()),source=value?.type==='panora-sync-backup'?value.snapshot:value?.snapshot||value;
+      let integrity='Старый формат без контрольной суммы';
+      if(value?.integrity){
+        if(value.integrity.algorithm!=='SHA-256'||!value.integrity.checksum)throw new Error('Неизвестный формат контрольной суммы');
+        const actual=await checksumText(JSON.stringify(source));
+        if(actual!==String(value.integrity.checksum).toLowerCase()){audit('sync.backup_integrity_failed',file.name||'Импорт резервной копии','warning');throw new Error('Контрольная сумма не совпадает: файл изменён или повреждён')}
+        integrity='Целостность подтверждена SHA-256';
+      }
+      const snapshot=validateImportedBackup(value),sections=Object.keys(snapshot.data).map(section=>backupSectionNames[section]||section).join(', ');
+      const size=Object.values(snapshot.data).reduce((total,raw)=>total+new Blob([raw]).size,0);
+      const preview=`Проверка завершена.\n\nДата снимка: ${new Date(snapshot.at).toLocaleString('ru-RU')}\nРазделы: ${sections}\nОбъём данных: ${(size/1024).toFixed(1)} КБ\n${integrity}\n\nДобавить снимок в историю?`;
+      if(!confirm(preview)){audit('sync.backup_import_cancelled','Импорт отменён после предварительного просмотра');return}
+      const backups=[snapshot,...readBackups()].slice(0,10);
       localStorage.setItem(backupKey,JSON.stringify(backups));audit('sync.backup_imported',`Импортирован резерв: ${Object.keys(snapshot.data).join(', ')}`);renderBackupHistory();
       if(confirm('Резерв проверен и добавлен в историю. Восстановить его сейчас?'))await restoreBackup(snapshot);
     }catch(error){alert(`Не удалось импортировать резерв. ${error.message||'Проверьте выбранный файл.'}`);audit('sync.backup_import_failed',String(error.message||error),'warning')}
