@@ -20,6 +20,7 @@
     'sync.backup_deleted':'Удалён резерв данных',
     'sync.backup_integrity_failed':'Ошибка целостности резерва',
     'sync.backup_import_cancelled':'Импорт резерва отменён',
+    'sync.backup_restore_cancelled':'Восстановление резерва отменено',
     'sync.backups_cleaned':'Очищены старые резервы',
     'sync.restored':'Связь с облаком восстановлена'
   };

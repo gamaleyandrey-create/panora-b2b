@@ -10,6 +10,23 @@
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Рестораны',plans:'План производства'};
   const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией','before-restore':'Перед восстановлением снимка',imported:'Импортировано с другого устройства'};
+  const parseBackupSection=raw=>{try{return JSON.parse(raw)}catch{return null}};
+  const backupEntities=(section,value)=>{
+    if(section==='recipes'&&value&&typeof value==='object'&&!Array.isArray(value))return Object.entries(value).flatMap(([product,items])=>(Array.isArray(items)?items:[]).map((item,index)=>({id:`${product}:${index}`,value:item})));
+    if(Array.isArray(value))return value.map((item,index)=>({id:String(item?.id??item?.date??item?.bakeDate??index),value:item}));
+    if(value&&typeof value==='object')return Object.entries(value).map(([id,item])=>({id,value:item}));
+    return[];
+  };
+  const compareBackupSection=(section,raw)=>{
+    const target=backupEntities(section,parseBackupSection(raw)),current=backupEntities(section,parseBackupSection(localStorage.getItem(sectionKeys[section])||'null'));
+    const before=new Map(current.map(item=>[item.id,JSON.stringify(item.value)])),after=new Map(target.map(item=>[item.id,JSON.stringify(item.value)]));
+    let added=0,changed=0,removed=0,same=0;
+    after.forEach((value,id)=>{if(!before.has(id))added++;else if(before.get(id)!==value)changed++;else same++});
+    before.forEach((value,id)=>{if(!after.has(id))removed++});
+    return{section,added,changed,removed,same,total:target.length};
+  };
+  const backupDiff=(snapshot)=>Object.entries(snapshot?.data||{}).map(([section,raw])=>compareBackupSection(section,raw));
+  const backupDiffText=diff=>diff.map(row=>`${backupSectionNames[row.section]||row.section}: +${row.added} добавлено, ${row.changed} изменено, −${row.removed} удалено, ${row.same} без изменений`).join('\n');
   const saveBackup=(sections,reason='sync')=>{
     const data={};
     sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
@@ -524,7 +541,10 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function restoreBackup(snapshot){
     if(!snapshot)return false;
     const sections=Object.keys(snapshot.data||{});if(!sections.length)return false;
-    if(!confirm(`Восстановить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}?\n\nРазделы: ${sections.map(section=>backupSectionNames[section]||section).join(', ')}. После восстановления данные будут отправлены в облако.`))return false;
+    const diff=backupDiff(snapshot),hasChanges=diff.some(row=>row.added||row.changed||row.removed);
+    if(!hasChanges){alert('Этот снимок полностью совпадает с текущими данными. Восстановление не требуется.');return false}
+    const preview=`Сравнение с текущими данными\n\n${backupDiffText(diff)}\n\nПосле подтверждения текущие данные будут сохранены отдельным резервом, а выбранный снимок отправлен в облако. Продолжить?`;
+    if(!confirm(preview)){audit('sync.backup_restore_cancelled','Восстановление отменено после сравнения');return false}
     try{
       saveBackup(sections,'before-restore');
       sections.forEach(section=>{const key=sectionKeys[section];if(!key)return;localStorage.setItem(key,snapshot.data[section]);markPending(section);forceSections.add(section)});
@@ -533,7 +553,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(snapshot.data.restaurants&&typeof restaurants!=='undefined')restaurants=JSON.parse(snapshot.data.restaurants);
       if(snapshot.data.plans&&typeof plans!=='undefined')plans=JSON.parse(snapshot.data.plans);
       if(snapshot.data.products)productDirty=true;
-      audit('sync.backup_restored',`Восстановлен резерв: ${sections.map(section=>backupSectionNames[section]||section).join(', ')}`,'warning');
+      audit('sync.backup_restored',`Восстановлен резерв: ${backupDiffText(diff).replaceAll('\n','; ')}`,'warning');
       closeBackupHistory();
       if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();if(typeof renderAll==='function')renderAll();
       return retrySync();
@@ -591,7 +611,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   function renderBackupHistory(){
     const root=document.querySelector('#syncBackupList');if(!root)return;
     const backups=readBackups();
-    root.innerHTML=backups.length?backups.map((snapshot,index)=>{const sectionList=Object.keys(snapshot.data||{}),sections=sectionList.map(section=>backupSectionNames[section]||section).join(', '),bytes=Object.values(snapshot.data||{}).reduce((total,raw)=>total+new Blob([String(raw)]).size,0),source=snapshot.source==='imported'||snapshot.reason==='imported'?'Импортирован':'Автоматический',integrity=snapshot.integrity==='sha256'?'SHA-256 проверен':snapshot.integrity==='legacy'?'Старый формат':'Локальный снимок';return `<article class="sync-backup-item"><div class="sync-backup-title"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div>${index===0?'<span class="sync-backup-latest">Последний</span>':''}</div><div class="sync-backup-badges"><span>${source}</span><span>${integrity}</span></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'} · ${sectionList.length} разд. · ${(bytes/1024).toFixed(1)} КБ</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary" data-backup-export="${snapshot.id}">Экспорт</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}" ${backups.length===1?'disabled title="Последний резерв защищён"':''}>Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
+    root.innerHTML=backups.length?backups.map((snapshot,index)=>{const sectionList=Object.keys(snapshot.data||{}),sections=sectionList.map(section=>backupSectionNames[section]||section).join(', '),bytes=Object.values(snapshot.data||{}).reduce((total,raw)=>total+new Blob([String(raw)]).size,0),source=snapshot.source==='imported'||snapshot.reason==='imported'?'Импортирован':'Автоматический',integrity=snapshot.integrity==='sha256'?'SHA-256 проверен':snapshot.integrity==='legacy'?'Старый формат':'Локальный снимок';return `<article class="sync-backup-item"><div class="sync-backup-title"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div>${index===0?'<span class="sync-backup-latest">Последний</span>':''}</div><div class="sync-backup-badges"><span>${source}</span><span>${integrity}</span></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'} · ${sectionList.length} разд. · ${(bytes/1024).toFixed(1)} КБ</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Сравнить и восстановить</button><button type="button" class="secondary" data-backup-export="${snapshot.id}">Экспорт</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}" ${backups.length===1?'disabled title="Последний резерв защищён"':''}>Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
   }
   function openBackupHistory(){renderBackupHistory();const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=false}
   function deleteBackup(id){
