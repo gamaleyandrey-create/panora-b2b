@@ -2,12 +2,15 @@
 let shownMonth=new Date();shownMonth.setDate(1);
 const navigation=document.querySelector('.plan-navigation');navigation.hidden=true;
 navigation.insertAdjacentHTML('beforebegin',`<section class="bake-calendar" id="bakeCalendar"><header><button id="calendarPrev">← Предыдущий месяц</button><h3 id="calendarTitle"></h3><button id="calendarToday">Сегодня</button><button id="calendarNext">Следующий месяц →</button></header><div class="calendar-weekdays" id="calendarWeekdays"></div><div class="calendar-grid" id="calendarGrid"></div><p class="calendar-help">Нажмите на пустую дату, чтобы запланировать выпечку.</p></section>`);
+const calendarHeading=document.querySelector('#view-plan .page-head');
+const calendarBlock=document.querySelector('#bakeCalendar');
+if(calendarHeading&&calendarBlock)calendarBlock.insertAdjacentElement('beforebegin',calendarHeading);
 const mobileLayout=window.matchMedia('(max-width:850px)');
 function placeBakeCalendar(){
  const calendar=document.querySelector('#bakeCalendar'),planList=document.querySelector('#planList');
  if(!calendar||!planList)return;
- if(mobileLayout.matches)planList.insertAdjacentElement('afterend',calendar);
- else navigation.insertAdjacentElement('beforebegin',calendar);
+ if(mobileLayout.matches){planList.insertAdjacentElement('afterend',calendarHeading);calendarHeading.insertAdjacentElement('afterend',calendar)}
+ else{navigation.insertAdjacentElement('beforebegin',calendarHeading);calendarHeading.insertAdjacentElement('afterend',calendar)}
 }
 placeBakeCalendar();
 if(typeof mobileLayout.addEventListener==='function')mobileLayout.addEventListener('change',placeBakeCalendar);
