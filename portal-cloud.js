@@ -66,7 +66,7 @@
     try{return await fetchJson(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}})}
     catch(error){if(error.status===401&&retry){await refreshSession();return api(path,options,false)}throw error}
   }
-  function state(type,text){lastState={type,text};decorateState()}
+  function state(type,text){lastState={type,text};window.panoraRestaurantSyncState=lastState;window.dispatchEvent(new CustomEvent('panora:restaurant-sync',{detail:lastState}));decorateState()}
   function decorateState(){
     if(!account)return;const modal=document.querySelector('#profileModal'),anchor=modal?.querySelector('.account-section');if(!anchor)return;
     let box=modal.querySelector('#restaurantCloudState');if(!box){box=document.createElement('section');box.id='restaurantCloudState';box.className='account-section';anchor.before(box)}
@@ -117,7 +117,7 @@
   }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();setTimeout(()=>openPanel(document.querySelector('#profileModal')),180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(){
@@ -198,7 +198,7 @@
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
   session=read(SESSION_KEY);
-  (async()=>{try{if(session?.access_token&&!session.user){session.user=await fetchJson(`${cfg.url}/auth/v1/user`,{headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}});saveSession(session)}if(session?.user)await loadAll(true);else renderAccountModal()}catch(error){state('error',error.message);renderAccountModal()}})();
+  (async()=>{try{if(session?.access_token&&!session.user){session.user=await fetchJson(`${cfg.url}/auth/v1/user`,{headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}});saveSession(session)}if(session?.user){await loadAll(true);setTimeout(()=>openPanel(document.querySelector('#profileModal')),120)}else renderAccountModal()}catch(error){state('error',error.message);renderAccountModal()}})();
   setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
   window.panoraPortalCloud={load:()=>loadAll(true)};
 })();

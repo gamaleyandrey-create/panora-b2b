@@ -5,6 +5,7 @@
   const tx = {
     ru: {
       title: "Кабинет ресторана",
+      home: "Главная",
       newOrder: "Новый заказ",
       orders: "Мои заказы",
       notes: "Накладные",
@@ -42,9 +43,22 @@
       traysDelivered: "Передано лотков",
       traysReturned: "Возвращено",
       trayBalance: "Осталось у вас",
+      overview: "Сегодня в Panora",
+      nextDelivery: "Ближайшая поставка",
+      activeOrder: "Текущий заказ",
+      repeatOrder: "Повторить заказ",
+      continueOrder: "Продолжить заказ",
+      noActiveOrder: "Активных заказов нет",
+      saved: "Сохранено",
+      offline: "Нет сети",
+      syncing: "Синхронизация…",
+      noteSearch: "Номер накладной",
+      allMonths: "Все месяцы",
+      nothingFound: "Накладные не найдены",
     },
     en: {
       title: "Restaurant workspace",
+      home: "Home",
       newOrder: "New order",
       orders: "My orders",
       notes: "Delivery notes",
@@ -82,9 +96,11 @@
       traysDelivered: "Delivered trays",
       traysReturned: "Returned",
       trayBalance: "At your restaurant",
+      overview: "Today in Panora", nextDelivery: "Next delivery", activeOrder: "Current order", repeatOrder: "Repeat order", continueOrder: "Continue order", noActiveOrder: "No active orders", saved: "Saved", offline: "Offline", syncing: "Syncing…", noteSearch: "Delivery note number", allMonths: "All months", nothingFound: "No delivery notes found",
     },
     es: {
       title: "Área del restaurante",
+      home: "Inicio",
       newOrder: "Nuevo pedido",
       orders: "Mis pedidos",
       notes: "Albaranes",
@@ -122,6 +138,7 @@
       traysDelivered: "Bandejas entregadas",
       traysReturned: "Devueltas",
       trayBalance: "En tu restaurante",
+      overview: "Hoy en Panora", nextDelivery: "Próxima entrega", activeOrder: "Pedido actual", repeatOrder: "Repetir pedido", continueOrder: "Continuar pedido", noActiveOrder: "No hay pedidos activos", saved: "Guardado", offline: "Sin conexión", syncing: "Sincronizando…", noteSearch: "Número de albarán", allMonths: "Todos los meses", nothingFound: "No se encontraron albaranes",
     },
   };
   const t = (key) => (tx[lang] || tx.ru)[key];
@@ -144,7 +161,9 @@
           "'": "&#39;",
         })[char],
     );
-  let activeTab = "orders";
+  let activeTab = "home";
+  let noteQuery = "";
+  let noteMonth = "";
 
   const ownOrders = () =>
     portalOrders()
@@ -182,6 +201,31 @@
       ? portalStatus(order.status)
       : order.status;
 
+  const isActiveOrder = (order) => !["cancelled", "shipped", "paid", "completed"].includes(order.status);
+  const cartCount = () => Object.values(cart || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  function syncLabel() {
+    if (!navigator.onLine) return t("offline");
+    return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
+  }
+  function homeHtml() {
+    const orders = ownOrders();
+    const active = orders.filter(isActiveOrder).sort((a, b) => String(a.deliveryDate || a.date).localeCompare(String(b.deliveryDate || b.date)))[0];
+    const last = orders[0];
+    const notes = ownNotes();
+    const trays = notes.length ? Number(notes[0].trayBalanceAfter || 0) : 0;
+    const draftCount = cartCount();
+    return `<section class="rw-home">
+      <header class="rw-overview-head"><div><span class="kicker">Panora</span><h3>${t("overview")}</h3></div><span class="rw-sync ${navigator.onLine ? "online" : "offline"}"><i></i>${syncLabel()}</span></header>
+      <div class="rw-summary-grid">
+        <article><span>${t("nextDelivery")}</span><strong>${active ? esc(localDate(active.deliveryDate || active.date)) : "—"}</strong><small>${active ? esc(orderNumber(active)) : t("noActiveOrder")}</small></article>
+        <article><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong><small>${t("finance")}</small></article>
+        <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
+      </div>
+      ${active ? `<article class="rw-current-order"><div><span>${t("activeOrder")}</span><strong>${esc(orderNumber(active))}</strong><small>${esc(status(active))} · ${esc(localDate(active.deliveryDate || active.date))}</small></div><b>${portalMoney(orderTotal(active))}</b><button class="button button-ghost" data-rw-tab="orders">${t("orders")}</button></article>` : ""}
+      <div class="rw-quick-actions"><button class="button button-primary" data-rw-start>${draftCount ? `${t("continueOrder")} · ${draftCount} ${t("pieces")}` : t("newOrder")}</button>${last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : ""}</div>
+    </section>`;
+  }
+
   function profileHtml() {
     return `<aside class="rw-profile">
       <div class="rw-profile-main"><span class="account-avatar">${esc(account.name?.[0]?.toUpperCase() || "R")}</span><span><strong>${esc(account.name)}</strong><small>${esc(account.email)}</small></span></div>
@@ -208,21 +252,23 @@
       .join("")}</section>`;
   }
   function notesHtml() {
-    const notes = ownNotes(),
+    const allNotes = ownNotes(),
       orders = ownOrders();
-    if (!notes.length)
+    if (!allNotes.length)
       return `<section class="rw-empty"><h3>${t("emptyNotes")}</h3></section>`;
+    const months = [...new Set(allNotes.map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))];
+    const notes = allNotes.filter((note) => (!noteMonth || String(note.date || "").startsWith(noteMonth)) && (!noteQuery || noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase())));
     return `<section class="rw-note-library"><header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header><div class="rw-list">${notes
       .map((note) => {
         const order = orders.find((item) => item.id === note.orderId);
-        const isMain = note.id === notes[0].id;
+        const isMain = note.id === allNotes[0].id;
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}">
       <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
       })
-      .join("")}</div></section>`;
+      .join("")}</div>${notes.length ? "" : `<p class="rw-filter-empty">${t("nothingFound")}</p>`}</section>`;
   }
   function paymentsHtml() {
     window.panoraRecalculateBalances?.();
@@ -348,6 +394,7 @@
     return `<section class="rw-prices"><h3>${t("prices")}</h3>${products.map((product) => `<div><span>${esc(itemName(product.id))}</span><strong>${portalMoney(account.prices[product.id])}</strong></div>`).join("")}</section>`;
   }
   function contentHtml() {
+    if (activeTab === "home") return homeHtml();
     if (activeTab === "new") return newOrderHtml();
     if (activeTab === "notes") return notesHtml();
     if (activeTab === "payments") return paymentsHtml();
@@ -362,6 +409,10 @@
           renderAccountModal();
         }),
     );
+    const search = modal.querySelector("[data-rw-note-search]");
+    if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => modal.querySelector("[data-rw-note-search]")?.focus()); };
+    const month = modal.querySelector("[data-rw-note-month]");
+    if (month) month.onchange = () => { noteMonth = month.value; renderAccountModal(); };
     modal
       .querySelectorAll("[data-portal-close]")
       .forEach((button) => (button.onclick = closePanels));
@@ -377,6 +428,14 @@
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }),
     );
+    modal.querySelectorAll("[data-rw-repeat]").forEach((button) => button.onclick = () => {
+      const order = ownOrders().find((item) => item.id === button.dataset.rwRepeat);
+      if (!order) return;
+      cart = Object.fromEntries(order.items.map((item) => [item.product, Number(item.quantity)]));
+      localStorage.setItem("panora-cart", JSON.stringify(cart));
+      closePanels(); renderProducts(); renderCart();
+      document.querySelector("#catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     modal
       .querySelectorAll("[data-rw-cancel]")
       .forEach(
@@ -423,6 +482,7 @@
       <div class="rw-layout">
         <nav class="rw-nav" aria-label="${t("title")}">
           ${[
+            ["home", t("home"), "⌂"],
             ["new", t("newOrder"), "＋"],
             ["orders", t("orders"), counts.orders],
             ["notes", t("notes"), counts.notes],
@@ -439,5 +499,13 @@
       </div>
       <footer class="rw-footer"><button class="button button-ghost" data-rw-logout>${t("signOut")}</button><button class="button button-primary" data-portal-close>${t("close")}</button></footer>`;
     bind(modal);
+    if (activeTab === "notes") {
+      const head = modal.querySelector(".rw-note-library-head");
+      head?.insertAdjacentHTML("beforeend", `<div class="rw-note-filters"><input type="search" data-rw-note-search value="${esc(noteQuery)}" placeholder="${t("noteSearch")}"><select data-rw-note-month><option value="">${t("allMonths")}</option>${[...new Set(ownNotes().map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))].map((month) => `<option value="${esc(month)}"${noteMonth === month ? " selected" : ""}>${esc(month)}</option>`).join("")}</select></div>`);
+      bind(modal);
+    }
   };
+  window.addEventListener("online", () => account && renderAccountModal());
+  window.addEventListener("offline", () => account && renderAccountModal());
+  window.addEventListener("panora:restaurant-sync", () => account && renderAccountModal());
 })();
