@@ -1,4 +1,4 @@
-const CACHE='panora-v283';
+const CACHE='panora-v284';
 const CORE=['./','index.html','admin.html','manifest.webmanifest','icon.svg','styles.css','portal.css','admin.css','app.js','portal.js','admin.js','supabase-config.js'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.allSettled(CORE.map(url=>cache.add(new Request(url,{cache:'reload'}))));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key!==CACHE)await caches.delete(key);await self.clients.claim()})()));

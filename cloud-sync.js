@@ -3,9 +3,10 @@
   const pendingKey='panora-cloud-pending-v283';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   let pending=readPending();
-  const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending))};
+  const pendingCount=()=>Object.keys(pending).length;
+  const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,shippingLocks=new Set();
   const audit=(action,details='',level='info')=>window.panoraAudit?.record(action,details,level);
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
@@ -16,6 +17,7 @@
     el.style.cursor=error?'pointer':'';
     el.onclick=error?()=>retrySync():null;
   };
+  const showPending=()=>{const count=pendingCount();if(!count)return false;status(navigator.onLine?`Ожидает отправки: ${count}`:`Офлайн · ожидает: ${count}`,false,'Нажмите после восстановления сети для повторной отправки');const el=document.querySelector('#saveState');if(el){el.style.cursor='pointer';el.onclick=()=>retrySync()}return true};
   const refreshSession=async()=>{
     if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
     refreshing=fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(async response=>{if(!response.ok)throw new Error('Войдите в экран пекарни повторно');session=await response.json();localStorage.setItem('panora-supabase-session',JSON.stringify(session));window.panoraSupabaseSession=session;return session}).finally(()=>refreshing=null);return refreshing
@@ -470,9 +472,10 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
   }
   async function retrySync(){
+    if(retrying)return retrying;
     if(!navigator.onLine){status('Сохранено на устройстве');return false}
     if(!ready){status('Облако не подключено',true,'Сначала войдите в приложение');return false}
-    status('Повторная синхронизация…');
+    retrying=(async()=>{status(`Синхронизация${pendingCount()?` · ${pendingCount()}`:''}…`);
     try{
       if(pending.products)await flushProducts();
       if(pending.recipes)await flushRecipes();
@@ -484,6 +487,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){fail('повтор',error);return false}
+    })().finally(()=>retrying=null);
+    return retrying;
   }
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
@@ -495,9 +500,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()}};
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
-  window.addEventListener('offline',()=>status('Сохранено на устройстве'));
+  window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
