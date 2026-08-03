@@ -112,6 +112,305 @@
   .rw-overview-head{align-items:flex-start}.rw-overview-head h3{font-size:29px}.rw-summary-grid{grid-template-columns:1fr}.rw-summary-grid article{grid-template-columns:1fr auto;align-items:center}.rw-summary-grid article small{grid-column:1/-1}.rw-current-order{grid-template-columns:minmax(0,1fr) auto}.rw-current-order .button{grid-column:1/-1;width:100%}.rw-quick-actions{display:grid}.rw-quick-actions .button{width:100%}.rw-note-filters{grid-template-columns:1fr}.rw-document{grid-template-columns:1fr auto}
 }
 
+/* v301: polished partner dashboard and reliable smartphone sizing. */
+.restaurant-workspace,
+.restaurant-workspace.open{
+  --rw-ink:#18251d;
+  --rw-muted:#6d776f;
+  --rw-line:#dfe4dc;
+  --rw-soft:#f2f5ef;
+  --rw-green:#365e45;
+  --rw-orange:#d9773e;
+  background:
+    radial-gradient(circle at 92% 3%,rgba(217,119,62,.07),transparent 26rem),
+    #fcfbf8;
+  color:var(--rw-ink);
+}
+.restaurant-workspace .rw-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding:6px 0 22px;
+}
+.restaurant-workspace .rw-head h2{
+  margin:6px 0 0;
+  font-size:clamp(36px,3.2vw,54px);
+  line-height:.98;
+  letter-spacing:-.035em;
+}
+.restaurant-workspace .rw-head .close-button{
+  flex:0 0 48px;
+  width:48px;
+  height:48px;
+  border:1px solid var(--rw-line);
+  background:#fff;
+  box-shadow:0 5px 18px rgba(31,54,39,.07);
+}
+.rw-partner-name{
+  max-width:760px;
+  margin-top:10px;
+  color:var(--rw-muted);
+  font-size:15px;
+}
+.restaurant-workspace .rw-layout{
+  grid-template-columns:220px minmax(0,1fr);
+  gap:clamp(24px,3vw,46px);
+}
+.restaurant-workspace .rw-nav{
+  gap:8px;
+  padding:6px 20px 6px 0;
+  border-color:var(--rw-line);
+}
+.restaurant-workspace .rw-nav button{
+  min-height:52px;
+  padding:10px 12px;
+  border:1px solid transparent;
+  border-radius:13px;
+  font-size:15px;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.restaurant-workspace .rw-nav button:hover{
+  transform:translateX(2px);
+}
+.restaurant-workspace .rw-nav button.active{
+  border-color:#d8e3d8;
+  background:#eaf1e8;
+  box-shadow:inset 3px 0 0 var(--rw-green);
+}
+.restaurant-workspace .rw-nav i{
+  min-width:30px;
+  height:30px;
+  background:rgba(255,255,255,.88);
+  box-shadow:0 2px 8px rgba(35,61,43,.06);
+}
+.rw-home{gap:20px}
+.rw-overview-head{
+  min-height:58px;
+  padding:0 2px;
+}
+.rw-overview-head h3{
+  font-size:clamp(32px,3vw,46px);
+  line-height:1;
+  letter-spacing:-.025em;
+}
+.rw-sync{
+  flex:0 0 auto;
+  min-height:38px;
+  padding:8px 13px;
+  border:1px solid #dce6dc;
+}
+.rw-summary-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.rw-summary-grid article,
+.rw-summary-card{
+  box-sizing:border-box;
+  min-width:0;
+  min-height:150px;
+  align-content:center;
+  grid-template-columns:minmax(0,1fr);
+  gap:9px;
+  padding:22px;
+  border:1px solid var(--rw-line);
+  border-radius:18px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 8px 28px rgba(38,61,45,.055);
+}
+.rw-summary-grid span{
+  color:var(--rw-muted);
+  font-size:15px;
+}
+.rw-summary-grid strong{
+  min-width:0;
+  font-size:clamp(28px,2.15vw,38px);
+  line-height:1.05;
+  overflow-wrap:anywhere;
+}
+.rw-summary-grid small{
+  color:#7d857f;
+  font-size:14px;
+}
+.rw-summary-card:first-child{
+  border-color:#d6dfd4;
+  background:linear-gradient(145deg,#f8fbf6,#fff);
+}
+.rw-summary-card:nth-child(2){
+  border-color:#eadfd7;
+  background:linear-gradient(145deg,#fffaf6,#fff);
+}
+.rw-current-order{
+  min-height:116px;
+  padding:20px 22px;
+  border-radius:18px;
+  box-shadow:0 8px 28px rgba(38,61,45,.045);
+}
+.rw-current-order>b{
+  font-size:22px;
+  white-space:nowrap;
+}
+.rw-current-order .button,
+.rw-quick-actions .button{
+  min-height:52px;
+  border-radius:12px;
+}
+.rw-quick-actions{flex-wrap:wrap}
+.rw-footer .button{min-height:48px;border-radius:12px}
+
+@media(max-width:900px) and (min-width:721px){
+  .restaurant-workspace,.restaurant-workspace.open{padding:24px!important}
+  .restaurant-workspace .rw-layout{grid-template-columns:190px minmax(0,1fr);gap:24px}
+  .rw-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rw-summary-grid>article:last-child{grid-column:1/-1;min-height:110px}
+}
+
+@media(max-width:720px){
+  .restaurant-workspace,
+  .restaurant-workspace.open{
+    width:100%!important;
+    min-width:0!important;
+    height:100dvh!important;
+    padding:0 14px calc(92px + env(safe-area-inset-bottom))!important;
+    overflow-x:hidden!important;
+  }
+  .restaurant-workspace .rw-head{
+    position:sticky;
+    top:0;
+    z-index:24;
+    width:auto;
+    min-height:86px;
+    margin:0 -14px 14px;
+    padding:calc(14px + env(safe-area-inset-top)) 14px 13px;
+    align-items:flex-start;
+    background:rgba(252,251,248,.96);
+    border-bottom:1px solid var(--rw-line);
+    backdrop-filter:blur(14px);
+  }
+  .restaurant-workspace .rw-head h2{
+    margin-top:3px;
+    font-size:clamp(28px,9vw,36px)!important;
+    line-height:1;
+  }
+  .rw-partner-name{
+    max-width:calc(100vw - 92px);
+    margin-top:6px;
+    font-size:13px;
+    line-height:1.25;
+  }
+  .restaurant-workspace .rw-head .close-button{
+    flex-basis:44px;
+    width:44px;
+    height:44px;
+  }
+  .restaurant-workspace .rw-content{
+    width:100%;
+    min-width:0;
+    padding:2px 0 20px;
+  }
+  .rw-home{gap:14px}
+  .rw-overview-head{
+    align-items:flex-start;
+    gap:10px;
+  }
+  .rw-overview-head h3{
+    font-size:clamp(27px,8vw,34px);
+    line-height:1.02;
+  }
+  .rw-sync{
+    min-height:34px;
+    padding:7px 9px;
+    font-size:12px;
+  }
+  .rw-summary-grid{
+    grid-template-columns:minmax(0,1fr);
+    gap:10px;
+  }
+  .rw-summary-grid article,
+  .rw-summary-card{
+    min-height:104px;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:auto auto;
+    align-content:center;
+    align-items:center;
+    gap:6px 12px;
+    padding:16px;
+    border-radius:16px;
+  }
+  .rw-summary-grid span{
+    min-width:0;
+    font-size:14px;
+  }
+  .rw-summary-grid strong{
+    grid-column:2;
+    grid-row:1 / span 2;
+    max-width:56vw;
+    font-size:clamp(24px,7vw,30px);
+    text-align:right;
+    white-space:normal;
+  }
+  .rw-summary-grid small{
+    grid-column:1;
+    grid-row:2;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  .rw-current-order{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:12px;
+    min-height:0;
+    padding:16px;
+  }
+  .rw-current-order>div{min-width:0}
+  .rw-current-order>div small{overflow-wrap:anywhere}
+  .rw-current-order>b{font-size:19px}
+  .rw-current-order .button{
+    grid-column:1/-1;
+    width:100%;
+  }
+  .rw-quick-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+  .rw-quick-actions .button{width:100%;min-width:0}
+  .restaurant-workspace .rw-nav{
+    left:0;
+    right:0;
+    bottom:0;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:2px;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .restaurant-workspace .rw-nav button{
+    min-width:0;
+    min-height:60px;
+    padding:6px 1px;
+    border-radius:11px;
+    font-size:clamp(8px,2.45vw,10px);
+    line-height:1.05;
+  }
+  .restaurant-workspace .rw-nav button:hover{transform:none}
+  .restaurant-workspace .rw-nav button.active{box-shadow:inset 0 3px 0 var(--rw-green)}
+  .restaurant-workspace .rw-nav i{min-width:24px;height:24px}
+  .rw-profile-page,.rw-profile-grid{grid-template-columns:minmax(0,1fr)}
+  .rw-profile-form,.rw-profile{min-width:0;padding:15px;border-radius:16px}
+  .rw-profile-grid input,.rw-profile-grid select{max-width:100%;min-height:50px}
+  .rw-profile-access{min-width:0}
+  .rw-profile-access b{max-width:100%;overflow-wrap:anywhere}
+  .rw-document,.rw-payment,.rw-order{min-width:0}
+  .rw-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .rw-footer .button{width:100%;min-width:0}
+}
+
+@media(max-width:360px){
+  .restaurant-workspace,.restaurant-workspace.open{padding-left:10px!important;padding-right:10px!important}
+  .restaurant-workspace .rw-head{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
+  .rw-summary-grid article,.rw-summary-card{padding:14px}
+  .rw-summary-grid strong{max-width:52vw;font-size:23px}
+  .restaurant-workspace .rw-nav button{font-size:8px}
+}
+
 /* v300: partner identity and tappable mobile summary cards. */
 .rw-partner-name{max-width:min(620px,75vw);margin:5px 0 0;color:#667269;font-weight:700;overflow-wrap:anywhere}.rw-summary-card{display:grid;gap:5px;min-height:112px;padding:16px;border:1px solid #d9dbd4;border-radius:14px;background:#fff;color:#17231b;text-align:left;font:inherit;cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}.rw-summary-card:hover{border-color:#9db4a2;box-shadow:0 5px 14px rgba(40,72,51,.09);transform:translateY(-1px)}.rw-summary-card:focus-visible{outline:3px solid #dcebdd;outline-offset:2px}.rw-order-focus{border-color:#6e9677!important;box-shadow:0 0 0 4px #e1eee3;transition:box-shadow .2s ease}
 
@@ -141,3 +440,30 @@
   .rw-document,.rw-payment{padding:14px;border-radius:16px;gap:10px}.rw-trays{overflow-wrap:anywhere}
   .rw-note-library-head h3{font-size:27px}.rw-document-actions{grid-column:1/-1;width:100%}.rw-document-actions .button{width:100%}
 }
+
+/* v301 final cascade: keep later legacy rules from overriding the new layout. */
+.restaurant-workspace .rw-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:6px 0 22px}
+.restaurant-workspace .rw-head h2{margin:6px 0 0;font-size:clamp(36px,3.2vw,54px);line-height:.98;letter-spacing:-.035em}
+.restaurant-workspace .rw-layout{grid-template-columns:220px minmax(0,1fr);gap:clamp(24px,3vw,46px)}
+.restaurant-workspace .rw-nav{gap:8px;padding:6px 20px 6px 0}
+.restaurant-workspace .rw-nav button{min-height:52px;padding:10px 12px;border:1px solid transparent;border-radius:13px;font-size:15px}
+.restaurant-workspace .rw-nav button.active{border-color:#d8e3d8;background:#eaf1e8;box-shadow:inset 3px 0 0 #365e45}
+.rw-partner-name{max-width:760px;margin-top:10px;font-size:15px}
+.rw-home{gap:20px}.rw-overview-head{min-height:58px;padding:0 2px}.rw-overview-head h3{font-size:clamp(32px,3vw,46px);line-height:1;letter-spacing:-.025em}
+.rw-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.rw-summary-grid article,.rw-summary-card{box-sizing:border-box;min-width:0;min-height:150px;align-content:center;grid-template-columns:minmax(0,1fr);gap:9px;padding:22px;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(38,61,45,.055)}
+.rw-summary-grid strong{min-width:0;font-size:clamp(28px,2.15vw,38px);line-height:1.05;overflow-wrap:anywhere;white-space:normal}
+.rw-summary-grid small{font-size:14px}.rw-summary-card:first-child{border-color:#d6dfd4;background:linear-gradient(145deg,#f8fbf6,#fff)}.rw-summary-card:nth-child(2){border-color:#eadfd7;background:linear-gradient(145deg,#fffaf6,#fff)}
+.rw-current-order{min-height:116px;padding:20px 22px;border-radius:18px;box-shadow:0 8px 28px rgba(38,61,45,.045)}.rw-current-order>b{font-size:22px;white-space:nowrap}.rw-current-order .button,.rw-quick-actions .button{min-height:52px;border-radius:12px}.rw-quick-actions{flex-wrap:wrap}
+@media(max-width:900px) and (min-width:721px){.restaurant-workspace,.restaurant-workspace.open{padding:24px!important}.restaurant-workspace .rw-layout{grid-template-columns:190px minmax(0,1fr);gap:24px}.rw-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rw-summary-grid>article:last-child{grid-column:1/-1;min-height:110px}}
+@media(max-width:720px){
+  .restaurant-workspace,.restaurant-workspace.open{width:100%!important;min-width:0!important;height:100dvh!important;padding:0 14px calc(92px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important}
+  .restaurant-workspace .rw-head{position:sticky;top:0;z-index:24;width:auto;min-height:86px;margin:0 -14px 14px;padding:calc(14px + env(safe-area-inset-top)) 14px 13px;align-items:flex-start;background:rgba(252,251,248,.96);border-bottom:1px solid #dfe4dc;backdrop-filter:blur(14px)}
+  .restaurant-workspace .rw-head h2{margin-top:3px;font-size:clamp(28px,9vw,36px)!important;line-height:1}.rw-partner-name{max-width:calc(100vw - 92px);margin-top:6px;font-size:13px;line-height:1.25}
+  .restaurant-workspace .rw-content{width:100%;min-width:0;padding:2px 0 20px}.rw-home{gap:14px}.rw-overview-head{align-items:flex-start;gap:10px}.rw-overview-head h3{font-size:clamp(27px,8vw,34px)}.rw-sync{min-height:34px;padding:7px 9px;font-size:12px}
+  .rw-summary-grid{grid-template-columns:minmax(0,1fr);gap:10px}.rw-summary-grid article,.rw-summary-card{min-height:104px;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-content:center;align-items:center;gap:6px 12px;padding:16px;border-radius:16px}.rw-summary-grid strong{grid-column:2;grid-row:1 / span 2;max-width:56vw;font-size:clamp(24px,7vw,30px);text-align:right;white-space:normal}.rw-summary-grid small{grid-column:1;grid-row:2;min-width:0;overflow-wrap:anywhere}
+  .rw-current-order{grid-template-columns:minmax(0,1fr) auto;gap:12px;min-height:0;padding:16px}.rw-current-order>div{min-width:0}.rw-current-order>b{font-size:19px}.rw-current-order .button{grid-column:1/-1;width:100%}.rw-quick-actions{display:grid;grid-template-columns:1fr;gap:9px}.rw-quick-actions .button{width:100%;min-width:0}
+  .restaurant-workspace .rw-nav{position:fixed!important;left:0;right:0;top:auto!important;bottom:0;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;width:100%;margin:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));overflow:visible}.restaurant-workspace .rw-nav button{min-width:0;min-height:60px;padding:6px 1px;border-radius:11px;font-size:clamp(8px,2.45vw,10px);line-height:1.05}.restaurant-workspace .rw-nav button.active{box-shadow:inset 0 3px 0 #365e45}.restaurant-workspace .rw-nav i{min-width:24px;height:24px}
+  .rw-profile-page,.rw-profile-grid{grid-template-columns:minmax(0,1fr)}.rw-profile-form,.rw-profile{min-width:0;padding:15px;border-radius:16px}.rw-profile-grid input,.rw-profile-grid select{max-width:100%;min-height:50px}.rw-profile-access b{max-width:100%;overflow-wrap:anywhere}.rw-document,.rw-payment,.rw-order{min-width:0}.rw-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rw-footer .button{width:100%;min-width:0}
+}
+@media(max-width:360px){.restaurant-workspace,.restaurant-workspace.open{padding-left:10px!important;padding-right:10px!important}.restaurant-workspace .rw-head{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}.rw-summary-grid article,.rw-summary-card{padding:14px}.rw-summary-grid strong{max-width:52vw;font-size:23px}.restaurant-workspace .rw-nav button{font-size:8px}}
