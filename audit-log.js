@@ -12,6 +12,9 @@
     'payment.created':'Добавлена оплата',
     'payment.status_changed':'Изменён статус оплаты',
     'sync.failed':'Ошибка синхронизации',
+    'sync.conflict':'Обнаружен конфликт данных',
+    'sync.conflict_local':'Выбрана версия этого устройства',
+    'sync.conflict_cloud':'Выбрана облачная версия',
     'sync.restored':'Связь с облаком восстановлена'
   };
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
