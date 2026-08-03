@@ -74,7 +74,8 @@
     box.querySelector('#cloudReload')?.addEventListener('click',()=>loadAll(true));
   }
   const safeMessengers=value=>Array.isArray(value)?value.filter(item=>item&&typeof item==='object').slice(0,10).map(item=>({name:String(item.name||'').trim().slice(0,40),contact:String(item.contact||'').trim().slice(0,120)})).filter(item=>item.name&&item.contact):[];
-  const mapRestaurant=(row,prices)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengers(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:row.partner_type||'restaurant',prices:Object.fromEntries(prices.map(x=>[x.product_id,Number(x.price)]))});
+  const normalizePortalPartnerType=value=>{const raw=String(value??'').trim().toLowerCase(),aliases={restaurant:'restaurant','ресторан':'restaurant',restaurante:'restaurant',shop:'shop','магазин':'shop',tienda:'shop',hotel:'hotel','отель':'hotel',cafe:'cafe','кафе':'cafe','café':'cafe',catering:'catering','кейтеринг':'catering',cátering:'catering',other:'other','другое':'other',otro:'other'};return aliases[raw]||'restaurant'};
+  const mapRestaurant=(row,prices)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengers(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizePortalPartnerType(row.partner_type),prices:Object.fromEntries(prices.map(x=>[x.product_id,Number(x.price)]))});
   function mapOrder(row){
     let meta={};try{meta=JSON.parse(row.comment||'{}')}catch{meta={comment:row.comment||''}}
     const day=row.bake_days||{},items=row.order_items||[];
