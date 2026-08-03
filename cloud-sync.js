@@ -14,7 +14,7 @@
     const data={};
     sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
     if(!Object.keys(data).length)return null;
-    const snapshot={id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,at:new Date().toISOString(),reason,data};
+    const snapshot={id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,at:new Date().toISOString(),reason,source:'automatic',integrity:'local',data};
     const backups=[snapshot,...readBackups()].slice(0,10);localStorage.setItem(backupKey,JSON.stringify(backups));
     audit('sync.backup_created',`Резерв: ${Object.keys(data).join(', ')}`);return snapshot;
   };
@@ -565,7 +565,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       data[section]=raw;
     }
     if(!Object.keys(data).length)throw new Error('В резерве нет поддерживаемых разделов');
-    const at=new Date(snapshot.at);return{id:`${Date.now()}-import-${Math.random().toString(36).slice(2)}`,at:Number.isNaN(at.getTime())?new Date().toISOString():at.toISOString(),reason:'imported',data};
+    const at=new Date(snapshot.at);return{id:`${Date.now()}-import-${Math.random().toString(36).slice(2)}`,at:Number.isNaN(at.getTime())?new Date().toISOString():at.toISOString(),reason:'imported',source:'imported',integrity:value?.integrity?'sha256':'legacy',data};
   }
   async function importBackupFile(file){
     if(!file)return;
@@ -591,16 +591,22 @@ window.panoraRecalculateBalances=recalculateBalances;
   function renderBackupHistory(){
     const root=document.querySelector('#syncBackupList');if(!root)return;
     const backups=readBackups();
-    root.innerHTML=backups.length?backups.map(snapshot=>{const sections=Object.keys(snapshot.data||{}).map(section=>backupSectionNames[section]||section).join(', ');return `<article class="sync-backup-item"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'}</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary" data-backup-export="${snapshot.id}">Экспорт</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}">Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
+    root.innerHTML=backups.length?backups.map((snapshot,index)=>{const sectionList=Object.keys(snapshot.data||{}),sections=sectionList.map(section=>backupSectionNames[section]||section).join(', '),bytes=Object.values(snapshot.data||{}).reduce((total,raw)=>total+new Blob([String(raw)]).size,0),source=snapshot.source==='imported'||snapshot.reason==='imported'?'Импортирован':'Автоматический',integrity=snapshot.integrity==='sha256'?'SHA-256 проверен':snapshot.integrity==='legacy'?'Старый формат':'Локальный снимок';return `<article class="sync-backup-item"><div class="sync-backup-title"><div><strong>${new Date(snapshot.at).toLocaleString('ru-RU')}</strong><div class="sync-backup-meta">${backupReasonNames[snapshot.reason]||'Автоматический резерв'}</div></div>${index===0?'<span class="sync-backup-latest">Последний</span>':''}</div><div class="sync-backup-badges"><span>${source}</span><span>${integrity}</span></div><div class="sync-backup-sections">${sections||'Нет доступных разделов'} · ${sectionList.length} разд. · ${(bytes/1024).toFixed(1)} КБ</div><div class="sync-backup-actions"><button type="button" class="secondary" data-backup-restore="${snapshot.id}">Восстановить</button><button type="button" class="secondary" data-backup-export="${snapshot.id}">Экспорт</button><button type="button" class="secondary sync-backup-delete" data-backup-delete="${snapshot.id}" ${backups.length===1?'disabled title="Последний резерв защищён"':''}>Удалить</button></div></article>`}).join(''):'<p class="sync-backup-empty">Резервных снимков пока нет.</p>';
   }
   function openBackupHistory(){renderBackupHistory();const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=false}
   function deleteBackup(id){
     const backups=readBackups(),snapshot=backups.find(item=>item.id===id);if(!snapshot)return;
+    if(backups.length<=1){alert('Нельзя удалить последний резервный снимок. Сначала создайте или импортируйте другой резерв.');return}
     if(!confirm(`Удалить резерв от ${new Date(snapshot.at).toLocaleString('ru-RU')}? Это действие нельзя отменить.`))return;
     localStorage.setItem(backupKey,JSON.stringify(backups.filter(item=>item.id!==id)));audit('sync.backup_deleted','Удалён резерв данных','warning');renderBackupHistory();
   }
+  function cleanupBackups(){
+    const backups=readBackups();if(backups.length<=1){alert(backups.length?'Оставлен единственный защищённый резерв.':'Резервных снимков пока нет.');return}
+    if(!confirm(`Удалить ${backups.length-1} старых резервов и оставить самый новый? Последний рабочий снимок будет сохранён.`))return;
+    localStorage.setItem(backupKey,JSON.stringify([backups[0]]));audit('sync.backups_cleaned',`Удалено старых резервов: ${backups.length-1}`,'warning');renderBackupHistory();
+  }
   function initBackupHistory(){
-    document.querySelector('#syncBackupHistory')?.addEventListener('click',openBackupHistory);document.querySelector('#syncBackupClose')?.addEventListener('click',closeBackupHistory);document.querySelector('#syncBackupImport')?.addEventListener('click',()=>document.querySelector('#syncBackupImportFile')?.click());document.querySelector('#syncBackupImportFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];event.target.value='';importBackupFile(file)});
+    document.querySelector('#syncBackupHistory')?.addEventListener('click',openBackupHistory);document.querySelector('#syncBackupClose')?.addEventListener('click',closeBackupHistory);document.querySelector('#syncBackupCleanup')?.addEventListener('click',cleanupBackups);document.querySelector('#syncBackupImport')?.addEventListener('click',()=>document.querySelector('#syncBackupImportFile')?.click());document.querySelector('#syncBackupImportFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];event.target.value='';importBackupFile(file)});
     document.querySelector('#syncBackupModal')?.addEventListener('click',event=>{if(event.target.id==='syncBackupModal')closeBackupHistory()});
     document.querySelector('#syncBackupList')?.addEventListener('click',event=>{const restore=event.target.closest('[data-backup-restore]'),download=event.target.closest('[data-backup-export]'),remove=event.target.closest('[data-backup-delete]');if(restore)restoreBackup(readBackups().find(item=>item.id===restore.dataset.backupRestore));if(download)downloadBackup(readBackups().find(item=>item.id===download.dataset.backupExport));if(remove)deleteBackup(remove.dataset.backupDelete)});
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closeBackupHistory()});

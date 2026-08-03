@@ -20,6 +20,7 @@
     'sync.backup_deleted':'Удалён резерв данных',
     'sync.backup_integrity_failed':'Ошибка целостности резерва',
     'sync.backup_import_cancelled':'Импорт резерва отменён',
+    'sync.backups_cleaned':'Очищены старые резервы',
     'sync.restored':'Связь с облаком восстановлена'
   };
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
