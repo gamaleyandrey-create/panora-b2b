@@ -4,7 +4,7 @@
   const previousRender = renderAccountModal;
   const tx = {
     ru: {
-      title: "Кабинет ресторана",
+      title: "Кабинет партнёра",
       home: "Главная",
       newOrder: "Новый заказ",
       orders: "Мои заказы",
@@ -31,7 +31,8 @@
       orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине.",
       phone: "Телефон",
       address: "Адрес доставки",
-      restaurantName: "Название ресторана", email: "Email для входа", telegram: "Telegram", language: "Язык сообщений", profileData: "Данные ресторана", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
+      partnerType: "Тип партнёра", restaurant: "Ресторан", shop: "Магазин", hotel: "Отель", cafe: "Кафе", catering: "Кейтеринг", other: "Другое",
+      restaurantName: "Название партнёра", email: "Email для входа", telegram: "Telegram", language: "Язык сообщений", profileData: "Данные партнёра", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
       finance: "Баланс и оплаты",
       deliveredTotal: "Поставлено",
       paidTotal: "Оплачено",
@@ -58,7 +59,7 @@
       nothingFound: "Накладные не найдены",
     },
     en: {
-      title: "Restaurant workspace",
+      title: "Partner workspace",
       home: "Home",
       newOrder: "New order",
       orders: "My orders",
@@ -85,7 +86,8 @@
       orderHelp: "Choose bread, then confirm the delivery date in the basket.",
       phone: "Phone",
       address: "Delivery address",
-      restaurantName: "Restaurant name", email: "Sign-in email", telegram: "Telegram", language: "Message language", profileData: "Restaurant details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
+      partnerType: "Partner type", restaurant: "Restaurant", shop: "Shop", hotel: "Hotel", cafe: "Cafe", catering: "Catering", other: "Other",
+      restaurantName: "Partner name", email: "Sign-in email", telegram: "Telegram", language: "Message language", profileData: "Partner details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
       finance: "Balance and payments",
       deliveredTotal: "Delivered",
       paidTotal: "Paid",
@@ -101,7 +103,7 @@
       overview: "Today in Panora", nextDelivery: "Next delivery", activeOrder: "Current order", repeatOrder: "Repeat order", continueOrder: "Continue order", noActiveOrder: "No active orders", saved: "Saved", offline: "Offline", syncing: "Syncing…", noteSearch: "Delivery note number", allMonths: "All months", nothingFound: "No delivery notes found",
     },
     es: {
-      title: "Área del restaurante",
+      title: "Área del socio",
       home: "Inicio",
       newOrder: "Nuevo pedido",
       orders: "Mis pedidos",
@@ -128,7 +130,8 @@
       orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta.",
       phone: "Teléfono",
       address: "Dirección de entrega",
-      restaurantName: "Nombre del restaurante", email: "Email de acceso", telegram: "Telegram", language: "Idioma de mensajes", profileData: "Datos del restaurante", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
+      partnerType: "Tipo de socio", restaurant: "Restaurante", shop: "Tienda", hotel: "Hotel", cafe: "Cafetería", catering: "Catering", other: "Otro",
+      restaurantName: "Nombre del socio", email: "Email de acceso", telegram: "Telegram", language: "Idioma de mensajes", profileData: "Datos del socio", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
       finance: "Saldo y pagos",
       deliveredTotal: "Entregado",
       paidTotal: "Pagado",
@@ -165,6 +168,7 @@
         })[char],
     );
   let activeTab = "home";
+  let orderToReveal = "";
   let noteQuery = "";
   let noteMonth = "";
 
@@ -206,6 +210,7 @@
 
   const isActiveOrder = (order) => !["cancelled", "shipped", "paid", "completed"].includes(order.status);
   const cartCount = () => Object.values(cart || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  const partnerTypeLabel = () => t(["restaurant", "shop", "hotel", "cafe", "catering", "other"].includes(account?.partnerType) ? account.partnerType : "other");
   function syncLabel() {
     if (!navigator.onLine) return t("offline");
     return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
@@ -220,8 +225,8 @@
     return `<section class="rw-home">
       <header class="rw-overview-head"><div><span class="kicker">Panora</span><h3>${t("overview")}</h3></div><span class="rw-sync ${navigator.onLine ? "online" : "offline"}"><i></i>${syncLabel()}</span></header>
       <div class="rw-summary-grid">
-        <article><span>${t("nextDelivery")}</span><strong>${active ? esc(localDate(active.deliveryDate || active.date)) : "—"}</strong><small>${active ? esc(orderNumber(active)) : t("noActiveOrder")}</small></article>
-        <article><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong><small>${t("finance")}</small></article>
+        <button type="button" class="rw-summary-card" data-rw-summary="${active ? "delivery" : "new"}"${active ? ` data-rw-order-target="${esc(active.id)}"` : ""}><span>${t("nextDelivery")}</span><strong>${active ? esc(localDate(active.deliveryDate || active.date)) : "—"}</strong><small>${active ? esc(orderNumber(active)) : t("noActiveOrder")}</small></button>
+        <button type="button" class="rw-summary-card" data-rw-summary="payments"><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong><small>${t("finance")}</small></button>
         <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
       </div>
       ${active ? `<article class="rw-current-order"><div><span>${t("activeOrder")}</span><strong>${esc(orderNumber(active))}</strong><small>${esc(status(active))} · ${esc(localDate(active.deliveryDate || active.date))}</small></div><b>${portalMoney(orderTotal(active))}</b><button class="button button-ghost" data-rw-tab="orders">${t("orders")}</button></article>` : ""}
@@ -236,6 +241,7 @@
     </aside><form class="rw-profile-form" data-rw-profile-form>
       <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
       <div class="rw-profile-grid">
+        <label><span>${t("partnerType")}</span><select name="partnerType">${["restaurant", "shop", "hotel", "cafe", "catering", "other"].map((type) => `<option value="${type}"${(account.partnerType || "restaurant") === type ? " selected" : ""}>${t(type)}</option>`).join("")}</select></label>
         <label><span>${t("restaurantName")} *</span><input name="name" required value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
         <label><span>${t("phone")} *</span><input name="phone" required type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
         <label class="rw-profile-wide"><span>${t("address")} *</span><input name="address" required autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
@@ -256,7 +262,7 @@
       return `<section class="rw-empty"><h3>${t("emptyOrders")}</h3><button class="button button-primary" data-rw-start>${t("newOrder")}</button></section>`;
     return `<section class="rw-list">${rows
       .map(
-        (order) => `<article class="rw-order">
+        (order) => `<article class="rw-order" data-rw-order="${esc(order.id)}">
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small></span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(order.status)}">${esc(status(order))}</div>
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
@@ -416,6 +422,14 @@
     return ordersHtml();
   }
   function bind(modal) {
+    modal.querySelectorAll("[data-rw-summary]").forEach((button) => button.onclick = () => {
+      if (button.dataset.rwSummary === "payments") activeTab = "payments";
+      else if (button.dataset.rwSummary === "delivery") {
+        activeTab = "orders";
+        orderToReveal = button.dataset.rwOrderTarget || "";
+      } else activeTab = "new";
+      renderAccountModal();
+    });
     const profileForm = modal.querySelector("[data-rw-profile-form]");
     if (profileForm) profileForm.onsubmit = async (event) => {
       event.preventDefault();
@@ -503,7 +517,7 @@
       payments: ownPayments().length,
     };
     modal.classList.add("restaurant-workspace");
-    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2></div><button class="close-button" data-portal-close>×</button></div>
+    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><p class="rw-partner-name">${partnerTypeLabel()} · ${esc(account.name)}</p></div><button class="close-button" data-portal-close>×</button></div>
       <div class="rw-layout">
         <nav class="rw-nav" aria-label="${t("title")}">
           ${[
@@ -524,6 +538,16 @@
       </div>
       <footer class="rw-footer"><button class="button button-ghost" data-rw-logout>${t("signOut")}</button><button class="button button-primary" data-portal-close>${t("close")}</button></footer>`;
     bind(modal);
+    if (activeTab === "orders" && orderToReveal) {
+      const targetId = orderToReveal;
+      orderToReveal = "";
+      requestAnimationFrame(() => {
+        const card = [...modal.querySelectorAll("[data-rw-order]")].find((item) => item.dataset.rwOrder === targetId);
+        card?.scrollIntoView({ behavior: "smooth", block: "center" });
+        card?.classList.add("rw-order-focus");
+        window.setTimeout(() => card?.classList.remove("rw-order-focus"), 1800);
+      });
+    }
     if (activeTab === "notes") {
       const head = modal.querySelector(".rw-note-library-head");
       head?.insertAdjacentHTML("beforeend", `<div class="rw-note-filters"><input type="search" data-rw-note-search value="${esc(noteQuery)}" placeholder="${t("noteSearch")}"><select data-rw-note-month><option value="">${t("allMonths")}</option>${[...new Set(ownNotes().map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))].map((month) => `<option value="${esc(month)}"${noteMonth === month ? " selected" : ""}>${esc(month)}</option>`).join("")}</select></div>`);

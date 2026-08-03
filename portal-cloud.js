@@ -73,7 +73,7 @@
     box.innerHTML=`<h3>${labels('Облако','Cloud','Nube')}</h3><p style="color:${lastState.type==='error'?'#a5443c':'#42684d'};overflow-wrap:anywhere">${lastState.text}</p>${lastState.type==='error'?`<button type="button" class="button button-ghost full" id="cloudReload">${labels('Повторить','Retry','Reintentar')}</button>`:''}`;
     box.querySelector('#cloudReload')?.addEventListener('click',()=>loadAll(true));
   }
-  const mapRestaurant=(row,prices)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',telegram:row.telegram||'',address:row.address||'',language:row.language||'ru',prices:Object.fromEntries(prices.map(x=>[x.product_id,Number(x.price)]))});
+  const mapRestaurant=(row,prices)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',telegram:row.telegram||'',address:row.address||'',language:row.language||'ru',partnerType:row.partner_type||'restaurant',prices:Object.fromEntries(prices.map(x=>[x.product_id,Number(x.price)]))});
   function mapOrder(row){
     let meta={};try{meta=JSON.parse(row.comment||'{}')}catch{meta={comment:row.comment||''}}
     const day=row.bake_days||{},items=row.order_items||[];
@@ -133,11 +133,11 @@
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет ресторана','Sign in to the restaurant account','Inicia sesión'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
-    const patch={name:String(details.name||'').trim(),phone:String(details.phone||'').trim(),address:String(details.address||'').trim(),telegram:String(details.telegram||'').trim()||null,language:['ru','en','es'].includes(details.language)?details.language:'ru',updated_at:new Date().toISOString()};
+    const patch={name:String(details.name||'').trim(),phone:String(details.phone||'').trim(),address:String(details.address||'').trim(),telegram:String(details.telegram||'').trim()||null,language:['ru','en','es'].includes(details.language)?details.language:'ru',partner_type:['restaurant','shop','hotel','cafe','catering','other'].includes(details.partnerType)?details.partnerType:'other',updated_at:new Date().toISOString()};
     if(!patch.name||!patch.phone||!patch.address)throw new Error(labels('Заполните обязательные поля','Complete the required fields','Completa los campos obligatorios'));
     state('sending',labels('Сохраняем профиль…','Saving profile…','Guardando perfil…'));
     await api(`restaurants?id=eq.${encodeURIComponent(account.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)});
-    account={...account,...patch,telegram:patch.telegram||''};write('panora-restaurants',[account]);applyAccount();state('ok',labels('Профиль сохранён','Profile saved','Perfil guardado'));return account;
+    account={...account,...patch,partnerType:patch.partner_type,telegram:patch.telegram||''};delete account.partner_type;write('panora-restaurants',[account]);applyAccount();state('ok',labels('Профиль сохранён','Profile saved','Perfil guardado'));return account;
   }};
   async function createOrderDirect(id,date,deliveryDate,items,comment){
     const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);

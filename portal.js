@@ -58,8 +58,8 @@ function accountDebt() {
 function accountText(key) {
   const x = {
     ru: {
-      cabinet: "Личный кабинет ресторана",
-      profile: "Профиль ресторана",
+      cabinet: "Кабинет партнёра",
+      profile: "Профиль партнёра",
       phone: "Телефон",
       address: "Адрес доставки",
       login: "Вход для ресторана",
@@ -83,7 +83,7 @@ function accountText(key) {
     },
     en: {
       cabinet: "Restaurant account",
-      profile: "Restaurant profile",
+      profile: "Partner profile",
       phone: "Phone",
       address: "Delivery address",
       login: "Restaurant sign in",
@@ -107,7 +107,7 @@ function accountText(key) {
     },
     es: {
       cabinet: "Cuenta del restaurante",
-      profile: "Perfil del restaurante",
+      profile: "Perfil del socio",
       phone: "Teléfono",
       address: "Dirección de entrega",
       login: "Acceso para restaurantes",
