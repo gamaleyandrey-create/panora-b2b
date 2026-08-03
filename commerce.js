@@ -138,6 +138,11 @@ function syncPlansFromOrders() {
   return current;
 }
 const commerceEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[type]||'Партнёр');
+const partnerContactHtml=r=>{
+  const rows=[r.phone&&['Телефон',r.phone],r.whatsapp&&['WhatsApp',r.whatsapp],r.telegram&&['Telegram',r.telegram],...(Array.isArray(r.extraMessengers)?r.extraMessengers:[]).map(item=>[item.name,item.contact])].filter(Boolean);
+  return rows.length?`<div class="partner-contacts">${rows.map(([name,value])=>`<span><b>${commerceEscape(name)}</b><small>${commerceEscape(value)}</small></span>`).join('')}</div>`:'<p class="partner-empty">Контакты не указаны</p>';
+};
 function fillRestaurants() {
   const options = activeRestaurants()
     .map((r) => `<option value="${commerceEscape(r.id)}">${commerceEscape(r.name)}</option>`)
@@ -154,12 +159,12 @@ function renderRestaurants() {
       ? active
           .map(
             (r) =>
-              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">Личный кабинет</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "")}</p>${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}</span><span><input data-price="${r.id}:${product.id}" type="number" min="0" step="0.01" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}</span><span><input data-price="${r.id}:${product.id}" type="number" min="0" step="0.01" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
           )
           .join("")
-      : '<div class="empty-row">Добавьте первый ресторан и назначьте ему индивидуальные цены.</div>') +
+      : '<div class="empty-row">Добавьте первого партнёра и назначьте ему индивидуальные цены.</div>') +
     (removed.length
-      ? `<section class="removed-restaurants"><h3>Удалённые рестораны</h3>${removed.map((r) => `<div><span><strong>${commerceEscape(r.name)}</strong><small>${commerceEscape(r.email)}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
+      ? `<section class="removed-restaurants"><h3>Удалённые партнёры</h3>${removed.map((r) => `<div><span><strong>${commerceEscape(r.name)}</strong><small>${commerceEscape(r.email)}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
       : "");
   document.querySelectorAll("[data-price]").forEach(
     (i) =>
@@ -187,7 +192,7 @@ function deleteRestaurant(id) {
   if (
     !r ||
     !confirm(
-      `Удалить ресторан «${r.name}» из активных клиентов? Заказы, накладные и задолженность сохранятся.`,
+      `Удалить партнёра «${r.name}» из активных клиентов? Заказы, накладные и задолженность сохранятся.`,
     )
   )
     return;
@@ -232,7 +237,7 @@ function customerConfirmationHtml(order) {
   const trayInfo = note.customerTraysReceived == null
     ? ""
     : `<br>Лотки: принято ${Number(note.customerTraysReceived)} · возвращено ${Number(note.customerTraysReturned || 0)} · осталось ${Number(note.trayBalanceAfter || 0)}`;
-  return `<small class="customer-confirmed">✓ Получено рестораном${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}${trayInfo}</small>`;
+  return `<small class="customer-confirmed">✓ Получено партнёром${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}${trayInfo}</small>`;
 }
 function orderActions(o) {
   if (o.status === "shipped")
@@ -334,7 +339,7 @@ function renderAccounting() {
           return `<tr><td><strong>${commerceEscape(r.name)}</strong></td><td class="${s - p > 0 ? "negative" : ""}"><strong>${euro(s - p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${last}</td></tr>`;
         })
         .join("")
-    : '<tr><td class="empty-row" colspan="5">Ресторанов пока нет.</td></tr>';
+    : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';
   document.querySelector("#totalShipped").textContent = euro(shipped);
   document.querySelector("#totalPaid").textContent = euro(paid);
   document.querySelector("#totalDebt").textContent = euro(shipped - paid);
@@ -449,7 +454,7 @@ function renderReminders() {
           `Panora · оплата DN-${String(x.note.number).padStart(4, "0")}`,
         ),
         body = encodeURIComponent(message),
-        phone = cleanPhone(x.r.phone),
+        phone = cleanPhone(x.r.whatsapp || x.r.phone),
         waiting = !windowState.allowed && !x.sent,
         status = x.sent
           ? `Отправлено ${new Date(x.sent.sentAt).toLocaleString("ru-RU")}`
@@ -470,7 +475,7 @@ function renderReminders() {
           const message = reminderCopy[x.r.language || "ru"](x.r, x.plan),
             subject = encodeURIComponent(`Panora · ${x.plan.bakeDate}`),
             body = encodeURIComponent(message),
-            phone = cleanPhone(x.r.phone),
+            phone = cleanPhone(x.r.whatsapp || x.r.phone),
             waiting = !windowState.allowed && !x.ordered && !x.sent,
             status = x.ordered
               ? "Заказ получен"
@@ -547,16 +552,24 @@ document.querySelector("#addRestaurant").onclick = () =>
   document.querySelector("#restaurantDialog").showModal();
 document.querySelector("#saveRestaurant").onclick = (e) => {
   e.preventDefault();
-  const f = new FormData(document.querySelector("#restaurantForm"));
+  const form = document.querySelector("#restaurantForm");
+  if (!form.reportValidity()) return;
+  const f = new FormData(form);
   restaurants.push({
     id: crypto.randomUUID(),
     name: f.get("name"),
     email: f.get("email"),
     accessCode: f.get("accessCode"),
     phone: f.get("phone"),
-    telegram: String(f.get("telegram") || "").replace("@", ""),
+    whatsapp: String(f.get("whatsapp") || "").trim(),
+    telegram: String(f.get("telegram") || "").trim(),
+    extraMessengers: [],
+    partnerType: f.get("partnerType") || "other",
     language: f.get("language") || "ru",
     address: f.get("address"),
+    legalName: String(f.get("legalName") || "").trim(),
+    taxId: String(f.get("taxId") || "").trim().toUpperCase(),
+    billingAddress: String(f.get("billingAddress") || "").trim(),
     prices: {
       plain: Number(f.get("plainPrice")),
       pumpkin: Number(f.get("pumpkinPrice")),
@@ -573,7 +586,7 @@ document
   .addEventListener("change", () => setTimeout(renderCommerce));
 document.querySelector("#addOrder").onclick = () => {
   if (!activeRestaurants().length) {
-    alert("Сначала добавьте активный ресторан.");
+    alert("Сначала добавьте активного партнёра.");
     return;
   }
   const f = document.querySelector("#orderForm");
@@ -756,7 +769,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     trayBalanceAfter = availableTrays - traysReturned;
   if (traysReturned > availableTrays) {
     alert(
-      "Нельзя вернуть больше лотков, чем числится у ресторана с учётом этой поставки.",
+      "Нельзя вернуть больше лотков, чем числится у партнёра с учётом этой поставки.",
     );
     return false;
   }
@@ -869,7 +882,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
 };
 document.querySelector("#addPayment").onclick = () => {
   if (!restaurants.length) {
-    alert("Сначала добавьте ресторан.");
+    alert("Сначала добавьте партнёра.");
     return;
   }
   document.querySelector("#paymentDialog").showModal();
@@ -925,9 +938,9 @@ function printNote(orderId) {
     paymentDueLine = n.paymentDueDate
       ? `<br><strong>Плановая дата оплаты: ${n.paymentDueDate}</strong>`
       : "",
-    trayLine = `<p><strong>Возвратные лотки</strong><br>Пекарня выдала: ${Number(n.traysDelivered || 0)} шт.<br>${n.customerTraysReceived == null ? `Плановый возврат пустых: ${Number(n.traysReturned || 0)} шт.` : `Ресторан подтвердил: принято ${Number(n.customerTraysReceived)} шт., возвращено ${Number(n.customerTraysReturned || 0)} шт.<br>Осталось у ресторана: ${Number(n.trayBalanceAfter || 0)} шт.`}</p>`;
+    trayLine = `<p><strong>Возвратные лотки</strong><br>Пекарня выдала: ${Number(n.traysDelivered || 0)} шт.<br>${n.customerTraysReceived == null ? `Плановый возврат пустых: ${Number(n.traysReturned || 0)} шт.` : `Партнёр подтвердил: принято ${Number(n.customerTraysReceived)} шт., возвращено ${Number(n.customerTraysReturned || 0)} шт.<br>Осталось у партнёра: ${Number(n.trayBalanceAfter || 0)} шт.`}</p>`;
   w.document.write(
-    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Ресторан: <strong>${commerceEscape(r.name)}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${commerceProductLabel(i.product)}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table>${trayLine}<p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Ресторан __________________</span></div>`,
+    `<title>Накладная DN-${n.number}</title><style>body{font:15px Arial;max-width:800px;margin:40px auto}h1{font:36px Georgia}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:18px}.sign{margin-top:70px;display:flex;justify-content:space-between}</style><h1>Panora</h1><p><strong>${b.legalName || "Panora"}</strong><br>${b.taxId || ""}<br>${b.address || ""}<br>${b.email || ""} ${b.phone || ""}</p><h2>Накладная DN-${String(n.number).padStart(4, "0")}</h2><p>Дата накладной: ${n.date}<br>Дата выпечки: ${o?.date || n.date}<br>Дата доставки: ${o?.deliveryDate || o?.date || n.date}${paymentDueLine}<br>Партнёр: <strong>${commerceEscape(r.name)}</strong><br>Адрес: ${r.address || "—"}</p><table><tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>${n.items.map((i) => `<tr><td>${commerceProductLabel(i.product)}</td><td>${i.quantity} шт.</td><td>${euro(n.prices[i.product])}</td><td>${euro(i.quantity * n.prices[i.product])}</td></tr>`).join("")}</table>${trayLine}<p class="total">${taxSummary}Итого: <strong>${euro(n.total)}</strong><br>Оплачено: ${euro(n.paid)}<br>Остаток задолженности: ${euro(n.balanceAfter)}</p><div class="sign"><span>Panora __________________</span><span>Партнёр __________________</span></div>`,
   );
   w.document.close();
   w.print();
@@ -1058,7 +1071,7 @@ document.querySelector("#exportOrders").onclick = () => {
         "Номер",
         "Выпечка",
         "Доставка",
-        "Ресторан",
+        "Партнёр",
         "Статус",
         ...productIds.map((id) => `${commerceProductLabel(id)}, шт.`),
         "Без налога, EUR",
@@ -1104,7 +1117,7 @@ document.querySelector("#exportPayments").onclick = () => {
     "panora-payments-debts.csv",
     csv([
       [
-        "Ресторан",
+        "Партнёр",
         "Дата",
         "Тип",
         "Сумма, EUR",

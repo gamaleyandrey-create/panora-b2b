@@ -142,9 +142,9 @@
         <div><span>Пекарня выдаёт</span><strong>${traysDelivered} шт.</strong></div>
         <div><span>Ожидается возврат пустых</span><strong>${traysReturnedPlanned} шт.</strong></div>
         ${delivery.customer_confirmed_at ? `
-          <div><span>Ресторан принял</span><strong>${actualReceived ?? traysDelivered} шт.</strong></div>
-          <div><span>Ресторан вернул</span><strong>${actualReturned ?? traysReturnedPlanned} шт.</strong></div>
-          <div class="tray-balance"><span>Осталось у ресторана</span><strong>${balanceAfter} шт.</strong></div>` : ''}
+          <div><span>Партнёр принял</span><strong>${actualReceived ?? traysDelivered} шт.</strong></div>
+          <div><span>Партнёр вернул</span><strong>${actualReturned ?? traysReturnedPlanned} шт.</strong></div>
+          <div class="tray-balance"><span>Осталось у партнёра</span><strong>${balanceAfter} шт.</strong></div>` : ''}
       </section>
       <table class="items">
         <thead><tr><th>Товар</th><th>Количество</th></tr></thead>
@@ -157,7 +157,7 @@
             <label><span>Принято лотков, шт.</span><input name="traysReceived" type="number" inputmode="numeric" min="0" max="${traysDelivered}" step="1" value="${traysDelivered}" required></label>
             <label><span>Возвращено пустых, шт.</span><input name="traysReturned" type="number" inputmode="numeric" min="0" max="${previousBalance + traysDelivered}" step="1" value="${Math.min(traysReturnedPlanned, previousBalance + traysDelivered)}" required></label>
           </div>
-          <p class="tray-help">До поставки у ресторана: ${previousBalance} шт. После подтверждения остаток будет пересчитан.</p>
+          <p class="tray-help">До поставки у партнёра: ${previousBalance} шт. После подтверждения остаток будет пересчитан.</p>
           <label class="check"><input name="accepted" type="checkbox" required><span>Количество хлеба и лотков проверено. Подтверждаю получение.</span></label>
           <button>Подтвердить получение</button>
         </form>`}`;
@@ -195,7 +195,7 @@
         if (error.status === 0) {
           show('Нет связи с сервером', 'Проверьте интернет и нажмите «Повторить».', '<button class="button retry" type="button">Повторить</button>');
         } else {
-          show('Не удалось подтвердить', 'Код недействителен, истёк или принадлежит другому ресторану.');
+          show('Не удалось подтвердить', 'Код недействителен, истёк или принадлежит другому партнёру.');
         }
       } finally {
         button.disabled = false;
@@ -213,7 +213,7 @@
       return;
     }
     if (!session?.access_token) {
-      show('Нужно войти в кабинет ресторана', 'После входа снова отсканируйте QR-код.', '<a class="button login" href="index.html">Войти</a>');
+      show('Нужно войти в кабинет партнёра', 'После входа снова отсканируйте QR-код.', '<a class="button login" href="index.html">Войти</a>');
       return;
     }
     if (!navigator.onLine) {
@@ -226,7 +226,7 @@
     try {
       const rows = await rpc('panora_delivery_confirmation', { p_token: token });
       if (!rows?.length) {
-        show('Поставка недоступна', 'QR-код относится к другому ресторану, недействителен или истёк.');
+        show('Поставка недоступна', 'QR-код относится к другому партнёру, недействителен или истёк.');
         return;
       }
       render(rows[0]);

@@ -10,7 +10,7 @@
       if (!client) return;
       row.dataset.accountRestaurant = client.id;
       row.tabIndex = 0;
-      row.title = "Открыть операции ресторана";
+      row.title = "Открыть операции партнёра";
     });
   }
 

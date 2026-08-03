@@ -8,7 +8,7 @@
     'order.created':'Создан новый заказ',
     'order.status_changed':'Изменён статус заказа',
     'delivery_note.created':'Создана накладная',
-    'delivery_note.confirmed':'Ресторан подтвердил поставку',
+    'delivery_note.confirmed':'Партнёр подтвердил поставку',
     'payment.created':'Добавлена оплата',
     'payment.status_changed':'Изменён статус оплаты',
     'sync.failed':'Ошибка синхронизации',
