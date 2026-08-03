@@ -256,19 +256,19 @@
 
   const isoDate = (value) => String(value || "").slice(0, 10);
 
-  function downloadUbl(note, order, client, bakery, number) {
-    const items = Array.isArray(note.items) ? note.items : [];
-    const total = Number(note.total || 0);
+  function downloadUbl(note, order, client, bakery, number, meta = {}) {
+    const items = Array.isArray(meta.lines) ? meta.lines : [];
+    const taxableBase = Number(meta.taxableBase || 0), taxTotal = Number(meta.taxTotal || 0), total = Number(meta.documentTotal || 0);
     const lines = items
       .map((item, index) => {
         const quantity = Number(item.quantity || 0);
-        const price = Number(item.unitPrice ?? item.price ?? 0);
-        const lineTotal = Number(item.total ?? quantity * price);
+        const price = Number(item.unit_price_net || 0);
+        const lineTotal = Number(item.tax_base || quantity * price);
         return `<cac:InvoiceLine>
   <cbc:ID>${index + 1}</cbc:ID>
   <cbc:InvoicedQuantity unitCode="C62">${quantity}</cbc:InvoicedQuantity>
   <cbc:LineExtensionAmount currencyID="EUR">${lineTotal.toFixed(2)}</cbc:LineExtensionAmount>
-  <cac:Item><cbc:Name>${xml(item.name || item.productName || item.productId || "")}</cbc:Name></cac:Item>
+  <cac:Item><cbc:Name>${xml(item.name || item.product_id || "")}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>${Number(item.tax_rate||0).toFixed(2)}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
   <cac:Price><cbc:PriceAmount currencyID="EUR">${price.toFixed(2)}</cbc:PriceAmount></cac:Price>
 </cac:InvoiceLine>`;
       })
@@ -283,16 +283,18 @@
  xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
 <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
-<cbc:CustomizationID>Panora-Accounting-Export-1</cbc:CustomizationID>
+<cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>
 <cbc:ID>${xml(number)}</cbc:ID>
-<cbc:IssueDate>${xml(isoDate(note.date || new Date().toISOString()))}</cbc:IssueDate>
-${note.paymentDueDate ? `<cbc:DueDate>${xml(isoDate(note.paymentDueDate))}</cbc:DueDate>` : ""}
+<cbc:IssueDate>${xml(isoDate(meta.issueDate || new Date().toISOString()))}</cbc:IssueDate>
+${meta.dueDate ? `<cbc:DueDate>${xml(isoDate(meta.dueDate))}</cbc:DueDate>` : ""}
 <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
 <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
 <cac:AccountingSupplierParty>${party(bakery)}</cac:AccountingSupplierParty>
 <cac:AccountingCustomerParty>${party(client)}</cac:AccountingCustomerParty>
+<cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${taxTotal.toFixed(2)}</cbc:TaxAmount>${(meta.taxBreakdown||[]).map(t=>`<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${Number(t.base||0).toFixed(2)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">${Number(t.amount||0).toFixed(2)}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>${xml(t.category||'S')}</cbc:ID><cbc:Percent>${Number(t.rate||0).toFixed(2)}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join('')}</cac:TaxTotal>
 <cac:LegalMonetaryTotal>
-  <cbc:TaxExclusiveAmount currencyID="EUR">${total.toFixed(2)}</cbc:TaxExclusiveAmount>
+  <cbc:LineExtensionAmount currencyID="EUR">${taxableBase.toFixed(2)}</cbc:LineExtensionAmount>
+  <cbc:TaxExclusiveAmount currencyID="EUR">${taxableBase.toFixed(2)}</cbc:TaxExclusiveAmount>
   <cbc:TaxInclusiveAmount currencyID="EUR">${total.toFixed(2)}</cbc:TaxInclusiveAmount>
   <cbc:PayableAmount currencyID="EUR">${total.toFixed(2)}</cbc:PayableAmount>
 </cac:LegalMonetaryTotal>
@@ -325,16 +327,16 @@ ${lines}
     const variant = options.variant === "albaran" ? "albaran" : "factura";
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
-    const client = {...baseClient, legalName: meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerAddress || baseClient.billingAddress || baseClient.address};
-    const bakery = {...baseBakery, legalName: meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
+    const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
+    const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
     const prefix = variant === "albaran" ? "ALB-" : "F-";
     const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
     const rate = variant === "factura" ? Number(meta.ivaRate || 0) : 0;
     const gross = Number(note.total || 0);
     const pricesIncludeTax = meta.pricesIncludeTax !== false;
-    const taxableBase = variant === "factura" && pricesIncludeTax ? gross / (1 + rate / 100) : gross;
-    const vatAmount = variant === "factura" ? taxableBase * rate / 100 : 0;
-    const documentTotal = variant === "factura" && !pricesIncludeTax ? taxableBase + vatAmount : gross;
+    const taxableBase = meta.taxableBase ?? (variant === "factura" && pricesIncludeTax ? gross / (1 + rate / 100) : gross);
+    const vatAmount = meta.taxTotal ?? (variant === "factura" ? taxableBase * rate / 100 : 0);
+    const documentTotal = meta.documentTotal ?? (variant === "factura" && !pricesIncludeTax ? taxableBase + vatAmount : gross);
     const paid = paidAmount(note);
     const due = Math.max(0, documentTotal - paid);
     document.querySelector("#accountingInvoiceDialog")?.remove();
@@ -348,14 +350,14 @@ ${lines}
       <button type="button" class="accounting-x" aria-label="${esc(text("close"))}">×</button>
     </div>
     <article class="accounting-sheet">
-      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(text(variant))}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(note.date || "—")}</dd></div><div><dt>${esc(text("deliveryDate"))}</dt><dd>${esc(order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
+      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(text(variant))}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Дата операции</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
       <section class="accounting-parties">
         <div><h2>${esc(text("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(text("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(text("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(text("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
         <div><h2>${esc(text("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(text("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(text("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(text("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
       </section>
       <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(text("product"))}</span><span>${esc(text("quantity"))}</span><span>${esc(text("price"))}</span><span>${esc(text("amount"))}</span></div>${note.items.map((item) => {
-        const price = Number(note.prices?.[item.product] || 0);
-        return `<div class="accounting-line"><strong>${esc(productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(Number(item.quantity) * price))}</strong></div>`;
+        const issued=(meta.lines||[]).find(x=>x.product_id===item.product),price=Number(issued?.unit_price_net ?? note.prices?.[item.product] ?? 0),amount=Number(issued?.tax_base ?? (Number(item.quantity)*price));
+        return `<div class="accounting-line"><strong>${esc(issued?.name||productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(amount))}</strong></div>`;
       }).join("")}</div>
       <section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
       <footer><span>${esc(text("bakerySignature"))} __________________</span><span>${esc(text("restaurantSignature"))} __________________</span></footer>
@@ -369,7 +371,7 @@ ${lines}
     dialog.querySelector(".accounting-csv").onclick = () =>
       downloadCsv(note, order, client, bakery, number);
     dialog.querySelector(".accounting-edi")?.addEventListener("click", () =>
-      downloadUbl(note, order, client, bakery, number));
+      downloadUbl(note, order, client, bakery, number, meta));
     dialog.querySelector(".accounting-side")?.addEventListener("change", (event) => {
       const label = dialog.querySelector(".accounting-copy-label");
       label.textContent =
