@@ -164,8 +164,11 @@ function applyAccount() {
   f.restaurant.readOnly = true;
   f.email.value = account.email;
   f.email.readOnly = true;
-  f.phone.value = account.phone || "";
-  f.address.value = account.address || "";
+  const checkoutIsBeingEdited = f.contains(document.activeElement);
+  if (!checkoutIsBeingEdited && !String(f.phone.value || "").trim())
+    f.phone.value = account.phone || "";
+  if (!checkoutIsBeingEdited && !String(f.address.value || "").trim())
+    f.address.value = account.address || "";
   renderProducts();
   renderCart();
   renderAccountModal();
