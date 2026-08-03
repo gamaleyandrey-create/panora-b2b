@@ -31,6 +31,7 @@
       orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине.",
       phone: "Телефон",
       address: "Адрес доставки",
+      restaurantName: "Название ресторана", email: "Email для входа", telegram: "Telegram", language: "Язык сообщений", profileData: "Данные ресторана", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
       finance: "Баланс и оплаты",
       deliveredTotal: "Поставлено",
       paidTotal: "Оплачено",
@@ -42,7 +43,7 @@
       paymentDue: "Оплатить до",
       traysDelivered: "Передано лотков",
       traysReturned: "Возвращено",
-      trayBalance: "Осталось у вас",
+      trayBalance: "Лотки у вас",
       overview: "Сегодня в Panora",
       nextDelivery: "Ближайшая поставка",
       activeOrder: "Текущий заказ",
@@ -84,6 +85,7 @@
       orderHelp: "Choose bread, then confirm the delivery date in the basket.",
       phone: "Phone",
       address: "Delivery address",
+      restaurantName: "Restaurant name", email: "Sign-in email", telegram: "Telegram", language: "Message language", profileData: "Restaurant details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
       finance: "Balance and payments",
       deliveredTotal: "Delivered",
       paidTotal: "Paid",
@@ -126,6 +128,7 @@
       orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta.",
       phone: "Teléfono",
       address: "Dirección de entrega",
+      restaurantName: "Nombre del restaurante", email: "Email de acceso", telegram: "Telegram", language: "Idioma de mensajes", profileData: "Datos del restaurante", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
       finance: "Saldo y pagos",
       deliveredTotal: "Entregado",
       paidTotal: "Pagado",
@@ -227,11 +230,22 @@
   }
 
   function profileHtml() {
-    return `<aside class="rw-profile">
+    return `<section class="rw-profile-page"><aside class="rw-profile rw-profile-summary">
       <div class="rw-profile-main"><span class="account-avatar">${esc(account.name?.[0]?.toUpperCase() || "R")}</span><span><strong>${esc(account.name)}</strong><small>${esc(account.email)}</small></span></div>
       <div class="rw-balance"><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong></div>
-      <dl><div><dt>${t("phone")}</dt><dd>${esc(account.phone || "—")}</dd></div><div><dt>${t("address")}</dt><dd>${esc(account.address || "—")}</dd></div></dl>
-    </aside>`;
+    </aside><form class="rw-profile-form" data-rw-profile-form>
+      <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
+      <div class="rw-profile-grid">
+        <label><span>${t("restaurantName")} *</span><input name="name" required value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
+        <label><span>${t("phone")} *</span><input name="phone" required type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
+        <label class="rw-profile-wide"><span>${t("address")} *</span><input name="address" required autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
+        <label><span>${t("telegram")}</span><input name="telegram" value="${esc(account.telegram || "")}" placeholder="@restaurant"></label>
+        <label><span>${t("language")}</span><select name="language"><option value="ru"${account.language === "ru" ? " selected" : ""}>Русский</option><option value="es"${account.language === "es" ? " selected" : ""}>Español</option><option value="en"${account.language === "en" ? " selected" : ""}>English</option></select></label>
+      </div>
+      <div class="rw-profile-access"><span><strong>${t("accountAccess")}</strong><small>${t("emailLocked")}</small></span><b>${esc(account.email)}</b></div>
+      <p class="rw-profile-result" data-rw-profile-result role="status"></p>
+      <button class="button button-primary rw-profile-save" type="submit">${t("saveProfile")}</button>
+    </form></section>`;
   }
   function newOrderHtml() {
     return `<section class="rw-empty rw-new-order"><span>＋</span><h3>${t("newOrder")}</h3><p>${t("orderHelp")}</p><button class="button button-primary" data-rw-start>${t("startOrder")}</button></section>`;
@@ -402,6 +416,17 @@
     return ordersHtml();
   }
   function bind(modal) {
+    const profileForm = modal.querySelector("[data-rw-profile-form]");
+    if (profileForm) profileForm.onsubmit = async (event) => {
+      event.preventDefault();
+      const button = profileForm.querySelector('[type="submit"]'), result = profileForm.querySelector('[data-rw-profile-result]');
+      let valid = true;
+      ["name", "phone", "address"].forEach((field) => { const input = profileForm.elements[field], error = profileForm.querySelector(`[data-rw-field-error="${field}"]`), missing = !String(input.value || "").trim(); input.classList.toggle("invalid", missing); error.textContent = missing ? t("required") : ""; valid = valid && !missing; });
+      if (!valid) return profileForm.querySelector(".invalid")?.focus();
+      button.disabled = true; button.textContent = t("savingProfile"); result.textContent = "";
+      try { await window.panoraRestaurantProfile.save(Object.fromEntries(new FormData(profileForm))); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
+      catch (error) { result.textContent = error.message || String(error); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
+    };
     modal.querySelectorAll("[data-rw-tab]").forEach(
       (button) =>
         (button.onclick = () => {

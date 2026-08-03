@@ -130,6 +130,15 @@
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by restaurant',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
+  window.panoraRestaurantProfile={save:async details=>{
+    if(!account)throw new Error(labels('Войдите в кабинет ресторана','Sign in to the restaurant account','Inicia sesión'));
+    if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
+    const patch={name:String(details.name||'').trim(),phone:String(details.phone||'').trim(),address:String(details.address||'').trim(),telegram:String(details.telegram||'').trim()||null,language:['ru','en','es'].includes(details.language)?details.language:'ru',updated_at:new Date().toISOString()};
+    if(!patch.name||!patch.phone||!patch.address)throw new Error(labels('Заполните обязательные поля','Complete the required fields','Completa los campos obligatorios'));
+    state('sending',labels('Сохраняем профиль…','Saving profile…','Guardando perfil…'));
+    await api(`restaurants?id=eq.${encodeURIComponent(account.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)});
+    account={...account,...patch,telegram:patch.telegram||''};write('panora-restaurants',[account]);applyAccount();state('ok',labels('Профиль сохранён','Profile saved','Perfil guardado'));return account;
+  }};
   async function createOrderDirect(id,date,deliveryDate,items,comment){
     const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
     if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
