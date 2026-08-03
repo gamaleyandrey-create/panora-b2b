@@ -13,7 +13,8 @@ function syncAdminProductRegistry(){
 syncAdminProductRegistry();
 if(localStorage.getItem('panora-builtin-products-version')!=='4'){
  productRegistryDefaults.forEach(source=>{const target=productRegistry.find(p=>p.id===source.id);if(!target){productRegistry.push(structuredClone(source));return}Object.entries(source).forEach(([key,value])=>{if(target[key]==null||target[key]==='')target[key]=structuredClone(value)});target.names??=structuredClone(source.names);target.descriptions??=structuredClone(source.descriptions);Object.entries(source.names).forEach(([key,value])=>{if(!target.names[key])target.names[key]=value});Object.entries(source.descriptions).forEach(([key,value])=>{if(!target.descriptions[key])target.descriptions[key]=value})});
- const savedRestaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+ let savedRestaurants=[];
+ try{const parsed=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');savedRestaurants=Array.isArray(parsed)?parsed:[]}catch{localStorage.removeItem('panora-restaurants')}
  savedRestaurants.forEach(r=>{r.prices??={};if(r.prices.plain==null)r.prices.plain=4.5;if(r.prices.pumpkin==null)r.prices.pumpkin=5});
  localStorage.setItem('panora-products',JSON.stringify(productRegistry));
  localStorage.setItem('panora-restaurants',JSON.stringify(savedRestaurants));
