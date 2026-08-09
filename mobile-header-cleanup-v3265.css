@@ -1,0 +1,85 @@
+
+/* Panora v326.5 — mobile More menu + visible Panora brand */
+
+@media (max-width: 720px) {
+  /* Always show the Panora wordmark at the top. */
+  .admin-topbar .brand,
+  .topbar .brand {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    min-width: 0;
+    font-weight: 800 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+  }
+
+  .admin-topbar .brand::after,
+  .topbar .brand::after {
+    content: "Panora";
+  }
+
+  /* Avoid duplicated word if the HTML already contains Panora.
+     Hide the raw text node visually by making the link font-size 0,
+     then restore the icon and generated label sizes. */
+  .admin-topbar .brand,
+  .topbar .brand {
+    font-size: 0 !important;
+  }
+  .admin-topbar .brand > *,
+  .topbar .brand > * {
+    font-size: 18px !important;
+  }
+  .admin-topbar .brand::after,
+  .topbar .brand::after {
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+
+  /* Legacy admin navigation stays hidden until the user taps "Ещё". */
+  body.admin-page .admin-nav,
+  body.admin-page .admin-menu,
+  body.admin-page .desktop-admin-nav {
+    display: none !important;
+  }
+
+  /* "Ещё" opens the same admin navigation as a mobile sheet. */
+  body.admin-page.admin-menu-open .admin-nav {
+    display: grid !important;
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    z-index: 1000 !important;
+    max-height: min(68dvh, 560px) !important;
+    overflow-y: auto !important;
+    padding: 12px !important;
+    gap: 6px !important;
+    border: 1px solid #d8ddd6 !important;
+    border-radius: 18px !important;
+    background: #fafbf7 !important;
+    box-shadow: 0 16px 45px rgba(29,48,35,.22) !important;
+  }
+
+  body.admin-page.admin-menu-open .admin-nav h1 {
+    display: none !important;
+  }
+
+  body.admin-page.admin-menu-open .admin-nav button {
+    display: flex !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Make the More tab clearly tappable. */
+  #adminMobileMore {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+}
