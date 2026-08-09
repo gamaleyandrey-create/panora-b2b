@@ -1,0 +1,101 @@
+
+/* Panora v326.7 — fix duplicate partner brand and bakery language overlap */
+@media (max-width:720px){
+
+  /* PARTNER
+     v326.5 generated "Panora" with ::after while the HTML already contained the word.
+     Restore the real text and remove the generated duplicate. */
+  body:not(.admin-page) .topbar .brand{
+    font-size:20px !important;
+    line-height:1 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    min-width:0 !important;
+    white-space:nowrap !important;
+  }
+  body:not(.admin-page) .topbar .brand::after{
+    content:none !important;
+    display:none !important;
+  }
+  body:not(.admin-page) .topbar .brand > *{
+    font-size:inherit !important;
+  }
+
+  /* BAKERY
+     Give Panora and language their own columns so RU cannot overlap the wordmark. */
+  body.admin-page .admin-topbar{
+    display:grid !important;
+    grid-template-columns:minmax(118px,1fr) 68px minmax(86px,auto) !important;
+    column-gap:10px !important;
+    row-gap:0 !important;
+    align-items:center !important;
+    padding:8px 10px !important;
+  }
+
+  body.admin-page .admin-topbar .brand{
+    grid-column:1 !important;
+    font-size:20px !important;
+    line-height:1 !important;
+    min-width:110px !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+  }
+  body.admin-page .admin-topbar .brand::after{
+    content:none !important;
+    display:none !important;
+  }
+  body.admin-page .admin-topbar .brand > *{
+    font-size:inherit !important;
+  }
+
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language]{
+    grid-column:2 !important;
+    width:68px !important;
+    min-width:68px !important;
+    max-width:68px !important;
+    margin:0 !important;
+    justify-self:end !important;
+    position:static !important;
+    transform:none !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state]{
+    grid-column:3 !important;
+    max-width:96px !important;
+    min-width:0 !important;
+    justify-self:end !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+    font-size:11px !important;
+  }
+}
+
+/* Extra-tight phones */
+@media (max-width:390px){
+  body.admin-page .admin-topbar{
+    grid-template-columns:minmax(104px,1fr) 62px minmax(74px,auto) !important;
+    column-gap:7px !important;
+  }
+  body.admin-page .admin-topbar .brand{
+    min-width:100px !important;
+    font-size:18px !important;
+  }
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language]{
+    width:62px !important;
+    min-width:62px !important;
+    max-width:62px !important;
+  }
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state]{
+    max-width:78px !important;
+    font-size:10px !important;
+  }
+}
