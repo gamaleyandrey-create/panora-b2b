@@ -10,7 +10,8 @@ const list = [
   'two-device-sync-model.test.js',
   'v323-clean-migration.test.js',
   'v325-tech-card-lock.test.js',
-  'v328-order-workflow.test.js'
+  'v328-order-workflow.test.js',
+  'v331-sync-safety.test.js'
 ];
 
 let failures = 0;
