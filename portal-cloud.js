@@ -187,7 +187,15 @@
     const contactChanged=(nextPhone&&nextPhone!==String(account.phone||''))||(nextAddress&&nextAddress!==String(account.address||''));
     try{
       if(contactChanged){
-        await window.panoraRestaurantProfile.save({name:account.name,phone:nextPhone||account.phone,address:nextAddress||account.address,whatsapp:account.whatsapp,telegram:account.telegram,extraMessengers:account.extraMessengers,legalName:account.legalName,taxId:account.taxId,billingAddress:account.billingAddress,language:account.language,partnerType:account.partnerType});
+        try{
+          await window.panoraRestaurantProfile.save({name:account.name,phone:nextPhone||account.phone,address:nextAddress||account.address,whatsapp:account.whatsapp,telegram:account.telegram,extraMessengers:account.extraMessengers,legalName:account.legalName,taxId:account.taxId,billingAddress:account.billingAddress,language:account.language,partnerType:account.partnerType});
+        }catch(profileError){
+          /* An outdated profile RPC must not discard checkout data or block
+             an otherwise valid order. The v311 draft retries after migration. */
+          account={...account,phone:nextPhone||account.phone,address:nextAddress||account.address};
+          write('panora-restaurants',[account]);applyAccount();
+          window.dispatchEvent(new CustomEvent('panora:profile-save-deferred',{detail:{message:String(profileError?.message||profileError)}}));
+        }
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
       const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
@@ -196,7 +204,7 @@
       if(!created)throw new Error('Order was not created');
       const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
-      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
+      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));window.panoraFormDrafts?.confirmSaved(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
