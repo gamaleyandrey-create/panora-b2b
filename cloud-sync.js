@@ -39,7 +39,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,shippingLocks=new Set();
   const audit=(action,details='',level='info')=>window.panoraAudit?.record(action,details,level);
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
@@ -54,7 +54,15 @@
   const rememberRevision=(section,rows=[])=>{const latest=(rows||[]).reduce((value,row)=>String(row.updated_at||'')>value?String(row.updated_at):value,'');if(latest){revisions[section]=latest;localStorage.setItem(revisionKey,JSON.stringify(revisions))}return latest};
   const conflictCount=()=>Object.keys(conflicts).length;
   const saveConflicts=()=>Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
-  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Конфликт данных: ${count}`,true,'Нажмите, чтобы выбрать версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
+  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения на другом устройстве: ${count}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
+  function chooseConflictVersion(names){
+    return new Promise(resolve=>{
+      document.querySelector('#panoraConflictChoice')?.remove();
+      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
+      modal.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="panoraConflictTitle" style="width:min(520px,100%);background:#fff;color:#17251d;border-radius:18px;padding:24px;box-shadow:0 20px 70px #0005"><h2 id="panoraConflictTitle" style="margin:0 0 12px">Есть изменения на другом устройстве</h2><p>В облаке сохранена другая версия раздела: <strong>${String(names).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Выберите, какую версию использовать.</p><button type="button" data-choice="cloud" style="width:100%;margin-top:10px;padding:12px">Загрузить обновления из облака</button><p style="margin:6px 0 14px;color:#607066">Текущие поля будут заменены последней версией из облака.</p><button type="button" data-choice="local" style="width:100%;padding:12px">Сохранить версию этого устройства в облако</button><p style="margin:6px 0 14px;color:#607066">Данные с этого устройства заменят облачную версию.</p><button type="button" data-choice="later" style="width:100%;padding:10px;background:transparent;border:0;text-decoration:underline">Решить позже</button><p style="margin:14px 0 0;color:#42684d">Ваши данные не пропадут: перед заменой Panora сохранит резервную копию.</p></section>`;
+      modal.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;modal.remove();resolve(choice)});document.body.append(modal);modal.querySelector('[data-choice="cloud"]')?.focus();
+    })
+  }
   async function guardSection(section,path){
     if(forceSections.has(section)||!pending[section]||!revisions[section])return;
     const rows=await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),remoteAt=rows?.[0]?.updated_at||'';
@@ -88,6 +96,12 @@
     if(typeof buildPlanProductFields==='function')buildPlanProductFields();
     if(typeof syncProductSelects==='function')syncProductSelects();
     if(typeof renderAll==='function')renderAll();
+  }
+  async function refreshProductsIfChanged(){
+    if(!ready||productDirty||savingProducts||document.activeElement?.closest?.('#recipeList')||window.panoraRecipeEditing)return false;
+    const rows=await request('products?select=updated_at&order=updated_at.desc&limit=1'),remoteAt=rows?.[0]?.updated_at||'',localAt=revisions.products||'';
+    if(remoteAt&&remoteAt>localAt){await loadProducts();window.dispatchEvent(new CustomEvent('panora:products-changed'));return true}
+    return false
   }
   async function saveProducts(){
     if(!ready||typeof productRegistry==='undefined')return false;
@@ -551,8 +565,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function resolveConflicts(){
     const sections=Object.keys(conflicts);if(!sections.length)return retrySync();
-    const sectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'},names=sections.map(section=>sectionNames[section]||section).join(', '),keepLocal=confirm(`Конфликт синхронизации в разделе: ${names}.\n\nНажмите «OK», если последние изменения сделаны НА ЭТОМ УСТРОЙСТВЕ — они заменят облачную версию.\n\nНажмите «Отмена», если последние изменения сделаны НА ДРУГОМ УСТРОЙСТВЕ — будет загружена облачная версия и сохранена резервная копия текущих локальных данных.`);
-    if(keepLocal){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
+    const sectionNames={products:'Товары и технологические карты',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'},names=sections.map(section=>sectionNames[section]||section).join(', '),choice=await chooseConflictVersion(names);
+    if(choice==='later'){showConflicts();return false}
+    if(choice==='local'){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
     try{const backup=saveBackup(sections,'conflict-cloud');for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
   }
   async function restoreBackup(snapshot){
@@ -675,6 +690,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(productDirty)try{await flushProducts()}catch(error){errors.push(['товары',error])}
     if(recipeDirty)try{await flushRecipes()}catch(error){errors.push(['рецептуры',error])}
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
+    clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),5000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
