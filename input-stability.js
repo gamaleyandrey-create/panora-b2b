@@ -1,9 +1,11 @@
-/* Panora v312: durable, versioned drafts for every standard form control. */
+/* Panora v313: durable, versioned drafts for every standard form control. */
 (() => {
   "use strict";
 
   const VERSION = 1;
-  const LOCAL_PREFIX = "panora-form-draft-v312:";
+  // v313 intentionally uses a new namespace. v312 could assign one key to
+  // several recipe tech-card controls and must never replay that corrupt draft.
+  const LOCAL_PREFIX = "panora-form-draft-v313:";
   const DEVICE_KEY = "panora-form-device-v312";
   const SEND_DELAY = 900;
   const SKIP_TYPES = new Set(["password", "file", "hidden", "submit", "button", "reset", "image"]);
@@ -47,7 +49,7 @@
     const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-id],[data-index]");
     const owner = field.closest("[data-recipe-card]")?.getAttribute("data-recipe-card") || "";
     const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-id") || row?.getAttribute("data-index") || "";
-    const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-product") || field.getAttribute("data-field-id") || stablePath(field);
+    const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-tech") || field.getAttribute("data-role") || field.getAttribute("data-recipe-weight") || field.getAttribute("data-product") || field.getAttribute("data-field-id") || stablePath(field);
     const option = field.type === "radio" || field.type === "checkbox" ? `:${field.value || "checked"}` : "";
     return `${owner ? `${owner}:` : ""}${rowId ? `${rowId}:` : ""}${base}${option}`;
   };
