@@ -1,11 +1,11 @@
-/* Panora v314: durable, versioned drafts for every standard form control. */
+/* Panora v325.8: collision-safe durable drafts for all repeated/dynamic form controls. */
 (() => {
   "use strict";
 
   const VERSION = 1;
   // v313 intentionally uses a new namespace. v312 could assign one key to
   // several recipe tech-card controls and must never replay that corrupt draft.
-  const LOCAL_PREFIX = "panora-form-draft-v314:";
+  const LOCAL_PREFIX = "panora-form-draft-v3258:";
   const DEVICE_KEY = "panora-form-device-v312";
   const SEND_DELAY = 900;
   const SKIP_TYPES = new Set(["password", "file", "hidden", "submit", "button", "reset", "image"]);
@@ -36,23 +36,53 @@
   const isEditable = (node) => node instanceof Element && node.matches(controls) && !SKIP_TYPES.has(String(node.type || "").toLowerCase()) && !node.disabled;
   const formOf = (field) => field.closest("form") || field.closest("dialog,[role=dialog],section,article,main") || document.body;
   const formId = (form) => form.id || form.getAttribute?.("data-panora-form") || form.getAttribute?.("data-rw-profile-form") !== null && "partner-profile" || stablePath(form);
+  const identityData = (node) => {
+    if (!(node instanceof Element)) return "";
+    // Prefer application data attributes that carry an actual identity/value.
+    // Ignore internal Panora state and presentation-only flags.
+    const ignored = new Set(["panoraApplying","panoraDirty","syncState"]);
+    const preferred = [
+      "fieldId","rowId","itemId","planProduct","recipeWeight","recipeName","recipeQty","recipeUnit",
+      "price","customPrice","shipmentQuantity","product","qtySelect","order","stock","margin",
+      "costStock","costMargin","ingredientPrice","rwMessengerRow","id","index","tech","role","draftKey"
+    ];
+    for (const key of preferred) {
+      const value = node.dataset?.[key];
+      if (value !== undefined && value !== "") return `${key}=${value}`;
+    }
+    for (const [key, value] of Object.entries(node.dataset || {})) {
+      if (ignored.has(key) || value === "") continue;
+      return `${key}=${value}`;
+    }
+    return "";
+  };
+  const siblingIndex = (node) => {
+    if (!node?.parentElement) return 0;
+    const same = [...node.parentElement.children].filter(el => el.tagName === node.tagName);
+    return Math.max(0, same.indexOf(node));
+  };
   const stablePath = (node) => {
     if (!node || node === document.body) return "body";
     if (node.id) return `#${node.id}`;
     const bits = [];
-    for (let current = node; current && current !== document.body && bits.length < 4; current = current.parentElement) {
-      const key = current.getAttribute?.("data-field-id") || current.getAttribute?.("data-product") || current.getAttribute?.("data-id") || current.getAttribute?.("name");
-      bits.unshift(`${current.tagName.toLowerCase()}${key ? `[${key}]` : ""}`);
+    for (let current = node; current && current !== document.body && bits.length < 5; current = current.parentElement) {
+      const ident = identityData(current) || current.getAttribute?.("name") || "";
+      // nth-of-type is the final collision guard for repeated rows that do not
+      // expose any business identifier (for example messenger/ingredient rows).
+      bits.unshift(`${current.tagName.toLowerCase()}${ident ? `[${ident}]` : `:nth(${siblingIndex(current)})`}`);
     }
     return bits.join(">");
   };
   const fieldId = (field) => {
-    const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-qty-select],[data-id],[data-index]");
     const owner = field.closest("[data-recipe-card]")?.getAttribute("data-recipe-card") || "";
-    const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-qty-select") || row?.getAttribute("data-id") || row?.getAttribute("data-index") || "";
-    const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-tech") || field.getAttribute("data-role") || field.getAttribute("data-recipe-weight") || field.getAttribute("data-product") || field.getAttribute("data-qty-select") || field.getAttribute("data-field-id") || stablePath(field);
+    const direct = identityData(field);
+    const named = field.id ? `id=${field.id}` : field.name ? `name=${field.name}` : "";
+    const base = direct || named || stablePath(field);
+    // Always include an indexed structural path. This prevents two controls with
+    // the same name/data-draft-key in repeated rows from sharing one draft key.
+    const structure = stablePath(field);
     const option = field.type === "radio" || field.type === "checkbox" ? `:${field.value || "checked"}` : "";
-    return `${owner ? `${owner}:` : ""}${rowId ? `${rowId}:` : ""}${base}${option}`;
+    return `${owner ? `${owner}:` : ""}${base}|${structure}${option}`;
   };
   const scope = (form) => `${location.pathname}|${role()}|${userId()}|${formId(form)}`;
   const localKey = (form) => LOCAL_PREFIX + scope(form);
