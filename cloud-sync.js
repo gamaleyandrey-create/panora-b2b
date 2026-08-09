@@ -66,8 +66,19 @@
   }
   async function guardSection(section,path){
     if(forceSections.has(section)||!pending[section]||!revisions[section])return;
-    const rows=await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),remoteAt=rows?.[0]?.updated_at||'';
+    const rows=section==='products'
+      ?await request('products?select=*&order=created_at.asc')
+      :await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),
+      remoteAt=(rows||[]).reduce((latest,row)=>String(row.updated_at||'')>latest?String(row.updated_at):latest,'');
     if(remoteAt&&remoteAt>revisions[section]){
+      // Timestamps can advance after an idempotent write from another device.
+      // If the actual product data is identical, adopt that revision instead
+      // of asking the user to resolve a conflict that does not exist.
+      if(section==='products'&&productsEqualCloud(rows)){
+        revisions.products=remoteAt;accepted.products=remoteAt;
+        localStorage.setItem(revisionKey,JSON.stringify(revisions));saveAccepted();
+        productDirty=false;clearPending('products');delete conflicts.products;saveConflicts();return;
+      }
       if(String(remoteAt)<=String(accepted[section]||'')){
         revisions[section]=remoteAt;localStorage.setItem(revisionKey,JSON.stringify(revisions));
         clearPending(section);delete conflicts[section];saveConflicts();return;
@@ -89,6 +100,13 @@
   };
   const productRow=p=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),image_url:p.image||null,active:p.active!==false,tech_card:p.techCard||{},updated_at:new Date().toISOString()});
   const rowProduct=(row,local)=>({id:row.id,builtIn:['plain','pumpkin'].includes(row.id),active:row.active,weight:Number(row.weight_g),basePrice:Number(row.base_price),image:row.image_url||local?.image||'icon.svg',techCard:row.tech_card||local?.techCard||{},names:{ru:row.name_ru,en:row.name_en,es:row.name_es},descriptions:{ru:row.description_ru||'',en:row.description_en||'',es:row.description_es||''}});
+  const comparableProduct=p=>({id:String(p.id),active:p.active!==false,weight:Number(p.weight),basePrice:Number(p.basePrice),image:p.image||'icon.svg',techCard:p.techCard||{},names:p.names||{},descriptions:p.descriptions||{}});
+  function productsEqualCloud(rows){
+    const local=typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]');
+    const remote=(rows||[]).map(row=>rowProduct(row,local.find(p=>p.id===row.id)));
+    const normalize=list=>list.map(comparableProduct).sort((a,b)=>a.id.localeCompare(b.id));
+    return JSON.stringify(normalize(local))===JSON.stringify(normalize(remote));
+  }
   async function loadProducts(){
     if(productDirty||savingProducts){await flushProducts();return}
     const rows=await request('products?select=*&order=created_at.asc');
