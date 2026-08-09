@@ -49,6 +49,22 @@
     Object.keys(revisions).length?localStorage.setItem(revisionKey,JSON.stringify(revisions)):localStorage.removeItem(revisionKey);
     localStorage.setItem(syncSchemaKey,'323');
   }
+  // v325.5: one-time cleanup of stale production-plan pending/conflict state
+  // left by earlier multi-device builds. A clean startup must treat Supabase as
+  // authoritative; merely opening a second device is not a local plan edit.
+  const planCleanupKey='panora-cloud-plan-cleanup-v3255';
+  if(localStorage.getItem(planCleanupKey)!=='1'){
+    delete pending.plans;
+    delete conflicts.plans;
+    delete accepted.plans;
+    delete revisions.plans;
+    Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey);
+    Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
+    Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
+    Object.keys(revisions).length?localStorage.setItem(revisionKey,JSON.stringify(revisions)):localStorage.removeItem(revisionKey);
+    localStorage.setItem(planCleanupKey,'1');
+  }
+
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
