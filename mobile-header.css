@@ -243,3 +243,88 @@
     padding-right:8px !important;
   }
 }
+
+
+/* Panora v327.2 — partner Cabinet button matches desktop style on mobile */
+@media (max-width:720px){
+  body:not(.admin-page) .topbar{
+    grid-template-columns:minmax(82px,1fr) auto !important;
+    gap:8px !important;
+  }
+
+  body:not(.admin-page) .topbar .top-actions,
+  body:not(.admin-page) .topbar > div:last-child{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:7px !important;
+    min-width:max-content !important;
+    overflow:visible !important;
+  }
+
+  /* Keep the language selector immediately to the left of Cabinet. */
+  body:not(.admin-page) .topbar .top-actions select,
+  body:not(.admin-page) .topbar .top-actions .lang-select,
+  body:not(.admin-page) .topbar .top-actions [data-language]{
+    width:56px !important;
+    min-width:56px !important;
+    max-width:56px !important;
+    flex:0 0 56px !important;
+  }
+
+  /* Use the same visual treatment as the desktop account/cabinet action:
+     bordered rounded button with fully visible text. */
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-width:92px !important;
+    width:auto !important;
+    max-width:none !important;
+    min-height:38px !important;
+    padding:7px 12px !important;
+    border:1px solid currentColor !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    font-size:14px !important;
+    font-weight:600 !important;
+    line-height:1.1 !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    flex:0 0 auto !important;
+  }
+}
+
+@media (max-width:390px){
+  body:not(.admin-page) .topbar{
+    grid-template-columns:minmax(70px,1fr) auto !important;
+    gap:5px !important;
+    padding-left:7px !important;
+    padding-right:7px !important;
+  }
+
+  body:not(.admin-page) .topbar .brand{
+    font-size:17px !important;
+  }
+
+  body:not(.admin-page) .topbar .top-actions select,
+  body:not(.admin-page) .topbar .top-actions .lang-select,
+  body:not(.admin-page) .topbar .top-actions [data-language]{
+    width:50px !important;
+    min-width:50px !important;
+    max-width:50px !important;
+    flex-basis:50px !important;
+  }
+
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button{
+    min-width:84px !important;
+    min-height:36px !important;
+    padding:6px 9px !important;
+    font-size:13px !important;
+  }
+}
