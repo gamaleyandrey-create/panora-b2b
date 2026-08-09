@@ -54,6 +54,9 @@
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
   let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  const techCardLocks=new Map();
+  const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
+  const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
   const audit=(action,details='',level='info')=>window.panoraAudit?.record(action,details,level);
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
@@ -112,6 +115,33 @@
     if(response.status===204)return null;
     const text=await response.text();return text?JSON.parse(text):null;
   };
+  async function acquireTechCardLock(productId){
+    if(!productId)throw new Error('Не удалось определить технологическую карту');
+    if(!ready||!navigator.onLine)throw new Error('Для безопасного редактирования технологической карты требуется подключение к облаку.');
+    const existing=techCardLocks.get(productId);
+    if(existing?.token&&new Date(existing.expiresAt).getTime()>Date.now()+15000)return existing;
+    const token=existing?.token||uuid();
+    try{
+      const rows=await request('rpc/panora_acquire_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_device_id:techCardDeviceId,p_lock_token:token,p_ttl_seconds:240})});
+      const row=rows?.[0];if(!row?.lock_token)throw new Error('Сервер не подтвердил блокировку технологической карты');
+      const lock={token:row.lock_token,expiresAt:row.expires_at,deviceId:row.device_id};techCardLocks.set(productId,lock);return lock;
+    }catch(error){
+      if(/PANORA_TECH_CARD_LOCKED/i.test(String(error?.message||error)))throw new Error('Эта технологическая карта уже редактируется на другом устройстве. Дождитесь сохранения или автоматического освобождения блокировки.');
+      throw error;
+    }
+  }
+  async function renewTechCardLock(productId){
+    const lock=techCardLocks.get(productId);if(!lock?.token)return false;
+    try{const expiresAt=await request('rpc/panora_renew_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_lock_token:lock.token,p_ttl_seconds:240})});lock.expiresAt=expiresAt;return true}
+    catch(error){techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-lost',{detail:{productId}}));throw error}
+  }
+  async function releaseTechCardLock(productId){
+    const lock=techCardLocks.get(productId);techCardLocks.delete(productId);if(!lock?.token||!session?.access_token||!navigator.onLine)return false;
+    try{return await request('rpc/panora_release_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_lock_token:lock.token})})}catch(error){console.warn('Panora tech-card unlock',error);return false}
+  }
+  function hasTechCardLock(productId){const lock=techCardLocks.get(productId);return Boolean(lock?.token&&new Date(lock.expiresAt).getTime()>Date.now())}
+  setInterval(()=>{for(const productId of techCardLocks.keys())renewTechCardLock(productId).catch(()=>{})},60000);
+
   // Ordinary product saves deliberately omit tech_card. A stale device must
   // never overwrite a newer card as a side effect of changing a name/price.
   const productRow=(p,{includeTechCard=false}={})=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),image_url:p.image||null,active:p.active!==false,...(includeTechCard?{tech_card:p.techCard||{}}:{}),updated_at:new Date().toISOString()});
@@ -242,13 +272,16 @@
     status('Сохранение технологической карты…');
     let rows;
     try{
-      rows=await request('rpc/panora_save_tech_card_revision',{method:'POST',body:JSON.stringify({p_product_id:productId,p_tech_card:normalized,p_expected_revision:expectedRevision})});
+      const lock=techCardLocks.get(productId);if(!lock?.token)throw new Error('PANORA_LOCK_REQUIRED');
+      rows=await request('rpc/panora_save_locked_tech_card_revision',{method:'POST',body:JSON.stringify({p_product_id:productId,p_tech_card:normalized,p_expected_revision:expectedRevision,p_lock_token:lock.token})});
     }catch(error){
       if(/PANORA_REVISION_CONFLICT/i.test(String(error?.message||error))){
+        await releaseTechCardLock(productId);
         const latest=await request(`products?id=eq.${encodeURIComponent(productId)}&select=*&limit=1`);
         if(latest?.length)await applyProductRows((await request('products?select=*&order=created_at.asc'))||latest);
-        throw new Error('Карта уже изменена на другом устройстве. Новая облачная версия загружена; проверьте её и повторите правку.');
+        throw new Error('Карта уже изменена на другом устройстве. Блокировка снята, новая облачная версия загружена; проверьте её и начните редактирование заново.');
       }
+      if(/PANORA_LOCK_(REQUIRED|LOST|NOT_OWNER)/i.test(String(error?.message||error))){techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-lost',{detail:{productId}}));throw new Error('Безопасная блокировка технологической карты потеряна. Начните редактирование заново.');}
       throw error;
     }
     const saved=rows?.[0];
@@ -256,6 +289,7 @@
     const verified=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id,tech_card,tech_card_revision,updated_at&limit=1`),confirmed=verified?.[0];
     if(!confirmed||Number(confirmed.tech_card_revision)!==expectedRevision+1||JSON.stringify(canonicalValue(confirmed.tech_card||{}))!==JSON.stringify(canonicalValue(normalized)))throw new Error('Проверка технологической карты после записи не пройдена');
     if(local){local.techCard=confirmed.tech_card;local.techCardRevision=Number(confirmed.tech_card_revision)}
+    techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-released',{detail:{productId}}));
     productDirty=false;clearPending('products');rememberRevision('products',verified);saveProductBaseline(localProducts());status('Технологическая карта сохранена ✓');
     return confirmed.tech_card;
   }
@@ -817,7 +851,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
