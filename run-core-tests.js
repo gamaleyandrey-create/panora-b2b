@@ -13,7 +13,8 @@ const list = [
   'v328-order-workflow.test.js',
   'v331-sync-safety.test.js',
   'v332-notifications.test.js',
-  'v333-audit-trail.test.js'
+  'v333-audit-trail.test.js',
+  'v334-stable-pwa.test.js'
 ];
 
 let failures = 0;
