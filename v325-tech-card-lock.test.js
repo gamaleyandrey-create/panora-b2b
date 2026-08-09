@@ -1,0 +1,16 @@
+const fs=require('fs');
+const assert=require('assert');
+const cloud=fs.readFileSync('app/cloud-sync.js','utf8');
+const ui=fs.readFileSync('app/recipe-percent.js','utf8');
+const sql=fs.readFileSync('sql/supabase-v325-tech-card-locks.sql','utf8');
+assert(cloud.includes('panora_acquire_tech_card_lock'));
+assert(cloud.includes('panora_renew_tech_card_lock'));
+assert(cloud.includes('panora_release_tech_card_lock'));
+assert(cloud.includes('panora_save_locked_tech_card_revision'));
+assert(!cloud.includes("request('rpc/panora_save_tech_card_revision'"));
+assert(ui.includes('beginProtectedEdit'));
+assert(ui.includes('hasTechCardLock'));
+assert(sql.includes('PANORA_TECH_CARD_LOCKED'));
+assert(sql.includes('PANORA_REVISION_CONFLICT'));
+assert(sql.includes('revoke all on function public.panora_save_tech_card_revision'));
+console.log('v325 tech-card exclusive locking: OK');
