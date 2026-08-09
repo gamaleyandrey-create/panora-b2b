@@ -1,7 +1,7 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
-  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v320',backupKey='panora-cloud-backups-v286';
+  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v321',backupKey='panora-cloud-backups-v286';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -70,21 +70,12 @@
       ?await request('products?select=*&order=created_at.asc')
       :await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),
       remoteAt=(rows||[]).reduce((latest,row)=>String(row.updated_at||'')>latest?String(row.updated_at):latest,'');
+    if(section==='products'){
+      const decision=await reconcileProducts(rows);
+      if(decision==='cloud'||decision==='equal'||decision==='local')return;
+      const error=new Error('Товары одновременно изменены на этом и другом устройстве');error.panoraConflict=true;throw error
+    }
     if(remoteAt&&remoteAt>revisions[section]){
-      if(section==='products'){
-        const decision=await reconcileProducts(rows);
-        if(decision==='cloud'||decision==='equal')return;
-        if(decision==='local')return;
-        const error=new Error('Товары одновременно изменены на этом и другом устройстве');error.panoraConflict=true;throw error
-      }
-      // Timestamps can advance after an idempotent write from another device.
-      // If the actual product data is identical, adopt that revision instead
-      // of asking the user to resolve a conflict that does not exist.
-      if(section==='products'&&productsEqualCloud(rows)){
-        revisions.products=remoteAt;accepted.products=remoteAt;
-        localStorage.setItem(revisionKey,JSON.stringify(revisions));saveAccepted();
-        productDirty=false;clearPending('products');delete conflicts.products;saveConflicts();return;
-      }
       if(String(remoteAt)<=String(accepted[section]||'')){
         revisions[section]=remoteAt;localStorage.setItem(revisionKey,JSON.stringify(revisions));
         clearPending(section);delete conflicts[section];saveConflicts();return;
@@ -106,7 +97,12 @@
   };
   const productRow=p=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),image_url:p.image||null,active:p.active!==false,tech_card:p.techCard||{},updated_at:new Date().toISOString()});
   const rowProduct=(row,local)=>({id:row.id,builtIn:['plain','pumpkin'].includes(row.id),active:row.active,weight:Number(row.weight_g),basePrice:Number(row.base_price),image:row.image_url||local?.image||'icon.svg',techCard:row.tech_card||local?.techCard||{},names:{ru:row.name_ru,en:row.name_en,es:row.name_es},descriptions:{ru:row.description_ru||'',en:row.description_en||'',es:row.description_es||''}});
-  const comparableProduct=p=>({id:String(p.id),active:p.active!==false,weight:Number(p.weight),basePrice:Number(p.basePrice),image:p.image||'icon.svg',techCard:p.techCard||{},names:p.names||{},descriptions:p.descriptions||{}});
+  const canonicalValue=value=>{
+    if(Array.isArray(value))return value.map(canonicalValue);
+    if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{result[key]=canonicalValue(value[key]);return result},{});
+    return value;
+  };
+  const comparableProduct=p=>canonicalValue({id:String(p.id),active:p.active!==false,weight:Number(p.weight),basePrice:Number(p.basePrice),image:p.image||'icon.svg',techCard:p.techCard||{},names:p.names||{},descriptions:p.descriptions||{}});
   const normalizedProducts=list=>(list||[]).map(comparableProduct).sort((a,b)=>a.id.localeCompare(b.id));
   const productSignature=list=>JSON.stringify(normalizedProducts(list));
   const localProducts=()=>typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]');
@@ -159,9 +155,17 @@
   }
   async function refreshProductsIfChanged(){
     if(!ready||savingProducts||document.activeElement?.closest?.('#recipeList')||window.panoraRecipeEditing)return false;
-    const rows=await request('products?select=updated_at&order=updated_at.desc&limit=1'),remoteAt=rows?.[0]?.updated_at||'',localAt=revisions.products||'';
-    if(remoteAt&&remoteAt>localAt){const full=await request('products?select=*&order=created_at.asc'),decision=await reconcileProducts(full);if(decision==='local')await flushProducts();if(decision!=='conflict')window.dispatchEvent(new CustomEvent('panora:products-changed'));return decision!=='conflict'}
-    return false
+    // Device clocks are not a reliable revision source. Compare the complete,
+    // canonical product payload so a tech-card change is detected even when
+    // another row has a newer timestamp from a clock that is ahead.
+    const rows=await request('products?select=*&order=created_at.asc');
+    if(!rows?.length)return false;
+    const remoteSig=productSignature(remoteProducts(rows)),localSig=productSignature(localProducts());
+    if(remoteSig===localSig){rememberRevision('products',rows);saveProductBaseline(remoteProducts(rows));productDirty=false;clearPending('products');delete conflicts.products;saveConflicts();return false}
+    const decision=await reconcileProducts(rows);
+    if(decision==='local')await flushProducts();
+    if(decision!=='conflict')window.dispatchEvent(new CustomEvent('panora:products-changed'));
+    return decision!=='conflict'
   }
   async function saveProducts(){
     if(!ready||typeof productRegistry==='undefined')return false;
