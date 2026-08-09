@@ -65,6 +65,19 @@
     localStorage.setItem(planCleanupKey,'1');
   }
 
+  // v325.6: clear legacy timestamp-based plan state once. The new plan
+  // synchronizer rebuilds its baseline from actual cloud/local content.
+  const planContentSyncKey='panora-cloud-plan-content-sync-v3256';
+  if(localStorage.getItem(planContentSyncKey)!=='1'){
+    delete pending.plans;delete conflicts.plans;delete accepted.plans;delete revisions.plans;delete baselines.plans;
+    Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey);
+    Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
+    Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
+    Object.keys(revisions).length?localStorage.setItem(revisionKey,JSON.stringify(revisions)):localStorage.removeItem(revisionKey);
+    localStorage.setItem(baselineKey,JSON.stringify(baselines));
+    localStorage.setItem(planContentSyncKey,'1');
+  }
+
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
@@ -648,39 +661,79 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
+  const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);localStorage.setItem(baselineKey,JSON.stringify(baselines))};
+  async function applyCloudPlans(remote){
+    applyingCloud++;
+    try{
+      plans=Array.isArray(remote)?remote:[];
+      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+      savePlanBaseline(plans);
+      clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+      if(typeof renderAll==='function')renderAll();
+    }finally{applyingCloud--}
+  }
   async function loadPlans(){
-    // A cloud read is not a user edit. Rendering a freshly received plan can
-    // call store('panora-production-plans', ...) from older UI helpers, so keep
-    // applyingCloud raised for the whole apply/render cycle. queuePlans() also
-    // checks this guard and therefore cannot create a false pending.plans flag.
+    // v325.6: plan conflicts are determined by CONTENT, not timestamps.
+    // Merely starting a second device can never become a local edit.
     const remote=await getRemotePlans();
     const local=JSON.parse(localStorage.getItem('panora-production-plans')||'[]');
-    if(planSignature(remote)===planSignature(local)){
-      applyingCloud++;
-      try{
-        plans=remote.length?remote:local;
-        localStorage.setItem('panora-production-plans',JSON.stringify(plans));
-        clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
-        if(typeof renderAll==='function')renderAll();
-      }finally{applyingCloud--}
+    const remoteSig=planSignature(remote),localSig=planSignature(local),baseSig=String(baselines.plans||'');
+
+    if(remoteSig===localSig){
+      plans=remote.length?remote:local;
+      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+      savePlanBaseline(plans);
+      clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
       return;
     }
-    if(pending.plans){await savePlansNow();return}
-    if(remote.length){
-      applyingCloud++;
-      try{
-        plans=remote;
-        localStorage.setItem('panora-production-plans',JSON.stringify(plans));
-        clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
-        if(typeof renderAll==='function')renderAll();
-      }finally{applyingCloud--}
+
+    // First clean start on this device: Supabase is authoritative.
+    if(!baseSig){
+      await applyCloudPlans(remote);
+      return;
     }
-    else if(local.length){plans=local;ready=true;await savePlansNow()}
+
+    const localChanged=Boolean(pending.plans)&&localSig!==baseSig;
+    const remoteChanged=remoteSig!==baseSig;
+
+    if(!localChanged){
+      await applyCloudPlans(remote);
+      return;
+    }
+
+    if(localChanged&&!remoteChanged){
+      plans=local;
+      await savePlansNow();
+      return;
+    }
+
+    if(localChanged&&remoteChanged){
+      conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
+      saveConflicts();showConflicts();
+      return;
+    }
+
+    await applyCloudPlans(remote);
   }
   async function savePlansNow(){
     if(!ready||typeof plans==='undefined')return;
     status('Синхронизация…');
-    await guardSection('plans','bake_days');
+
+    // Content-based optimistic concurrency for production plans.
+    // This prevents a stale timestamp/pending flag on another device from
+    // creating a false conflict, while still protecting genuine concurrent edits.
+    const remoteBefore=await getRemotePlans();
+    const localSig=planSignature(plans),remoteSig=planSignature(remoteBefore),baseSig=String(baselines.plans||'');
+    const localChanged=!baseSig||localSig!==baseSig;
+    const remoteChanged=Boolean(baseSig)&&remoteSig!==baseSig;
+    if(localChanged&&remoteChanged&&localSig!==remoteSig&&!forceSections.has('plans')){
+      conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
+      saveConflicts();showConflicts();
+      const error=new Error('План производства одновременно изменён на другом устройстве');
+      error.panoraConflict=true;
+      throw error;
+    }
+
     const byDate=new Map();
     plans.forEach(p=>{if(!byDate.has(p.bakeDate))byDate.set(p.bakeDate,[]);byDate.get(p.bakeDate).push(p)});
     const existing=await request('bake_days?select=id,bake_date');
@@ -693,11 +746,11 @@ window.panoraRecalculateBalances=recalculateBalances;
       await request('bake_items?on_conflict=bake_day_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items.map(p=>({bake_day_id:day.id,product_id:p.product,planned_quantity:Number(p.planned||0)})))});
     }
     revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');delete conflicts.plans;saveConflicts();
-    clearPending('plans');
+    clearPending('plans');savePlanBaseline(plans);
     status('Облако ✓');
   }
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);if(error?.panoraConflict){showConflicts();return}audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
-  function queuePlans(){if(applyingCloud)return;markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
+  function queuePlans(){if(applyingCloud)return;const current=typeof plans!=='undefined'?plans:JSON.parse(localStorage.getItem('panora-production-plans')||'[]');const signature=planSignature(current);if(signature===String(baselines.plans||'')){clearPending('plans');delete conflicts.plans;saveConflicts();return}markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
   function queueProducts(){if(applyingCloud)return;const signature=productSignature(localProducts());if(signature===String(baselines.products||'')){productDirty=false;clearPending('products');return}productDirty=true;markPending('products');clearTimeout(productTimer);productTimer=setTimeout(()=>flushProducts().catch(error=>fail('товары',error)),350)}
   function queueRecipes(){recipeDirty=true;recipeRevision++;markPending('recipes');clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){markPending('restaurants');clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('партнёры',error)),350)}
