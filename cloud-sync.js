@@ -633,21 +633,32 @@ window.panoraRecalculateBalances=recalculateBalances;
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   async function loadPlans(){
-    // A previous page may have left a durable pending flag even though the
-    // exact same production plan already reached Supabase. Always compare the
-    // actual cloud snapshot first; otherwise every reload can reopen a false
-    // "Есть изменения: план производства" conflict forever.
+    // A cloud read is not a user edit. Rendering a freshly received plan can
+    // call store('panora-production-plans', ...) from older UI helpers, so keep
+    // applyingCloud raised for the whole apply/render cycle. queuePlans() also
+    // checks this guard and therefore cannot create a false pending.plans flag.
     const remote=await getRemotePlans();
     const local=JSON.parse(localStorage.getItem('panora-production-plans')||'[]');
     if(planSignature(remote)===planSignature(local)){
-      plans=remote.length?remote:local;
-      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
-      clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
-      if(typeof renderAll==='function')renderAll();
+      applyingCloud++;
+      try{
+        plans=remote.length?remote:local;
+        localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+        clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+        if(typeof renderAll==='function')renderAll();
+      }finally{applyingCloud--}
       return;
     }
     if(pending.plans){await savePlansNow();return}
-    if(remote.length){plans=remote;localStorage.setItem('panora-production-plans',JSON.stringify(plans));delete conflicts.plans;saveConflicts();if(typeof renderAll==='function')renderAll()}
+    if(remote.length){
+      applyingCloud++;
+      try{
+        plans=remote;
+        localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+        clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+        if(typeof renderAll==='function')renderAll();
+      }finally{applyingCloud--}
+    }
     else if(local.length){plans=local;ready=true;await savePlansNow()}
   }
   async function savePlansNow(){
@@ -670,7 +681,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Облако ✓');
   }
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);if(error?.panoraConflict){showConflicts();return}audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
-  function queuePlans(){markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
+  function queuePlans(){if(applyingCloud)return;markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>fail('план',error)),350)}
   function queueProducts(){if(applyingCloud)return;const signature=productSignature(localProducts());if(signature===String(baselines.products||'')){productDirty=false;clearPending('products');return}productDirty=true;markPending('products');clearTimeout(productTimer);productTimer=setTimeout(()=>flushProducts().catch(error=>fail('товары',error)),350)}
   function queueRecipes(){recipeDirty=true;recipeRevision++;markPending('recipes');clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){markPending('restaurants');clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('партнёры',error)),350)}
