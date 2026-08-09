@@ -154,6 +154,17 @@
       // not recreate or restore the already confirmed local draft.
     }
   };
+  const acceptCommitted = async (form) => {
+    const key = scope(form), draft = readDraft(form);
+    clearTimeout(timers.get(key)); timers.delete(key);
+    if (draft?.fields && Object.keys(draft.fields).length) {
+      localStorage.setItem(`${localKey(form)}:backup:${Date.now()}`, JSON.stringify(draft));
+    }
+    if (userId() !== "anonymous" && navigator.onLine) {
+      await api("rpc/panora_clear_form_draft", { method: "POST", body: JSON.stringify({ p_form_key: key }) });
+    }
+    discard(form);
+  };
   const showConflictHelp = (form, serverVersion) => {
     if (document.querySelector('[data-panora-conflict]')) return;
     const box = document.createElement('section');
@@ -211,6 +222,12 @@
   window.panoraFormDrafts = {
     restore: restoreAll,
     clear(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) discard(form); },
+    async acceptCommittedWithin(rootOrSelector) {
+      const root = typeof rootOrSelector === "string" ? document.querySelector(rootOrSelector) : rootOrSelector;
+      if (!root) return;
+      const forms = [...new Set([...root.querySelectorAll(controls)].map(formOf).filter(form => root.contains(form)))];
+      await Promise.all(forms.map(acceptCommitted));
+    },
     async confirmSaved(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) { await discardConfirmed(form); announce("Сохранено", "synced"); } },
     flush: () => Promise.all(allContainers().map(pushRemote))
   };
