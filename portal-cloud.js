@@ -54,17 +54,68 @@
     if(!response.ok){let message=text;try{const body=JSON.parse(text);message=body.message||body.msg||body.error_description||body.error||text}catch{}const error=new Error(message||`HTTP ${response.status}`);error.status=response.status;throw error}
     return text?JSON.parse(text):null;
   }
+  const isInvalidRefreshToken=error=>/invalid refresh token|refresh token not found|refresh token not found|invalid_refresh_token|refresh_token_not_found/i.test(String(error?.message||error||''));
+  function expiredSessionError(cause){
+    const error=new Error(labels('Сессия истекла. Войдите снова.','Session expired. Sign in again.','La sesión ha caducado. Inicia sesión de nuevo.'));
+    error.code='PANORA_SESSION_EXPIRED';error.cause=cause||null;return error;
+  }
+  function clearBrokenSession(cause){
+    saveSession(null);
+    account=null;
+    localStorage.removeItem('panora-account-id');
+    state('error',labels('Сессия истекла. Войдите снова.','Session expired. Sign in again.','La sesión ha caducado. Inicia sesión de nuevo.'));
+    try{
+      renderAccountModal();
+      closePanels();
+      setTimeout(()=>openPanel(document.querySelector('#profileModal')),80);
+    }catch{}
+    window.dispatchEvent(new CustomEvent('panora:session-expired',{detail:{reason:String(cause?.message||cause||'')}}));
+  }
   async function refreshSession(){
     if(refreshPromise)return refreshPromise;
-    if(!session?.refresh_token)throw new Error(labels('Войдите снова','Sign in again','Inicia sesión de nuevo'));
-    refreshPromise=fetchJson(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(next=>{saveSession(next);return next}).finally(()=>refreshPromise=null);
+    if(!session?.refresh_token){
+      const error=expiredSessionError();
+      clearBrokenSession(error);
+      throw error;
+    }
+    refreshPromise=fetchJson(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{
+      method:'POST',
+      headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:session.refresh_token})
+    }).then(next=>{
+      if(!next?.access_token||!next?.refresh_token)throw expiredSessionError();
+      saveSession(next);return next;
+    }).catch(error=>{
+      if(isInvalidRefreshToken(error)||error?.status===400||error?.status===401){
+        const friendly=expiredSessionError(error);
+        clearBrokenSession(error);
+        throw friendly;
+      }
+      throw error;
+    }).finally(()=>refreshPromise=null);
     return refreshPromise;
   }
-  async function ensureSession(){if(!session?.access_token)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession()}
+  async function ensureSession(){
+    if(!session?.access_token){
+      const error=expiredSessionError();
+      clearBrokenSession(error);
+      throw error;
+    }
+    if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
+  }
   async function api(path,options={},retry=true){
     await ensureSession();
     try{return await fetchJson(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}})}
-    catch(error){if(error.status===401&&retry){await refreshSession();return api(path,options,false)}throw error}
+    catch(error){
+      if(error.status===401&&retry){
+        try{await refreshSession();return api(path,options,false)}
+        catch(refreshError){throw refreshError}
+      }
+      if(error.status===401){
+        const friendly=expiredSessionError(error);clearBrokenSession(error);throw friendly;
+      }
+      throw error;
+    }
   }
   function state(type,text){lastState={type,text};window.panoraRestaurantSyncState=lastState;window.dispatchEvent(new CustomEvent('panora:restaurant-sync',{detail:lastState}));decorateState()}
   function decorateState(){
@@ -226,11 +277,39 @@
          delayed profile RPC is still being reconciled with the cloud. */
       saveCheckoutProfile();
       cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);loadAll(true).catch(error=>console.warn('Panora order refresh',error));
-    }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
+    }catch(error){
+      if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error)){
+        clearBrokenSession(error);
+        showToast(labels('Сессия истекла. Войдите снова, корзина сохранена.','Session expired. Sign in again; your cart is saved.','La sesión ha caducado. Inicia sesión de nuevo; el carrito está guardado.'));
+      }else{
+        state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);
+        showToast(lastState.text);
+      }
+    }finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
   session=read(SESSION_KEY);
-  (async()=>{try{if(session?.access_token&&!session.user){session.user=await fetchJson(`${cfg.url}/auth/v1/user`,{headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}});saveSession(session)}if(session?.user){await loadAll(true);setTimeout(()=>openPanel(document.querySelector('#profileModal')),120)}else renderAccountModal()}catch(error){state('error',error.message);renderAccountModal()}})();
+  (async()=>{try{
+    if(session?.access_token&&!session.user){
+      try{
+        session.user=await fetchJson(`${cfg.url}/auth/v1/user`,{headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}});
+        saveSession(session);
+      }catch(error){
+        if(error.status===401){
+          try{await refreshSession()}catch(refreshError){if(refreshError?.code==='PANORA_SESSION_EXPIRED')return;throw refreshError}
+          if(session?.access_token){
+            session.user=await fetchJson(`${cfg.url}/auth/v1/user`,{headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}});
+            saveSession(session);
+          }
+        }else throw error;
+      }
+    }
+    if(session?.user){await loadAll(true);setTimeout(()=>openPanel(document.querySelector('#profileModal')),120)}
+    else renderAccountModal();
+  }catch(error){
+    if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
+    else{state('error',error.message);renderAccountModal()}
+  }})();
   setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
   window.panoraPortalCloud={load:()=>loadAll(true)};
 })();

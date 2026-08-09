@@ -150,7 +150,37 @@
   <script src="app.js?v=312"></script>
 <script src="portal.js?v=315"></script>
   <script src="supabase-config.js?v=312"></script>
-  <script src="portal-cloud.js?v=317"></script>
+  
+<script>
+(async function(){
+  const KEY='panora-client-bootstrap-v3262';
+  if(localStorage.getItem(KEY)==='1') return;
+
+  // Preserve cart/order drafts. Remove only the broken partner cloud auth session.
+  localStorage.removeItem('panora-restaurant-cloud-session');
+
+  // Remove stale service workers and their caches so old portal-cloud.js?v=3262 cannot survive.
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  try{
+    const keys=await caches.keys();
+    await Promise.all(keys.map(k=>caches.delete(k)));
+  }catch(e){}
+
+  localStorage.setItem(KEY,'1');
+
+  // Reload once with a unique URL so GitHub Pages/browser caches are bypassed.
+  const u=new URL(location.href);
+  u.searchParams.set('panora_build','3262');
+  location.replace(u.toString());
+})();
+</script>
+
+<script src="portal-cloud.js?v=3262"></script>
   <script src="accounting-invoice.js?v=312"></script>
   <script src="spanish-documents.js?v=312"></script>
   <script src="document-library.js?v=312"></script>
