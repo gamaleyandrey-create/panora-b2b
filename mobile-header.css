@@ -188,3 +188,58 @@
     padding-right: 6px !important;
   }
 }
+
+
+/* Panora v327.1 — partner cabinet label visibility */
+@media (max-width:720px){
+  body:not(.admin-page) .topbar{
+    grid-template-columns:minmax(92px,1fr) auto !important;
+  }
+
+  body:not(.admin-page) .topbar .top-actions,
+  body:not(.admin-page) .topbar > div:last-child{
+    display:flex !important;
+    align-items:center !important;
+    gap:6px !important;
+    flex-wrap:nowrap !important;
+    min-width:max-content !important;
+    overflow:visible !important;
+  }
+
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-width:84px !important;
+    width:auto !important;
+    max-width:none !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    font-size:14px !important;
+    padding-left:10px !important;
+    padding-right:10px !important;
+  }
+}
+
+@media (max-width:390px){
+  body:not(.admin-page) .topbar{
+    grid-template-columns:minmax(78px,1fr) auto !important;
+    gap:5px !important;
+  }
+
+  body:not(.admin-page) .topbar .brand{
+    font-size:17px !important;
+  }
+
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button{
+    min-width:76px !important;
+    font-size:13px !important;
+    padding-left:8px !important;
+    padding-right:8px !important;
+  }
+}
