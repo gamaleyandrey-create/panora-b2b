@@ -221,7 +221,11 @@
       const saved=await verifyCreatedOrder(id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
       localStorage.removeItem(orderAttemptKey(account.id));
-      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);loadAll(true).catch(error=>console.warn('Panora order refresh',error));
+      /* Contact details are a reusable checkout profile, not order draft data.
+         Keep them after success so the next order is prefilled even while a
+         delayed profile RPC is still being reconciled with the cloud. */
+      saveCheckoutProfile();
+      cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);loadAll(true).catch(error=>console.warn('Panora order refresh',error));
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
