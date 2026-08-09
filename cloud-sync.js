@@ -1,11 +1,11 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
-  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',backupKey='panora-cloud-backups-v286';
+  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',backupKey='panora-cloud-backups-v286';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
-  let revisions=readObject(revisionKey),conflicts=readObject(conflictKey);
+  let revisions=readObject(revisionKey),conflicts=readObject(conflictKey),accepted=readObject(acceptedKey);
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'};
@@ -54,6 +54,7 @@
   const rememberRevision=(section,rows=[])=>{const latest=(rows||[]).reduce((value,row)=>String(row.updated_at||'')>value?String(row.updated_at):value,'');if(latest){revisions[section]=latest;localStorage.setItem(revisionKey,JSON.stringify(revisions))}return latest};
   const conflictCount=()=>Object.keys(conflicts).length;
   const saveConflicts=()=>Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
+  const saveAccepted=()=>Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
   const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения на другом устройстве: ${count}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
@@ -66,7 +67,13 @@
   async function guardSection(section,path){
     if(forceSections.has(section)||!pending[section]||!revisions[section])return;
     const rows=await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),remoteAt=rows?.[0]?.updated_at||'';
-    if(remoteAt&&remoteAt>revisions[section]){conflicts[section]={remoteAt,localAt:new Date().toISOString()};saveConflicts();audit('sync.conflict',`${section}: облако ${remoteAt}, устройство ${revisions[section]}`,'warning');showConflicts();const error=new Error(`На другом устройстве изменён раздел «${section}»`);error.panoraConflict=true;throw error}
+    if(remoteAt&&remoteAt>revisions[section]){
+      if(String(remoteAt)<=String(accepted[section]||'')){
+        revisions[section]=remoteAt;localStorage.setItem(revisionKey,JSON.stringify(revisions));
+        clearPending(section);delete conflicts[section];saveConflicts();return;
+      }
+      conflicts[section]={remoteAt,localAt:new Date().toISOString()};saveConflicts();audit('sync.conflict',`${section}: облако ${remoteAt}, устройство ${revisions[section]}`,'warning');showConflicts();const error=new Error(`На другом устройстве изменён раздел «${section}»`);error.panoraConflict=true;throw error
+    }
   }
   const refreshSession=async()=>{
     if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
@@ -560,13 +567,21 @@ window.panoraRecalculateBalances=recalculateBalances;
     const previous=pending[section];delete pending[section];
     if(section==='products')productDirty=false;
     if(section==='recipes')recipeDirty=false;
+    if(acceptedRemoteAt){
+      accepted[section]=String(acceptedRemoteAt);revisions[section]=String(acceptedRemoteAt);
+      saveAccepted();localStorage.setItem(revisionKey,JSON.stringify(revisions));
+      clearPending(section);delete conflicts[section];saveConflicts();
+    }
     try{
       if(section==='products')await loadProducts();else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();
       if(acceptedRemoteAt&&String(acceptedRemoteAt)>String(revisions[section]||''))revisions[section]=String(acceptedRemoteAt);
       localStorage.setItem(revisionKey,JSON.stringify(revisions));
       forceSections.delete(section);clearPending(section);delete conflicts[section];saveConflicts();
     }
-    catch(error){if(previous)pending[section]=previous;if(section==='products')productDirty=Boolean(previous);if(section==='recipes')recipeDirty=Boolean(previous);throw error}
+    catch(error){
+      if(!acceptedRemoteAt){if(previous)pending[section]=previous;if(section==='products')productDirty=Boolean(previous);if(section==='recipes')recipeDirty=Boolean(previous)}
+      throw error
+    }
   }
   async function resolveConflicts(){
     const sections=Object.keys(conflicts);if(!sections.length)return retrySync();

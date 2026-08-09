@@ -1,4 +1,10 @@
 .admin-menu-toggle{display:none}
+@media(min-width:721px){
+ .admin-topbar>div{display:grid!important;grid-template-columns:84px minmax(320px,520px) 112px!important;align-items:center!important;gap:14px!important;width:min(100%,744px)!important}
+ .admin-topbar #adminLanguage{grid-column:1;width:84px!important;min-width:84px!important}
+ .admin-topbar #saveState{grid-column:2;width:100%!important;min-width:0!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ .admin-topbar .admin-logout{grid-column:3;width:112px!important;min-width:112px!important;justify-content:center!important}
+}
 @media(max-width:720px){
  body.admin-menu-open{overflow:hidden!important}
  .admin-topbar{position:sticky!important;top:0!important;z-index:70!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;height:auto!important;min-height:64px!important;padding:8px 10px!important}
