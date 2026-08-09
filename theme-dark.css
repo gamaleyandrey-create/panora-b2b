@@ -83,3 +83,211 @@ html[data-theme="dark"] small {
   font-size:16px;
   flex:0 0 34px;
 }
+
+
+/* v329.2 — complete dark surface coverage */
+html[data-theme="dark"] {
+  --dark-bg: #121713;
+  --dark-surface: #1b221d;
+  --dark-surface-soft: #232c25;
+  --dark-surface-raised: #29332b;
+  --dark-border: #3b473e;
+  --dark-text: #edf2ee;
+  --dark-muted: #aab5ad;
+  --dark-input: #151b17;
+  --dark-overlay: rgba(0,0,0,.66);
+}
+
+/* Page regions and generic application surfaces */
+html[data-theme="dark"] body,
+html[data-theme="dark"] main,
+html[data-theme="dark"] section,
+html[data-theme="dark"] .page,
+html[data-theme="dark"] .content,
+html[data-theme="dark"] .admin-main,
+html[data-theme="dark"] .workspace,
+html[data-theme="dark"] .view,
+html[data-theme="dark"] .view-panel,
+html[data-theme="dark"] .content-panel {
+  background-color: var(--dark-bg) !important;
+  color: var(--dark-text) !important;
+}
+
+/* Raised blocks */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .box,
+html[data-theme="dark"] .tile,
+html[data-theme="dark"] .widget,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .product,
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .order,
+html[data-theme="dark"] .order-card,
+html[data-theme="dark"] .delivery-card,
+html[data-theme="dark"] .production-card,
+html[data-theme="dark"] .recipe-card,
+html[data-theme="dark"] .tech-card,
+html[data-theme="dark"] .account-section,
+html[data-theme="dark"] .cart-item,
+html[data-theme="dark"] .list-item,
+html[data-theme="dark"] .row-card {
+  background-color: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+/* Dialogs / menus / overlays */
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .dialog,
+html[data-theme="dark"] .drawer,
+html[data-theme="dark"] .sheet,
+html[data-theme="dark"] .popover,
+html[data-theme="dark"] .dropdown,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .menu,
+html[data-theme="dark"] .toast {
+  background-color: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] .modal-backdrop,
+html[data-theme="dark"] .overlay {
+  background-color: var(--dark-overlay) !important;
+}
+
+/* Tables: remove white table bodies and headers */
+html[data-theme="dark"] table,
+html[data-theme="dark"] tbody,
+html[data-theme="dark"] tr,
+html[data-theme="dark"] td {
+  background-color: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] thead,
+html[data-theme="dark"] th {
+  background-color: var(--dark-surface-soft) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] tr:nth-child(even) td {
+  background-color: #1e2720 !important;
+}
+
+/* Every common form surface */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .input,
+html[data-theme="dark"] .select,
+html[data-theme="dark"] .textarea,
+html[data-theme="dark"] [contenteditable="true"] {
+  background-color: var(--dark-input) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+  caret-color: var(--dark-text) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #7f8c83 !important;
+}
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] select:disabled,
+html[data-theme="dark"] textarea:disabled {
+  background-color: #202721 !important;
+  color: #818d84 !important;
+}
+
+/* Buttons which use white/light backgrounds in the base theme */
+html[data-theme="dark"] button:not(.primary):not(.danger),
+html[data-theme="dark"] .btn:not(.primary):not(.danger),
+html[data-theme="dark"] .button:not(.primary):not(.danger),
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .account-entry {
+  background-color: var(--dark-surface-soft) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+html[data-theme="dark"] button:hover,
+html[data-theme="dark"] .btn:hover,
+html[data-theme="dark"] .button:hover {
+  filter: brightness(1.08);
+}
+
+/* Pills, badges, chips and tabs */
+html[data-theme="dark"] .badge,
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .pill,
+html[data-theme="dark"] .tab,
+html[data-theme="dark"] .tag,
+html[data-theme="dark"] .status {
+  background-color: var(--dark-surface-soft) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+/* Navigation and mobile bottom bars */
+html[data-theme="dark"] nav,
+html[data-theme="dark"] .nav,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .admin-nav,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .mobile-tabs,
+html[data-theme="dark"] .mobile-admin-tabs,
+html[data-theme="dark"] .admin-mobile-tabs {
+  background-color: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+/* Text that base CSS paints dark */
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] label,
+html[data-theme="dark"] p,
+html[data-theme="dark"] strong,
+html[data-theme="dark"] .title,
+html[data-theme="dark"] .name,
+html[data-theme="dark"] .value {
+  color: var(--dark-text);
+}
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .hint,
+html[data-theme="dark"] .subtitle,
+html[data-theme="dark"] .meta,
+html[data-theme="dark"] .description,
+html[data-theme="dark"] small {
+  color: var(--dark-muted) !important;
+}
+
+/* Catch inline white/light surfaces left by legacy markup */
+html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background-color: white"],
+html[data-theme="dark"] [style*="background-color:white"],
+html[data-theme="dark"] [style*="background-color: #fff"],
+html[data-theme="dark"] [style*="background-color:#fff"] {
+  background-color: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+}
+
+/* Native browser widgets */
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] input[type="number"] {
+  color-scheme: dark;
+}
