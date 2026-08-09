@@ -35,6 +35,7 @@
 
 <link rel="stylesheet" href="mobile-header.css?v=3273">
 <link rel="stylesheet" href="light-pro.css?v=3300">
+<link rel="stylesheet" href="connection-status.css?v=3310">
 </head>
 <body>
   <div class="app-shell">
@@ -164,7 +165,7 @@
   // Preserve cart/order drafts. Remove only the broken partner cloud auth session.
   localStorage.removeItem('panora-restaurant-cloud-session');
 
-  // Remove stale service workers and their caches so old portal-cloud.js?v=3280 cannot survive.
+  // Remove stale service workers and their caches so old portal-cloud.js?v=3310 cannot survive.
   try{
     if('serviceWorker' in navigator){
       const regs=await navigator.serviceWorker.getRegistrations();
@@ -185,7 +186,7 @@
 })();
 </script>
 
-<script src="portal-cloud.js?v=3280"></script>
+<script src="portal-cloud.js?v=3310"></script>
   <script src="accounting-invoice.js?v=312"></script>
   <script src="spanish-documents.js?v=312"></script>
   <script src="document-library.js?v=312"></script>
@@ -195,5 +196,7 @@
   <script src="restaurant-workspace.js?v=312"></script>
 <script src="checkout-flow-fix.js?v=315"></script>
 <script src="input-stability.js?v=318"></script>
+<script src="recovery-guard.js?v=3310"></script>
+<script src="connection-status.js?v=3310"></script>
 </body>
 </html>

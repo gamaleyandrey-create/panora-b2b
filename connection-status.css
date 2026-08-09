@@ -1,0 +1,16 @@
+
+.panora-connection-state{
+  position:fixed;z-index:1100;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:7px;
+  min-height:34px;max-width:min(330px,calc(100vw - 28px));padding:7px 11px;border:1px solid #d6ded7;
+  border-radius:999px;background:rgba(255,255,255,.96);color:#405047;box-shadow:0 5px 18px rgba(31,50,37,.10);
+  font:600 12px/1.15 system-ui,-apple-system,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer
+}
+.panora-connection-state[data-state="synced"]{color:#487155;background:rgba(248,252,248,.96);border-color:#d7e5da}
+.panora-connection-state[data-state="syncing"]{color:#356d91;background:#f2f8fc;border-color:#cfe2ef}
+.panora-connection-state[data-state="offline"],
+.panora-connection-state[data-state="local"],
+.panora-connection-state[data-state="pending"]{color:#8c641b;background:#fff9ec;border-color:#ead8ad}
+.panora-connection-state[data-state="error"]{color:#a5443c;background:#fff3f1;border-color:#edc9c4}
+@media(max-width:720px){
+  .panora-connection-state{right:10px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:calc(100vw - 20px);min-height:32px;padding:6px 10px;font-size:11px}
+}
