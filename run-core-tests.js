@@ -1,0 +1,22 @@
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
+
+const list = [
+  'automatic-cloud-sync.test.js',
+  'canonical-two-device-sync.test.js',
+  'cloud-conflict-acceptance.test.js',
+  'cloud-tech-card-authority.test.js',
+  'server-revision-sync.test.js',
+  'two-device-sync-model.test.js',
+  'v323-clean-migration.test.js',
+  'v325-tech-card-lock.test.js',
+  'v328-order-workflow.test.js'
+];
+
+let failures = 0;
+for (const file of list) {
+  const r = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit' });
+  if (r.status !== 0) failures++;
+}
+if (failures) process.exit(1);
+console.log(`core regression: ${list.length}/${list.length} passed`);

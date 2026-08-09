@@ -30,8 +30,7 @@ const data = migrate({
 
 assert.equal(JSON.parse(data.get(pendingKey)).products, undefined);
 assert.equal(JSON.parse(data.get(pendingKey)).orders, true);
-assert.equal(JSON.parse(data.get(conflictKey)).products, undefined);
-assert.ok(JSON.parse(data.get(conflictKey)).plans);
+assert.equal(data.get(conflictKey), undefined, 'current migrations remove stale product and plan conflicts');
 assert.equal(data.get('panora-cloud-sync-schema'), '323');
 assert.ok(JSON.parse(data.get('panora-cloud-backups-v286'))[0].data.products);
 
