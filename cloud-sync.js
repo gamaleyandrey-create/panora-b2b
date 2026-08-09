@@ -630,11 +630,24 @@ window.panoraRecalculateBalances=recalculateBalances;
     rememberRevision('plans',days);
     return (days||[]).flatMap(day=>(day.bake_items||[]).map(item=>remotePlan({...day,...item})));
   }
+  const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
+  const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   async function loadPlans(){
-    if(pending.plans){await savePlansNow();return}
+    // A previous page may have left a durable pending flag even though the
+    // exact same production plan already reached Supabase. Always compare the
+    // actual cloud snapshot first; otherwise every reload can reopen a false
+    // "Есть изменения: план производства" conflict forever.
     const remote=await getRemotePlans();
     const local=JSON.parse(localStorage.getItem('panora-production-plans')||'[]');
-    if(remote.length){plans=remote;localStorage.setItem('panora-production-plans',JSON.stringify(plans));if(typeof renderAll==='function')renderAll()}
+    if(planSignature(remote)===planSignature(local)){
+      plans=remote.length?remote:local;
+      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+      clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+      if(typeof renderAll==='function')renderAll();
+      return;
+    }
+    if(pending.plans){await savePlansNow();return}
+    if(remote.length){plans=remote;localStorage.setItem('panora-production-plans',JSON.stringify(plans));delete conflicts.plans;saveConflicts();if(typeof renderAll==='function')renderAll()}
     else if(local.length){plans=local;ready=true;await savePlansNow()}
   }
   async function savePlansNow(){
