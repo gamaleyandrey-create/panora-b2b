@@ -12,7 +12,8 @@ const list = [
   'v325-tech-card-lock.test.js',
   'v328-order-workflow.test.js',
   'v331-sync-safety.test.js',
-  'v332-notifications.test.js'
+  'v332-notifications.test.js',
+  'v333-audit-trail.test.js'
 ];
 
 let failures = 0;
