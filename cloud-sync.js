@@ -125,6 +125,21 @@
     status('Товар сохранён ✓');
     return rowProduct(saved,product);
   }
+  async function saveProductTechCardConfirmed(productId,techCard){
+    if(!productId)throw new Error('Не удалось определить хлеб');
+    if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите.');
+    if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
+    const normalized={mix:String(techCard?.mix||''),fermentation:Number(techCard?.fermentation||0),proof:Number(techCard?.proof||0),bakeTemp:Number(techCard?.bakeTemp||0),bakeTime:Number(techCard?.bakeTime||0),steps:String(techCard?.steps||''),notes:String(techCard?.notes||'')};
+    status('Сохранение технологической карты…');
+    const rows=await request(`products?id=eq.${encodeURIComponent(productId)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({tech_card:normalized,updated_at:new Date().toISOString()})});
+    if(!rows?.some(row=>row.id===productId))throw new Error('Supabase не подтвердил запись технологической карты');
+    const verified=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id,tech_card,updated_at&limit=1`),saved=verified?.[0];
+    if(!saved||JSON.stringify(saved.tech_card||{})!==JSON.stringify(normalized))throw new Error('Проверка технологической карты после записи не пройдена');
+    const local=typeof productRegistry!=='undefined'?productRegistry.find(item=>item.id===productId):null;
+    if(local)local.techCard=normalized;
+    productDirty=false;clearPending('products');rememberRevision('products',verified);status('Технологическая карта сохранена ✓');
+    return normalized;
+  }
   async function deleteProductConfirmed(productId){
     if(!productId)throw new Error('Не удалось определить товар');
     if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите.');
@@ -662,7 +677,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{if(ready)retrySync()});
