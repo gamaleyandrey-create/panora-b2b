@@ -1,7 +1,7 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
-  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v321',backupKey='panora-cloud-backups-v286';
+  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v322',backupKey='panora-cloud-backups-v286';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -54,6 +54,8 @@
   const rememberRevision=(section,rows=[])=>{const latest=(rows||[]).reduce((value,row)=>String(row.updated_at||'')>value?String(row.updated_at):value,'');if(latest){revisions[section]=latest;localStorage.setItem(revisionKey,JSON.stringify(revisions))}return latest};
   const conflictCount=()=>Object.keys(conflicts).length;
   const saveConflicts=()=>Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
+  const clearOrphanConflicts=()=>{let changed=false;for(const section of Object.keys(conflicts)){if(!pending[section]){delete conflicts[section];changed=true}}if(changed)saveConflicts()};
+  clearOrphanConflicts();
   const saveAccepted=()=>Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
   const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения на другом устройстве: ${count}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
   function chooseConflictVersion(names){
@@ -136,12 +138,17 @@
     if(!baseSig){
       saveBackup(['products'],'conflict-cloud');await applyProductRows(rows);audit('sync.auto_cloud_bootstrap','Товары: облако принято как начальная общая версия');return'cloud'
     }
-    if(localSig!==baseSig&&remoteSig!==baseSig){
+    // A content difference is not proof of a local edit: older releases could
+    // leave a stale baseline after rendering or browser normalization. Only a
+    // queued user change is allowed to compete with the cloud version.
+    const localChanged=Boolean(productDirty||pending.products)&&localSig!==baseSig;
+    const remoteChanged=remoteSig!==baseSig;
+    if(localChanged&&remoteChanged){
       if(!allowManual)return'conflict';
       const remoteAt=(rows||[]).reduce((latest,row)=>String(row.updated_at||'')>latest?String(row.updated_at):latest,'');
       conflicts.products={remoteAt,localAt:new Date().toISOString()};saveConflicts();showConflicts();return'conflict'
     }
-    if(localSig===baseSig){await applyProductRows(rows);audit('sync.auto_cloud','Товары: автоматически применены изменения из облака');return'cloud'}
+    if(!localChanged){await applyProductRows(rows);audit('sync.auto_cloud','Товары: автоматически применены изменения из облака');return'cloud'}
     return'local'
   }
   async function loadProducts(){
@@ -766,7 +773,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
-    session=authSession;ready=true;status('Загрузка облака…');
+    session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
     const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
     if(productDirty)try{await flushProducts()}catch(error){errors.push(['товары',error])}
