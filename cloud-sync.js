@@ -1,7 +1,7 @@
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
-  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v322',backupKey='panora-cloud-backups-v286';
+  const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v323',backupKey='panora-cloud-backups-v286',syncSchemaKey='panora-cloud-sync-schema';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -35,6 +35,20 @@
     const backups=[snapshot,...readBackups()].slice(0,10);localStorage.setItem(backupKey,JSON.stringify(backups));
     audit('sync.backup_created',`Резерв: ${Object.keys(data).join(', ')}`);return snapshot;
   };
+  // v283-v322 inferred a product edit from durable queue flags. A flag could
+  // survive an already accepted cloud load and make one clean device reopen
+  // the same conflict forever. On the first v323 start preserve the local
+  // product snapshot, then discard only that legacy inference. The empty v323
+  // baseline makes the next cloud read authoritative and automatic.
+  if(localStorage.getItem(syncSchemaKey)!=='323'){
+    if(pending.products||conflicts.products)saveBackup(['products'],'sync');
+    delete pending.products;delete conflicts.products;delete accepted.products;delete revisions.products;
+    Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey);
+    Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
+    Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
+    Object.keys(revisions).length?localStorage.setItem(revisionKey,JSON.stringify(revisions)):localStorage.removeItem(revisionKey);
+    localStorage.setItem(syncSchemaKey,'323');
+  }
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
@@ -57,7 +71,8 @@
   const clearOrphanConflicts=()=>{let changed=false;for(const section of Object.keys(conflicts)){if(!pending[section]){delete conflicts[section];changed=true}}if(changed)saveConflicts()};
   clearOrphanConflicts();
   const saveAccepted=()=>Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
-  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения на другом устройстве: ${count}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
+  const conflictNames=()=>{const names={products:'технологические карты',recipes:'рецептуры',restaurants:'партнёры',plans:'план производства'};return Object.keys(conflicts).map(section=>names[section]||section).join(', ')};
+  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения: ${conflictNames()}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
       document.querySelector('#panoraConflictChoice')?.remove();
@@ -120,6 +135,11 @@
     const mapped=rows.map(row=>rowProduct(row,local.find(p=>p.id===row.id)));
     applyingCloud++;
     try{
+      // Product rows are the committed business record. Recipe-card drafts
+      // from another device/older render must not repaint stale values over
+      // the verified tech_card. acceptCommittedWithin keeps a timestamped
+      // local backup before clearing those drafts.
+      await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       localStorage.setItem('panora-products',JSON.stringify(mapped));
       if(typeof productRegistry!=='undefined')productRegistry=mapped;
       if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();
@@ -153,7 +173,7 @@
   }
   async function loadProducts(){
     const rows=await request('products?select=*&order=created_at.asc');
-    if(productDirty||savingProducts){
+    if(!baselines.products||productDirty||savingProducts){
       const decision=await reconcileProducts(rows);
       if(decision==='local'){await flushProducts();return}
       return
@@ -219,7 +239,7 @@
     const rows=await request(`products?id=eq.${encodeURIComponent(productId)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({tech_card:normalized,updated_at:new Date().toISOString()})});
     if(!rows?.some(row=>row.id===productId))throw new Error('Supabase не подтвердил запись технологической карты');
     const verified=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id,tech_card,updated_at&limit=1`),saved=verified?.[0];
-    if(!saved||JSON.stringify(saved.tech_card||{})!==JSON.stringify(normalized))throw new Error('Проверка технологической карты после записи не пройдена');
+    if(!saved||JSON.stringify(canonicalValue(saved.tech_card||{}))!==JSON.stringify(canonicalValue(normalized)))throw new Error('Проверка технологической карты после записи не пройдена');
     const local=typeof productRegistry!=='undefined'?productRegistry.find(item=>item.id===productId):null;
     if(local)local.techCard=normalized;
     productDirty=false;clearPending('products');rememberRevision('products',verified);saveProductBaseline(localProducts());status('Технологическая карта сохранена ✓');
@@ -241,6 +261,7 @@
     if(recipeDirty||savingRecipes){await flushRecipes();return}
     rememberRevision('recipes',rows);
     if(rows?.length){
+      await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       const remote={};
       rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0)})});
       recipes=remote;if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-2');window.dispatchEvent(new CustomEvent('panora:recipes-changed'));

@@ -13,6 +13,7 @@
   const timers = new Map();
   const requestVersion = new Map();
   const hydrated = new Set();
+  const committedScopes = new Set();
   let mutationQueued = false;
 
   const json = (value, fallback = null) => { try { return JSON.parse(value) ?? fallback; } catch { return fallback; } };
@@ -84,6 +85,7 @@
   };
   const saveLocal = (field) => {
     const form = formOf(field), draft = readDraft(form), key = fieldId(field);
+    committedScopes.delete(scope(form));
     draft.fields[key] = { ...valueOf(field), changedAt: new Date().toISOString() };
     draft.seq = Number(draft.seq || 0) + 1;
     draft.updatedAt = new Date().toISOString();
@@ -110,7 +112,7 @@
   };
   const pullRemote = async (form) => {
     const key = scope(form), local = readDraft(form);
-    if (local.dirty || hydrated.has(key) || userId() === "anonymous") return;
+    if (committedScopes.has(key) || local.dirty || hydrated.has(key) || userId() === "anonymous") return;
     hydrated.add(key);
     try {
       const rows = await api(`panora_form_drafts?form_key=eq.${encodeURIComponent(key)}&select=payload,version,updated_at&limit=1`);
@@ -156,12 +158,18 @@
   };
   const acceptCommitted = async (form) => {
     const key = scope(form), draft = readDraft(form);
+    committedScopes.add(key);
     clearTimeout(timers.get(key)); timers.delete(key);
     if (draft?.fields && Object.keys(draft.fields).length) {
       localStorage.setItem(`${localKey(form)}:backup:${Date.now()}`, JSON.stringify(draft));
     }
     if (userId() !== "anonymous" && navigator.onLine) {
-      await api("rpc/panora_clear_form_draft", { method: "POST", body: JSON.stringify({ p_form_key: key }) });
+      try {
+        await api("rpc/panora_clear_form_draft", { method: "POST", body: JSON.stringify({ p_form_key: key }) });
+      } catch {
+        // The verified product/recipe record stays authoritative even when the
+        // optional draft-cleanup endpoint is temporarily unavailable.
+      }
     }
     discard(form);
   };
