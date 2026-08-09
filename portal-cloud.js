@@ -1,5 +1,6 @@
 /* Panora restaurant cloud v2. Supabase is the only source of truth for orders. */
 (()=>{
+  let partnerOrderPoll=0,partnerOrdersLoading=null;
   'use strict';
   const cfg=window.PANORA_SUPABASE;
   if(!cfg)return;
@@ -60,6 +61,7 @@
     error.code='PANORA_SESSION_EXPIRED';error.cause=cause||null;return error;
   }
   function clearBrokenSession(cause){
+    stopPartnerOrderPolling();
     saveSession(null);
     account=null;
     localStorage.removeItem('panora-account-id');
@@ -154,10 +156,40 @@
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       if(products?.length)write('panora-products',products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}})));
-      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();decorateState();renderProducts();renderCart();return orders;
+      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();decorateState();renderProducts();renderCart();startPartnerOrderPolling();return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
+  async function refreshPartnerOrders(){
+    if(partnerOrdersLoading)return partnerOrdersLoading;
+    if(!session?.user?.id||!account?.id||!navigator.onLine)return [];
+    partnerOrdersLoading=(async()=>{
+      const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
+      const next=(rows||[]).map(mapOrder);
+      const before=JSON.stringify(read('panora-orders')||[]);
+      const after=JSON.stringify(next);
+      if(before!==after){
+        write('panora-orders',next);
+        renderAccountModal();
+        decorateState();
+        window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length}}));
+      }
+      return next;
+    })().finally(()=>partnerOrdersLoading=null);
+    return partnerOrdersLoading;
+  }
+  function startPartnerOrderPolling(){
+    clearInterval(partnerOrderPoll);
+    if(!session?.user||!account)return;
+    partnerOrderPoll=setInterval(()=>{
+      refreshPartnerOrders().catch(error=>{
+        if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
+        console.warn('Panora partner order refresh',error);
+      });
+    },4000);
+  }
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0}
+
   async function signIn(email,password,signup=false){
     const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
     const result=await fetchJson(`${cfg.url}${path}`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body)}),next=result.access_token?result:result.session;
@@ -181,7 +213,7 @@
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;
-  logoutAccount=async()=>{try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
+  logoutAccount=async()=>{stopPartnerOrderPolling();try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
@@ -311,5 +343,5 @@
     else{state('error',error.message);renderAccountModal()}
   }})();
   setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
-  window.panoraPortalCloud={load:()=>loadAll(true)};
+  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders};
 })();

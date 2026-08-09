@@ -163,7 +163,7 @@
   // Preserve cart/order drafts. Remove only the broken partner cloud auth session.
   localStorage.removeItem('panora-restaurant-cloud-session');
 
-  // Remove stale service workers and their caches so old portal-cloud.js?v=3262 cannot survive.
+  // Remove stale service workers and their caches so old portal-cloud.js?v=3280 cannot survive.
   try{
     if('serviceWorker' in navigator){
       const regs=await navigator.serviceWorker.getRegistrations();
@@ -184,7 +184,7 @@
 })();
 </script>
 
-<script src="portal-cloud.js?v=3262"></script>
+<script src="portal-cloud.js?v=3280"></script>
   <script src="accounting-invoice.js?v=312"></script>
   <script src="spanish-documents.js?v=312"></script>
   <script src="document-library.js?v=312"></script>
