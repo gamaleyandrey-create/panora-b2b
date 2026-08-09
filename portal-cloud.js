@@ -149,6 +149,16 @@
     await api('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:Number(account.prices[item.product])}))) });
     return created;
   }
+  async function verifyCreatedOrder(id){
+    for(const delay of [0,180,450,900]){
+      if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
+      try{
+        const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&select=id,order_number,status&limit=1`);
+        if(rows?.[0]?.id===id)return rows[0];
+      }catch(error){if(delay===900)throw error}
+    }
+    return null;
+  }
   const form=document.querySelector('#checkoutForm');
   /* Disable app.js' legacy localStorage submit path. Cloud orders are only
      considered successful after panora_create_order commits in Supabase. */
@@ -202,8 +212,9 @@
       try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
       catch(error){const unusableRpc=error.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(error.message);if(!unusableRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
       if(!created)throw new Error('Order was not created');
-      const fresh=await loadAll(true),saved=fresh.find(order=>order.id===id);
+      const saved=await verifyCreatedOrder(id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
+      await loadAll(true);
       cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));window.panoraFormDrafts?.confirmSaved(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
