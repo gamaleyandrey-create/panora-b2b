@@ -155,18 +155,23 @@
       const row=rows?.[0];if(!row?.lock_token)throw new Error('Сервер не подтвердил блокировку технологической карты');
       const lock={token:row.lock_token,expiresAt:row.expires_at,deviceId:row.device_id};techCardLocks.set(productId,lock);return lock;
     }catch(error){
-      if(/PANORA_TECH_CARD_LOCKED/i.test(String(error?.message||error)))throw new Error('Эта технологическая карта уже редактируется на другом устройстве. Дождитесь сохранения или автоматического освобождения блокировки.');
+    if(window.panoraHandleSessionError?.(error)) return;
+    if(/PANORA_TECH_CARD_LOCKED/i.test(String(error?.message||error)))throw new Error('Эта технологическая карта уже редактируется на другом устройстве. Дождитесь сохранения или автоматического освобождения блокировки.');
       throw error;
     }
   }
   async function renewTechCardLock(productId){
     const lock=techCardLocks.get(productId);if(!lock?.token)return false;
     try{const expiresAt=await request('rpc/panora_renew_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_lock_token:lock.token,p_ttl_seconds:240})});lock.expiresAt=expiresAt;return true}
-    catch(error){techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-lost',{detail:{productId}}));throw error}
+    catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-lost',{detail:{productId}}));throw error}
   }
   async function releaseTechCardLock(productId){
     const lock=techCardLocks.get(productId);techCardLocks.delete(productId);if(!lock?.token||!session?.access_token||!navigator.onLine)return false;
-    try{return await request('rpc/panora_release_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_lock_token:lock.token})})}catch(error){console.warn('Panora tech-card unlock',error);return false}
+    try{return await request('rpc/panora_release_tech_card_lock',{method:'POST',body:JSON.stringify({p_product_id:productId,p_lock_token:lock.token})})}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    console.warn('Panora tech-card unlock',error);return false}
   }
   function hasTechCardLock(productId){const lock=techCardLocks.get(productId);return Boolean(lock?.token&&new Date(lock.expiresAt).getTime()>Date.now())}
   setInterval(()=>{for(const productId of techCardLocks.keys())renewTechCardLock(productId).catch(()=>{})},60000);
@@ -304,7 +309,8 @@
       const lock=techCardLocks.get(productId);if(!lock?.token)throw new Error('PANORA_LOCK_REQUIRED');
       rows=await request('rpc/panora_save_locked_tech_card_revision',{method:'POST',body:JSON.stringify({p_product_id:productId,p_tech_card:normalized,p_expected_revision:expectedRevision,p_lock_token:lock.token})});
     }catch(error){
-      if(/PANORA_REVISION_CONFLICT/i.test(String(error?.message||error))){
+    if(window.panoraHandleSessionError?.(error)) return;
+    if(/PANORA_REVISION_CONFLICT/i.test(String(error?.message||error))){
         await releaseTechCardLock(productId);
         const latest=await request(`products?id=eq.${encodeURIComponent(productId)}&select=*&limit=1`);
         if(latest?.length)await applyProductRows((await request('products?select=*&order=created_at.asc'))||latest);
@@ -407,6 +413,7 @@
     loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');orders=(rows||[]).map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
+    await window.panoraEnsureFreshSession?.();
     if(!ready)throw new Error('Облако ещё загружается');
     if(loadingOrders)await loadingOrders;
     clearTimeout(orderTimer);orderTimer=0;
@@ -459,7 +466,8 @@
       audit('shipment.completed',`${order?.number||orderId} · накладная ${note.number||note.noteNumber||''}`);
       return note;
     }catch(error){
-      try{
+    if(window.panoraHandleSessionError?.(error)) return;
+    try{
         const existing=await request(`delivery_notes?order_id=eq.${encodeURIComponent(orderId)}&select=id,note_number&limit=1`);
         if(existing?.length){
           await loadOrders();await loadPayments();await loadDeliveryNotes();
@@ -525,7 +533,9 @@
     const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
     financeLoaded=true;localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
-    if(pending.length){ready=true;try{await saveDeliveryNotesNow()}catch(error){console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
+    if(pending.length){ready=true;try{await saveDeliveryNotesNow()}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
     ready=true;await repairMissingDeliveryNotes();
     if(typeof renderCommerce==='function')renderCommerce()
   }
@@ -784,7 +794,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       window.panoraAudit?.mergeCloud(rows||[]);
       return rows||[];
     }catch(error){
-      const message=String(error?.message||error);
+    if(window.panoraHandleSessionError?.(error)) return;
+    const message=String(error?.message||error);
       if(!/operation_events|42P01|PGRST205/i.test(message))console.warn('Panora operation journal',error);
       return [];
     }
@@ -810,7 +821,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       forceSections.delete(section);clearPending(section);delete conflicts[section];saveConflicts();
     }
     catch(error){
-      if(!acceptedRemoteAt){if(previous)pending[section]=previous;if(section==='products')productDirty=Boolean(previous);if(section==='recipes')recipeDirty=Boolean(previous)}
+    if(window.panoraHandleSessionError?.(error)) return;
+    if(!acceptedRemoteAt){if(previous)pending[section]=previous;if(section==='products')productDirty=Boolean(previous);if(section==='recipes')recipeDirty=Boolean(previous)}
       throw error
     }
   }
@@ -819,7 +831,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     const sectionNames={products:'Товары и технологические карты',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'},names=sections.map(section=>sectionNames[section]||section).join(', '),choice=await chooseConflictVersion(names);
     if(choice==='later'){showConflicts();return false}
     if(choice==='local'){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
-    try{const backup=saveBackup(sections,'conflict-cloud'),accepted=Object.fromEntries(sections.map(section=>[section,conflicts[section]?.remoteAt||'']));for(const section of sections)await loadCloudSection(section,accepted[section]);audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
+    try{const backup=saveBackup(sections,'conflict-cloud'),accepted=Object.fromEntries(sections.map(section=>[section,conflicts[section]?.remoteAt||'']));for(const section of sections)await loadCloudSection(section,accepted[section]);audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    fail('разрешение конфликта',error);return false}
   }
   async function restoreBackup(snapshot){
     if(!snapshot)return false;
@@ -840,7 +854,9 @@ window.panoraRecalculateBalances=recalculateBalances;
       closeBackupHistory();
       if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();if(typeof renderAll==='function')renderAll();
       return retrySync();
-    }catch(error){fail('восстановление резерва',error);return false}
+    }catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    fail('восстановление резерва',error);return false}
   }
   async function restoreLatestBackup(){return restoreBackup(readBackups()[0])}
   function closeBackupHistory(){const modal=document.querySelector('#syncBackupModal');if(modal)modal.hidden=true}
@@ -889,7 +905,9 @@ window.panoraRecalculateBalances=recalculateBalances;
       const backups=[snapshot,...readBackups()].slice(0,10);
       localStorage.setItem(backupKey,JSON.stringify(backups));audit('sync.backup_imported',`Импортирован резерв: ${Object.keys(snapshot.data).join(', ')}`);renderBackupHistory();
       if(confirm('Резерв проверен и добавлен в историю. Восстановить его сейчас?'))await restoreBackup(snapshot);
-    }catch(error){alert(`Не удалось импортировать резерв. ${error.message||'Проверьте выбранный файл.'}`);audit('sync.backup_import_failed',String(error.message||error),'warning')}
+    }catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    alert(`Не удалось импортировать резерв. ${error.message||'Проверьте выбранный файл.'}`);audit('sync.backup_import_failed',String(error.message||error),'warning')}
   }
   function renderBackupHistory(){
     const root=document.querySelector('#syncBackupList');if(!root)return;
@@ -929,7 +947,9 @@ window.panoraRecalculateBalances=recalculateBalances;
       await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
-    }catch(error){fail('повтор',error);return false}
+    }catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    fail('повтор',error);return false}
     })().finally(()=>retrying=null);
     return retrying;
   }
@@ -937,10 +957,18 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
     const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['журнал',loadOperationEvents]],errors=[];
-    for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
-    if(productDirty)try{await flushProducts()}catch(error){errors.push(['товары',error])}
-    if(recipeDirty)try{await flushRecipes()}catch(error){errors.push(['рецептуры',error])}
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
+    for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
+    if(productDirty)try{await flushProducts()}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    errors.push(['товары',error])}
+    if(recipeDirty)try{await flushRecipes()}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    errors.push(['рецептуры',error])}
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){
+    if(window.panoraHandleSessionError?.(error)) return;
+    fail('заказы и накладные',error)}},4000);
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
