@@ -1,0 +1,89 @@
+
+/* Panora v326.4 — unified mobile headers for partner and bakery */
+
+@media (max-width: 720px) {
+  /* Shared: keep top controls compact, readable, and non-overlapping. */
+  .topbar,
+  .admin-topbar {
+    min-height: 54px;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .topbar .brand,
+  .admin-topbar .brand,
+  .topbar .logo,
+  .admin-topbar .logo {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  /* Partner: Panora | language | account */
+  body:not(.admin-page) .topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  body:not(.admin-page) .topbar .lang-select,
+  body:not(.admin-page) .topbar select[data-language],
+  body:not(.admin-page) .topbar select[name="language"] {
+    max-width: 78px;
+  }
+
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button {
+    white-space: nowrap;
+  }
+
+  /* Bakery: Panora | cloud state | logout. Language moves out of the top line. */
+  body.admin-page .admin-topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language] {
+    display: none !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state] {
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  body.admin-page .logout-button,
+  body.admin-page [data-logout],
+  body.admin-page #logoutBtn {
+    white-space: nowrap;
+  }
+
+  /* Disable competing legacy top navigation on bakery mobile.
+     Bottom mobile tabs remain the only primary navigation. */
+  body.admin-page .admin-nav,
+  body.admin-page .admin-menu,
+  body.admin-page .desktop-admin-nav {
+    display: none !important;
+  }
+
+  body.admin-page .mobile-admin-tabs,
+  body.admin-page .admin-mobile-tabs,
+  body.admin-page .bottom-nav {
+    display: grid !important;
+  }
+
+  /* Protect page content from sticky top bar and bottom tabs. */
+  body.admin-page main,
+  body.admin-page .admin-main,
+  body.admin-page .content {
+    scroll-margin-top: 64px;
+  }
+}
