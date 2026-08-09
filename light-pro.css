@@ -1,0 +1,199 @@
+
+/* Panora v330 — Light Pro
+   Single light appearance. No dark mode / no theme switcher. */
+
+:root {
+  --lp-page: #f4f6f2;
+  --lp-surface: #ffffff;
+  --lp-surface-soft: #f8faf7;
+  --lp-border: #dce3dc;
+  --lp-border-strong: #cbd5cc;
+  --lp-text: #1d2820;
+  --lp-muted: #69756d;
+  --lp-green: #39764d;
+  --lp-green-hover: #2f6741;
+  --lp-green-soft: #edf6ef;
+  --lp-blue: #357da6;
+  --lp-blue-soft: #edf6fb;
+  --lp-amber: #a36d17;
+  --lp-amber-soft: #fff7e7;
+  --lp-red: #ad4b43;
+  --lp-red-soft: #fff0ee;
+  --lp-shadow: 0 5px 18px rgba(36,56,42,.055);
+}
+
+/* Cleaner page/surface separation */
+body {
+  background-color: var(--lp-page);
+  color: var(--lp-text);
+}
+
+.card,
+.panel,
+.product-card,
+.order-card,
+.delivery-card,
+.recipe-card,
+.tech-card,
+.account-section,
+.admin-card,
+.settings-card,
+.section-card,
+.stat-card,
+.summary-card {
+  background-color: var(--lp-surface);
+  border-color: var(--lp-border);
+}
+
+/* Restrained depth: enough separation without decorative shadows */
+.card,
+.panel,
+.order-card,
+.delivery-card,
+.admin-card,
+.settings-card,
+.section-card,
+.stat-card {
+  box-shadow: var(--lp-shadow);
+}
+
+/* Tables: clearer header and subtle row rhythm */
+table {
+  background: var(--lp-surface);
+}
+thead,
+th {
+  background: #eef2ed;
+  color: #26332a;
+  font-weight: 700;
+}
+td,
+th {
+  border-color: #e1e7e1;
+}
+tbody tr:nth-child(even) td {
+  background-color: #fafbf9;
+}
+tbody tr:hover td {
+  background-color: #f4f8f4;
+}
+
+/* Inputs are easier to locate and focus */
+input,
+select,
+textarea {
+  border-color: var(--lp-border-strong);
+  background: #fff;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #6fa17d;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(57,118,77,.10);
+}
+
+/* One consistent primary action language */
+.primary,
+.button-primary,
+.btn-primary {
+  background: var(--lp-green) !important;
+  border-color: var(--lp-green) !important;
+  color: #fff !important;
+}
+.primary:hover,
+.button-primary:hover,
+.btn-primary:hover {
+  background: var(--lp-green-hover) !important;
+  border-color: var(--lp-green-hover) !important;
+}
+
+/* Business status palette */
+.status-new,
+.status-submitted,
+[data-status="new"],
+[data-status="submitted"] {
+  background: var(--lp-blue-soft) !important;
+  color: var(--lp-blue) !important;
+  border-color: #cce4f1 !important;
+}
+.status-confirmed,
+.status-success,
+[data-status="confirmed"],
+[data-status="completed"],
+[data-status="shipped"] {
+  background: var(--lp-green-soft) !important;
+  color: var(--lp-green) !important;
+  border-color: #cfe4d4 !important;
+}
+.status-pending,
+.status-warning,
+[data-status="pending"],
+[data-status="processing"] {
+  background: var(--lp-amber-soft) !important;
+  color: var(--lp-amber) !important;
+  border-color: #efdcb5 !important;
+}
+.status-cancelled,
+.status-error,
+[data-status="cancelled"],
+[data-status="error"] {
+  background: var(--lp-red-soft) !important;
+  color: var(--lp-red) !important;
+  border-color: #f0ccc8 !important;
+}
+
+/* Important working values */
+.price,
+.quantity,
+.total,
+.amount,
+.date,
+.number,
+[data-value],
+[data-total] {
+  color: #18231b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sync state should be readable but not visually dominant */
+#saveState,
+.save-state,
+[data-save-state] {
+  font-weight: 600;
+}
+
+/* Modal hierarchy */
+.modal-card,
+.modal-content,
+.sheet,
+.drawer {
+  background: var(--lp-surface);
+  border-color: var(--lp-border);
+  box-shadow: 0 18px 50px rgba(29,48,35,.14);
+}
+
+/* Navigation stays clean; active state carries the brand accent */
+.bottom-nav .active,
+.admin-mobile-tabs .active,
+.mobile-admin-tabs .active,
+[aria-current="page"],
+[aria-selected="true"] {
+  color: var(--lp-green);
+}
+
+/* Mobile touch targets without changing desktop layout */
+@media (max-width:720px) {
+  button,
+  .button,
+  .btn,
+  .icon-button {
+    min-height: 38px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 40px;
+  }
+}
