@@ -556,11 +556,16 @@ window.panoraRecalculateBalances=recalculateBalances;
       return [];
     }
   }
-  async function loadCloudSection(section){
+  async function loadCloudSection(section,acceptedRemoteAt=''){
     const previous=pending[section];delete pending[section];
     if(section==='products')productDirty=false;
     if(section==='recipes')recipeDirty=false;
-    try{if(section==='products')await loadProducts();else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();clearPending(section)}
+    try{
+      if(section==='products')await loadProducts();else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();
+      if(acceptedRemoteAt&&String(acceptedRemoteAt)>String(revisions[section]||''))revisions[section]=String(acceptedRemoteAt);
+      localStorage.setItem(revisionKey,JSON.stringify(revisions));
+      forceSections.delete(section);clearPending(section);delete conflicts[section];saveConflicts();
+    }
     catch(error){if(previous)pending[section]=previous;if(section==='products')productDirty=Boolean(previous);if(section==='recipes')recipeDirty=Boolean(previous);throw error}
   }
   async function resolveConflicts(){
@@ -568,7 +573,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const sectionNames={products:'Товары и технологические карты',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'},names=sections.map(section=>sectionNames[section]||section).join(', '),choice=await chooseConflictVersion(names);
     if(choice==='later'){showConflicts();return false}
     if(choice==='local'){sections.forEach(section=>forceSections.add(section));audit('sync.conflict_local',`Выбрана локальная версия: ${names}`,'warning');return retrySync()}
-    try{const backup=saveBackup(sections,'conflict-cloud');for(const section of sections)await loadCloudSection(section);conflicts={};saveConflicts();audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
+    try{const backup=saveBackup(sections,'conflict-cloud'),accepted=Object.fromEntries(sections.map(section=>[section,conflicts[section]?.remoteAt||'']));for(const section of sections)await loadCloudSection(section,accepted[section]);audit('sync.conflict_cloud',`Выбрана облачная версия: ${names}`,'warning');status(backup?'Облако загружено · есть резерв':'Облачная версия загружена ✓',false,backup?'Нажмите, чтобы восстановить прежнюю локальную версию':'');const el=document.querySelector('#saveState');if(el&&backup){el.style.cursor='pointer';el.onclick=restoreLatestBackup}return true}catch(error){fail('разрешение конфликта',error);return false}
   }
   async function restoreBackup(snapshot){
     if(!snapshot)return false;
