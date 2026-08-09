@@ -112,14 +112,16 @@
     if(response.status===204)return null;
     const text=await response.text();return text?JSON.parse(text):null;
   };
-  const productRow=p=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),image_url:p.image||null,active:p.active!==false,tech_card:p.techCard||{},updated_at:new Date().toISOString()});
-  const rowProduct=(row,local)=>({id:row.id,builtIn:['plain','pumpkin'].includes(row.id),active:row.active,weight:Number(row.weight_g),basePrice:Number(row.base_price),image:row.image_url||local?.image||'icon.svg',techCard:row.tech_card||local?.techCard||{},names:{ru:row.name_ru,en:row.name_en,es:row.name_es},descriptions:{ru:row.description_ru||'',en:row.description_en||'',es:row.description_es||''}});
+  // Ordinary product saves deliberately omit tech_card. A stale device must
+  // never overwrite a newer card as a side effect of changing a name/price.
+  const productRow=(p,{includeTechCard=false}={})=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),image_url:p.image||null,active:p.active!==false,...(includeTechCard?{tech_card:p.techCard||{}}:{}),updated_at:new Date().toISOString()});
+  const rowProduct=(row,local)=>({id:row.id,builtIn:['plain','pumpkin'].includes(row.id),active:row.active,weight:Number(row.weight_g),basePrice:Number(row.base_price),image:row.image_url||local?.image||'icon.svg',techCard:row.tech_card||{},techCardRevision:Number(row.tech_card_revision||0),names:{ru:row.name_ru,en:row.name_en,es:row.name_es},descriptions:{ru:row.description_ru||'',en:row.description_en||'',es:row.description_es||''}});
   const canonicalValue=value=>{
     if(Array.isArray(value))return value.map(canonicalValue);
     if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{result[key]=canonicalValue(value[key]);return result},{});
     return value;
   };
-  const comparableProduct=p=>canonicalValue({id:String(p.id),active:p.active!==false,weight:Number(p.weight),basePrice:Number(p.basePrice),image:p.image||'icon.svg',techCard:p.techCard||{},names:p.names||{},descriptions:p.descriptions||{}});
+  const comparableProduct=p=>canonicalValue({id:String(p.id),active:p.active!==false,weight:Number(p.weight),basePrice:Number(p.basePrice),image:p.image||'icon.svg',techCard:p.techCard||{},techCardRevision:Number(p.techCardRevision||0),names:p.names||{},descriptions:p.descriptions||{}});
   const normalizedProducts=list=>(list||[]).map(comparableProduct).sort((a,b)=>a.id.localeCompare(b.id));
   const productSignature=list=>JSON.stringify(normalizedProducts(list));
   const localProducts=()=>typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]');
@@ -222,7 +224,7 @@
     const rows=await request('products?on_conflict=id',{
       method:'POST',
       headers:{Prefer:'resolution=merge-duplicates,return=representation'},
-      body:JSON.stringify(productRow(product))
+      body:JSON.stringify(productRow(product,{includeTechCard:product.techCardRevision==null}))
     });
     const saved=rows?.find(row=>row.id===product.id);
     if(!saved)throw new Error('Supabase не подтвердил создание товара');
@@ -235,15 +237,27 @@
     if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите.');
     if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
     const normalized={mix:String(techCard?.mix||''),fermentation:Number(techCard?.fermentation||0),proof:Number(techCard?.proof||0),bakeTemp:Number(techCard?.bakeTemp||0),bakeTime:Number(techCard?.bakeTime||0),steps:String(techCard?.steps||''),notes:String(techCard?.notes||'')};
-    status('Сохранение технологической карты…');
-    const rows=await request(`products?id=eq.${encodeURIComponent(productId)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({tech_card:normalized,updated_at:new Date().toISOString()})});
-    if(!rows?.some(row=>row.id===productId))throw new Error('Supabase не подтвердил запись технологической карты');
-    const verified=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id,tech_card,updated_at&limit=1`),saved=verified?.[0];
-    if(!saved||JSON.stringify(canonicalValue(saved.tech_card||{}))!==JSON.stringify(canonicalValue(normalized)))throw new Error('Проверка технологической карты после записи не пройдена');
     const local=typeof productRegistry!=='undefined'?productRegistry.find(item=>item.id===productId):null;
-    if(local)local.techCard=normalized;
+    const expectedRevision=Number(local?.techCardRevision||0);
+    status('Сохранение технологической карты…');
+    let rows;
+    try{
+      rows=await request('rpc/panora_save_tech_card_revision',{method:'POST',body:JSON.stringify({p_product_id:productId,p_tech_card:normalized,p_expected_revision:expectedRevision})});
+    }catch(error){
+      if(/PANORA_REVISION_CONFLICT/i.test(String(error?.message||error))){
+        const latest=await request(`products?id=eq.${encodeURIComponent(productId)}&select=*&limit=1`);
+        if(latest?.length)await applyProductRows((await request('products?select=*&order=created_at.asc'))||latest);
+        throw new Error('Карта уже изменена на другом устройстве. Новая облачная версия загружена; проверьте её и повторите правку.');
+      }
+      throw error;
+    }
+    const saved=rows?.[0];
+    if(!saved||saved.id!==productId)throw new Error('Сервер не подтвердил новую ревизию технологической карты');
+    const verified=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id,tech_card,tech_card_revision,updated_at&limit=1`),confirmed=verified?.[0];
+    if(!confirmed||Number(confirmed.tech_card_revision)!==expectedRevision+1||JSON.stringify(canonicalValue(confirmed.tech_card||{}))!==JSON.stringify(canonicalValue(normalized)))throw new Error('Проверка технологической карты после записи не пройдена');
+    if(local){local.techCard=confirmed.tech_card;local.techCardRevision=Number(confirmed.tech_card_revision)}
     productDirty=false;clearPending('products');rememberRevision('products',verified);saveProductBaseline(localProducts());status('Технологическая карта сохранена ✓');
-    return normalized;
+    return confirmed.tech_card;
   }
   async function deleteProductConfirmed(productId){
     if(!productId)throw new Error('Не удалось определить товар');
@@ -800,7 +814,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(productDirty)try{await flushProducts()}catch(error){errors.push(['товары',error])}
     if(recipeDirty)try{await flushRecipes()}catch(error){errors.push(['рецептуры',error])}
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){fail('заказы и накладные',error)}},4000);
-    clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),5000);
+    clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
