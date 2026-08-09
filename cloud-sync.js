@@ -573,6 +573,11 @@ window.panoraRecalculateBalances=recalculateBalances;
       clearPending(section);delete conflicts[section];saveConflicts();
     }
     try{
+      // A committed product/tech-card version is authoritative. Clear both the
+      // local and server-side editor drafts before rebuilding the recipe cards;
+      // otherwise MutationObserver can replay an older draft over fresh cloud
+      // values immediately after loadProducts() renders the screen.
+      if(section==='products'&&acceptedRemoteAt)await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       if(section==='products')await loadProducts();else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();
       if(acceptedRemoteAt&&String(acceptedRemoteAt)>String(revisions[section]||''))revisions[section]=String(acceptedRemoteAt);
       localStorage.setItem(revisionKey,JSON.stringify(revisions));
