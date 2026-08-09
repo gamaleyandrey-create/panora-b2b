@@ -76,9 +76,13 @@
     else{const all=JSON.parse(localStorage.getItem('panora-products')||'[]'),saved=all.find(p=>p.id===product.id);if(saved){saved.weight=product.weight;localStorage.setItem('panora-products',JSON.stringify(all));window.panoraCloud?.queueProducts?.()}}
   }
   function setCardEditMode(card,enabled,message=''){
-    card.dataset.techEdit=enabled?'true':'false';
-    card.querySelectorAll('input,select,textarea').forEach(el=>{if(el.matches('[data-product-active]'))return;el.disabled=!enabled});
-    card.querySelectorAll('[data-delete-ingredient],[data-add-ingredient],.recipe-save').forEach(el=>el.disabled=!enabled);
+    // v325.1: do not freeze the whole recipe card while waiting for a server lock.
+    // Users may prepare a local draft at any time; the exclusive server lock and
+    // revision check are mandatory at SAVE time, so stale data still cannot overwrite
+    // a newer technology card from another device.
+    card.dataset.techEdit=enabled?'true':'draft';
+    card.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=false});
+    card.querySelectorAll('[data-delete-ingredient],[data-add-ingredient],.recipe-save').forEach(el=>el.disabled=false);
     const edit=card.querySelector('[data-tech-edit]'),cancel=card.querySelector('[data-tech-cancel]');
     if(edit)edit.hidden=enabled;if(cancel)cancel.hidden=!enabled;
     const state=card.querySelector('[data-tech-lock-state]');if(state)state.textContent=message||(enabled?L().lockReady:L().lockNeed);
@@ -96,7 +100,14 @@
   }
   async function saveCard(card){
     const pid=card.dataset.recipeCard,status=card.querySelector('.recipe-save-status');
-    if(!window.panoraCloud?.hasTechCardLock?.(pid)){status.textContent=L().lockNeed;return}
+    // Acquire the exclusive lock just before saving. This keeps the editor usable even
+    // before a lock is held, while the server remains the final authority for writes.
+    if(!window.panoraCloud?.hasTechCardLock?.(pid)){
+      if(!navigator.onLine||!window.panoraCloud?.ready){status.textContent=L().lockOnline;return}
+      status.textContent=L().saving;
+      try{await window.panoraCloud.acquireTechCardLock(pid);setCardEditMode(card,true,L().lockReady)}
+      catch(error){console.warn('Panora tech-card save lock',error);status.textContent='⚠ '+(error?.message||L().saveError);return}
+    }
     const previous=recipes[pid]||[];
     recipes[pid]=[...card.querySelectorAll('.recipe-percent-row')].map((row,index)=>({
       name:row.querySelector('[data-role="name"]').value.trim()||L().ingredient,
