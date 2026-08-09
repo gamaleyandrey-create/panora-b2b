@@ -1,0 +1,85 @@
+
+/* Panora v329.1
+   Light is the untouched v328 interface.
+   This file contains ONLY optional dark-mode overrides. */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --dark-bg: #151a16;
+  --dark-surface: #1d241f;
+  --dark-surface-soft: #252d27;
+  --dark-border: #3a453d;
+  --dark-text: #edf1ed;
+  --dark-muted: #aeb8b0;
+  --dark-input: #171d19;
+}
+
+html[data-theme="dark"] body {
+  background: var(--dark-bg) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .admin-nav,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .admin-mobile-tabs {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .order-card,
+html[data-theme="dark"] .product-card {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: var(--dark-input) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+html[data-theme="dark"] th {
+  background: var(--dark-surface-soft) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] table {
+  border-color: var(--dark-border) !important;
+}
+
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .hint,
+html[data-theme="dark"] small {
+  color: var(--dark-muted) !important;
+}
+
+/* Small control; it must not disturb the mobile header layout. */
+.panora-theme-toggle {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  min-width:34px;
+  height:34px;
+  padding:0;
+  border:1px solid rgba(80,95,84,.35);
+  border-radius:999px;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  line-height:1;
+  font-size:16px;
+  flex:0 0 34px;
+}
