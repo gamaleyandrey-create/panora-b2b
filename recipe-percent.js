@@ -207,6 +207,15 @@
   renderRecipes=professionalRender;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',professionalRender);else professionalRender();
   window.addEventListener('panora:recipes-changed',()=>{if(!document.activeElement?.closest?.('#recipeList'))professionalRender()});
+  // v325.2: cloud-sync refreshes products in the background every ~3 s and
+  // emits this event when another device saved a new tech-card revision.
+  // Re-render immediately when this device is only viewing the recipe.
+  // Never overwrite an active local edit.
+  window.addEventListener('panora:products-changed',()=>{
+    const root=document.querySelector('#recipeList');
+    const activelyEditing=Boolean(window.panoraRecipeEditing||root?.dataset.recipeEditing==='true'||document.activeElement?.closest?.('#recipeList'));
+    if(!activelyEditing)professionalRender(true);
+  });
   window.addEventListener('panora:ingredient-costs-changed',()=>{if(!document.activeElement?.closest?.('#recipeList'))professionalRender()});
   window.addEventListener('panora:tech-card-lock-lost',event=>{const card=document.querySelector(`[data-recipe-card="${CSS.escape(event.detail?.productId||'')}"]`);if(card)setCardEditMode(card,false,L().lockNeed)});
 })();
