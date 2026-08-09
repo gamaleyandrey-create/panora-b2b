@@ -1,10 +1,10 @@
-/* Panora v311: durable, versioned drafts for every standard form control. */
+/* Panora v312: durable, versioned drafts for every standard form control. */
 (() => {
   "use strict";
 
   const VERSION = 1;
-  const LOCAL_PREFIX = "panora-form-draft-v311:";
-  const DEVICE_KEY = "panora-form-device-v311";
+  const LOCAL_PREFIX = "panora-form-draft-v312:";
+  const DEVICE_KEY = "panora-form-device-v312";
   const SEND_DELAY = 900;
   const SKIP_TYPES = new Set(["password", "file", "hidden", "submit", "button", "reset", "image"]);
   const controls = 'input:not([type="password"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),textarea,select,[contenteditable="true"]';
@@ -44,11 +44,12 @@
     return bits.join(">");
   };
   const fieldId = (field) => {
-    const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-id]");
-    const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-id") || "";
+    const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-id],[data-index]");
+    const owner = field.closest("[data-recipe-card]")?.getAttribute("data-recipe-card") || "";
+    const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-id") || row?.getAttribute("data-index") || "";
     const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-product") || field.getAttribute("data-field-id") || stablePath(field);
     const option = field.type === "radio" || field.type === "checkbox" ? `:${field.value || "checked"}` : "";
-    return `${rowId ? `${rowId}:` : ""}${base}${option}`;
+    return `${owner ? `${owner}:` : ""}${rowId ? `${rowId}:` : ""}${base}${option}`;
   };
   const scope = (form) => `${location.pathname}|${role()}|${userId()}|${formId(form)}`;
   const localKey = (form) => LOCAL_PREFIX + scope(form);
@@ -127,7 +128,7 @@
       if (requestVersion.get(key) !== marker) return;
       const result = Array.isArray(rows) ? rows[0] : rows;
       const current = readDraft(form);
-      if (result?.conflict) { current.conflict = true; current.dirty = true; writeDraft(form, current); announce("Не сохранено — изменения на другом устройстве", "error"); return; }
+      if (result?.conflict) { current.conflict = true; current.dirty = true; writeDraft(form, current); announce("Нужно выбрать версию данных", "error"); showConflictHelp(form, result.version); return; }
       current.serverVersion = Number(result?.version || current.serverVersion || 0);
       if (Number(current.seq || 0) === sentSeq) { current.dirty = false; current.conflict = false; announce("Сохранено", "synced"); }
       writeDraft(form, current);
@@ -139,6 +140,46 @@
     timers.set(key, setTimeout(() => pushRemote(form), SEND_DELAY));
   };
   const discard = (form) => { localStorage.removeItem(localKey(form)); hydrated.delete(scope(form)); };
+  const showConflictHelp = (form, serverVersion) => {
+    if (document.querySelector('[data-panora-conflict]')) return;
+    const box = document.createElement('section');
+    box.dataset.panoraConflict = 'true';
+    box.setAttribute('role', 'alertdialog');
+    box.setAttribute('aria-live', 'assertive');
+    box.style.cssText = 'position:fixed;z-index:100000;left:12px;right:12px;bottom:12px;max-width:620px;margin:auto;padding:18px;border-radius:16px;background:#fff;color:#17251d;box-shadow:0 12px 45px #0005;border:2px solid #b7791f;font:15px/1.45 system-ui';
+    const title = document.createElement('strong');
+    title.textContent = role() === 'partner' ? 'Данные изменены на другом устройстве' : 'Обнаружен конфликт данных';
+    const help = document.createElement('p');
+    help.textContent = 'Ваши текущие значения сохранены на этом устройстве и не пропадут. Если вы сейчас заполняли форму здесь — выберите «Оставить с этого устройства». Если правильные данные вводили на другом телефоне или компьютере — выберите «Загрузить из облака».';
+    const note = document.createElement('p');
+    note.textContent = 'Не закрывайте страницу до выбора. Перед загрузкой облачной версии Panora сохранит резервную копию текущих значений.';
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:12px';
+    const keep = document.createElement('button');
+    keep.type = 'button'; keep.textContent = 'Оставить с этого устройства';
+    const cloud = document.createElement('button');
+    cloud.type = 'button'; cloud.textContent = 'Загрузить из облака';
+    [keep, cloud].forEach(button => { button.style.cssText = 'padding:10px 14px;border-radius:10px;border:1px solid #627568;background:#f7faf8;color:#17251d;font-weight:700'; });
+    keep.onclick = () => {
+      const current = readDraft(form);
+      current.serverVersion = Number(serverVersion || current.serverVersion || 0);
+      current.conflict = false; current.dirty = true;
+      writeDraft(form, current); box.remove(); announce('Сохраняем выбранную версию…', 'syncing'); scheduleRemote(form);
+    };
+    cloud.onclick = async () => {
+      const key = scope(form), current = readDraft(form);
+      localStorage.setItem(`${localKey(form)}:backup:${Date.now()}`, JSON.stringify(current));
+      cloud.disabled = true; keep.disabled = true;
+      try {
+        const rows = await api(`panora_form_drafts?form_key=eq.${encodeURIComponent(key)}&select=payload,version,updated_at&limit=1`);
+        const remote = rows?.[0];
+        if (!remote?.payload?.fields) throw new Error('cloud-draft-missing');
+        writeDraft(form, { ...remote.payload, serverVersion: Number(remote.version || 0), dirty: false, conflict: false });
+        restoreForm(form); box.remove(); announce('Загружена версия из облака', 'synced');
+      } catch { cloud.disabled = false; keep.disabled = false; announce('Облако недоступно — текущие данные сохранены на устройстве', 'local'); }
+    };
+    actions.append(keep, cloud); box.append(title, help, note, actions); document.body.append(box); keep.focus();
+  };
 
   document.addEventListener("input", event => { if (isEditable(event.target) && event.target.dataset.panoraApplying !== "1") saveLocal(event.target); }, true);
   document.addEventListener("change", event => { if (isEditable(event.target) && event.target.dataset.panoraApplying !== "1") saveLocal(event.target); }, true);
