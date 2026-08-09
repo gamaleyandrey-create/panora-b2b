@@ -52,6 +52,7 @@
 
 <link rel="stylesheet" href="mobile-header.css?v=3270">
 <link rel="stylesheet" href="light-pro.css?v=3300">
+<link rel="stylesheet" href="connection-status.css?v=3310">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -184,7 +185,7 @@
 <div class="sync-backup-modal" id="syncBackupModal" hidden><div class="sync-backup-panel" role="dialog" aria-modal="true" aria-labelledby="syncBackupTitle"><div class="sync-backup-head"><div><h2 id="syncBackupTitle">История резервов</h2><p>Проверяйте состав, восстанавливайте или экспортируйте снимки.</p></div><button type="button" class="sync-backup-close" id="syncBackupClose" aria-label="Закрыть">×</button></div><div class="sync-backup-toolbar"><button type="button" class="secondary" id="syncBackupCleanup">Очистить старые</button><span>Последний резерв всегда защищён.</span></div><div id="syncBackupList" class="sync-backup-list"></div></div></div>
 <script src="audit-log.js?v=312"></script>
 <script src="input-stability.js?v=324"></script>
-<script src="cloud-sync.js?v=3263"></script>
+<script src="cloud-sync.js?v=3310"></script>
   <script src="recipe-percent.js?v=325"></script>
   <script src="daily-order-summary.js?v=312"></script>
   <script>
@@ -192,5 +193,7 @@
     (()=>{const b=document.querySelector('#adminMenuToggle'),n=document.querySelector('#adminNavigation');if(!b||!n||b.dataset.ready)return;b.dataset.ready='1';const open=value=>{document.body.classList.toggle('admin-menu-open',value);b.setAttribute('aria-expanded',String(value));b.querySelector('span').textContent=value?'×':'☰'};b.addEventListener('click',e=>{e.stopPropagation();open(!document.body.classList.contains('admin-menu-open'))});n.querySelectorAll('button[data-view]').forEach(x=>x.addEventListener('click',()=>open(false)));document.addEventListener('click',e=>{if(!n.contains(e.target)&&!b.contains(e.target))open(false)})})();
     if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js?v=3262').then(reg=>reg.update()).catch(()=>{});
   </script>
+<script src="recovery-guard.js?v=3310"></script>
+<script src="connection-status.js?v=3310"></script>
 </body>
 </html>
