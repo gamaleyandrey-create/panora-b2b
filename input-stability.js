@@ -1,11 +1,11 @@
-/* Panora v313: durable, versioned drafts for every standard form control. */
+/* Panora v314: durable, versioned drafts for every standard form control. */
 (() => {
   "use strict";
 
   const VERSION = 1;
   // v313 intentionally uses a new namespace. v312 could assign one key to
   // several recipe tech-card controls and must never replay that corrupt draft.
-  const LOCAL_PREFIX = "panora-form-draft-v313:";
+  const LOCAL_PREFIX = "panora-form-draft-v314:";
   const DEVICE_KEY = "panora-form-device-v312";
   const SEND_DELAY = 900;
   const SKIP_TYPES = new Set(["password", "file", "hidden", "submit", "button", "reset", "image"]);
@@ -142,6 +142,18 @@
     timers.set(key, setTimeout(() => pushRemote(form), SEND_DELAY));
   };
   const discard = (form) => { localStorage.removeItem(localKey(form)); hydrated.delete(scope(form)); };
+  const discardConfirmed = async (form) => {
+    const key = scope(form), draft = readDraft(form);
+    clearTimeout(timers.get(key)); timers.delete(key);
+    discard(form);
+    if (userId() === "anonymous" || !navigator.onLine) return;
+    try {
+      await api("rpc/panora_clear_form_draft", { method: "POST", body: JSON.stringify({ p_form_key: key }) });
+    } catch {
+      // The committed business record is authoritative. A failed cleanup must
+      // not recreate or restore the already confirmed local draft.
+    }
+  };
   const showConflictHelp = (form, serverVersion) => {
     if (document.querySelector('[data-panora-conflict]')) return;
     const box = document.createElement('section');
@@ -199,7 +211,7 @@
   window.panoraFormDrafts = {
     restore: restoreAll,
     clear(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) discard(form); },
-    confirmSaved(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) { discard(form); announce("Сохранено", "synced"); } },
+    async confirmSaved(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) { await discardConfirmed(form); announce("Сохранено", "synced"); } },
     flush: () => Promise.all(allContainers().map(pushRemote))
   };
   restoreAll();

@@ -764,6 +764,10 @@ $("#checkoutButton").onclick = () => {
 $("#checkoutForm").addEventListener(
   "submit",
   (e) => {
+    // portal-cloud.js owns the final checkout in authenticated mode. Running
+    // this legacy local-plan guard first can cancel a valid cloud order using
+    // a stale selectedBakeDate from a previous render.
+    if (window.panoraPortalCloud) return;
     if (!account) {
       e.preventDefault();
       e.stopImmediatePropagation();

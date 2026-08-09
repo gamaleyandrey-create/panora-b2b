@@ -90,7 +90,12 @@
     store('panora-recipes',recipes);if(typeof renderPurchase==='function')renderPurchase();
     const status=card.querySelector('.recipe-save-status');status.textContent=L().saving;
     try{
-      if(navigator.onLine&&window.panoraCloud?.ready&&window.panoraCloud?.flushRecipes){saveProducts();await Promise.all([window.panoraCloud.flushRecipes(),window.panoraCloud.flushProducts()]);status.textContent='✓ '+L().saved}
+      if(navigator.onLine&&window.panoraCloud?.ready&&window.panoraCloud?.flushRecipes&&window.panoraCloud?.saveProductTechCardConfirmed){
+        await Promise.all([window.panoraCloud.flushRecipes(),window.panoraCloud.saveProductTechCardConfirmed(pid,product?.techCard||{})]);
+        await window.panoraFormDrafts?.confirmSaved?.(card);
+        localStorage.setItem('panora-products',JSON.stringify(typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]')));
+        status.textContent='✓ '+L().saved
+      }
       else status.textContent=L().localSaved;
     }
     catch(error){console.error('Panora recipe save',error);status.textContent=L().localSaved}
