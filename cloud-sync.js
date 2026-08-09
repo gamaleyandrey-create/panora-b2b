@@ -132,14 +132,54 @@
       conflicts[section]={remoteAt,localAt:new Date().toISOString()};saveConflicts();audit('sync.conflict',`${section}: облако ${remoteAt}, устройство ${revisions[section]}`,'warning');showConflicts();const error=new Error(`На другом устройстве изменён раздел «${section}»`);error.panoraConflict=true;throw error
     }
   }
+  const clearAdminSession=()=>{
+    session=null;ready=false;
+    localStorage.removeItem('panora-supabase-session');
+    window.panoraSupabaseSession=null;
+    try{window.dispatchEvent(new CustomEvent('panora:admin-session-expired'))}catch{}
+  };
   const refreshSession=async()=>{
-    if(refreshing)return refreshing;if(!session?.refresh_token)throw new Error('Сессия администратора истекла');
-    refreshing=fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(async response=>{if(!response.ok)throw new Error('Войдите в экран пекарни повторно');session=await response.json();localStorage.setItem('panora-supabase-session',JSON.stringify(session));window.panoraSupabaseSession=session;return session}).finally(()=>refreshing=null);return refreshing
+    if(refreshing)return refreshing;
+    if(!session?.refresh_token){
+      clearAdminSession();
+      const error=new Error('Сессия пекарни истекла. Войдите повторно.');
+      error.code='PANORA_ADMIN_SESSION_EXPIRED';
+      throw error;
+    }
+    refreshing=fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{
+      method:'POST',
+      headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:session.refresh_token})
+    }).then(async response=>{
+      if(!response.ok){
+        let detail='';
+        try{detail=await response.text()}catch{}
+        clearAdminSession();
+        const error=new Error('Сессия пекарни истекла. Войдите повторно.');
+        error.code='PANORA_ADMIN_SESSION_EXPIRED';
+        error.detail=detail;
+        throw error;
+      }
+      session=await response.json();
+      localStorage.setItem('panora-supabase-session',JSON.stringify(session));
+      window.panoraSupabaseSession=session;
+      return session;
+    }).finally(()=>refreshing=null);
+    return refreshing
   };
   const request=async(path,options={},retried=false)=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
     const response=await fetch(`${cfg.url}/rest/v1/${path}`,{cache:'no-store',...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}});
-    if(response.status===401&&!retried){await refreshSession();return request(path,options,true)}
+    if(response.status===401&&!retried){
+      await refreshSession();
+      return request(path,options,true);
+    }
+    if(response.status===401){
+      clearAdminSession();
+      const error=new Error('Сессия пекарни истекла. Войдите повторно.');
+      error.code='PANORA_ADMIN_SESSION_EXPIRED';
+      throw error;
+    }
     if(!response.ok){const detail=await response.text();throw new Error(detail||`Supabase: ${response.status}`)}
     if(response.status===204)return null;
     const text=await response.text();return text?JSON.parse(text):null;
@@ -413,7 +453,6 @@
     loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');orders=(rows||[]).map(rowOrder);localStorage.setItem('panora-orders',JSON.stringify(orders));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
-    await window.panoraEnsureFreshSession?.();
     if(!ready)throw new Error('Облако ещё загружается');
     if(loadingOrders)await loadingOrders;
     clearTimeout(orderTimer);orderTimer=0;

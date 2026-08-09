@@ -5,9 +5,9 @@
   async function ensureFreshSession(options = {}) {
     const client = window.panoraSupabase || window.supabaseClient || window.supabase;
     if (!client?.auth?.getSession) {
-      const err = new Error("Supabase auth client is unavailable");
-      err.code = "PANORA_AUTH_CLIENT_MISSING";
-      throw err;
+      // Panora admin uses its own REST/Auth session in cloud-sync.js.
+      // Absence of the Supabase JS SDK must never block an admin action.
+      return window.panoraSupabaseSession || null;
     }
 
     const { data, error } = await client.auth.getSession();
