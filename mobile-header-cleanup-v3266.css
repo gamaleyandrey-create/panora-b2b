@@ -1,0 +1,35 @@
+
+/* Panora v326.6 — restore language selector in bakery mobile topbar */
+@media (max-width:720px){
+  body.admin-page .admin-topbar{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto minmax(74px,auto) !important;
+    gap:7px !important;
+    align-items:center !important;
+  }
+
+  /* Restore the actual language control hidden by v326.4. */
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language]{
+    display:inline-flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    max-width:74px !important;
+    min-width:58px !important;
+  }
+
+  /* Top line priority: Panora + language + sync. Logout is available from More. */
+  body.admin-page .admin-topbar .logout-button,
+  body.admin-page .admin-topbar [data-logout],
+  body.admin-page .admin-topbar #logoutBtn{
+    display:none !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state]{
+    max-width:105px !important;
+    font-size:12px !important;
+  }
+}
