@@ -46,10 +46,10 @@
     return bits.join(">");
   };
   const fieldId = (field) => {
-    const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-id],[data-index]");
+    const row = field.closest("[data-row-id],[data-item-id],[data-product],[data-qty-select],[data-id],[data-index]");
     const owner = field.closest("[data-recipe-card]")?.getAttribute("data-recipe-card") || "";
-    const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-id") || row?.getAttribute("data-index") || "";
-    const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-tech") || field.getAttribute("data-role") || field.getAttribute("data-recipe-weight") || field.getAttribute("data-product") || field.getAttribute("data-field-id") || stablePath(field);
+    const rowId = row?.getAttribute("data-row-id") || row?.getAttribute("data-item-id") || row?.getAttribute("data-product") || row?.getAttribute("data-qty-select") || row?.getAttribute("data-id") || row?.getAttribute("data-index") || "";
+    const base = field.getAttribute("data-draft-key") || field.name || field.id || field.getAttribute("data-tech") || field.getAttribute("data-role") || field.getAttribute("data-recipe-weight") || field.getAttribute("data-product") || field.getAttribute("data-qty-select") || field.getAttribute("data-field-id") || stablePath(field);
     const option = field.type === "radio" || field.type === "checkbox" ? `:${field.value || "checked"}` : "";
     return `${owner ? `${owner}:` : ""}${rowId ? `${rowId}:` : ""}${base}${option}`;
   };
