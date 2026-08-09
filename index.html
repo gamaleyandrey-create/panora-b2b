@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#2f4937">
+  <meta name="theme-color" content="#39764d">
   <meta name="description" content="Panora — bakery pre-orders for partners">
-  <link rel="manifest" href="manifest.webmanifest?v=312">
+  <link rel="manifest" href="manifest.webmanifest?v=3340">
   <link rel="stylesheet" href="styles.css?v=312">
   <link rel="stylesheet" href="portal.css?v=312">
   <link rel="stylesheet" href="restaurant-workspace.css?v=312">
@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="connection-status.css?v=3310">
 <link rel="stylesheet" href="event-notifications.css?v=3320">
 <link rel="stylesheet" href="audit-trail.css?v=3330">
+<link rel="stylesheet" href="pwa-stable.css?v=3340">
 </head>
 <body>
   <div class="app-shell">
@@ -158,37 +159,7 @@
   <script src="app.js?v=312"></script>
 <script src="portal.js?v=315"></script>
   <script src="supabase-config.js?v=312"></script>
-  
-<script>
-(async function(){
-  const KEY='panora-client-bootstrap-v3262';
-  if(localStorage.getItem(KEY)==='1') return;
-
-  // Preserve cart/order drafts. Remove only the broken partner cloud auth session.
-  localStorage.removeItem('panora-restaurant-cloud-session');
-
-  // Remove stale service workers and their caches so old portal-cloud.js?v=3310 cannot survive.
-  try{
-    if('serviceWorker' in navigator){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r=>r.unregister()));
-    }
-  }catch(e){}
-  try{
-    const keys=await caches.keys();
-    await Promise.all(keys.map(k=>caches.delete(k)));
-  }catch(e){}
-
-  localStorage.setItem(KEY,'1');
-
-  // Reload once with a unique URL so GitHub Pages/browser caches are bypassed.
-  const u=new URL(location.href);
-  u.searchParams.set('panora_build','3262');
-  location.replace(u.toString());
-})();
-</script>
-
-<script src="portal-cloud.js?v=3310"></script>
+<script src="portal-cloud.js?v=3340"></script>
   <script src="accounting-invoice.js?v=312"></script>
   <script src="spanish-documents.js?v=312"></script>
   <script src="document-library.js?v=312"></script>
@@ -202,5 +173,7 @@
 <script src="connection-status.js?v=3310"></script>
 <script src="event-notifications.js?v=3320"></script>
 <script src="audit-trail.js?v=3330"></script>
+<script src="stable-health.js?v=3340"></script>
+<script src="pwa-stable.js?v=3340"></script>
 </body>
 </html>

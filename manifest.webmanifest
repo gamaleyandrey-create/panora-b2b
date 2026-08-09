@@ -1,11 +1,19 @@
 {
-  "name":"Panora — хлеб для партнёров",
-  "short_name":"Panora",
-  "start_url":"./",
-  "display":"standalone",
-  "background_color":"#fbfaf7",
-  "theme_color":"#2f4937",
-  "lang":"ru",
-  "description":"Multilingual wholesale bread pre-orders for partners",
-  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "Panora",
+  "short_name": "Panora",
+  "start_url": "./index.html?source=pwa&build=3340",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f2",
+  "theme_color": "#39764d",
+  "lang": "ru",
+  "description": "Panora — заказы, производство и поставки для пекарни и партнёров.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
