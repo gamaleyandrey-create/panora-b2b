@@ -1,0 +1,190 @@
+
+/* Panora v329 — light / dark appearance */
+
+:root {
+  color-scheme: light;
+  --panora-bg: #f4f1e8;
+  --panora-surface: #fffdf7;
+  --panora-surface-2: #f7f5ee;
+  --panora-text: #1f2a22;
+  --panora-muted: #6a746d;
+  --panora-border: #d8ddd6;
+  --panora-accent: #2f6b45;
+  --panora-accent-2: #214f34;
+  --panora-danger: #a5443c;
+  --panora-input: #fffdf7;
+  --panora-shadow: 0 10px 28px rgba(29,48,35,.10);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --panora-bg: #111713;
+  --panora-surface: #182019;
+  --panora-surface-2: #202a22;
+  --panora-text: #edf3ee;
+  --panora-muted: #aeb9b1;
+  --panora-border: #39443c;
+  --panora-accent: #7fc793;
+  --panora-accent-2: #9ed9ad;
+  --panora-danger: #ef8f86;
+  --panora-input: #151c17;
+  --panora-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+
+/* Base surfaces */
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: var(--panora-bg) !important;
+  color: var(--panora-text) !important;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .page,
+html[data-theme="dark"] .app,
+html[data-theme="dark"] .admin-main,
+html[data-theme="dark"] .content {
+  color: var(--panora-text) !important;
+}
+
+/* Header / navigation */
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .admin-nav,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .mobile-admin-tabs,
+html[data-theme="dark"] .admin-mobile-tabs {
+  background: var(--panora-surface) !important;
+  color: var(--panora-text) !important;
+  border-color: var(--panora-border) !important;
+}
+
+/* Common cards, modals, panels */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .sheet,
+html[data-theme="dark"] .drawer,
+html[data-theme="dark"] .account-section,
+html[data-theme="dark"] .order-card,
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .toast,
+html[data-theme="dark"] .popover,
+html[data-theme="dark"] .dropdown-menu {
+  background: var(--panora-surface) !important;
+  color: var(--panora-text) !important;
+  border-color: var(--panora-border) !important;
+  box-shadow: var(--panora-shadow) !important;
+}
+
+/* Tables */
+html[data-theme="dark"] table,
+html[data-theme="dark"] thead,
+html[data-theme="dark"] tbody,
+html[data-theme="dark"] tr,
+html[data-theme="dark"] th,
+html[data-theme="dark"] td {
+  color: var(--panora-text) !important;
+  border-color: var(--panora-border) !important;
+}
+html[data-theme="dark"] th {
+  background: var(--panora-surface-2) !important;
+}
+html[data-theme="dark"] tr:hover td {
+  background: rgba(127,199,147,.06) !important;
+}
+
+/* Form controls */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: var(--panora-input) !important;
+  color: var(--panora-text) !important;
+  border-color: var(--panora-border) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #829087 !important;
+}
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] select:disabled,
+html[data-theme="dark"] textarea:disabled {
+  background: #202721 !important;
+  color: #7f8b82 !important;
+}
+
+/* Buttons and links */
+html[data-theme="dark"] button,
+html[data-theme="dark"] .button,
+html[data-theme="dark"] .btn {
+  border-color: var(--panora-border) !important;
+}
+html[data-theme="dark"] .button-ghost,
+html[data-theme="dark"] .btn-ghost,
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .account-entry {
+  color: var(--panora-text) !important;
+  background: transparent !important;
+}
+html[data-theme="dark"] a {
+  color: var(--panora-accent-2);
+}
+
+/* Secondary/muted copy */
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .hint,
+html[data-theme="dark"] .subtitle,
+html[data-theme="dark"] small,
+html[data-theme="dark"] .meta {
+  color: var(--panora-muted) !important;
+}
+
+/* Explicit light backgrounds that otherwise remain bright */
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background: white"] {
+  background: var(--panora-surface) !important;
+}
+
+/* Mobile "More" sheet */
+html[data-theme="dark"] body.admin-page.admin-menu-open .admin-nav {
+  background: var(--panora-surface) !important;
+  border-color: var(--panora-border) !important;
+}
+
+/* Theme button */
+.panora-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--panora-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--panora-text);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.panora-theme-toggle:hover {
+  background: var(--panora-surface-2);
+}
+
+@media (max-width: 390px) {
+  .panora-theme-toggle {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+}
