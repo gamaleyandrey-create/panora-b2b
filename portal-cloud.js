@@ -159,6 +159,12 @@
     }
     return null;
   }
+  const orderAttemptKey=accountId=>`panora-order-attempt-${accountId}`;
+  const orderFingerprint=(date,items,comment)=>JSON.stringify({date,items:[...items].sort((a,b)=>String(a.product).localeCompare(String(b.product))),comment:String(comment||'')});
+  function orderAttempt(accountId,fingerprint){
+    const key=orderAttemptKey(accountId);try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved?.fingerprint===fingerprint&&saved?.id)return saved.id}catch{}
+    const id=crypto.randomUUID();localStorage.setItem(key,JSON.stringify({id,fingerprint,createdAt:new Date().toISOString()}));return id
+  }
   const form=document.querySelector('#checkoutForm');
   /* Disable app.js' legacy localStorage submit path. Cloud orders are only
      considered successful after panora_create_order commits in Supabase. */
@@ -208,14 +214,14 @@
         }
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
-      const id=crypto.randomUUID(),plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||'');let created;
+      const plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(date,items,comment),id=orderAttempt(account.id,fingerprint);let created;
       try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
       catch(error){const unusableRpc=error.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(error.message);if(!unusableRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
       if(!created)throw new Error('Order was not created');
       const saved=await verifyCreatedOrder(id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
-      await loadAll(true);
-      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);
+      localStorage.removeItem(orderAttemptKey(account.id));
+      cart={};localStorage.removeItem('panora-cart');localStorage.removeItem(`panora-checkout-profile-${account.id}`);['contact','phone','email','address','fulfillment','time'].forEach(field=>localStorage.removeItem(`panora-checkout-profile-${account.id}-${field}`));await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);loadAll(true).catch(error=>console.warn('Panora order refresh',error));
     }catch(error){state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);showToast(lastState.text)}finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
