@@ -1,0 +1,190 @@
+
+/* Panora v327 — single clean mobile header stylesheet */
+
+@media (max-width: 720px) {
+  /* Shared two-column structure: brand left, actions group right */
+  .topbar,
+  .admin-topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .topbar .brand,
+  .admin-topbar .brand {
+    min-width: 0 !important;
+    justify-self: start !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .topbar .brand::after,
+  .admin-topbar .brand::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  /* Actual right-side action groups */
+  .topbar .top-actions,
+  .admin-topbar .top-actions,
+  .admin-topbar > div:last-child,
+  .topbar > div:last-child {
+    justify-self: end !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* PARTNER: Panora | RU | Cabinet */
+  body:not(.admin-page) .topbar .top-actions select,
+  body:not(.admin-page) .topbar .top-actions .lang-select,
+  body:not(.admin-page) .topbar .top-actions [data-language] {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+    margin: 0 !important;
+    flex: 0 0 60px !important;
+  }
+
+  body:not(.admin-page) .topbar .top-actions .account-button,
+  body:not(.admin-page) .topbar .top-actions [data-open-account],
+  body:not(.admin-page) .topbar .top-actions .profile-button {
+    margin: 0 !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* BAKERY: Panora | RU | sync | Exit */
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language] {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+    margin: 0 !important;
+    flex: 0 0 60px !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state] {
+    max-width: 92px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    flex: 0 1 auto !important;
+  }
+
+  body.admin-page .logout-button,
+  body.admin-page [data-logout],
+  body.admin-page #logoutBtn {
+    display: inline-flex !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Mobile bakery uses only bottom tabs + More sheet for section navigation */
+  body.admin-page .admin-nav,
+  body.admin-page .admin-menu,
+  body.admin-page .desktop-admin-nav {
+    display: none !important;
+  }
+
+  body.admin-page.admin-menu-open .admin-nav {
+    display: grid !important;
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    z-index: 1000 !important;
+    max-height: min(68dvh, 560px) !important;
+    overflow-y: auto !important;
+    padding: 12px !important;
+    gap: 6px !important;
+    border: 1px solid #d8ddd6 !important;
+    border-radius: 18px !important;
+    background: #fafbf7 !important;
+    box-shadow: 0 16px 45px rgba(29,48,35,.22) !important;
+  }
+
+  body.admin-page.admin-menu-open .admin-nav h1 {
+    display: none !important;
+  }
+
+  body.admin-page.admin-menu-open .admin-nav button {
+    display: flex !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  #adminMobileMore {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+}
+
+/* Very narrow phones: preserve order, compress only the status */
+@media (max-width: 390px) {
+  .topbar,
+  .admin-topbar {
+    gap: 7px !important;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+
+  .topbar .brand,
+  .admin-topbar .brand {
+    font-size: 18px !important;
+  }
+
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language],
+  body:not(.admin-page) .topbar .top-actions select,
+  body:not(.admin-page) .topbar .top-actions .lang-select,
+  body:not(.admin-page) .topbar .top-actions [data-language] {
+    width: 54px !important;
+    min-width: 54px !important;
+    max-width: 54px !important;
+    flex-basis: 54px !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state] {
+    max-width: 58px !important;
+    font-size: 9px !important;
+  }
+
+  body.admin-page .logout-button,
+  body.admin-page [data-logout],
+  body.admin-page #logoutBtn {
+    font-size: 11px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}

@@ -1,0 +1,119 @@
+
+/* Panora v326.8 — requested mobile header positions */
+@media (max-width:720px){
+
+  /* PARTNER: Panora on the left; RU immediately before/with Cabinet on the right. */
+  body:not(.admin-page) .topbar{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto auto !important;
+    align-items:center !important;
+    column-gap:6px !important;
+    padding:8px 10px !important;
+  }
+
+  body:not(.admin-page) .topbar .brand{
+    grid-column:1 !important;
+    justify-self:start !important;
+    min-width:0 !important;
+  }
+
+  body:not(.admin-page) .topbar .lang-select,
+  body:not(.admin-page) .topbar select[data-language],
+  body:not(.admin-page) .topbar select[name="language"],
+  body:not(.admin-page) .topbar select{
+    grid-column:2 !important;
+    justify-self:end !important;
+    width:60px !important;
+    min-width:60px !important;
+    max-width:60px !important;
+    margin:0 !important;
+  }
+
+  body:not(.admin-page) .topbar .account-button,
+  body:not(.admin-page) .topbar [data-open-account],
+  body:not(.admin-page) .topbar .profile-button{
+    grid-column:3 !important;
+    justify-self:end !important;
+    margin:0 !important;
+    white-space:nowrap !important;
+  }
+
+  /* BAKERY: Panora | RU | sync | Exit at the far right. */
+  body.admin-page .admin-topbar{
+    display:grid !important;
+    grid-template-columns:minmax(96px,1fr) 60px minmax(70px,auto) auto !important;
+    align-items:center !important;
+    column-gap:7px !important;
+    padding:8px 9px !important;
+  }
+
+  body.admin-page .admin-topbar .brand{
+    grid-column:1 !important;
+    justify-self:start !important;
+    min-width:90px !important;
+  }
+
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language]{
+    grid-column:2 !important;
+    width:60px !important;
+    min-width:60px !important;
+    max-width:60px !important;
+    justify-self:end !important;
+  }
+
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state]{
+    grid-column:3 !important;
+    justify-self:end !important;
+    max-width:82px !important;
+    font-size:10px !important;
+  }
+
+  /* Restore Exit in the topbar and place it farthest right. */
+  body.admin-page .admin-topbar .logout-button,
+  body.admin-page .admin-topbar [data-logout],
+  body.admin-page .admin-topbar #logoutBtn{
+    display:inline-flex !important;
+    grid-column:4 !important;
+    justify-self:end !important;
+    margin:0 !important;
+    white-space:nowrap !important;
+  }
+}
+
+/* Very narrow phones: keep requested order, compress labels rather than overlap. */
+@media (max-width:390px){
+  body.admin-page .admin-topbar{
+    grid-template-columns:minmax(82px,1fr) 54px minmax(55px,auto) auto !important;
+    column-gap:5px !important;
+    padding-left:7px !important;
+    padding-right:7px !important;
+  }
+  body.admin-page .admin-topbar .brand{
+    min-width:80px !important;
+    font-size:17px !important;
+  }
+  body.admin-page .admin-topbar select,
+  body.admin-page .admin-topbar .language-select,
+  body.admin-page .admin-topbar [data-language]{
+    width:54px !important;
+    min-width:54px !important;
+    max-width:54px !important;
+  }
+  body.admin-page #saveState,
+  body.admin-page .save-state,
+  body.admin-page [data-save-state]{
+    max-width:60px !important;
+    font-size:9px !important;
+  }
+  body.admin-page .admin-topbar .logout-button,
+  body.admin-page .admin-topbar [data-logout],
+  body.admin-page .admin-topbar #logoutBtn{
+    font-size:11px !important;
+    padding-left:6px !important;
+    padding-right:6px !important;
+  }
+}
