@@ -275,3 +275,89 @@
   }
   body.admin-page #panoraConnectionState{display:none!important}
 }
+
+/* v337.6 compact bakery mobile order card */
+@media(max-width:720px){
+  #orderRows{gap:8px!important}
+  #orderRows tr.order-row{
+    padding:10px 11px!important;border-radius:13px!important;
+    box-shadow:0 3px 10px rgba(31,50,37,.05)!important
+  }
+
+  #orderRows .order-mobile-number{
+    min-height:28px!important;padding-right:112px!important;font-size:13px!important
+  }
+  #orderRows .order-mobile-status{max-width:108px!important}
+  #orderRows .order-mobile-status .tag{
+    max-width:108px!important;padding:5px 8px!important;font-size:9px!important
+  }
+
+  /* Partner gets a full-width compact row: name first, type second. */
+  #orderRows .order-mobile-partner{
+    margin-top:5px!important;padding-top:6px!important;min-height:34px!important
+  }
+  #orderRows .order-partner{
+    width:100%!important;display:flex!important;flex-wrap:wrap!important;
+    justify-content:flex-start!important;align-items:center!important;gap:5px 7px!important
+  }
+  #orderRows .order-partner strong{
+    flex:1 1 180px!important;max-width:none!important;
+    overflow:visible!important;text-overflow:clip!important;white-space:normal!important;
+    overflow-wrap:anywhere!important;line-height:1.15!important;font-size:12px!important
+  }
+  #orderRows .partner-type{
+    flex:0 0 auto!important;padding:4px 7px!important;font-size:9px!important
+  }
+
+  /* Dates: compact labels and values, no oversized blocks. */
+  #orderRows .order-mobile-dates{
+    margin-top:6px!important;padding:7px 8px!important;border-radius:9px!important
+  }
+  #orderRows .order-dates{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:3px 8px!important
+  }
+  #orderRows .order-dates strong,#orderRows .order-dates small{
+    font-size:9px!important;line-height:1.2!important
+  }
+
+  /* Product row uses the entire card width and avoids 4-line names. */
+  #orderRows .order-mobile-items{
+    margin-top:6px!important;padding:8px!important;border-radius:9px!important
+  }
+  #orderRows .order-item{
+    grid-template-columns:minmax(0,1fr)!important;gap:3px!important
+  }
+  #orderRows .order-item strong{
+    font-size:11px!important;line-height:1.2!important;
+    overflow-wrap:normal!important;word-break:normal!important
+  }
+  #orderRows .order-item span{
+    white-space:normal!important;font-size:9.5px!important;line-height:1.2!important
+  }
+
+  #orderRows .order-mobile-total{
+    margin-top:6px!important;font-size:15px!important
+  }
+
+  /* Progress and actions consume less vertical space. */
+  #orderRows .order-action-cell{margin-top:6px!important;padding-top:7px!important}
+  #orderRows .order-flow{margin-bottom:6px!important;gap:2px!important}
+  #orderRows .order-flow-step{
+    grid-template-columns:auto minmax(0,1fr)!important;gap:3px!important;
+    font-size:7.5px!important
+  }
+  #orderRows .order-flow-step b{width:17px!important;height:17px!important;font-size:8px!important}
+  #orderRows .order-flow-actions{gap:6px!important}
+  #orderRows .order-flow-actions .primary-flow{
+    min-height:40px!important;padding:7px 10px!important;font-size:12px!important;border-radius:10px!important
+  }
+  #orderRows .order-flow-actions .danger-quiet{
+    min-width:64px!important;min-height:40px!important;padding:7px 9px!important;
+    font-size:10px!important;border-radius:10px!important
+  }
+  #orderRows .order-contact-action,
+  #orderRows [data-message-order]{
+    min-height:38px!important;margin-top:6px!important;padding:7px 10px!important;
+    font-size:11px!important;border-radius:10px!important
+  }
+}
