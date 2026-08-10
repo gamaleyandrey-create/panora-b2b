@@ -1,8 +1,8 @@
 {
-  "version": "338.9.0",
-  "build": "3389",
+  "version": "339.0.0",
+  "build": "3390",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "change": "desktop-order-button-sizing"
+  "change": "desktop-order-form-polish"
 }
