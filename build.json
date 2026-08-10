@@ -1,8 +1,8 @@
 {
-  "version": "338.3.0",
-  "build": "3383",
+  "version": "338.4.0",
+  "build": "3384",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "filters": "new-only"
+  "mobile_scale": "normalized"
 }
