@@ -1,0 +1,12 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const cloud=fs.readFileSync(path.join(__dirname,'../app/cloud-sync.js'),'utf8');
+assert.match(cloud,/async function refreshPlansIfChanged\(\)/);
+assert.match(cloud,/if\(!ready\|\|pending\.plans\|\|conflicts\.plans\)return false/);
+assert.match(cloud,/remoteSig===localSig/);
+assert.match(cloud,/await applyCloudPlans\(remote\)/);
+assert.match(cloud,/panora:plans-updated/);
+assert.match(cloud,/clearInterval\(planPoll\)/);
+assert.match(cloud,/planPoll=setInterval/);
+assert.match(cloud,/\),2000\)/);
+assert.match(cloud,/refreshPlans:refreshPlansIfChanged/);
+console.log('v335.2-calendar-live-sync: 9 assertions passed');
