@@ -23,3 +23,6 @@
 }
 .panora-utility-zone .panora-audit-button span{font-size:15px}
 .panora-utility-zone .panora-audit-button em{font-style:normal}
+
+/* v336.7 history moved to Settings */
+.panora-audit-button{display:none!important}
