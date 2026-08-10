@@ -1,0 +1,18 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const partner=fs.readFileSync(path.join(app,'index.html'),'utf8');
+const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const conn=fs.readFileSync(path.join(app,'connection-status.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+assert.match(partner,/id="partnerSyncInline"/);
+assert.match(conn,/document\.querySelector\('#panoraConnectionState'\)\?\.remove\(\)/);
+assert.match(conn,/el\.id==='partnerSyncInline'/);
+assert.match(css,/#cartButton\{overflow:visible!important\}/);
+assert.match(css,/#partnerSyncInline\{/);
+assert.match(css,/top:-31px!important/);
+assert.match(admin,/Поставка с даты/);
+assert.match(admin,/по дату поставки/);
+assert.match(commerce,/order\.deliveryDate\|\|order\.date/);
+assert.match(commerce,/поставка \$\{orderDateFromFilter/);
+console.log('v336-embedded-status-delivery-filter: 10 assertions passed');

@@ -21,9 +21,9 @@ assert.match(recovery,/beforeunload/);
 assert.match(recovery,/restoreLatest/);
 
 for(const html of [admin,partner]){
-  assert.match(html,/connection-status\.css\?v=3359/);
+  assert.match(html,/connection-status\.css\?v=3360/);
   assert.match(html,/recovery-guard\.js\?v=3310/);
-  assert.match(html,/connection-status\.js\?v=3359/);
+  assert.match(html,/connection-status\.js\?v=3360/);
 }
 
 console.log('v331-sync-safety: 17 assertions passed');

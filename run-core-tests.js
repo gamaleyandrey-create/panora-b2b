@@ -23,7 +23,8 @@ const list = [
   'v335-6-order-plan-loop.test.js',
   'v335-7-partner-sync-status.test.js',
   'v335-8-partner-filter-status.test.js',
-  'v335-9-partner-history-filters.test.js'
+  'v335-9-partner-history-filters.test.js',
+  'v336-embedded-status-delivery-filter.test.js'
 ];
 
 let failures = 0;
