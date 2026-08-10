@@ -12,5 +12,5 @@ assert.match(js,/confirmed:'подтверждён'/);
 assert.match(js,/shipped:'отгружен'/);
 assert.match(js,/panora:orders-updated/);
 assert.match(cloud,/panora:orders-updated/);
-for(const h of [admin,partner]){assert.match(h,/event-notifications\.css\?v=3367/);assert.match(h,/event-notifications\.js\?v=3367/)}
+for(const h of [admin,partner]){assert.match(h,/event-notifications\.css\?v=3367/);assert.match(h,/event-notifications\.js\?v=3368/)}
 console.log('v332-notifications: 13 assertions passed');

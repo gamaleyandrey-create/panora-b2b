@@ -1,0 +1,12 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const orders=fs.readFileSync(path.join(app,'order-notifications.js'),'utf8');
+const events=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+assert.match(orders,/panora-admin-notifications-enabled/);
+assert.match(orders,/Уведомления выключены/);
+assert.match(orders,/const enabled=!pref\(\)/);
+assert.match(orders,/panora:notification-preference/);
+assert.match(orders,/if\(pref\(\)&&'Notification'in window/);
+assert.match(events,/panora:notification-preference/);
+assert.match(events,/sound=!!event\.detail\?\.enabled/);
+console.log('v336.8-notification-toggle: 7 assertions passed');
