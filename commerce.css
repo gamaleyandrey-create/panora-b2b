@@ -666,3 +666,34 @@
     }
   }
 }
+
+/* v339.2 desktop order actions vertical, matching mobile layout */
+@media(min-width:721px){
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:8px!important;
+    width:100%!important;
+  }
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:40px!important;
+    min-height:40px!important;
+    padding:0 14px!important;
+    margin:0!important;
+    justify-content:center!important;
+    align-items:center!important;
+    white-space:nowrap!important;
+  }
+  #orderRows .order-flow-actions .primary-flow{order:1!important}
+  #orderRows .order-contact-button{order:2!important}
+  #orderRows .order-flow-actions .danger-quiet{
+    order:3!important;
+    margin-top:3px!important;
+  }
+}
