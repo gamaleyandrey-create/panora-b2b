@@ -156,7 +156,7 @@
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       if(products?.length)write('panora-products',products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}})));
-      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();decorateState();renderProducts();renderCart();startPartnerOrderPolling();return orders;
+      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();renderProducts();renderCart();startPartnerOrderPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -171,9 +171,9 @@
       if(before!==after){
         write('panora-orders',next);
         renderAccountModal();
-        decorateState();
         window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length}}));
       }
+      state('ok',labels('Синхронизировано','Synced','Sincronizado'));
       return next;
     })().finally(()=>partnerOrdersLoading=null);
     return partnerOrdersLoading;
@@ -308,7 +308,10 @@
          Keep them after success so the next order is prefilled even while a
          delayed profile RPC is still being reconciled with the cloud. */
       saveCheckoutProfile();
-      cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();state('ok',labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`));showToast(lastState.text);loadAll(true).catch(error=>console.warn('Panora order refresh',error));
+      cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();const sentMessage=labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`);
+      showToast(sentMessage);
+      state('ok',labels('Синхронизировано','Synced','Sincronizado'));
+      loadAll(true).catch(error=>console.warn('Panora order refresh',error));
     }catch(error){
       if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error)){
         clearBrokenSession(error);
