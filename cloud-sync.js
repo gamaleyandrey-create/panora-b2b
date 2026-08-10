@@ -91,12 +91,12 @@
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
     const syncing=/загруз|синх|повтор|loading|sync|retry|cargando|sincron/i.test(text);
-    const local=/устройств|офлайн|offline|device|dispositivo/i.test(text);
+    const local=/устройств|офлайн|offline|device|dispositivo|отправим при подключении/i.test(text);
     el.dataset.syncState=error?'error':syncing?'syncing':local?'local':'synced';
     el.style.cursor=error?'pointer':'';
     el.onclick=error?()=>retrySync():null;
   };
-  const showPending=()=>{const count=pendingCount();if(!count)return false;status(navigator.onLine?`Ожидает отправки: ${count}`:`Офлайн · ожидает: ${count}`,false,'Нажмите после восстановления сети для повторной отправки');const el=document.querySelector('#saveState');if(el){el.style.cursor='pointer';el.onclick=()=>retrySync()}return true};
+  const showPending=()=>{const count=pendingCount();if(!count)return false;status(navigator.onLine?'Отправляем изменения…':'Сохранено на устройстве · отправим при подключении',false,navigator.onLine?'Panora автоматически отправляет изменения. Ничего нажимать не нужно.':'Изменения сохранены на этом устройстве и будут отправлены автоматически после восстановления сети.');return true};
   const rememberRevision=(section,rows=[])=>{const latest=(rows||[]).reduce((value,row)=>String(row.updated_at||'')>value?String(row.updated_at):value,'');if(latest){revisions[section]=latest;localStorage.setItem(revisionKey,JSON.stringify(revisions))}return latest};
   const conflictCount=()=>Object.keys(conflicts).length;
   const saveConflicts=()=>Object.keys(conflicts).length?localStorage.setItem(conflictKey,JSON.stringify(conflicts)):localStorage.removeItem(conflictKey);
@@ -777,7 +777,7 @@ window.panoraRecalculateBalances=recalculateBalances;
 
   async function savePlansNow(){
     if(!ready||typeof plans==='undefined')return;
-    status('Синхронизация…');
+    status('Сохраняем…');
 
     // Content-based optimistic concurrency for production plans.
     // This prevents a stale timestamp/pending flag on another device from
@@ -807,7 +807,8 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
     revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');delete conflicts.plans;saveConflicts();
     clearPending('plans');savePlanBaseline(plans);
-    status('Облако ✓');
+    status('Сохранено');
+    window.dispatchEvent(new CustomEvent('panora:plan-saved',{detail:{at:new Date().toISOString()}}));
   }
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);if(error?.panoraConflict){showConflicts();return}audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){if(applyingCloud)return;const current=typeof plans!=='undefined'?plans:JSON.parse(localStorage.getItem('panora-production-plans')||'[]');const signature=planSignature(current);if(signature===String(baselines.plans||'')){clearPending('plans');delete conflicts.plans;saveConflicts();return}markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{showPending();fail('план',error)}),350)}
@@ -984,9 +985,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function retrySync(){
     if(retrying)return retrying;
-    if(!navigator.onLine){status('Сохранено на устройстве');return false}
+    if(!navigator.onLine){status('Сохранено на устройстве · отправим при подключении');return false}
     if(!ready){status('Облако не подключено',true,'Сначала войдите в приложение');return false}
-    retrying=(async()=>{status(`Синхронизация${pendingCount()?` · ${pendingCount()}`:''}…`);
+    retrying=(async()=>{status(pendingCount()?'Отправляем изменения…':'Проверяем синхронизацию…');
     try{
       if(pending.products)await flushProducts();
       if(pending.recipes)await flushRecipes();

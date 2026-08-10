@@ -5,11 +5,11 @@
 
   const labels={
     synced:'Синхронизировано',
-    syncing:'Синхронизация…',
+    syncing:'Сохраняем…',
     offline:'Нет сети',
     local:'Сохранено на устройстве',
     error:'Ошибка синхронизации',
-    pending:'Ожидает отправки'
+    pending:'Отправляем изменения…'
   };
 
   function ensure(){
@@ -56,8 +56,9 @@
     const t=String(text).toLowerCase();
     if(!navigator.onLine)return 'offline';
     if(datasetState==='error'||/ошиб|error|conflict|конфликт/.test(t))return 'error';
-    if(datasetState==='local'||/устройств|офлайн|offline|ожидает/.test(t))return /ожидает/.test(t)?'pending':'local';
-    if(datasetState==='syncing'||/синх|загруз|сохранение|повтор|sync|loading/.test(t))return 'syncing';
+    if(datasetState==='local'||/устройств|офлайн|offline|отправим при подключении/.test(t))return 'local';
+    if(/отправляем изменения|ожидает/.test(t))return 'pending';
+    if(datasetState==='syncing'||/синх|загруз|сохранение|сохраняем|проверяем|повтор|sync|loading/.test(t))return 'syncing';
     return 'synced';
   }
 
@@ -68,7 +69,8 @@
       const state=classify(source.textContent,source.dataset.syncState);
       let text=source.textContent?.trim()||labels[state];
       const pending=Number(window.panoraCloud?.pendingCount||0);
-      if((state==='local'||state==='pending')&&pending>0)text=`Ожидает отправки: ${pending}`;
+      if(state==='local'&&pending>0)text='Сохранено на устройстве · отправим при подключении';
+      if(state==='pending'&&pending>0)text='Отправляем изменения…';
       if(state==='synced'&&!/сохран|синхрониз|облако/i.test(text))text=labels.synced;
       render(state,text,source.title||'');
       return;
