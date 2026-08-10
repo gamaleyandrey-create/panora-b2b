@@ -457,6 +457,8 @@
     if(loadingOrders)await loadingOrders;
     clearTimeout(orderTimer);orderTimer=0;
     await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:nextStatus,cancelled_reason:cancelledReason,updated_at:new Date().toISOString()})});
+    try{await loadOrders()}catch{}
+    window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
     await loadOrders();
     const saved=orders.find(order=>order.id===id);
     if(!saved||saved.status!==nextStatus)throw new Error('Supabase не подтвердил изменение статуса заказа');
@@ -771,7 +773,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const remoteSig=planSignature(remote),localSig=planSignature(local);
     if(remoteSig===localSig)return false;
     await applyCloudPlans(remote);
-    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'cloud-remote'}}));
+    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'cloud-remote',signature:remoteSig}}));
     return true;
   }
 
@@ -1019,7 +1021,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     errors.push(['рецептуры',error])}
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы и накладные',error)}},4000);
+    fail('заказы и накладные',error)}},2000);
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     clearInterval(planPoll);planPoll=setInterval(()=>refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;

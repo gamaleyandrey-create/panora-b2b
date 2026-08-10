@@ -2,7 +2,7 @@
 /* Panora v332 — in-app order/status notifications with optional sound */
 (function(){
  const SOUND_KEY='panora-event-sound-v332',SNAP_KEY='panora-event-orders-v332';
- let sound=localStorage.getItem(SOUND_KEY)==='1',audioCtx=null,initialized=false;
+ let sound=localStorage.getItem(SOUND_KEY)==='1',audioCtx=null,initialized=false,lastPlanNoticeAt=0,lastPlanNoticeSig='';
 
  function readOrders(){try{return JSON.parse(localStorage.getItem('panora-orders')||'[]')||[]}catch{return[]}}
  function readSnap(){try{return JSON.parse(sessionStorage.getItem(SNAP_KEY)||'{}')||{}}catch{return{}}}
@@ -27,6 +27,23 @@
    el.innerHTML=`<div class="panora-event-icon">${icon}</div><div><p class="panora-event-title"></p><p class="panora-event-text"></p></div><button type="button" class="panora-event-close" aria-label="Закрыть">×</button>`;
    el.querySelector('.panora-event-title').textContent=title;el.querySelector('.panora-event-text').textContent=text;
    el.querySelector('.panora-event-close').onclick=()=>el.remove();stack().prepend(el);beep(type);setTimeout(()=>el.remove(),8000);
+ }
+ function toastOnce(key,title,text,type='order',icon='🔔',cooldownMs=12000){
+   const now=Date.now();
+   const existing=document.querySelector(`.panora-event-toast[data-key="${key}"]`);
+   if(existing){
+     existing.querySelector('.panora-event-title').textContent=title;
+     existing.querySelector('.panora-event-text').textContent=text;
+     return existing;
+   }
+   const last=Number(sessionStorage.getItem(`panora-toast-last:${key}`)||0);
+   if(now-last<cooldownMs)return null;
+   sessionStorage.setItem(`panora-toast-last:${key}`,String(now));
+   const before=stack().firstElementChild;
+   toast(title,text,type,icon);
+   const el=stack().firstElementChild;
+   if(el&&el!==before)el.dataset.key=key;
+   return el;
  }
  function orderNo(o){return `PN-${String(o.number||0).padStart(4,'0')}`}
  function partnerName(id){try{const rows=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');return rows.find(x=>x.id===id)?.name||'Партнёр'}catch{return'Партнёр'}}
@@ -57,7 +74,15 @@
  window.addEventListener('storage',e=>{if(e.key==='panora-orders')setTimeout(compare,0)});
  window.addEventListener('panora:partner-orders-updated',()=>setTimeout(compare,0));
  window.addEventListener('panora:orders-updated',()=>setTimeout(compare,0));
- window.addEventListener('panora:plans-updated',event=>{if(event.detail?.source==='cloud-remote')toast('План обновлён','Получены изменения с другого устройства.','success','↻')});
+ window.addEventListener('panora:order-status-local',()=>setTimeout(compare,0));
+ window.addEventListener('panora:plans-updated',event=>{
+   if(event.detail?.source!=='cloud-remote')return;
+   const sig=String(event.detail?.signature||event.detail?.count||'plan');
+   const now=Date.now();
+   if(sig===lastPlanNoticeSig && now-lastPlanNoticeAt<12000)return;
+   lastPlanNoticeSig=sig;lastPlanNoticeAt=now;
+   toastOnce('remote-plan','План обновлён','Получены изменения с другого устройства.','success','↻',12000);
+ });
  window.addEventListener('panora:restaurant-sync',e=>{if(e.detail?.type==='error')toast('Ошибка синхронизации',e.detail.text||'Не удалось синхронизировать данные.','error','!')});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(compare,100)});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{settings();compare()},{once:true});else{settings();compare()}
