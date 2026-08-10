@@ -125,7 +125,9 @@ function syncPlansFromOrders() {
       current.push(p);
     } else {
       p.ordered = g.ordered;
-      p.planned = Math.max(Number(p.planned || 0), g.ordered);
+      // Planned quantity is controlled by the bakery. Order polling updates only
+      // the ordered quantity; otherwise local plan and cloud plan can fight every 2 seconds.
+      p.planned = Number(p.planned || 0);
       p.deliveryDate = p.deliveryDate || g.deliveryDate;
     }
   });
@@ -254,7 +256,7 @@ function orderActions(o) {
   if (o.status === "cancelled") return "—";
   if (o.status === "submitted")
     return `<button class="action-small" data-confirm="${o.id}">Подтвердить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
-  return `<button class="action-small ship" data-ship="${o.id}">Отгрузить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
+  return `<button class="action-small ship" data-ship="${o.id}" title="Подтверждённый заказ остаётся в списке до отгрузки">Отгрузить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
 }
 function renderOrders() {
   const body = document.querySelector("#orderRows");

@@ -77,11 +77,14 @@
  window.addEventListener('panora:order-status-local',()=>setTimeout(compare,0));
  window.addEventListener('panora:plans-updated',event=>{
    if(event.detail?.source!=='cloud-remote')return;
-   const sig=String(event.detail?.signature||event.detail?.count||'plan');
-   const now=Date.now();
-   if(sig===lastPlanNoticeSig && now-lastPlanNoticeAt<12000)return;
-   lastPlanNoticeSig=sig;lastPlanNoticeAt=now;
-   toastOnce('remote-plan','План обновлён','Получены изменения с другого устройства.','success','↻',12000);
+   const calendarVisible=document.querySelector('#view-plan')?.classList.contains('active');
+   if(!calendarVisible)return;
+   const state=document.querySelector('#saveState');
+   if(state&&state.dataset.syncState!=='syncing'&&state.dataset.syncState!=='local'&&state.dataset.syncState!=='error'){
+     state.textContent='План обновлён';
+     state.dataset.syncState='synced';
+     setTimeout(()=>{if(state.textContent==='План обновлён')state.textContent='Сохранено'},1400);
+   }
  });
  window.addEventListener('panora:restaurant-sync',e=>{if(e.detail?.type==='error')toast('Ошибка синхронизации',e.detail.text||'Не удалось синхронизировать данные.','error','!')});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(compare,100)});
