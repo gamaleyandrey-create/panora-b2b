@@ -156,3 +156,122 @@
 
 /* v337.3 order-cycle action feedback */
 .order-flow-actions button:disabled{opacity:.65!important;cursor:wait!important;filter:saturate(.7)}
+
+/* v337.5 mobile order card hardening from real-device screenshot */
+@media(max-width:720px){
+  #view-orders{overflow-x:hidden!important}
+  #view-orders .admin-content,#view-orders .table-wrap,#orderRows{min-width:0!important;max-width:100%!important}
+
+  #orderRows tr.order-row{
+    grid-template-columns:minmax(0,1fr)!important;
+    padding:12px!important;gap:0!important;overflow:hidden!important
+  }
+
+  #orderRows .order-mobile-number,
+  #orderRows .order-mobile-status,
+  #orderRows .order-mobile-partner,
+  #orderRows .order-mobile-dates,
+  #orderRows .order-mobile-items,
+  #orderRows .order-mobile-total,
+  #orderRows .order-action-cell{
+    grid-column:1!important;width:100%!important;max-width:100%!important;min-width:0!important
+  }
+
+  #orderRows .order-mobile-number{
+    grid-row:1!important;padding-right:120px!important;min-height:34px!important;
+    display:flex!important;align-items:center!important
+  }
+
+  #orderRows .order-mobile-status{
+    grid-row:1!important;justify-self:end!important;width:auto!important;max-width:116px!important;
+    min-width:0!important;text-align:right!important;align-self:start!important
+  }
+  #orderRows .order-mobile-status .tag{
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    width:auto!important;max-width:116px!important;min-width:0!important;
+    padding:6px 9px!important;border-radius:999px!important;white-space:normal!important;
+    word-break:normal!important;overflow-wrap:normal!important;line-height:1.15!important;
+    text-align:center!important;font-size:10px!important
+  }
+  #orderRows .order-mobile-status *{
+    writing-mode:horizontal-tb!important;text-orientation:mixed!important
+  }
+
+  #orderRows .order-mobile-partner{
+    grid-row:2!important;margin-top:8px!important;padding-top:8px!important;
+    display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important
+  }
+  #orderRows .order-partner{display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important}
+  #orderRows .order-partner strong{
+    min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+    font-size:13px!important
+  }
+  #orderRows .partner-type{flex:0 0 auto!important;white-space:nowrap!important}
+
+  #orderRows .order-mobile-dates{
+    grid-row:3!important;margin-top:8px!important;padding:9px 10px!important;
+    border-radius:10px!important;background:#f7f9f7!important
+  }
+  #orderRows .order-dates{
+    display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px 8px!important
+  }
+  #orderRows .order-dates strong,
+  #orderRows .order-dates small{
+    margin:0!important;line-height:1.25!important;word-break:normal!important;overflow-wrap:normal!important
+  }
+  #orderRows .order-dates strong{font-size:10px!important}
+  #orderRows .order-dates small{font-size:9px!important}
+  #orderRows .payment-due-date{grid-column:1/-1!important}
+
+  #orderRows .order-mobile-items{
+    grid-row:4!important;margin-top:8px!important;padding:10px!important;background:#f8faf8!important
+  }
+  #orderRows .order-items{gap:7px!important}
+  #orderRows .order-item{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important;
+    gap:10px!important
+  }
+  #orderRows .order-item strong{
+    min-width:0!important;word-break:normal!important;overflow-wrap:break-word!important;
+    line-height:1.28!important;font-size:11px!important
+  }
+  #orderRows .order-item span{white-space:nowrap!important;font-size:10px!important;color:#69766e!important}
+
+  #orderRows .order-mobile-total{
+    grid-row:5!important;margin-top:8px!important;font-size:17px!important;font-weight:800!important
+  }
+
+  #orderRows .order-action-cell{
+    grid-row:6!important;margin-top:9px!important;padding-top:9px!important
+  }
+  #orderRows .order-flow{
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:4px!important;overflow:visible!important
+  }
+  #orderRows .order-flow-step{
+    min-width:0!important;display:grid!important;grid-template-columns:auto 1fr!important;
+    align-items:center!important;gap:4px!important;font-size:8.5px!important;white-space:normal!important
+  }
+  #orderRows .order-flow-step span{
+    min-width:0!important;line-height:1.15!important;word-break:normal!important;overflow-wrap:normal!important
+  }
+  #orderRows .order-flow-step:not(:last-child)::after{display:none!important}
+  #orderRows .order-flow-step b{width:18px!important;height:18px!important;font-size:9px!important}
+
+  #orderRows .order-flow-actions{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:7px!important;width:100%!important
+  }
+  #orderRows .order-flow-actions .primary-flow{
+    width:100%!important;min-width:0!important;min-height:44px!important;font-size:13px!important
+  }
+  #orderRows .order-flow-actions .danger-quiet{
+    min-width:72px!important;white-space:nowrap!important
+  }
+
+  /* Cloud status must never cover the current order action area */
+  body.admin-page #saveState{
+    position:static!important;inset:auto!important;transform:none!important;
+    max-width:88px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important
+  }
+  body.admin-page #panoraConnectionState{display:none!important}
+}

@@ -145,3 +145,12 @@ body:not(.admin-page) #partnerSyncInline[data-state="error"]{background:#fff1ef!
   body:not(.admin-page) #partnerSyncInline em{display:none!important}
   body:not(.admin-page) #partnerSyncInline i{font-size:11px!important}
 }
+
+/* v337.5 bakery mobile cloud state: header-only */
+@media(max-width:720px){
+  body.admin-page #panoraConnectionState{display:none!important}
+  body.admin-page #saveState{
+    position:static!important;inset:auto!important;transform:none!important;
+    z-index:auto!important;max-width:88px!important
+  }
+}
