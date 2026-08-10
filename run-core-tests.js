@@ -33,7 +33,8 @@ const list = [
   'v336-6-order-filter-drawer.test.js',
   'v336-7-notification-history-cleanup.test.js',
   'v336-8-notification-toggle.test.js',
-  'v336-9-order-workflow-stages.test.js'
+  'v336-9-order-workflow-stages.test.js',
+  'v337-0-order-action-flow.test.js'
 ];
 
 let failures = 0;

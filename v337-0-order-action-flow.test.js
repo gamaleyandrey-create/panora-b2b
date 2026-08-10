@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(commerce,/order-flow-step/);
+assert.match(commerce,/Подтвердить заказ/);
+assert.match(commerce,/Отгрузить заказ/);
+assert.match(commerce,/Открыть накладную/);
+assert.match(commerce,/step\(1,'Подтвердить','done'\)/);
+assert.match(commerce,/step\(2,'Отгрузить','current'\)/);
+assert.match(commerce,/step\(3,'Накладная','current'\)/);
+assert.match(css,/clear order action sequence/);
+assert.match(css,/\.order-flow-actions \.primary-flow/);
+assert.match(css,/grid-template-columns:1fr auto/);
+console.log('v337.0-order-action-flow: 10 assertions passed');
