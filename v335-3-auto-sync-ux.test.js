@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const cloud=fs.readFileSync(path.join(app,'cloud-sync.js'),'utf8');
+const admin=fs.readFileSync(path.join(app,'admin.js'),'utf8');
+const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+const conn=fs.readFileSync(path.join(app,'connection-status.js'),'utf8');
+assert.match(cloud,/status\('Сохраняем…'\)/);
+assert.match(cloud,/status\('Сохранено'\)/);
+assert.match(cloud,/Сохранено на устройстве · отправим при подключении/);
+assert.match(cloud,/Отправляем изменения…/);
+assert.doesNotMatch(cloud,/Нажмите после восстановления сети для повторной отправки/);
+assert.match(admin,/Сохраняем…/);
+assert.match(note,/План обновлён/);
+assert.match(note,/Получены изменения с другого устройства/);
+assert.match(conn,/pending:'Отправляем изменения…'/);
+console.log('v335.3-auto-sync-ux: 9 assertions passed');
