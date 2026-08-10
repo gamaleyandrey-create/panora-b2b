@@ -494,3 +494,103 @@
     margin:0!important;padding:7px 9px!important;border-radius:9px!important
   }
 }
+
+/* v337.8 approved mobile action buttons */
+.cancel-label-mobile{display:none}
+@media(max-width:720px){
+  #orderRows .order-action-cell{
+    display:block!important;
+    width:100%!important;
+  }
+
+  #orderRows .order-flow{
+    margin-bottom:10px!important;
+  }
+
+  /* Main action: full-width solid green */
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    width:100%!important;
+  }
+  #orderRows .order-flow-actions .primary-flow{
+    order:1!important;
+    width:100%!important;
+    min-height:54px!important;
+    padding:0 16px!important;
+    border:1px solid #2f6845!important;
+    border-radius:12px!important;
+    background:#2f6845!important;
+    color:#fff!important;
+    font-size:15px!important;
+    font-weight:800!important;
+    line-height:1!important;
+    box-shadow:none!important;
+  }
+
+  /* Cancel: separate full-width white/red button */
+  #orderRows .order-flow-actions .danger-quiet{
+    order:2!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:50px!important;
+    padding:0 16px!important;
+    border:1px solid #d9a19a!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    color:#c2483c!important;
+    font-size:14px!important;
+    font-weight:800!important;
+    line-height:1!important;
+    box-shadow:none!important;
+  }
+  #orderRows .cancel-label-desktop{display:none!important}
+  #orderRows .cancel-label-mobile{display:inline!important}
+
+  /* Message: third full-width outlined green button */
+  #orderRows .order-contact-button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:9px!important;
+    width:100%!important;
+    min-height:50px!important;
+    margin-top:10px!important;
+    padding:0 16px!important;
+    border:1px solid #6f927c!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    color:#2f6845!important;
+    font-size:14px!important;
+    font-weight:800!important;
+    line-height:1!important;
+    box-shadow:none!important;
+  }
+  #orderRows .order-contact-icon{
+    width:22px!important;
+    height:22px!important;
+    flex:0 0 22px!important;
+    fill:none!important;
+    stroke:currentColor!important;
+    stroke-width:1.7!important;
+    stroke-linecap:round!important;
+    stroke-linejoin:round!important;
+  }
+
+  /* Touch/pressed feedback without changing layout */
+  #orderRows .order-flow-actions button,
+  #orderRows .order-contact-button{
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+  #orderRows .order-flow-actions button:active,
+  #orderRows .order-contact-button:active{
+    transform:scale(.992)!important;
+  }
+
+  /* Shipped state still uses full-width primary document action */
+  #orderRows .order-row-shipped .order-flow-actions .primary-flow{
+    width:100%!important;
+  }
+}
