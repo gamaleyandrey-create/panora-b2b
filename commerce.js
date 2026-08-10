@@ -146,7 +146,7 @@ const normalizePartnerType=value=>{
   return aliases[raw]||'restaurant';
 };
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[normalizePartnerType(type)]||'Ресторан');
-let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false;
+let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false,orderStatusFilter='all';
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -268,6 +268,24 @@ function renderOrders() {
     filter.innerHTML='<label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label><label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label><label><span>Поставка с даты</span><input id="orderDateFromFilter" type="date"></label><label><span>по дату поставки</span><input id="orderDateToFilter" type="date"></label><button type="button" class="secondary order-filter-reset" id="orderFiltersReset">Сбросить</button><strong id="orderPartnerFilterSummary">Все заказы</strong>';
     table.before(filter);
   }
+  const ordersView=document.querySelector('#view-orders');
+  let statusBar=document.querySelector('#orderStatusBar');
+  if(ordersView&&!statusBar){
+    statusBar=document.createElement('div');statusBar.id='orderStatusBar';statusBar.className='order-status-bar';
+    const tableWrap=body.closest('.table-wrap');if(tableWrap)tableWrap.before(statusBar);
+  }
+  const statusGroups={
+    all:()=>true,
+    new:o=>o.status==='submitted',
+    confirmed:o=>!['submitted','shipped','cancelled'].includes(o.status),
+    shipped:o=>o.status==='shipped',
+    completed:o=>['shipped','cancelled'].includes(o.status)
+  };
+  if(statusBar){
+    const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
+    statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${orders.filter(statusGroups[key]).length}</b></button>`).join('');
+    statusBar.querySelectorAll('[data-order-status]').forEach(button=>button.onclick=()=>{orderStatusFilter=button.dataset.orderStatus;renderOrders()});
+  }
   const filterPanel=document.querySelector('#orderFilterPanel');
   const filterToggle=document.querySelector('#orderFilterToggle');
   const filterClose=document.querySelector('#orderFilterClose');
@@ -309,7 +327,8 @@ function renderOrders() {
     const orderDay=String(order.deliveryDate||order.date||'').slice(0,10);
     const fromMatches=!orderDateFromFilter||orderDay>=orderDateFromFilter;
     const toMatches=!orderDateToFilter||orderDay<=orderDateToFilter;
-    return typeMatches&&partnerMatches&&fromMatches&&toMatches;
+    const statusMatches=(statusGroups[orderStatusFilter]||statusGroups.all)(order);
+    return typeMatches&&partnerMatches&&fromMatches&&toMatches&&statusMatches;
   });
   const summary=document.querySelector('#orderPartnerFilterSummary');
   if(summary){
@@ -317,7 +336,7 @@ function renderOrders() {
     const bits=[];
     if(selectedPartner)bits.push(selectedPartner.name||'Партнёр');
     if(orderDateFromFilter||orderDateToFilter)bits.push(`поставка ${orderDateFromFilter||'…'} — ${orderDateToFilter||'…'}`);
-    summary.textContent=bits.length?`История: ${bits.join(' · ')} · ${visibleOrders.length}`:`Все заказы: ${visibleOrders.length}`;
+    summary.textContent=bits.length?`${bits.join(' · ')} · найдено ${visibleOrders.length}`:`Найдено заказов: ${visibleOrders.length}`;
   }
   body.innerHTML = visibleOrders.length
     ? visibleOrders
@@ -332,7 +351,7 @@ function renderOrders() {
           return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td><td><div class="order-items">${itemHtml}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
         })
         .join("")
-    : `<tr><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
+    : `<tr class="${o.status==='submitted'?'order-row-new':''}"><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));

@@ -86,3 +86,19 @@
 /* v336.8 working notification toggle */
 #enableAdminNotifications.notifications-off{border-color:#d8dfda!important;background:#fff!important;color:#69766e!important;box-shadow:none!important}
 #enableAdminNotifications[aria-pressed="true"],#enableAdminNotifications[aria-pressed="false"]{cursor:pointer!important}
+
+/* v336.9 bakery order workflow stages */
+.order-status-bar{display:flex;gap:6px;align-items:center;overflow-x:auto;padding:2px 0 11px;scrollbar-width:none}
+.order-status-bar::-webkit-scrollbar{display:none}
+.order-status-bar button{flex:0 0 auto;min-height:38px;padding:0 11px;display:inline-flex;align-items:center;gap:7px;border:1px solid #dfe6e1;border-radius:10px;background:#fff;color:#617068;font:700 12px system-ui;cursor:pointer}
+.order-status-bar button.active{border-color:#a9c9b2;background:#edf6ef;color:#315f3f;box-shadow:0 2px 8px rgba(49,95,63,.07)}
+.order-status-bar b{min-width:20px;height:20px;padding:0 5px;display:inline-grid;place-items:center;border-radius:999px;background:#eef2ef;color:#69776e;font-size:10px}
+.order-status-bar button.active b{background:#d8eadc;color:#315f3f}
+#orderRows tr.order-row-new td{background:#fffaf2}
+#orderRows tr.order-row-new td:first-child{box-shadow:inset 3px 0 0 #d9984b}
+#orderRows tr.order-row-new [data-confirm]{background:#3f7d50!important;border-color:#3f7d50!important;color:#fff!important;font-weight:800}
+@media(max-width:720px){
+ .order-status-bar{margin:0 -2px;padding-bottom:10px}
+ .order-status-bar button{min-height:40px;padding:0 10px;font-size:11px}
+ #orderRows tr.order-row-new td:first-child{box-shadow:inset 3px 0 0 #d9984b}
+}
