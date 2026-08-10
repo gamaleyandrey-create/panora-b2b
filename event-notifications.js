@@ -67,6 +67,11 @@
  function settings(){
    // v336.7: no floating bell. Toast and sound/event logic stay available.
  }
+ window.addEventListener('panora:notification-preference',event=>{
+   sound=!!event.detail?.enabled;
+   localStorage.setItem(SOUND_KEY,sound?'1':'0');
+   if(sound)beep('success');
+ });
  window.addEventListener('storage',e=>{if(e.key==='panora-orders')setTimeout(compare,0)});
  window.addEventListener('panora:partner-orders-updated',()=>setTimeout(compare,0));
  window.addEventListener('panora:orders-updated',()=>setTimeout(compare,0));

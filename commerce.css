@@ -82,3 +82,7 @@
 .settings-history-card>div{display:flex;align-items:flex-start;gap:11px}.settings-history-card h3{margin:0 0 3px;font-size:14px;color:#30483a}.settings-history-card p{margin:0;color:#718078;font-size:12px;line-height:1.4}
 .settings-history-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#edf5ef;color:#3e704c;font-size:18px;font-weight:800}
 @media(max-width:720px){.settings-history-card{align-items:stretch;flex-direction:column}.settings-history-card #openAuditHistory{width:100%;min-height:42px}#enableAdminNotifications.notifications-active{font-size:11px}}
+
+/* v336.8 working notification toggle */
+#enableAdminNotifications.notifications-off{border-color:#d8dfda!important;background:#fff!important;color:#69766e!important;box-shadow:none!important}
+#enableAdminNotifications[aria-pressed="true"],#enableAdminNotifications[aria-pressed="false"]{cursor:pointer!important}
