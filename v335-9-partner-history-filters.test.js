@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+const connCss=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+assert.match(admin,/id="orderPartnerNameFilter"/);
+assert.match(admin,/id="orderDateFromFilter"/);
+assert.match(admin,/id="orderDateToFilter"/);
+assert.match(commerce,/Все партнёры/);
+assert.match(commerce,/partnerMatches/);
+assert.match(commerce,/fromMatches/);
+assert.match(commerce,/toMatches/);
+assert.match(commerce,/История:/);
+assert.match(css,/grid-template-columns:1fr!important/);
+assert.match(connCss,/body:not\(\.admin-page\) #panoraConnectionState/);
+console.log('v335.9-partner-history-filters: 10 assertions passed');
