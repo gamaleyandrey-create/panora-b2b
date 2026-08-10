@@ -2,12 +2,9 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const app=path.join(__dirname,'../app');
 const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
 const cloud=fs.readFileSync(path.join(app,'cloud-sync.js'),'utf8');
-assert.match(note,/function toastOnce\(/);
-assert.match(note,/cooldownMs=12000/);
-assert.match(note,/lastPlanNoticeSig/);
-assert.match(note,/toastOnce\('remote-plan'/);
 assert.match(cloud,/signature:remoteSig/);
 assert.match(cloud,/panora:order-status-local/);
 assert.match(cloud,/try\{await loadOrders\(\)\}catch\{\}/);
 assert.match(note,/panora:order-status-local/);
-console.log('v335.5-notice-order-refresh: 8 assertions passed');
+assert.match(note,/calendarVisible/);
+console.log('v335.6-notice-order-refresh: 5 assertions passed');

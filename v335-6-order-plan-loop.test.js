@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const commerce=fs.readFileSync(path.join(__dirname,'../app/commerce.js'),'utf8');
+const note=fs.readFileSync(path.join(__dirname,'../app/event-notifications.js'),'utf8');
+const start=commerce.indexOf('function syncPlansFromOrders()');
+const end=commerce.indexOf('const commerceEscape',start);
+const sync=commerce.slice(start,end);
+assert.ok(start>=0&&end>start);
+assert.match(sync,/p\.ordered = g\.ordered/);
+assert.doesNotMatch(sync,/p\.planned = Math\.max/);
+assert.match(sync,/p\.planned = Number\(p\.planned \|\| 0\)/);
+assert.doesNotMatch(note,/Получены изменения с другого устройства/);
+assert.match(note,/calendarVisible/);
+console.log('v335.6-order-plan-loop: 6 assertions passed');
