@@ -39,7 +39,8 @@ const list = [
   'v337-2-partner-order-lifecycle.test.js',
   'v337-3-realtime-order-cycle.test.js',
   'v337-4-responsive-ordering.test.js',
-  'v337-5-mobile-order-card-fix.test.js'
+  'v337-5-mobile-order-card-fix.test.js',
+  'v337-6-compact-mobile-order.test.js'
 ];
 
 let failures = 0;

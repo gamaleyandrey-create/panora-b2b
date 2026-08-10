@@ -1,0 +1,10 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(css,/v337\.6 compact bakery mobile order card/);
+assert.match(css,/flex:1 1 180px!important/);
+assert.match(css,/overflow:visible!important/);
+assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important;gap:3px!important/);
+assert.match(css,/min-height:40px!important/);
+assert.match(css,/font-size:7\.5px!important/);
+console.log('v337.6-compact-mobile-order: 6 assertions passed');
