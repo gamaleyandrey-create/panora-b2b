@@ -9,7 +9,7 @@
    restaurants=cRead('panora-restaurants',[]);orders=cRead('panora-orders',[]);payments=cRead('panora-payments',[]);deliveryNotes=cRead('panora-delivery-notes',[]);
    bakerySettings=cRead('panora-bakery-settings',bakerySettings);plans=read('panora-production-plans',[]);movements=read('panora-stock-movements',[]);
    renderCommerce();renderAll();
-   const state=document.querySelector('#saveState');if(state&&state.dataset.syncState!=='syncing'&&state.dataset.syncState!=='local'){state.textContent='План обновлён с другого устройства';state.dataset.syncState='synced';setTimeout(()=>{if(state.textContent==='План обновлён с другого устройства')state.textContent='Сохранено'},1800)}
+   const state=document.querySelector('#saveState');if(state&&state.dataset.syncState!=='syncing'&&state.dataset.syncState!=='local'&&state.dataset.syncState!=='error'){state.textContent='Сохранено';state.dataset.syncState='synced'}
   }finally{refreshing=false}
  }
  window.addEventListener('storage',event=>{if(sharedKeys.has(event.key))refresh()});
