@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
+const conn=fs.readFileSync(path.join(app,'connection-status.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+assert.match(admin,/orderPartnerNameFilter/);
+assert.match(commerce,/partnerName\.includes\(orderPartnerNameFilter\)/);
+assert.match(conn,/Данные актуальны/);
+assert.match(css,/bottom:82px/);
+console.log('v335.8-partner-filter-status: 4 assertions passed');
