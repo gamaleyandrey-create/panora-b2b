@@ -18,7 +18,8 @@ const list = [
   'v335-offline-ux.test.js',
   'v335-2-calendar-live-sync.test.js',
   'v335-3-auto-sync-ux.test.js',
-  'v335-4-remote-notice.test.js'
+  'v335-4-remote-notice.test.js',
+  'v335-5-notice-order-refresh.test.js'
 ];
 
 let failures = 0;

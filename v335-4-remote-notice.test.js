@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const sync=fs.readFileSync(path.join(app,'admin-status-sync.js'),'utf8');
+const cloud=fs.readFileSync(path.join(app,'cloud-sync.js'),'utf8');
+const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+assert.doesNotMatch(sync,/План обновлён с другого устройства/);
+assert.match(sync,/state\.textContent='Сохранено'/);
+assert.match(cloud,/source:'cloud-remote'/);
+assert.match(note,/event\.detail\?\.source!=='cloud-remote'/);
+assert.match(note,/Получены изменения с другого устройства/);
+console.log('v335.4-remote-notice: 5 assertions passed');
