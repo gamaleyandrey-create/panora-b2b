@@ -1,8 +1,8 @@
 {
-  "version": "338.1.0",
-  "build": "3381",
+  "version": "338.2.0",
+  "build": "3382",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "filters": "recent-drawer"
+  "filters": "unified-fields"
 }
