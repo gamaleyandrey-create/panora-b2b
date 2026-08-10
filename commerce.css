@@ -273,3 +273,41 @@
     letter-spacing:-0.005em!important;
   }
 }
+
+/* v338.7 mobile order actions + single date rendering */
+@media(max-width:720px){
+  /* All three customer/order actions use the same full-width geometry */
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:8px!important;
+    width:100%!important;
+  }
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:100%!important;
+    max-width:100%!important;
+    min-height:46px!important;
+    height:46px!important;
+    margin:0!important;
+    padding:0 14px!important;
+    justify-content:center!important;
+    align-items:center!important;
+    flex:0 0 46px!important;
+    border-radius:11px!important;
+    font-size:14px!important;
+    line-height:1!important;
+  }
+
+  /* Mobile gets only one value per baking/delivery date.
+     Desktop version remains available outside this media query. */
+  #orderRows .order-date-line .date-desktop{
+    display:none!important;
+  }
+  #orderRows .order-date-line .date-mobile{
+    display:inline!important;
+  }
+}

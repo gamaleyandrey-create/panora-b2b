@@ -1,8 +1,8 @@
 {
-  "version": "338.6.0",
-  "build": "3386",
+  "version": "338.7.0",
+  "build": "3387",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "change": "mobile-order-card-typography-only"
+  "change": "equal-mobile-order-actions-single-dates"
 }
