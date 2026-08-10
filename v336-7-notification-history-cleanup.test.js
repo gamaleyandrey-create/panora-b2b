@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
+const orders=fs.readFileSync(path.join(app,'order-notifications.js'),'utf8');
+const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+const audit=fs.readFileSync(path.join(app,'audit-trail.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(admin,/id="openAuditHistory"/);
+assert.match(admin,/История изменений/);
+assert.match(orders,/notifications-active/);
+assert.match(orders,/● Уведомления включены/);
+assert.doesNotMatch(note,/modern-bell/);
+assert.doesNotMatch(note,/utilityZone\(/);
+assert.match(audit,/window\.panoraAuditOpen=open/);
+assert.match(css,/#enableAdminNotifications\.notifications-active/);
+assert.match(css,/\.settings-history-card/);
+console.log('v336.7-notification-history-cleanup: 9 assertions passed');

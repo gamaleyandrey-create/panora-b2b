@@ -30,7 +30,8 @@ const list = [
   'v336-3-sync-position.test.js',
   'v336-4-utility-zone.test.js',
   'v336-5-active-orders-modern-bell.test.js',
-  'v336-6-order-filter-drawer.test.js'
+  'v336-6-order-filter-drawer.test.js',
+  'v336-7-notification-history-cleanup.test.js'
 ];
 
 let failures = 0;
