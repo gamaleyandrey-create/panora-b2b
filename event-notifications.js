@@ -57,7 +57,7 @@
  window.addEventListener('storage',e=>{if(e.key==='panora-orders')setTimeout(compare,0)});
  window.addEventListener('panora:partner-orders-updated',()=>setTimeout(compare,0));
  window.addEventListener('panora:orders-updated',()=>setTimeout(compare,0));
- window.addEventListener('panora:plans-updated',()=>toast('План обновлён','Получены изменения с другого устройства.','success','↻'));
+ window.addEventListener('panora:plans-updated',event=>{if(event.detail?.source==='cloud-remote')toast('План обновлён','Получены изменения с другого устройства.','success','↻')});
  window.addEventListener('panora:restaurant-sync',e=>{if(e.detail?.type==='error')toast('Ошибка синхронизации',e.detail.text||'Не удалось синхронизировать данные.','error','!')});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(compare,100)});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{settings();compare()},{once:true});else{settings();compare()}

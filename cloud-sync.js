@@ -771,7 +771,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const remoteSig=planSignature(remote),localSig=planSignature(local);
     if(remoteSig===localSig)return false;
     await applyCloudPlans(remote);
-    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length}}));
+    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'cloud-remote'}}));
     return true;
   }
 

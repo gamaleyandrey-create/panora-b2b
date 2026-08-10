@@ -17,7 +17,8 @@ const list = [
   'v334-stable-pwa.test.js',
   'v335-offline-ux.test.js',
   'v335-2-calendar-live-sync.test.js',
-  'v335-3-auto-sync-ux.test.js'
+  'v335-3-auto-sync-ux.test.js',
+  'v335-4-remote-notice.test.js'
 ];
 
 let failures = 0;
