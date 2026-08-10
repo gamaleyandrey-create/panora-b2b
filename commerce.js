@@ -383,6 +383,9 @@ function renderOrders() {
 async function confirmOrder(id) {
   const o = orders.find((x) => x.id === id);
   if (!o || o.status !== "submitted") return;
+  const button=document.querySelector(`[data-confirm="${CSS.escape(id)}"]`);
+  if(button?.disabled)return;
+  if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="Подтверждаем…"}
   try {
     if (window.panoraCloud?.ready) {
       await window.panoraCloud.updateOrderStatus(id, "confirmed");
@@ -391,8 +394,10 @@ async function confirmOrder(id) {
       cSave("panora-orders", orders);
     }
     window.panoraDataChannel?.postMessage({ type: "order-confirmed", id });
+    window.dispatchEvent(new CustomEvent('panora:order-cycle-updated',{detail:{id,status:'confirmed'}}));
     renderCommerce();
   } catch (error) {
+    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Подтвердить заказ"}
     alert(`Не удалось подтвердить заказ: ${error.message}`);
   }
 }
@@ -971,6 +976,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     shipmentDialog.close();
     renderCommerce();
     renderStock();
+    window.dispatchEvent(new CustomEvent('panora:order-cycle-updated',{detail:{id:o.id,status:'shipped'}}));
     printNote(o.id);
     return true;
   } catch (error) {

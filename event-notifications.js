@@ -58,8 +58,8 @@
      const old=before[o.id];
      if(!old&&admin&&o.status==='submitted')toast('Новый заказ поступил в пекарню',`${partnerName(o.restaurantId)} · ${orderNo(o)}. Откройте заказ и проверьте позиции.`,'order','🧾');
      else if(old&&old.status!==o.status){
-       if(admin)toast('Заказ изменил статус',`${orderNo(o)} — ${statusText(o.status)}. Изменение синхронизировано с партнёром.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
-       else toast('Есть новости по вашему заказу',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
+       if(admin)toastOnce(`order-status:${o.id}:${o.status}`,'Статус заказа обновлён',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000);
+       else toastOnce(`order-status:${o.id}:${o.status}`,'Есть новости по вашему заказу',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000);
      }
    });
    saveSnap(orders);

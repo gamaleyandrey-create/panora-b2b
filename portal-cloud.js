@@ -166,12 +166,18 @@
     partnerOrdersLoading=(async()=>{
       const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
       const next=(rows||[]).map(mapOrder);
-      const before=JSON.stringify(read('panora-orders')||[]);
+      const previous=read('panora-orders')||[];
+      const before=JSON.stringify(previous);
       const after=JSON.stringify(next);
       if(before!==after){
+        const previousById=new Map(previous.map(order=>[order.id,order.status]));
+        const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
         write('panora-orders',next);
         renderAccountModal();
-        window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length}}));
+        window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length,changed}}));
+        if(changed.some(change=>change.status==='shipped')){
+          setTimeout(()=>loadAll(true).catch(()=>{}),80);
+        }
       }
       state('ok',labels('Синхронизировано','Synced','Sincronizado'));
       return next;
@@ -181,14 +187,17 @@
   function startPartnerOrderPolling(){
     clearInterval(partnerOrderPoll);
     if(!session?.user||!account)return;
-    partnerOrderPoll=setInterval(()=>{
-      refreshPartnerOrders().catch(error=>{
-        if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
-        console.warn('Panora partner order refresh',error);
-      });
-    },4000);
+    const tick=()=>refreshPartnerOrders().catch(error=>{
+      if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
+      console.warn('Panora partner order refresh',error);
+    });
+    tick();
+    partnerOrderPoll=setInterval(()=>{if(!document.hidden)tick()},2000);
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0}
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account)refreshPartnerOrders().catch(()=>{})});
+  window.addEventListener('focus',()=>{if(session?.user&&account)refreshPartnerOrders().catch(()=>{})});
+  window.addEventListener('online',()=>{if(session?.user&&account)refreshPartnerOrders().catch(()=>{})});
 
   async function signIn(email,password,signup=false){
     const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
