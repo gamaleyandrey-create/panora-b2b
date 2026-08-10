@@ -251,12 +251,14 @@ function customerConfirmationHtml(order) {
   return `<small class="customer-confirmed">✓ Получено партнёром${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}${trayInfo}</small>`;
 }
 function orderActions(o) {
+  const step=(n,label,state)=>`<span class="order-flow-step ${state}" aria-label="Этап ${n}: ${label}"><b>${state==='done'?'✓':n}</b><span>${label}</span></span>`;
+  if (o.status === "cancelled")
+    return `<div class="order-flow order-flow-cancelled"><span>Заказ отменён</span></div>`;
   if (o.status === "shipped")
-    return `<button class="action-small" data-note="${o.id}">Накладная</button> <button class="action-small ship" data-delivery-qr="${o.id}">QR-код</button>`;
-  if (o.status === "cancelled") return "—";
+    return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
-    return `<button class="action-small" data-confirm="${o.id}">Подтвердить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
-  return `<button class="action-small ship" data-ship="${o.id}" title="Подтверждённый заказ остаётся в списке до отгрузки">Отгрузить</button> <button class="action-small" data-cancel-order="${o.id}">Отменить</button>`;
+    return `<div class="order-flow">${step(1,'Подтвердить','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}">Отменить</button></div>`;
+  return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small ship primary-flow" data-ship="${o.id}" title="После отгрузки будет создана накладная">Отгрузить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}">Отменить</button></div>`;
 }
 function renderOrders() {
   const body = document.querySelector("#orderRows");

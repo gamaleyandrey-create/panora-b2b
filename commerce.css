@@ -102,3 +102,22 @@
  .order-status-bar button{min-height:40px;padding:0 10px;font-size:11px}
  #orderRows tr.order-row-new td:first-child{box-shadow:inset 3px 0 0 #d9984b}
 }
+
+/* v337.0 clear order action sequence */
+.order-flow{display:flex;align-items:center;gap:5px;margin:0 0 8px;white-space:nowrap}
+.order-flow-step{display:inline-flex;align-items:center;gap:4px;color:#98a29c;font-size:10px;font-weight:700}
+.order-flow-step:not(:last-child)::after{content:"›";margin-left:2px;color:#c3cbc6;font-size:13px}
+.order-flow-step b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:#f0f3f1;color:#7d8981;font-size:10px}
+.order-flow-step.done{color:#63816b}.order-flow-step.done b{background:#e5f1e8;color:#397049}
+.order-flow-step.current{color:#315f3f}.order-flow-step.current b{background:#3f7d50;color:#fff}
+.order-flow-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.order-flow-actions .primary-flow{background:#3f7d50!important;border-color:#3f7d50!important;color:#fff!important;font-weight:800!important}
+.order-flow-actions .danger-quiet{background:transparent!important;border-color:transparent!important;color:#9b6d6d!important;padding-inline:5px!important}
+.order-flow-cancelled{margin:0;color:#8d7777;font-size:11px;font-weight:700}
+@media(max-width:720px){
+ .order-flow{gap:3px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+ .order-flow::-webkit-scrollbar{display:none}
+ .order-flow-step{font-size:9px}.order-flow-step b{width:19px;height:19px}
+ .order-flow-actions{display:grid;grid-template-columns:1fr auto;width:100%}
+ .order-flow-actions .primary-flow{min-height:40px}
+}
