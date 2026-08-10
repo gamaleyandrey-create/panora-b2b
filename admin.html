@@ -7,7 +7,7 @@
   <title>Panora — управление пекарней</title>
 <link rel="stylesheet" href="admin.css?v=312">
 <link rel="stylesheet" href="admin-v247.css?v=312">
-  <link rel="stylesheet" href="commerce.css?v=3360">
+  <link rel="stylesheet" href="commerce.css?v=3361">
   <link rel="stylesheet" href="settings.css?v=312">
   <link rel="stylesheet" href="export.css?v=312">
   <link rel="stylesheet" href="recipe-actions.css?v=312">
@@ -52,7 +52,7 @@
 
 <link rel="stylesheet" href="mobile-header.css?v=3270">
 <link rel="stylesheet" href="light-pro.css?v=3300">
-<link rel="stylesheet" href="connection-status.css?v=3360">
+<link rel="stylesheet" href="connection-status.css?v=3361">
 <link rel="stylesheet" href="event-notifications.css?v=3350">
 <link rel="stylesheet" href="audit-trail.css?v=3350">
 <link rel="manifest" href="manifest.webmanifest?v=3340">
@@ -124,14 +124,19 @@
       </div>
       <div class="view active" id="view-orders">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Заказы и отгрузки</h2><p>Заказ ведётся в штуках. При отгрузке создаётся накладная и задолженность.</p></div><div class="head-actions"><button class="secondary" id="enableAdminNotifications">Включить уведомления</button><button class="primary" id="addOrder">+ Новый заказ</button></div></div>
-        <div class="order-partner-filter">
-          <label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label>
-          <label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label>
-          <label><span>Поставка с даты</span><input id="orderDateFromFilter" type="date"></label>
-          <label><span>по дату поставки</span><input id="orderDateToFilter" type="date"></label>
-          <button type="button" class="secondary order-filter-reset" id="orderFiltersReset">Сбросить</button>
+        <section class="order-filter-card" aria-label="Фильтр заказов и отгрузок">
+          <div class="order-filter-head"><div><strong>Фильтр заказов</strong><span>Партнёр и период поставки</span></div><button type="button" class="order-filter-reset" id="orderFiltersReset">Сбросить</button></div>
+          <div class="order-partner-filter">
+            <label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label>
+            <label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label>
+            <div class="order-date-range">
+              <label><span>Поставка с</span><input id="orderDateFromFilter" type="date"></label>
+              <span class="order-date-separator" aria-hidden="true">→</span>
+              <label><span>по</span><input id="orderDateToFilter" type="date"></label>
+            </div>
+          </div>
           <strong id="orderPartnerFilterSummary">Все заказы</strong>
-        </div>
+        </section>
         <div class="table-wrap"><table><thead><tr><th>№</th><th>Дата</th><th>Партнёр</th><th>Состав</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody id="orderRows"></tbody></table></div>
       </div>
       <div class="view" id="view-reminders">
@@ -209,6 +214,6 @@
 <script src="event-notifications.js?v=3356"></script>
 <script src="audit-trail.js?v=3330"></script>
 <script src="stable-health.js?v=3340"></script>
-<script src="pwa-stable.js?v=3360"></script>
+<script src="pwa-stable.js?v=3361"></script>
 </body>
 </html>
