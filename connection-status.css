@@ -93,3 +93,32 @@ body:not(.admin-page) #panoraConnectionState{display:none!important}
     transform:translateX(-50%)!important;max-width:180px!important
   }
 }
+
+/* v336.3 mobile sync status — separate from cart, no overlap with product card */
+body:not(.admin-page) #partnerSyncInline{
+  position:fixed!important;
+  left:50%!important;right:auto!important;
+  bottom:calc(146px + env(safe-area-inset-bottom))!important;
+  top:auto!important;
+  transform:translateX(-50%)!important;
+  z-index:11!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;
+  width:auto!important;max-width:180px!important;min-height:26px!important;
+  padding:5px 10px!important;margin:0!important;
+  border:1px solid #b9d5c0!important;border-radius:999px!important;
+  background:#eef7f0!important;color:#244c34!important;-webkit-text-fill-color:#244c34!important;
+  box-shadow:0 4px 14px rgba(36,76,52,.16)!important;
+  font:800 10px/1 system-ui,-apple-system,sans-serif!important;
+  white-space:nowrap!important;pointer-events:none!important
+}
+body:not(.admin-page) #partnerSyncInline i,
+body:not(.admin-page) #partnerSyncInline em{
+  position:static!important;color:inherit!important;-webkit-text-fill-color:inherit!important;
+  font-style:normal!important;font-size:inherit!important
+}
+@media(max-width:720px){
+  body:not(.admin-page) #partnerSyncInline{
+    bottom:calc(145px + env(safe-area-inset-bottom))!important;
+    max-width:170px!important;min-height:25px!important;padding:5px 9px!important
+  }
+}

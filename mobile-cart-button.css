@@ -9,3 +9,6 @@
   #cartButton.cart-fab{min-height:60px!important;touch-action:manipulation}
   #cartButton #partnerSyncInline{pointer-events:none!important}
 }
+
+/* v336.3 sync status is no longer a child of cartButton */
+@media(max-width:720px){#partnerSyncInline{pointer-events:none!important}}
