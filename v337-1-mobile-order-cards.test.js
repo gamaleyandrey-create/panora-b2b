@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(commerce,/order-mobile-number/);
+assert.match(commerce,/order-mobile-partner/);
+assert.match(commerce,/order-mobile-items/);
+assert.match(commerce,/order-mobile-total/);
+assert.match(commerce,/order-mobile-status/);
+assert.match(commerce,/order-row-new/);
+assert.doesNotMatch(commerce,/: `<tr class="\$\{o\.status===/);
+assert.match(css,/mobile bakery order cards/);
+assert.match(css,/#orderRows tr\.order-row\{/);
+assert.match(css,/grid-template-columns:1fr auto!important/);
+assert.match(css,/#orderRows \.order-action-cell/);
+console.log('v337.1-mobile-order-cards: 11 assertions passed');

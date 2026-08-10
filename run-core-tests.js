@@ -34,7 +34,8 @@ const list = [
   'v336-7-notification-history-cleanup.test.js',
   'v336-8-notification-toggle.test.js',
   'v336-9-order-workflow-stages.test.js',
-  'v337-0-order-action-flow.test.js'
+  'v337-0-order-action-flow.test.js',
+  'v337-1-mobile-order-cards.test.js'
 ];
 
 let failures = 0;
