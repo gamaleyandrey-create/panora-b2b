@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(admin,/id="orderFilterToggle"/);
+assert.match(admin,/id="orderFilterCount"/);
+assert.match(admin,/id="orderFilterPanel"[^>]*hidden/);
+assert.match(admin,/id="orderFilterClose"/);
+assert.match(commerce,/orderFilterOpen=false/);
+assert.match(commerce,/activeFilterCount=/);
+assert.match(commerce,/filterToggle\.classList\.toggle\('has-filters'/);
+assert.match(css,/desktop popover \/ mobile bottom sheet/);
+assert.match(css,/position:fixed!important;z-index:1800!important/);
+assert.match(css,/border-radius:18px 18px 0 0!important/);
+console.log('v336.6-order-filter-drawer: 10 assertions passed');
