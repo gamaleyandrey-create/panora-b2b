@@ -1,7 +1,8 @@
 {
-  "version": "337.9.0",
-  "build": "3379",
+  "version": "338.0.0",
+  "build": "3380",
   "channel": "test",
   "date": "2026-08-10",
-  "mobile_ui_baseline": "v336.3"
+  "visual_shell": "v336.3",
+  "functional_baseline": "v337.8"
 }

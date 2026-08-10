@@ -13,16 +13,3 @@
 /* v335: keep History next to the bell, away from bottom navigation and sync badge */
 .panora-audit-button{top:64px;right:58px}
 @media(max-width:720px){.panora-audit-button{top:62px;right:54px;bottom:auto}}
-
-/* v336.4 History is part of the shared utility zone */
-.panora-utility-zone .panora-audit-button{
-  position:static!important;inset:auto!important;height:34px!important;min-height:34px!important;
-  padding:0 10px!important;display:inline-flex!important;align-items:center!important;gap:6px!important;
-  border:0!important;border-radius:9px!important;background:transparent!important;box-shadow:none!important;
-  color:#425248!important;font:700 11px system-ui,-apple-system,sans-serif!important
-}
-.panora-utility-zone .panora-audit-button span{font-size:15px}
-.panora-utility-zone .panora-audit-button em{font-style:normal}
-
-/* v336.7 history moved to Settings */
-.panora-audit-button{display:none!important}
