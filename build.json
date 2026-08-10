@@ -1,8 +1,8 @@
 {
-  "version": "338.7.0",
-  "build": "3387",
+  "version": "338.8.0",
+  "build": "3388",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "change": "equal-mobile-order-actions-single-dates"
+  "change": "mobile-button-hierarchy"
 }
