@@ -77,6 +77,7 @@
    zone=document.createElement('div');zone.className='panora-utility-zone';zone.setAttribute('aria-label','Быстрые действия');document.body.appendChild(zone);return zone;
  }
  function ui(){
+   if(!document.body.classList.contains('admin-page'))return;
    if(document.querySelector('.panora-audit-button'))return;
    const b=document.createElement('button');b.type='button';b.className='panora-audit-button';b.innerHTML='<span aria-hidden="true">↺</span><em>История</em>';b.title='История изменений';b.onclick=()=>panel().classList.add('open');utilityZone().appendChild(b);
    const p=document.createElement('div');p.className='panora-audit-panel';p.innerHTML=`<aside class="panora-audit-drawer"><div class="panora-audit-head"><h2>История изменений</h2><button class="panora-audit-close" type="button">×</button></div><div class="panora-audit-tools"><select class="panora-audit-filter"><option value="">Все разделы</option>${Object.values(watched).map(x=>`<option>${x}</option>`).join('')}</select></div><div class="panora-audit-list"></div></aside>`;document.body.appendChild(p);
