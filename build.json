@@ -1,8 +1,7 @@
 {
-  "version": "339.1.0",
-  "build": "3391",
+  "version": "339.2.0",
+  "build": "3392",
   "channel": "test",
-  "date": "2026-08-10",
-  "visual_shell": "v336.3",
-  "change": "desktop-orders-table-width-density"
+  "date": "2026-08-11",
+  "change": "desktop-order-actions-vertical"
 }
