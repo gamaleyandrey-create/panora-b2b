@@ -146,9 +146,15 @@ const normalizePartnerType=value=>{
   return aliases[raw]||'restaurant';
 };
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[normalizePartnerType(type)]||'Ресторан');
+const orderCompactDate=value=>{
+  if(!value)return '—';
+  try{
+    return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(`${String(value).slice(0,10)}T12:00:00`)).replace(' г.','');
+  }catch{return orderDateLabel(value)}
+};
 let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false,orderStatusFilter='all';
 const orderPartnerHtml=partner=>partner
-  ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
+  ? `<div class="order-partner"><strong class="order-partner-name">${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
 const partnerContactHtml=r=>{
   const rows=[r.phone&&['Телефон',r.phone],r.whatsapp&&['WhatsApp',r.whatsapp],r.telegram&&['Telegram',r.telegram],...(Array.isArray(r.extraMessengers)?r.extraMessengers:[]).map(item=>[item.name,item.contact])].filter(Boolean);
@@ -352,7 +358,11 @@ function renderOrders() {
             : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
           return `<tr class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
             <td class="order-mobile-number" data-label="Заказ"><strong>PN-${String(o.number).padStart(4, "0")}</strong></td>
-            <td class="order-mobile-dates" data-label="Даты"><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td>
+            <td class="order-mobile-dates" data-label="Даты"><div class="order-dates">
+              <span class="order-date-line"><em>Выпечка</em><strong class="date-desktop">${orderDateLabel(o.date, true)}</strong><strong class="date-mobile">${orderCompactDate(o.date)}</strong></span>
+              <span class="order-date-line"><em>Доставка</em><strong class="date-desktop">${orderDateLabel(o.deliveryDate || o.date)}</strong><strong class="date-mobile">${orderCompactDate(o.deliveryDate || o.date)}</strong></span>
+              ${note?.paymentDueDate ? `<span class="payment-due-date"><em>Оплата до</em><strong>${orderCompactDate(note.paymentDueDate)}</strong></span>` : ""}
+            </div></td>
             <td class="order-mobile-partner" data-label="Партнёр">${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td>
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма"><strong>${euro(orderTotal(o))}</strong></td>

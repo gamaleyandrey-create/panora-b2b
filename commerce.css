@@ -361,3 +361,136 @@
     font-size:11px!important;border-radius:10px!important
   }
 }
+
+/* v337.7 final unified mobile order cards */
+.date-mobile{display:none}
+@media(max-width:720px){
+  #orderRows tr.order-row{
+    padding:10px 11px!important;border-radius:13px!important;
+    min-height:0!important
+  }
+
+  /* Header: order number + horizontal status */
+  #orderRows .order-mobile-number{
+    min-height:30px!important;padding-right:118px!important;
+    font-size:13px!important
+  }
+  #orderRows .order-mobile-status{max-width:112px!important}
+  #orderRows .order-mobile-status .tag{
+    max-width:112px!important;padding:5px 8px!important;
+    font-size:9.5px!important;line-height:1.1!important
+  }
+
+  /* Partner: always visible, no mysterious prefix or clipping */
+  #orderRows .order-mobile-partner{
+    margin-top:5px!important;padding-top:7px!important;
+    display:block!important
+  }
+  #orderRows .order-partner{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px!important;align-items:center!important;width:100%!important
+  }
+  #orderRows .order-partner-name{
+    display:block!important;min-width:0!important;
+    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+    word-break:normal!important;overflow-wrap:anywhere!important;
+    font-size:12.5px!important;line-height:1.18!important
+  }
+  #orderRows .partner-type{
+    white-space:nowrap!important;padding:4px 7px!important;font-size:9px!important
+  }
+
+  /* Dates: one short row under another. Never two squeezing columns. */
+  #orderRows .order-mobile-dates{
+    margin-top:6px!important;padding:7px 8px!important;
+    border-radius:9px!important;background:#f7f9f7!important
+  }
+  #orderRows .order-dates{
+    display:grid!important;grid-template-columns:1fr!important;
+    gap:4px!important
+  }
+  #orderRows .order-date-line,
+  #orderRows .payment-due-date{
+    display:grid!important;grid-template-columns:76px minmax(0,1fr)!important;
+    gap:6px!important;align-items:baseline!important;
+    min-width:0!important
+  }
+  #orderRows .order-date-line em,
+  #orderRows .payment-due-date em{
+    font-style:normal!important;color:#6e7b72!important;
+    font-size:9px!important;font-weight:700!important;white-space:nowrap!important
+  }
+  #orderRows .date-desktop{display:none!important}
+  #orderRows .date-mobile{
+    display:block!important;min-width:0!important;
+    font-size:10px!important;line-height:1.2!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
+  }
+  #orderRows .payment-due-date strong{
+    font-size:10px!important;white-space:nowrap!important
+  }
+
+  /* Products: full width, each item compact and readable */
+  #orderRows .order-mobile-items{
+    margin-top:6px!important;padding:8px!important;border-radius:9px!important
+  }
+  #orderRows .order-items{gap:6px!important}
+  #orderRows .order-item{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px 10px!important;align-items:end!important
+  }
+  #orderRows .order-item strong{
+    min-width:0!important;font-size:11px!important;line-height:1.2!important;
+    white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important
+  }
+  #orderRows .order-item span{
+    white-space:nowrap!important;font-size:9.5px!important;line-height:1.2!important
+  }
+
+  #orderRows .order-mobile-total{
+    margin-top:6px!important;font-size:15px!important
+  }
+
+  /* Lifecycle: one compact line on every status */
+  #orderRows .order-action-cell{margin-top:6px!important;padding-top:7px!important}
+  #orderRows .order-flow{
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:3px!important;margin-bottom:6px!important
+  }
+  #orderRows .order-flow-step{
+    min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;
+    gap:3px!important;font-size:7.5px!important;text-align:center!important
+  }
+  #orderRows .order-flow-step b{
+    flex:0 0 17px!important;width:17px!important;height:17px!important;font-size:8px!important
+  }
+  #orderRows .order-flow-step span{
+    min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
+  }
+
+  /* Actions: clear hierarchy, no competition with primary action */
+  #orderRows .order-flow-actions{
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px!important;width:100%!important
+  }
+  #orderRows .order-flow-actions .primary-flow{
+    min-height:40px!important;padding:7px 10px!important;
+    font-size:12px!important;border-radius:10px!important
+  }
+  #orderRows .order-flow-actions .danger-quiet{
+    min-width:66px!important;min-height:40px!important;padding:7px 8px!important;
+    border:1px solid #e6b2ab!important;background:#fff!important;color:#a44940!important;
+    font-size:10px!important;border-radius:10px!important
+  }
+
+  #orderRows .order-contact-action,
+  #orderRows [data-message-order]{
+    min-height:36px!important;margin-top:6px!important;
+    padding:7px 10px!important;font-size:10.5px!important;border-radius:10px!important
+  }
+
+  /* Completed/cancelled cards use same geometry */
+  #orderRows .order-flow-cancelled{
+    margin:0!important;padding:7px 9px!important;border-radius:9px!important
+  }
+}
