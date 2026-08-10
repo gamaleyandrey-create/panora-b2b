@@ -4,3 +4,8 @@
   #cartButton.cart-fab>b{display:grid!important;place-items:center!important;min-width:30px!important;height:30px!important;padding:0 7px!important;border-radius:999px!important;background:#fff!important;color:#b95829!important;-webkit-text-fill-color:#b95829!important;font-size:15px!important;visibility:visible!important;opacity:1!important}
   #cartButton.cart-fab>strong{display:block!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:17px!important;font-weight:800!important;visibility:visible!important;opacity:1!important;white-space:nowrap!important}
 }
+
+@media(max-width:720px){
+  #cartButton.cart-fab{min-height:60px!important;touch-action:manipulation}
+  #cartButton #partnerSyncInline{pointer-events:none!important}
+}

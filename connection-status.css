@@ -80,3 +80,16 @@ body:not(.admin-page) #panoraConnectionState{display:none!important}
 #cartButton #partnerSyncInline[data-state="error"]{
   color:#8f302b!important;-webkit-text-fill-color:#8f302b!important;background:#fff0ed!important;border-color:#e4b3ad!important
 }
+
+/* v336.2 final mobile placement: centered over cart */
+#cartButton #partnerSyncInline{
+  left:50%!important;right:auto!important;top:-32px!important;bottom:auto!important;
+  transform:translateX(-50%)!important;
+  max-width:min(190px,calc(100% - 24px))!important
+}
+@media(max-width:720px){
+  #cartButton #partnerSyncInline{
+    left:50%!important;right:auto!important;top:-31px!important;
+    transform:translateX(-50%)!important;max-width:180px!important
+  }
+}
