@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const html=fs.readFileSync(path.join(app,'index.html'),'utf8');
+const css=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+const statusPos=html.indexOf('id="partnerSyncInline"'), cartPos=html.indexOf('id="cartButton"');
+assert.ok(statusPos>=0 && cartPos>=0 && statusPos<cartPos);
+assert.match(css,/body:not\(\.admin-page\) #partnerSyncInline/);
+assert.match(css,/bottom:calc\(146px \+ env\(safe-area-inset-bottom\)\)!important/);
+assert.match(css,/border-radius:999px!important/);
+assert.match(css,/font:800 10px/);
+console.log('v336.3-sync-position: 5 assertions passed');

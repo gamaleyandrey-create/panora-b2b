@@ -3,7 +3,7 @@ const app=path.join(__dirname,'../app');
 const css=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
 const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
 const commerceCss=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
-assert.match(css,/#cartButton #partnerSyncInline/);
+assert.match(css,/#partnerSyncInline/);
 assert.match(css,/-webkit-text-fill-color:#244c34!important/);
 assert.match(admin,/order-filter-card/);
 assert.match(admin,/Поставка с/);

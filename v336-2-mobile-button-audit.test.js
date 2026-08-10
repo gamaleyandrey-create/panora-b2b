@@ -3,7 +3,7 @@ const app=path.join(__dirname,'../app');
 const conn=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
 const head=fs.readFileSync(path.join(app,'mobile-header.css'),'utf8');
 const cart=fs.readFileSync(path.join(app,'mobile-cart-button.css'),'utf8');
-assert.match(conn,/left:50%!important;right:auto!important;top:-32px!important/);
+assert.match(conn,/bottom:calc\(146px \+ env\(safe-area-inset-bottom\)\)!important/);
 assert.match(conn,/transform:translateX\(-50%\)!important/);
 assert.match(head,/#profileButton\.account-entry/);
 assert.match(head,/#adminLogout\.admin-logout/);
