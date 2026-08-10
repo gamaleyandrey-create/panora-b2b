@@ -1,6 +1,7 @@
 {
-  "version": "337.8.0",
-  "build": "3378",
+  "version": "337.9.0",
+  "build": "3379",
   "channel": "test",
-  "date": "2026-08-10"
+  "date": "2026-08-10",
+  "mobile_ui_baseline": "v336.3"
 }
