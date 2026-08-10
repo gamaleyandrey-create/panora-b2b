@@ -34,3 +34,26 @@ body:not(.admin-page) #panoraConnectionState{
     right:10px!important;bottom:calc(124px + env(safe-area-inset-bottom))!important;max-width:175px!important
   }
 }
+
+/* v336 partner status is physically embedded in the cart button */
+body:not(.admin-page) #panoraConnectionState{display:none!important}
+#cartButton{overflow:visible!important}
+#partnerSyncInline{
+  position:absolute!important;right:0!important;top:-31px!important;bottom:auto!important;left:auto!important;
+  display:inline-flex!important;align-items:center!important;gap:5px!important;
+  min-height:24px!important;max-width:180px!important;padding:4px 8px!important;
+  border:1px solid #dce7de!important;border-radius:9px!important;background:rgba(249,252,249,.97)!important;
+  box-shadow:0 3px 10px rgba(31,50,37,.08)!important;color:#5d7564!important;
+  font:700 10px/1.1 system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;
+  pointer-events:none!important;z-index:2!important
+}
+#partnerSyncInline i{font-style:normal!important;font-size:9px!important}
+#partnerSyncInline em{font-style:normal!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#partnerSyncInline[data-state="syncing"]{color:#356d91!important;background:#f2f8fc!important;border-color:#cfe2ef!important}
+#partnerSyncInline[data-state="offline"],
+#partnerSyncInline[data-state="local"],
+#partnerSyncInline[data-state="pending"]{color:#8c641b!important;background:#fff9ec!important;border-color:#ead8ad!important}
+#partnerSyncInline[data-state="error"]{color:#a5443c!important;background:#fff3f1!important;border-color:#edc9c4!important}
+@media(max-width:720px){
+  #partnerSyncInline{right:0!important;top:-29px!important;max-width:165px!important;min-height:23px!important;padding:4px 7px!important;font-size:10px!important}
+}

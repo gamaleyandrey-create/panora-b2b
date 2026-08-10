@@ -13,6 +13,12 @@
   };
 
   function ensure(){
+    const partnerPage=!document.body.classList.contains('admin-page');
+    if(partnerPage){
+      document.querySelector('#panoraConnectionState')?.remove();
+      const inline=document.querySelector('#partnerSyncInline');
+      if(inline)return inline;
+    }
     let el=document.querySelector('#panoraConnectionState');
     if(el)return el;
     el=document.createElement('button');
@@ -45,7 +51,11 @@
     const resolved=(s==='synced'&&partnerPage)?'Актуально':(text||labels[s]||labels.synced);
     last={state:s,text:resolved};
     el.dataset.state=s;
-    el.innerHTML=`<span class="panora-connection-dot" aria-hidden="true">${icon(s)}</span><span>${last.text}</span>`;
+    if(el.id==='partnerSyncInline'){
+      el.innerHTML=`<i aria-hidden="true">${icon(s)}</i><em>${last.text}</em>`;
+    }else{
+      el.innerHTML=`<span class="panora-connection-dot" aria-hidden="true">${icon(s)}</span><span>${last.text}</span>`;
+    }
     el.title=detail||(
       s==='offline'?'Изменения сохраняются на этом устройстве и отправятся после восстановления сети.':
       s==='local'||s==='pending'?'Есть локальные изменения. Нажмите после восстановления связи для повторной синхронизации.':
