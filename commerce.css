@@ -429,3 +429,117 @@
     flex:0 0 17px!important;
   }
 }
+
+/* v339.0 desktop order form polish — buttons / typography / fields only */
+@media(min-width:721px){
+  /* Buttons: same geometry, clear hierarchy */
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    box-sizing:border-box!important;
+    width:165px!important;
+    min-width:165px!important;
+    max-width:165px!important;
+    height:40px!important;
+    min-height:40px!important;
+    max-height:40px!important;
+    padding:0 14px!important;
+    border-radius:10px!important;
+    font-size:13px!important;
+    font-weight:650!important;
+    line-height:1!important;
+    justify-content:center!important;
+    align-items:center!important;
+    white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+
+  #orderRows .order-flow-actions .primary-flow{
+    border:1px solid #2f6845!important;
+    background:#2f6845!important;
+    color:#fff!important;
+  }
+
+  #orderRows .order-contact-button{
+    display:inline-flex!important;
+    gap:6px!important;
+    border:1px solid #6f927c!important;
+    background:#fff!important;
+    color:#2f6845!important;
+  }
+
+  #orderRows .order-flow-actions .danger-quiet{
+    border:1px solid #d9a19a!important;
+    background:#fff!important;
+    color:#c2483c!important;
+  }
+
+  #orderRows .order-contact-icon{
+    width:17px!important;
+    height:17px!important;
+    flex:0 0 17px!important;
+  }
+
+  /* Typography hierarchy inside desktop order rows */
+  #orderRows tr.order-row{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;
+    font-size:13px!important;
+  }
+
+  #orderRows .order-mobile-number strong,
+  #orderRows .order-partner strong{
+    font-size:14px!important;
+    font-weight:700!important;
+    letter-spacing:-0.01em!important;
+  }
+
+  #orderRows .order-item strong,
+  #orderRows .order-mobile-total strong{
+    font-size:13.5px!important;
+    font-weight:650!important;
+  }
+
+  #orderRows .order-dates,
+  #orderRows .order-item span{
+    font-size:12px!important;
+    font-weight:500!important;
+    color:#657269!important;
+  }
+
+  #orderRows .tag,
+  #orderRows .partner-type{
+    font-size:11px!important;
+    font-weight:600!important;
+  }
+
+  /* Desktop filter/form fields: compact and consistent */
+  #view-orders>.order-filter-card select,
+  #view-orders>.order-filter-card input[type="date"],
+  #view-orders select,
+  #view-orders input[type="date"]{
+    box-sizing:border-box!important;
+    height:40px!important;
+    min-height:40px!important;
+    padding:0 34px 0 11px!important;
+    border:1px solid #d9e1db!important;
+    border-radius:9px!important;
+    background-color:#fff!important;
+    color:#34483b!important;
+    font-size:13px!important;
+    font-weight:500!important;
+    box-shadow:none!important;
+  }
+
+  #view-orders>.order-filter-card .order-partner-filter label>span,
+  #view-orders>.order-filter-card .order-date-range label>span{
+    font-size:11px!important;
+    font-weight:600!important;
+    color:#657269!important;
+  }
+
+  #view-orders>.order-filter-card select:focus,
+  #view-orders>.order-filter-card input[type="date"]:focus{
+    border-color:#8fb39a!important;
+    box-shadow:0 0 0 3px rgba(76,130,91,.10)!important;
+    outline:none!important;
+  }
+}
