@@ -496,3 +496,11 @@
   .restaurant-workspace .rw-nav i{display:grid;place-items:center;min-width:29px;width:29px;height:27px;margin:0 auto 3px;border-radius:9px;font-size:18px;font-style:normal}
 }
 @media(max-width:360px){.restaurant-workspace .rw-nav button{font-size:10px}.restaurant-workspace .rw-nav{gap:2px;padding-left:4px;padding-right:4px}}
+
+/* v336.5 active orders / history */
+.rw-order-view-tabs{display:inline-flex;gap:3px;padding:3px;margin:0 0 12px;border:1px solid #dfe6e0;border-radius:11px;background:#f5f8f6}
+.rw-order-view-tabs button{min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#68756c;font:700 12px system-ui;cursor:pointer}
+.rw-order-view-tabs button.active{background:#fff;color:#315c3e;box-shadow:0 2px 8px rgba(31,50,37,.08)}
+.rw-order-view-tabs b{display:inline-grid;place-items:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#e7eee9;font-size:10px}
+.rw-order-view-tabs button.active b{background:#dcecdf;color:#315c3e}
+@media(max-width:720px){.rw-order-view-tabs{display:grid;grid-template-columns:1fr 1fr;width:100%}.rw-order-view-tabs button{min-height:40px}}

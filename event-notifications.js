@@ -72,7 +72,11 @@
  function settings(){
    let b=document.querySelector('.panora-event-settings');if(b)return;
    b=document.createElement('button');b.type='button';b.className='panora-event-settings';b.dataset.sound=sound?'on':'off';
-   const sync=()=>{b.innerHTML=`<span aria-hidden="true">${sound?'🔔':'🔕'}</span><em>Звук</em>`;b.title=sound?'Звук уведомлений включён':'Включить звук уведомлений';b.dataset.sound=sound?'on':'off'};sync();
+   const sync=()=>{
+     const slash=sound?'':'<path d="M5 5l14 14" class="bell-slash"/>';
+     b.innerHTML=`<span class="modern-bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>${slash}</svg><i></i></span><em>Уведомления</em>`;
+     b.title=sound?'Уведомления включены':'Включить уведомления';b.setAttribute('aria-label',b.title);b.dataset.sound=sound?'on':'off'
+   };sync();
    b.onclick=()=>{sound=!sound;localStorage.setItem(SOUND_KEY,sound?'1':'0');sync();if(sound){beep('success');toast('Звук включён','Новые заказы и изменения статусов могут сопровождаться коротким сигналом.','success','🔔')}};
    utilityZone().appendChild(b);
  }
