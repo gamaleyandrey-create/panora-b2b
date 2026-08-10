@@ -240,3 +240,36 @@
     opacity:1!important;
   }
 }
+
+/* v338.6 mobile order card typography only */
+@media(max-width:720px){
+  #orderRows,
+  #orderRows tr.order-row,
+  #orderRows tr.order-row button,
+  #orderRows tr.order-row input,
+  #orderRows tr.order-row select{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;
+  }
+
+  #orderRows .order-mobile-number,
+  #orderRows .order-partner strong,
+  #orderRows .order-item strong,
+  #orderRows .order-mobile-total{
+    font-weight:700!important;
+    letter-spacing:-0.01em!important;
+  }
+
+  #orderRows .tag,
+  #orderRows .partner-type,
+  #orderRows .order-dates,
+  #orderRows .order-item span{
+    font-weight:500!important;
+    letter-spacing:0!important;
+  }
+
+  #orderRows .order-flow-actions button,
+  #orderRows .order-contact-button{
+    font-weight:650!important;
+    letter-spacing:-0.005em!important;
+  }
+}
