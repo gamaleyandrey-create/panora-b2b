@@ -12,3 +12,6 @@
 
 /* v336.3 sync status is no longer a child of cartButton */
 @media(max-width:720px){#partnerSyncInline{pointer-events:none!important}}
+
+/* v337.4 cart is a single action bar; sync status is in topbar */
+#cartButton #partnerSyncInline{display:none!important}
