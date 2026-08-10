@@ -146,7 +146,7 @@ const normalizePartnerType=value=>{
   return aliases[raw]||'restaurant';
 };
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[normalizePartnerType(type)]||'Ресторан');
-let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='';
+let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false;
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -268,6 +268,19 @@ function renderOrders() {
     filter.innerHTML='<label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label><label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label><label><span>Поставка с даты</span><input id="orderDateFromFilter" type="date"></label><label><span>по дату поставки</span><input id="orderDateToFilter" type="date"></label><button type="button" class="secondary order-filter-reset" id="orderFiltersReset">Сбросить</button><strong id="orderPartnerFilterSummary">Все заказы</strong>';
     table.before(filter);
   }
+  const filterPanel=document.querySelector('#orderFilterPanel');
+  const filterToggle=document.querySelector('#orderFilterToggle');
+  const filterClose=document.querySelector('#orderFilterClose');
+  const filterCount=document.querySelector('#orderFilterCount');
+  const activeFilterCount=(orderPartnerTypeFilter!=='all'?1:0)+(orderPartnerNameFilter!=='all'?1:0)+(orderDateFromFilter?1:0)+(orderDateToFilter?1:0);
+  if(filterPanel)filterPanel.hidden=!orderFilterOpen;
+  if(filterToggle){
+    filterToggle.setAttribute('aria-expanded',orderFilterOpen?'true':'false');
+    filterToggle.classList.toggle('has-filters',activeFilterCount>0);
+    filterToggle.onclick=()=>{orderFilterOpen=!orderFilterOpen;renderOrders()};
+  }
+  if(filterClose)filterClose.onclick=()=>{orderFilterOpen=false;renderOrders()};
+  if(filterCount){filterCount.textContent=String(activeFilterCount);filterCount.hidden=!activeFilterCount}
   const select=document.querySelector('#orderPartnerTypeFilter');
   if(select){
     select.value=orderPartnerTypeFilter;
@@ -287,7 +300,7 @@ function renderOrders() {
   if(dateFrom){dateFrom.value=orderDateFromFilter;dateFrom.onchange=()=>{orderDateFromFilter=dateFrom.value;renderOrders()}}
   if(dateTo){dateTo.value=orderDateToFilter;dateTo.onchange=()=>{orderDateToFilter=dateTo.value;renderOrders()}}
   const reset=document.querySelector('#orderFiltersReset');
-  if(reset)reset.onclick=()=>{orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';renderOrders()};
+  if(reset)reset.onclick=()=>{orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
 
   const visibleOrders=orders.filter(order=>{
     const partner=restaurant(order.restaurantId);
