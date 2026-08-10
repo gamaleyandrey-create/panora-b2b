@@ -28,3 +28,36 @@
   .order-partner-filter label,.order-partner-filter select,.order-partner-filter input,.order-filter-reset{width:100%!important;min-width:0!important}
   #orderPartnerFilterSummary{grid-column:1!important}
 }
+
+/* v338.1 restored recent order filters */
+#view-orders{position:relative}
+.order-filter-toggle{position:relative;display:inline-flex!important;align-items:center!important;gap:6px!important}
+.order-filter-toggle>span:first-child{font-size:15px;line-height:1}
+.order-filter-toggle b{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#dfeee3;color:#356246;font-size:10px}
+.order-filter-toggle.has-filters{border-color:#a9c9b2!important;background:#eef7f0!important;color:#315c3e!important}
+.order-filter-card[hidden]{display:none!important}
+#view-orders>.order-filter-card{
+  position:absolute;z-index:30;top:78px;right:0;width:min(720px,calc(100% - 24px));
+  margin:0;padding:14px;border-radius:14px;background:#fff;box-shadow:0 14px 42px rgba(31,50,37,.18)
+}
+.order-filter-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.order-filter-head>div:first-child{display:grid;gap:2px}.order-filter-head span{font-size:11px;color:#7a867f}
+.order-filter-head-actions{display:flex;align-items:center;gap:6px}
+.order-filter-close{width:32px;height:32px;display:grid;place-items:center;border:1px solid #d8dfda;border-radius:9px;background:#fff;color:#657269;font-size:20px;line-height:1;cursor:pointer}
+.order-filter-reset{min-height:32px}
+#view-orders>.order-filter-card .order-partner-filter{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(200px,1.2fr) minmax(320px,1.5fr);gap:10px;align-items:end}
+.order-date-range{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:720px){
+  #view-orders>.page-head .head-actions{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important;gap:7px!important}
+  #view-orders>.page-head .head-actions #addOrder{grid-column:1/-1}
+  #view-orders>.order-filter-card{
+    position:fixed!important;z-index:1800!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+    width:100%!important;max-height:min(78vh,620px)!important;overflow:auto!important;
+    margin:0!important;padding:14px 14px calc(18px + env(safe-area-inset-bottom))!important;
+    border:0!important;border-radius:18px 18px 0 0!important;
+    box-shadow:0 -12px 38px rgba(25,45,31,.22)!important
+  }
+  #view-orders>.order-filter-card::before{content:"";display:block;width:38px;height:4px;margin:-5px auto 10px;border-radius:999px;background:#d8dfda}
+  #view-orders>.order-filter-card .order-partner-filter{grid-template-columns:1fr!important}
+  #view-orders>.order-filter-card .order-date-range{grid-template-columns:1fr 1fr!important}
+}
