@@ -206,3 +206,37 @@
     font-size:12px!important;
   }
 }
+
+/* v338.5 mobile orders cleanup — hide secondary status/navigation UI only */
+@media(max-width:720px){
+  /* Remove row above orders: All / New / Confirmed / Shipped / Completed */
+  #view-orders #orderStatusBar,
+  #view-orders .order-status-bar{
+    display:none!important;
+  }
+
+  /* Remove decorative workflow text/checkmarks:
+     Confirm -> Ship -> Invoice.
+     Do NOT hide .order-flow-actions — the real buttons remain. */
+  #orderRows .order-flow{
+    display:none!important;
+  }
+
+  /* Tighten the action area after workflow removal */
+  #orderRows .order-action-cell{
+    margin-top:6px!important;
+    padding-top:7px!important;
+  }
+
+  /* Main action buttons remain visible and touch-friendly */
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  #orderRows .order-flow-actions button{
+    display:inline-flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+}
