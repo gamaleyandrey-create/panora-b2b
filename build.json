@@ -1,8 +1,8 @@
 {
-  "version": "338.8.0",
-  "build": "3388",
+  "version": "338.9.0",
+  "build": "3389",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "change": "mobile-button-hierarchy"
+  "change": "desktop-order-button-sizing"
 }
