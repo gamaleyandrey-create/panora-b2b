@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const rw=fs.readFileSync(path.join(app,'restaurant-workspace.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'restaurant-workspace.css'),'utf8');
+assert.match(rw,/function orderProgressHtml/);
+assert.match(rw,/Отправлен/);
+assert.match(rw,/Подтверждён/);
+assert.match(rw,/Отгружен/);
+assert.match(rw,/Пекарня получила заказ\. Ожидайте подтверждения\./);
+assert.match(rw,/Заказ подтверждён пекарней и готовится к поставке\./);
+assert.match(rw,/Накладная доступна в документах/);
+assert.match(css,/partner order lifecycle/);
+assert.match(css,/\.rw-order-progress\{/);
+assert.match(css,/\.rw-order-status-hint/);
+console.log('v337.2-partner-order-lifecycle: 10 assertions passed');
