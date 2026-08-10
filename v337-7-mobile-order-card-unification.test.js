@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const js=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(js,/orderCompactDate/);
+assert.match(js,/order-partner-name/);
+assert.match(js,/order-date-line/);
+assert.match(js,/date-mobile/);
+assert.match(css,/v337\.7 final unified mobile order cards/);
+assert.match(css,/grid-template-columns:76px minmax\(0,1fr\)!important/);
+assert.match(css,/grid-template-columns:minmax\(0,1fr\) auto!important/);
+assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+assert.match(css,/white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important/);
+console.log('v337.7-mobile-order-card-unification: 9 assertions passed');

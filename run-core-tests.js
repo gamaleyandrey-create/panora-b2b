@@ -40,7 +40,8 @@ const list = [
   'v337-3-realtime-order-cycle.test.js',
   'v337-4-responsive-ordering.test.js',
   'v337-5-mobile-order-card-fix.test.js',
-  'v337-6-compact-mobile-order.test.js'
+  'v337-6-compact-mobile-order.test.js',
+  'v337-7-mobile-order-card-unification.test.js'
 ];
 
 let failures = 0;
