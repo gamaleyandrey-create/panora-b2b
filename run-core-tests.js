@@ -24,7 +24,8 @@ const list = [
   'v335-7-partner-sync-status.test.js',
   'v335-8-partner-filter-status.test.js',
   'v335-9-partner-history-filters.test.js',
-  'v336-embedded-status-delivery-filter.test.js'
+  'v336-embedded-status-delivery-filter.test.js',
+  'v336-1-status-filter-polish.test.js'
 ];
 
 let failures = 0;
