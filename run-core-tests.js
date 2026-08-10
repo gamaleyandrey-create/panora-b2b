@@ -27,7 +27,8 @@ const list = [
   'v336-embedded-status-delivery-filter.test.js',
   'v336-1-status-filter-polish.test.js',
   'v336-2-mobile-button-audit.test.js',
-  'v336-3-sync-position.test.js'
+  'v336-3-sync-position.test.js',
+  'v336-4-utility-zone.test.js'
 ];
 
 let failures = 0;
