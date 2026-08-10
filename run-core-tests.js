@@ -20,7 +20,8 @@ const list = [
   'v335-3-auto-sync-ux.test.js',
   'v335-4-remote-notice.test.js',
   'v335-5-notice-order-refresh.test.js',
-  'v335-6-order-plan-loop.test.js'
+  'v335-6-order-plan-loop.test.js',
+  'v335-7-partner-sync-status.test.js'
 ];
 
 let failures = 0;
