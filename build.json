@@ -1,8 +1,8 @@
 {
-  "version": "338.4.0",
-  "build": "3384",
+  "version": "338.5.0",
+  "build": "3385",
   "channel": "test",
   "date": "2026-08-10",
   "visual_shell": "v336.3",
-  "mobile_scale": "normalized"
+  "mobile_orders": "status-tabs-and-progress-hidden"
 }
