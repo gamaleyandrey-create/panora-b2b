@@ -3,3 +3,124 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
 @media(max-width:720px){body{overflow-x:hidden}.topbar{padding:14px 18px!important}.hero,.catalog-section,.how-section,.bake-picker,.benefits{padding-left:18px!important;padding-right:18px!important}.hero h1{font-size:clamp(46px,14vw,72px)!important;line-height:.95}.hero-actions{display:grid!important}.hero-actions>*{width:100%}.hero-meta{grid-template-columns:1fr!important;gap:18px!important}.benefits,.steps,.section-heading{grid-template-columns:1fr!important}.bake-picker{grid-template-columns:1fr!important}.bake-dates{width:100%;overflow-x:auto}.product-grid{grid-template-columns:1fr!important}.product-card{min-width:0}.cart-fab{left:16px!important;right:16px!important;bottom:76px!important;width:auto!important}.drawer,.modal{width:100%!important;max-width:none!important}.drawer{padding-bottom:env(safe-area-inset-bottom)}.mobile-nav{display:grid!important;padding-bottom:env(safe-area-inset-bottom)}.admin-topbar{padding:12px 16px}.admin-shell{display:block!important}.admin-nav{position:sticky!important;top:0;z-index:20;display:flex!important;gap:8px;overflow-x:auto;width:100%!important;padding:10px!important;background:#f7f6f1}.admin-nav h1{display:none}.admin-nav button{flex:0 0 auto;white-space:nowrap;padding:11px 14px!important}.admin-content{padding:20px 14px!important}.page-head{display:grid!important;gap:16px}.page-head h2{font-size:clamp(32px,10vw,48px)!important}.page-head button{width:100%}.plan-navigation,.week-navigation,.settings-row{grid-template-columns:1fr!important;display:grid!important}.week-navigation button{width:100%}.summary-grid{grid-template-columns:1fr!important}.restaurant-grid,.reminder-summary{grid-template-columns:1fr!important}dialog{width:calc(100% - 16px)!important;max-height:96dvh!important;margin:auto 8px!important}dialog form{padding:22px 16px!important}.bread-plan-fields{grid-template-columns:1fr!important}.dialog-actions{display:flex!important;flex-direction:column-reverse}.dialog-actions button{width:100%}.table-wrap table{min-width:720px}.account-order{grid-template-columns:1fr!important}}
 @media(min-width:721px) and (max-width:1100px){.mobile-nav{display:none}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.drawer{width:min(520px,70vw)}}
 @media(min-width:1101px){.mobile-nav{display:none}.app-shell{max-width:1680px;margin:auto}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v338.4 mobile button/text scale normalization */
+@media(max-width:720px){
+  /* Base readable scale */
+  body{font-size:14px!important}
+  body button,
+  body input,
+  body select,
+  body textarea{font-size:14px!important}
+
+  /* Top bars */
+  body:not(.admin-page) .topbar,
+  body.admin-page .admin-topbar{min-height:58px!important}
+  body:not(.admin-page) .topbar .brand,
+  body.admin-page .admin-topbar .brand{font-size:18px!important}
+  body:not(.admin-page) .topbar button,
+  body:not(.admin-page) .topbar select,
+  body.admin-page .admin-topbar button,
+  body.admin-page .admin-topbar select{
+    min-height:40px!important;
+    font-size:13px!important;
+  }
+
+  /* Primary/secondary actions */
+  .primary,
+  .secondary,
+  .button,
+  button.primary,
+  button.secondary{
+    min-height:46px!important;
+    padding:0 14px!important;
+    font-size:14px!important;
+    line-height:1.15!important;
+    border-radius:11px!important;
+  }
+
+  /* Compact utility controls */
+  .action-small,
+  .order-filter-reset,
+  .order-filter-close,
+  .admin-menu-toggle,
+  .chip{
+    min-height:40px!important;
+    font-size:12px!important;
+  }
+
+  /* Form controls */
+  input,
+  select,
+  textarea{
+    min-height:44px!important;
+    border-radius:10px!important;
+  }
+  label>span,
+  .field-label,
+  .helper,
+  small{
+    font-size:11px!important;
+    line-height:1.25!important;
+  }
+
+  /* Headings/body */
+  h1{font-size:24px!important;line-height:1.15!important}
+  h2{font-size:21px!important;line-height:1.2!important}
+  h3{font-size:16px!important;line-height:1.2!important}
+  p{font-size:13px!important;line-height:1.4!important}
+
+  /* Orders/filter */
+  #view-orders .order-status-bar button{
+    min-height:40px!important;
+    font-size:12px!important;
+    padding:0 11px!important;
+  }
+  #view-orders #orderFilterToggle{
+    min-height:42px!important;
+    font-size:13px!important;
+  }
+  #view-orders>.order-filter-card select,
+  #view-orders>.order-filter-card input[type="date"]{
+    min-height:44px!important;
+    height:44px!important;
+    font-size:13px!important;
+  }
+  #view-orders>.order-filter-card .order-partner-filter label>span,
+  #view-orders>.order-filter-card .order-date-range label>span{
+    font-size:11px!important;
+  }
+
+  /* Bottom mobile navigation */
+  .mobile-nav button,
+  .mobile-nav a{
+    min-height:56px!important;
+    font-size:11px!important;
+    line-height:1.1!important;
+  }
+  .mobile-nav svg,
+  .mobile-nav .icon{
+    width:22px!important;
+    height:22px!important;
+  }
+
+  /* Cart */
+  #cartButton,
+  .cart-fab{
+    min-height:58px!important;
+    font-size:14px!important;
+    border-radius:13px!important;
+  }
+}
+
+@media(max-width:390px){
+  body{font-size:13px!important}
+  h1{font-size:22px!important}
+  h2{font-size:19px!important}
+  h3{font-size:15px!important}
+  .primary,.secondary,.button,button.primary,button.secondary{
+    min-height:44px!important;
+    font-size:13px!important;
+  }
+  .mobile-nav button,.mobile-nav a{font-size:10px!important}
+}

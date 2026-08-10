@@ -191,3 +191,18 @@
 #view-orders>.order-filter-inline{display:none!important}
 #view-orders>#orderFilterPanel{display:block}
 #view-orders>#orderFilterPanel[hidden]{display:none!important}
+
+/* v338.4 mobile filter control sizing */
+@media(max-width:720px){
+  #view-orders>.order-filter-card select,
+  #view-orders>.order-filter-card input[type="date"]{
+    min-height:44px!important;
+    height:44px!important;
+    font-size:13px!important;
+  }
+  #view-orders>.order-filter-card .order-filter-reset,
+  #view-orders>.order-filter-card .order-filter-close{
+    min-height:40px!important;
+    font-size:12px!important;
+  }
+}
