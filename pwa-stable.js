@@ -1,7 +1,7 @@
 
 /* Panora v334 — stable install/update controller */
 (function(){
-  const BUILD='3340';
+  const BUILD='3350';
   let deferredPrompt=null;
 
   function ensure(){

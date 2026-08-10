@@ -9,3 +9,7 @@
 .panora-event-settings[data-sound="on"]{color:#39764d;background:#f1f8f3;border-color:#cfe2d4}
 @keyframes panoraToastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media(max-width:720px){.panora-event-stack{top:62px;right:10px;width:calc(100vw - 20px)}.panora-event-settings{top:auto;right:10px;bottom:calc(118px + env(safe-area-inset-bottom))}}
+
+/* v335: utility controls live below the header and never cover primary navigation */
+.panora-event-settings{top:64px;right:14px}
+@media(max-width:720px){.panora-event-settings{top:62px;right:10px;bottom:auto}}

@@ -12,10 +12,14 @@
    if(!sound)return;
    try{
      audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
-     const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-     o.type='sine';o.frequency.value=type==='error'?330:type==='success'?660:520;
-     g.gain.setValueAtTime(.0001,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.055,audioCtx.currentTime+.015);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.16);
-     o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.18);
+     const now=audioCtx.currentTime;
+     const tones=type==='error'?[330,260]:type==='success'?[660,880]:[620,820];
+     tones.forEach((freq,i)=>{
+       const o=audioCtx.createOscillator(),g=audioCtx.createGain(),start=now+i*.13;
+       o.type='sine';o.frequency.setValueAtTime(freq,start);
+       g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(.16,start+.018);g.gain.exponentialRampToValueAtTime(.0001,start+.19);
+       o.connect(g);g.connect(audioCtx.destination);o.start(start);o.stop(start+.21);
+     });
    }catch{}
  }
  function toast(title,text,type='order',icon='🔔'){
@@ -35,10 +39,10 @@
    const admin=document.body.classList.contains('admin-page');
    orders.forEach(o=>{
      const old=before[o.id];
-     if(!old&&admin&&o.status==='submitted')toast('Новый заказ',`${partnerName(o.restaurantId)} · ${orderNo(o)}`,'order','🧾');
+     if(!old&&admin&&o.status==='submitted')toast('Новый заказ поступил в пекарню',`${partnerName(o.restaurantId)} · ${orderNo(o)}. Откройте заказ и проверьте позиции.`,'order','🧾');
      else if(old&&old.status!==o.status){
-       if(admin)toast('Статус заказа изменён',`${orderNo(o)} · ${statusText(o.status)}`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
-       else toast('Заказ обновлён',`${orderNo(o)} · ${statusText(o.status)}`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
+       if(admin)toast('Заказ изменил статус',`${orderNo(o)} — ${statusText(o.status)}. Изменение синхронизировано с партнёром.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
+       else toast('Есть новости по вашему заказу',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓');
      }
    });
    saveSnap(orders);
