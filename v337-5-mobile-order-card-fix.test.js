@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+const conn=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+assert.match(css,/mobile order card hardening from real-device screenshot/);
+assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);
+assert.match(css,/writing-mode:horizontal-tb!important/);
+assert.match(css,/grid-template-columns:1fr 1fr!important/);
+assert.match(css,/grid-template-columns:minmax\(0,1fr\) auto!important/);
+assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+assert.match(css,/body\.admin-page #panoraConnectionState\{display:none!important\}/);
+assert.match(conn,/bakery mobile cloud state: header-only/);
+console.log('v337.5-mobile-order-card-fix: 8 assertions passed');
