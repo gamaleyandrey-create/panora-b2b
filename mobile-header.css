@@ -426,34 +426,3 @@
     font-size:12px !important;
   }
 }
-
-/* v336.2 mobile button audit — real selectors used by current markup */
-@media(max-width:720px){
-  body:not(.admin-page) #profileButton.account-entry{
-    display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;
-    min-width:82px!important;min-height:40px!important;width:auto!important;height:40px!important;
-    padding:0 9px!important;margin:0!important;border-radius:10px!important;
-    white-space:nowrap!important;overflow:visible!important
-  }
-  body:not(.admin-page) #profileButton.account-entry svg{width:20px!important;height:20px!important;flex:0 0 20px!important}
-  body:not(.admin-page) #profileButton .account-entry-label{
-    display:inline!important;font-size:12px!important;line-height:1!important;white-space:nowrap!important
-  }
-
-  body.admin-page #adminLogout.admin-logout{
-    display:inline-flex!important;align-items:center!important;justify-content:center!important;
-    min-height:38px!important;height:38px!important;min-width:58px!important;width:auto!important;
-    padding:0 8px!important;margin:0!important;border-radius:9px!important;
-    font-size:11px!important;white-space:nowrap!important
-  }
-  body.admin-page #adminMenuToggle.admin-menu-toggle{
-    min-height:38px!important;height:38px!important;padding:0 8px!important;border-radius:9px!important
-  }
-
-  .mobile-nav a,.mobile-nav button{
-    min-height:48px!important;touch-action:manipulation
-  }
-  .hero-actions .button{
-    min-height:48px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important
-  }
-}
