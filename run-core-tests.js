@@ -36,7 +36,8 @@ const list = [
   'v336-9-order-workflow-stages.test.js',
   'v337-0-order-action-flow.test.js',
   'v337-1-mobile-order-cards.test.js',
-  'v337-2-partner-order-lifecycle.test.js'
+  'v337-2-partner-order-lifecycle.test.js',
+  'v337-3-realtime-order-cycle.test.js'
 ];
 
 let failures = 0;

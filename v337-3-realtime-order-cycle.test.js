@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const portal=fs.readFileSync(path.join(app,'portal-cloud.js'),'utf8');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const notes=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+assert.match(portal,/setInterval\(\(\)=>\{if\(!document\.hidden\)tick\(\)\},2000\)/);
+assert.match(portal,/visibilitychange/);
+assert.match(portal,/window\.addEventListener\('focus'/);
+assert.match(portal,/changed\.some\(change=>change\.status==='shipped'\)/);
+assert.match(portal,/loadAll\(true\)/);
+assert.match(commerce,/Подтверждаем…/);
+assert.match(commerce,/button\?\.disabled/);
+assert.match(commerce,/panora:order-cycle-updated/);
+assert.match(notes,/toastOnce\(`order-status:\$\{o\.id\}:\$\{o\.status\}`/);
+assert.match(notes,/30000/);
+console.log('v337.3-realtime-order-cycle: 10 assertions passed');
