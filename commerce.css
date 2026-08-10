@@ -183,3 +183,11 @@
     grid-template-columns:1fr!important;
   }
 }
+
+/* v338.3 remove legacy order filter field */
+#view-orders>.order-partner-filter,
+#view-orders>.order-filters,
+#view-orders>.orders-filter-bar,
+#view-orders>.order-filter-inline{display:none!important}
+#view-orders>#orderFilterPanel{display:block}
+#view-orders>#orderFilterPanel[hidden]{display:none!important}
