@@ -57,3 +57,26 @@ body:not(.admin-page) #panoraConnectionState{display:none!important}
 @media(max-width:720px){
   #partnerSyncInline{right:0!important;top:-29px!important;max-width:165px!important;min-height:23px!important;padding:4px 7px!important;font-size:10px!important}
 }
+
+/* v336.1 readable embedded sync badge */
+#cartButton #partnerSyncInline{
+  color:#244c34!important;-webkit-text-fill-color:#244c34!important;
+  background:#eef7f0!important;border:1px solid #b9d5c0!important;
+  box-shadow:0 4px 12px rgba(36,76,52,.16)!important
+}
+#cartButton #partnerSyncInline i,
+#cartButton #partnerSyncInline em{color:inherit!important;-webkit-text-fill-color:inherit!important}
+#cartButton #partnerSyncInline[data-state="synced"]{
+  color:#244c34!important;-webkit-text-fill-color:#244c34!important;background:#eef7f0!important;border-color:#b9d5c0!important
+}
+#cartButton #partnerSyncInline[data-state="syncing"]{
+  color:#245d80!important;-webkit-text-fill-color:#245d80!important;background:#eaf5fb!important;border-color:#b7d7e8!important
+}
+#cartButton #partnerSyncInline[data-state="offline"],
+#cartButton #partnerSyncInline[data-state="local"],
+#cartButton #partnerSyncInline[data-state="pending"]{
+  color:#7a5314!important;-webkit-text-fill-color:#7a5314!important;background:#fff4d9!important;border-color:#e2c985!important
+}
+#cartButton #partnerSyncInline[data-state="error"]{
+  color:#8f302b!important;-webkit-text-fill-color:#8f302b!important;background:#fff0ed!important;border-color:#e4b3ad!important
+}

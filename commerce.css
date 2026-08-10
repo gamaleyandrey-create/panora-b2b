@@ -28,3 +28,21 @@
   .order-partner-filter label,.order-partner-filter select,.order-partner-filter input,.order-filter-reset{width:100%!important;min-width:0!important}
   #orderPartnerFilterSummary{grid-column:1!important}
 }
+
+/* v336.1 polished order filter card */
+.order-filter-card{margin:0 0 16px;padding:14px;border:1px solid #dfe7e1;border-radius:14px;background:#fbfcfb;box-shadow:0 5px 18px rgba(38,65,47,.06)}
+.order-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.order-filter-head>div{display:grid;gap:2px}.order-filter-head strong{font-size:14px;color:#314b3a}.order-filter-head span{font-size:12px;color:#768179}
+.order-filter-card .order-partner-filter{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(220px,1.2fr) minmax(360px,1.5fr);gap:10px;margin:0;padding:0;border:0;background:transparent}
+.order-filter-card label{display:grid;gap:6px}.order-filter-card label>span{font-size:11px;font-weight:800;color:#6b776f}
+.order-filter-card select,.order-filter-card input[type="date"]{width:100%;min-height:42px;border:1px solid #cfdbd2;border-radius:10px;padding:8px 10px;background:#fff;color:#2f4236;font:600 13px system-ui,-apple-system,sans-serif}
+.order-date-range{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}.order-date-separator{padding:0 2px 12px;color:#7d8c82;font-weight:800}
+.order-filter-reset{border:1px solid #d8dfda;border-radius:9px;background:#fff;color:#52635a;padding:7px 11px;font:700 12px system-ui,-apple-system,sans-serif;cursor:pointer}
+.order-filter-card>#orderPartnerFilterSummary{display:block;margin-top:10px;color:#3f6a4c;font-size:12px}
+@media(max-width:900px){.order-filter-card .order-partner-filter{grid-template-columns:1fr 1fr}.order-date-range{grid-column:1/-1}}
+@media(max-width:720px){
+  .order-filter-card{padding:12px;border-radius:12px}.order-filter-head{align-items:flex-start}.order-filter-head span{font-size:11px}
+  .order-filter-card .order-partner-filter{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
+  .order-date-range{display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-column:auto}.order-date-separator{display:none}
+  .order-filter-card select,.order-filter-card input[type="date"]{min-height:44px;font-size:14px}.order-filter-reset{min-height:36px}
+}
