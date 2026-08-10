@@ -391,3 +391,41 @@
     opacity:.88!important;
   }
 }
+
+/* v338.9 desktop order action button sizing only */
+@media(min-width:721px){
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px!important;
+  }
+
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    box-sizing:border-box!important;
+    width:auto!important;
+    min-width:150px!important;
+    height:38px!important;
+    min-height:38px!important;
+    max-height:38px!important;
+    padding:0 14px!important;
+    margin:0!important;
+    border-radius:9px!important;
+    font-size:12px!important;
+    line-height:1!important;
+    justify-content:center!important;
+    align-items:center!important;
+    white-space:nowrap!important;
+  }
+
+  #orderRows .order-contact-button{
+    display:inline-flex!important;
+    gap:6px!important;
+  }
+  #orderRows .order-contact-icon{
+    width:17px!important;
+    height:17px!important;
+    flex:0 0 17px!important;
+  }
+}
