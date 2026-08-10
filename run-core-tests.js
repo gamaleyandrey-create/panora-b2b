@@ -41,7 +41,8 @@ const list = [
   'v337-4-responsive-ordering.test.js',
   'v337-5-mobile-order-card-fix.test.js',
   'v337-6-compact-mobile-order.test.js',
-  'v337-7-mobile-order-card-unification.test.js'
+  'v337-7-mobile-order-card-unification.test.js',
+  'v337-8-mobile-action-buttons.test.js'
 ];
 
 let failures = 0;

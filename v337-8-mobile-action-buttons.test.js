@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+const comm=fs.readFileSync(path.join(app,'order-communication.js'),'utf8');
+assert.match(commerce,/cancel-label-mobile">Отменить заказ/);
+assert.match(comm,/order-contact-icon/);
+assert.match(comm,/Сообщить клиенту/);
+assert.match(css,/v337\.8 approved mobile action buttons/);
+assert.match(css,/flex-direction:column!important/);
+assert.match(css,/min-height:54px!important/);
+assert.match(css,/width:100%!important/);
+assert.match(css,/border:1px solid #d9a19a!important/);
+assert.match(css,/border:1px solid #6f927c!important/);
+assert.match(css,/\.cancel-label-mobile\{display:inline!important\}/);
+console.log('v337.8-mobile-action-buttons: 10 assertions passed');
