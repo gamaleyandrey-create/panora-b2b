@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const html=fs.readFileSync(path.join(app,'index.html'),'utf8');
+const responsive=fs.readFileSync(path.join(app,'responsive.css'),'utf8');
+const conn=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+assert.match(html,/top-actions"><div class="partner-sync-inline"/);
+assert.match(responsive,/unified desktop\/mobile partner layout/);
+assert.match(responsive,/position:sticky!important;top:0!important/);
+assert.match(responsive,/#cartButton\.cart-fab/);
+assert.match(responsive,/panora-audit-button,.panora-event-settings,.panora-utility-zone/);
+assert.match(conn,/position:static!important/);
+assert.match(conn,/@media\(max-width:720px\)/);
+assert.match(conn,/partnerSyncInline em\{display:none!important\}/);
+console.log('v337.4-responsive-ordering: 8 assertions passed');

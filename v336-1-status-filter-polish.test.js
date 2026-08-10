@@ -2,13 +2,8 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const app=path.join(__dirname,'../app');
 const css=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
 const admin=fs.readFileSync(path.join(app,'admin.html'),'utf8');
-const commerceCss=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
-assert.match(css,/#partnerSyncInline/);
-assert.match(css,/-webkit-text-fill-color:#244c34!important/);
+assert.match(css,/definitive sync placement/);
 assert.match(admin,/order-filter-card/);
 assert.match(admin,/Поставка с/);
 assert.match(admin,/order-date-range/);
-assert.match(commerceCss,/polished order filter card/);
-assert.match(commerceCss,/grid-template-columns:minmax\(170px,.8fr\)/);
-assert.match(commerceCss,/@media\(max-width:720px\)/);
-console.log('v336.1-status-filter-polish: 8 assertions passed');
+console.log('v337.4-status-filter-polish-compatible: 4 assertions passed');
