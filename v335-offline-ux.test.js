@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const cloud=fs.readFileSync(path.join(app,'cloud-sync.js'),'utf8');
+const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+const noteCss=fs.readFileSync(path.join(app,'event-notifications.css'),'utf8');
+const auditCss=fs.readFileSync(path.join(app,'audit-trail.css'),'utf8');
+assert.match(cloud,/if\(!navigator\.onLine\)\{showPending\(\);return\}planTimer/);
+assert.match(cloud,/if\(!navigator\.onLine\)\{markPending\('plans'\);showPending\(\);return false\}/);
+assert.match(cloud,/online'.*pending=readPending\(\).*retrySync/s);
+assert.match(note,/\.16/);
+assert.match(note,/Новый заказ поступил в пекарню/);
+assert.match(note,/Есть новости по вашему заказу/);
+assert.match(noteCss,/\.panora-event-settings\{top:64px;right:14px\}/);
+assert.match(auditCss,/\.panora-audit-button\{top:64px;right:58px\}/);
+console.log('v335-offline-ux: 8 assertions passed');

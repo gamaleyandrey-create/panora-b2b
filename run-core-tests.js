@@ -14,7 +14,8 @@ const list = [
   'v331-sync-safety.test.js',
   'v332-notifications.test.js',
   'v333-audit-trail.test.js',
-  'v334-stable-pwa.test.js'
+  'v334-stable-pwa.test.js',
+  'v335-offline-ux.test.js'
 ];
 
 let failures = 0;
