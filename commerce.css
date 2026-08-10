@@ -75,3 +75,10 @@
   #view-orders>.order-filter-card .order-partner-filter{grid-template-columns:1fr!important}
   #view-orders>.order-filter-card .order-date-range{grid-template-columns:1fr 1fr!important}
 }
+
+/* v336.7 notification state + history card */
+#enableAdminNotifications.notifications-active{border-color:#b8d8c0!important;background:#eef8f0!important;color:#2f6a40!important;box-shadow:0 2px 8px rgba(47,106,64,.08)}
+.settings-history-card{margin:14px 0;padding:14px 16px;border:1px solid #dfe7e1;border-radius:14px;background:#fbfcfb;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.settings-history-card>div{display:flex;align-items:flex-start;gap:11px}.settings-history-card h3{margin:0 0 3px;font-size:14px;color:#30483a}.settings-history-card p{margin:0;color:#718078;font-size:12px;line-height:1.4}
+.settings-history-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#edf5ef;color:#3e704c;font-size:18px;font-weight:800}
+@media(max-width:720px){.settings-history-card{align-items:stretch;flex-direction:column}.settings-history-card #openAuditHistory{width:100%;min-height:42px}#enableAdminNotifications.notifications-active{font-size:11px}}

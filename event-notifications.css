@@ -59,3 +59,6 @@ body:not(.admin-page) .panora-utility-zone .panora-event-settings em{display:non
  body:not(.admin-page) .panora-utility-zone{top:60px;right:9px}
  body:not(.admin-page) .panora-utility-zone .panora-event-settings{width:40px!important;height:40px!important;min-height:40px!important;border-radius:12px!important}
 }
+
+/* v336.7 no floating notification control */
+.panora-event-settings,.panora-utility-zone{display:none!important}
