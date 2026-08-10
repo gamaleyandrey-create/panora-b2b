@@ -1,0 +1,18 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const appjs=fs.readFileSync(path.join(app,'app.js'),'utf8');
+const rw=fs.readFileSync(path.join(app,'restaurant-workspace.js'),'utf8');
+const note=fs.readFileSync(path.join(app,'event-notifications.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'event-notifications.css'),'utf8');
+const audit=fs.readFileSync(path.join(app,'audit-trail.js'),'utf8');
+assert.match(appjs,/panoraOpenPartnerOrders/);
+assert.match(rw,/orderView = "active"/);
+assert.match(rw,/data-rw-order-view="active"/);
+assert.match(rw,/data-rw-order-view="history"/);
+assert.match(rw,/window\.panoraOpenPartnerOrders/);
+assert.match(rw,/mobile-orders-badge/);
+assert.match(note,/modern-bell/);
+assert.match(note,/<svg viewBox="0 0 24 24">/);
+assert.match(css,/modern partner notification control/);
+assert.match(audit,/if\(!document\.body\.classList\.contains\('admin-page'\)\)return/);
+console.log('v336.5-active-orders-modern-bell: 10 assertions passed');
