@@ -22,3 +22,15 @@ body:not(.admin-page) .panora-connection-state{
 }
 body:not(.admin-page) .panora-connection-state[data-state="synced"]{color:#5d7564;border-color:#dce7de;background:rgba(249,252,249,.94)}
 @media(max-width:720px){body:not(.admin-page) .panora-connection-state{right:10px;bottom:calc(132px + env(safe-area-inset-bottom));max-width:190px}}
+
+/* v335.9 partner status above cart, including installed mobile PWA */
+body:not(.admin-page) #panoraConnectionState{
+  position:fixed!important;right:14px!important;left:auto!important;top:auto!important;bottom:76px!important;
+  width:auto!important;max-width:180px!important;min-height:26px!important;padding:4px 8px!important;border-radius:9px!important;
+  font-size:10px!important;z-index:1250!important;display:inline-flex!important;visibility:visible!important;opacity:.96!important
+}
+@media(max-width:720px){
+  body:not(.admin-page) #panoraConnectionState{
+    right:10px!important;bottom:calc(124px + env(safe-area-inset-bottom))!important;max-width:175px!important
+  }
+}

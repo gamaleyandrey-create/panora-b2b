@@ -146,7 +146,7 @@ const normalizePartnerType=value=>{
   return aliases[raw]||'restaurant';
 };
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[normalizePartnerType(type)]||'Ресторан');
-let orderPartnerTypeFilter='all',orderPartnerNameFilter='';
+let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='';
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -265,7 +265,7 @@ function renderOrders() {
   if(table&&!document.querySelector('#orderPartnerTypeFilter')){
     const filter=document.createElement('div');
     filter.className='order-partner-filter';
-    filter.innerHTML='<label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label><strong id="orderPartnerFilterSummary">Все заказы</strong>';
+    filter.innerHTML='<label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label><label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label><label><span>Заказы с даты</span><input id="orderDateFromFilter" type="date"></label><label><span>по дату</span><input id="orderDateToFilter" type="date"></label><button type="button" class="secondary order-filter-reset" id="orderFiltersReset">Сбросить</button><strong id="orderPartnerFilterSummary">Все заказы</strong>';
     table.before(filter);
   }
   const select=document.querySelector('#orderPartnerTypeFilter');
@@ -273,20 +273,39 @@ function renderOrders() {
     select.value=orderPartnerTypeFilter;
     select.onchange=()=>{orderPartnerTypeFilter=select.value;renderOrders()};
   }
-  const nameInput=document.querySelector('#orderPartnerNameFilter');
-  if(nameInput){
-    if(nameInput.value.toLowerCase()!==orderPartnerNameFilter)nameInput.value=orderPartnerNameFilter;
-    nameInput.oninput=()=>{orderPartnerNameFilter=nameInput.value.trim().toLowerCase();renderOrders()};
+  const partnerSelect=document.querySelector('#orderPartnerNameFilter');
+  if(partnerSelect){
+    const partnerOptions=restaurants.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru'))
+      .map(r=>`<option value="${commerceEscape(r.id)}">${commerceEscape(r.name||'Без названия')}</option>`).join('');
+    partnerSelect.innerHTML=`<option value="all">Все партнёры</option>${partnerOptions}`;
+    partnerSelect.value=restaurants.some(r=>r.id===orderPartnerNameFilter)?orderPartnerNameFilter:'all';
+    orderPartnerNameFilter=partnerSelect.value;
+    partnerSelect.onchange=()=>{orderPartnerNameFilter=partnerSelect.value;renderOrders()};
   }
+  const dateFrom=document.querySelector('#orderDateFromFilter');
+  const dateTo=document.querySelector('#orderDateToFilter');
+  if(dateFrom){dateFrom.value=orderDateFromFilter;dateFrom.onchange=()=>{orderDateFromFilter=dateFrom.value;renderOrders()}}
+  if(dateTo){dateTo.value=orderDateToFilter;dateTo.onchange=()=>{orderDateToFilter=dateTo.value;renderOrders()}}
+  const reset=document.querySelector('#orderFiltersReset');
+  if(reset)reset.onclick=()=>{orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';renderOrders()};
+
   const visibleOrders=orders.filter(order=>{
     const partner=restaurant(order.restaurantId);
     const typeMatches=orderPartnerTypeFilter==='all'||normalizePartnerType(partner?.partnerType||order.partnerType)===orderPartnerTypeFilter;
-    const partnerName=String(partner?.name||order.partnerName||'').toLowerCase();
-    const nameMatches=!orderPartnerNameFilter||partnerName.includes(orderPartnerNameFilter);
-    return typeMatches&&nameMatches;
+    const partnerMatches=orderPartnerNameFilter==='all'||order.restaurantId===orderPartnerNameFilter;
+    const orderDay=String(order.date||'').slice(0,10);
+    const fromMatches=!orderDateFromFilter||orderDay>=orderDateFromFilter;
+    const toMatches=!orderDateToFilter||orderDay<=orderDateToFilter;
+    return typeMatches&&partnerMatches&&fromMatches&&toMatches;
   });
   const summary=document.querySelector('#orderPartnerFilterSummary');
-  if(summary)summary.textContent=orderPartnerNameFilter?`Найдено: ${visibleOrders.length}`:(orderPartnerTypeFilter==='all'?`Все заказы: ${orders.length}`:`${partnerTypeLabel(orderPartnerTypeFilter)}: ${visibleOrders.length}`);
+  if(summary){
+    const selectedPartner=orderPartnerNameFilter==='all'?null:restaurant(orderPartnerNameFilter);
+    const bits=[];
+    if(selectedPartner)bits.push(selectedPartner.name||'Партнёр');
+    if(orderDateFromFilter||orderDateToFilter)bits.push(`${orderDateFromFilter||'…'} — ${orderDateToFilter||'…'}`);
+    summary.textContent=bits.length?`История: ${bits.join(' · ')} · ${visibleOrders.length}`:`Все заказы: ${visibleOrders.length}`;
+  }
   body.innerHTML = visibleOrders.length
     ? visibleOrders
         .slice()
