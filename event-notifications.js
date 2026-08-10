@@ -64,12 +64,17 @@
    });
    saveSnap(orders);
  }
+ function utilityZone(){
+   let zone=document.querySelector('.panora-utility-zone');
+   if(zone)return zone;
+   zone=document.createElement('div');zone.className='panora-utility-zone';zone.setAttribute('aria-label','Быстрые действия');document.body.appendChild(zone);return zone;
+ }
  function settings(){
    let b=document.querySelector('.panora-event-settings');if(b)return;
    b=document.createElement('button');b.type='button';b.className='panora-event-settings';b.dataset.sound=sound?'on':'off';
-   const sync=()=>{b.textContent=sound?'🔔':'🔕';b.title=sound?'Звук уведомлений включён':'Включить звук уведомлений';b.dataset.sound=sound?'on':'off'};sync();
+   const sync=()=>{b.innerHTML=`<span aria-hidden="true">${sound?'🔔':'🔕'}</span><em>Звук</em>`;b.title=sound?'Звук уведомлений включён':'Включить звук уведомлений';b.dataset.sound=sound?'on':'off'};sync();
    b.onclick=()=>{sound=!sound;localStorage.setItem(SOUND_KEY,sound?'1':'0');sync();if(sound){beep('success');toast('Звук включён','Новые заказы и изменения статусов могут сопровождаться коротким сигналом.','success','🔔')}};
-   document.body.appendChild(b);
+   utilityZone().appendChild(b);
  }
  window.addEventListener('storage',e=>{if(e.key==='panora-orders')setTimeout(compare,0)});
  window.addEventListener('panora:partner-orders-updated',()=>setTimeout(compare,0));
