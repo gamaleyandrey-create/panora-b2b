@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const conn=fs.readFileSync(path.join(app,'connection-status.css'),'utf8');
+const head=fs.readFileSync(path.join(app,'mobile-header.css'),'utf8');
+const cart=fs.readFileSync(path.join(app,'mobile-cart-button.css'),'utf8');
+assert.match(conn,/left:50%!important;right:auto!important;top:-32px!important/);
+assert.match(conn,/transform:translateX\(-50%\)!important/);
+assert.match(head,/#profileButton\.account-entry/);
+assert.match(head,/#adminLogout\.admin-logout/);
+assert.match(head,/#adminMenuToggle\.admin-menu-toggle/);
+assert.match(head,/\.mobile-nav a,\.mobile-nav button/);
+assert.match(head,/\.hero-actions \.button/);
+assert.match(cart,/touch-action:manipulation/);
+console.log('v336.2-mobile-button-audit: 8 assertions passed');
