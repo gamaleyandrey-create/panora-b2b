@@ -9,3 +9,7 @@
 .panora-audit-item{border:1px solid #e0e6e0;border-radius:12px;padding:10px 11px;background:#fbfcfb}.panora-audit-title{font-weight:800;font-size:13px;color:#243128}.panora-audit-meta{font-size:11px;color:#748077;margin-top:3px}.panora-audit-detail{font-size:12px;color:#536058;margin-top:6px;line-height:1.35}
 .panora-audit-empty{padding:28px;text-align:center;color:#758078}
 @media(max-width:720px){.panora-audit-button{top:auto;right:54px;bottom:calc(118px + env(safe-area-inset-bottom));padding:0 9px}.panora-audit-drawer{width:100%}}
+
+/* v335: keep History next to the bell, away from bottom navigation and sync badge */
+.panora-audit-button{top:64px;right:58px}
+@media(max-width:720px){.panora-audit-button{top:62px;right:54px;bottom:auto}}
