@@ -11,7 +11,7 @@ assert.match(commerce,/Все партнёры/);
 assert.match(commerce,/partnerMatches/);
 assert.match(commerce,/fromMatches/);
 assert.match(commerce,/toMatches/);
-assert.match(commerce,/История:/);
+assert.match(commerce,/Найдено заказов:/);
 assert.match(css,/grid-template-columns:1fr!important/);
 assert.match(connCss,/body:not\(\.admin-page\) #panoraConnectionState/);
 console.log('v335.9-partner-history-filters: 10 assertions passed');

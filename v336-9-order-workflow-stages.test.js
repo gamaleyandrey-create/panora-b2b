@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const app=path.join(__dirname,'../app');
+const commerce=fs.readFileSync(path.join(app,'commerce.js'),'utf8');
+const css=fs.readFileSync(path.join(app,'commerce.css'),'utf8');
+assert.match(commerce,/orderStatusFilter='all'/);
+assert.match(commerce,/\['all','Все'\]/);
+assert.match(commerce,/\['new','Новые'\]/);
+assert.match(commerce,/\['confirmed','Подтверждённые'\]/);
+assert.match(commerce,/\['shipped','Отгруженные'\]/);
+assert.match(commerce,/statusMatches=/);
+assert.match(commerce,/order-row-new/);
+assert.match(css,/bakery order workflow stages/);
+assert.match(css,/#orderRows tr\.order-row-new/);
+assert.match(css,/\[data-confirm\]/);
+console.log('v336.9-order-workflow-stages: 10 assertions passed');
