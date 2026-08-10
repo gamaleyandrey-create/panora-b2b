@@ -350,10 +350,18 @@ function renderOrders() {
           const itemHtml=o.items.map((i)=>typeof orderLine==='function'
             ? orderLine(o,i)
             : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
-          return `<tr class="order-row order-row-${o.status}"><td>PN-${String(o.number).padStart(4, "0")}</td><td><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td><td>${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td><td><div class="order-items">${itemHtml}</div></td><td><strong>${euro(orderTotal(o))}</strong></td><td><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td><td class="order-action-cell">${orderActions(o)}</td></tr>`;
+          return `<tr class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
+            <td class="order-mobile-number" data-label="Заказ"><strong>PN-${String(o.number).padStart(4, "0")}</strong></td>
+            <td class="order-mobile-dates" data-label="Даты"><div class="order-dates"><strong>Выпечка: ${orderDateLabel(o.date, true)}</strong><small>Доставка: ${orderDateLabel(o.deliveryDate || o.date)}</small>${note?.paymentDueDate ? `<small class="payment-due-date">Оплата до: <strong>${orderDateLabel(note.paymentDueDate)}</strong></small>` : ""}</div></td>
+            <td class="order-mobile-partner" data-label="Партнёр">${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td>
+            <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
+            <td class="order-mobile-total" data-label="Сумма"><strong>${euro(orderTotal(o))}</strong></td>
+            <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
+            <td class="order-action-cell" data-label="Действие">${orderActions(o)}</td>
+          </tr>`;
         })
         .join("")
-    : `<tr class="${o.status==='submitted'?'order-row-new':''}"><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
+    : `<tr><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
