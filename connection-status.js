@@ -41,7 +41,9 @@
   function render(state,text,detail=''){
     const el=ensure();
     const s=state||'synced';
-    last={state:s,text:text||labels[s]||labels.synced};
+    const partnerPage=!document.body.classList.contains('admin-page');
+    const resolved=(s==='synced'&&partnerPage)?'Данные актуальны':(text||labels[s]||labels.synced);
+    last={state:s,text:resolved};
     el.dataset.state=s;
     el.innerHTML=`<span class="panora-connection-dot" aria-hidden="true">${icon(s)}</span><span>${last.text}</span>`;
     el.title=detail||(

@@ -14,3 +14,11 @@
 @media(max-width:720px){
   .panora-connection-state{right:10px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:calc(100vw - 20px);min-height:32px;padding:6px 10px;font-size:11px}
 }
+
+body:not(.admin-page) .panora-connection-state{
+  right:16px;bottom:82px;min-height:28px;max-width:210px;padding:5px 9px;
+  border-radius:10px;background:rgba(255,255,255,.92);box-shadow:0 3px 12px rgba(31,50,37,.08);
+  font-size:10px;font-weight:700;opacity:.94
+}
+body:not(.admin-page) .panora-connection-state[data-state="synced"]{color:#5d7564;border-color:#dce7de;background:rgba(249,252,249,.94)}
+@media(max-width:720px){body:not(.admin-page) .panora-connection-state{right:10px;bottom:calc(132px + env(safe-area-inset-bottom));max-width:190px}}

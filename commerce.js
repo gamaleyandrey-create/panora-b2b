@@ -146,7 +146,7 @@ const normalizePartnerType=value=>{
   return aliases[raw]||'restaurant';
 };
 const partnerTypeLabel=type=>({restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',catering:'Кейтеринг',other:'Другое'}[normalizePartnerType(type)]||'Ресторан');
-let orderPartnerTypeFilter='all';
+let orderPartnerTypeFilter='all',orderPartnerNameFilter='';
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong>${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -273,9 +273,20 @@ function renderOrders() {
     select.value=orderPartnerTypeFilter;
     select.onchange=()=>{orderPartnerTypeFilter=select.value;renderOrders()};
   }
-  const visibleOrders=orders.filter(order=>orderPartnerTypeFilter==='all'||normalizePartnerType(restaurant(order.restaurantId)?.partnerType||order.partnerType)===orderPartnerTypeFilter);
+  const nameInput=document.querySelector('#orderPartnerNameFilter');
+  if(nameInput){
+    if(nameInput.value.toLowerCase()!==orderPartnerNameFilter)nameInput.value=orderPartnerNameFilter;
+    nameInput.oninput=()=>{orderPartnerNameFilter=nameInput.value.trim().toLowerCase();renderOrders()};
+  }
+  const visibleOrders=orders.filter(order=>{
+    const partner=restaurant(order.restaurantId);
+    const typeMatches=orderPartnerTypeFilter==='all'||normalizePartnerType(partner?.partnerType||order.partnerType)===orderPartnerTypeFilter;
+    const partnerName=String(partner?.name||order.partnerName||'').toLowerCase();
+    const nameMatches=!orderPartnerNameFilter||partnerName.includes(orderPartnerNameFilter);
+    return typeMatches&&nameMatches;
+  });
   const summary=document.querySelector('#orderPartnerFilterSummary');
-  if(summary)summary.textContent=orderPartnerTypeFilter==='all'?`Все заказы: ${orders.length}`:`${partnerTypeLabel(orderPartnerTypeFilter)}: ${visibleOrders.length}`;
+  if(summary)summary.textContent=orderPartnerNameFilter?`Найдено: ${visibleOrders.length}`:(orderPartnerTypeFilter==='all'?`Все заказы: ${orders.length}`:`${partnerTypeLabel(orderPartnerTypeFilter)}: ${visibleOrders.length}`);
   body.innerHTML = visibleOrders.length
     ? visibleOrders
         .slice()
