@@ -319,12 +319,27 @@ function renderOrders() {
   }
   const partnerSelect=document.querySelector('#orderPartnerNameFilter');
   if(partnerSelect){
-    const partnerOptions=restaurants.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru'))
-      .map(r=>`<option value="${commerceEscape(r.id)}">${commerceEscape(r.name||'Без названия')}</option>`).join('');
-    partnerSelect.innerHTML=`<option value="all">Все партнёры</option>${partnerOptions}`;
+    const sortedPartners=restaurants.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru'));
+    const optionSignature=sortedPartners.map(r=>`${r.id}:${r.name||''}`).join('|');
+    /* Desktop browsers can briefly lock up when a native <select> is rebuilt
+       synchronously from its own change event. Rebuild partner options only
+       when the partner list itself changed, never on every filter pass. */
+    if(partnerSelect.dataset.partnerOptionsSignature!==optionSignature){
+      const partnerOptions=sortedPartners
+        .map(r=>`<option value="${commerceEscape(r.id)}">${commerceEscape(r.name||'Без названия')}</option>`).join('');
+      partnerSelect.innerHTML=`<option value="all">Все партнёры</option>${partnerOptions}`;
+      partnerSelect.dataset.partnerOptionsSignature=optionSignature;
+    }
     partnerSelect.value=restaurants.some(r=>r.id===orderPartnerNameFilter)?orderPartnerNameFilter:'all';
     orderPartnerNameFilter=partnerSelect.value;
-    partnerSelect.onchange=()=>{orderPartnerNameFilter=partnerSelect.value;renderOrders()};
+    partnerSelect.onchange=()=>{
+      const nextValue=partnerSelect.value;
+      if(nextValue===orderPartnerNameFilter)return;
+      orderPartnerNameFilter=nextValue;
+      /* Let the desktop native select close before the table is repainted.
+         Mobile keeps the same behaviour but also benefits from the deferred paint. */
+      requestAnimationFrame(()=>renderOrders());
+    };
   }
   const dateFrom=document.querySelector('#orderDateFromFilter');
   const dateTo=document.querySelector('#orderDateToFilter');
