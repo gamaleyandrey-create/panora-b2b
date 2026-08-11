@@ -27,6 +27,7 @@
       signOut: "Выйти",
       close: "Закрыть",
       pending: "Ожидает подтверждения",
+      activeOrders: "Активные", historyOrders: "История", noActiveOrders: "Активных заказов нет",
       startOrder: "Выбрать хлеб и дату",
       orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине.",
       phone: "Телефон",
@@ -126,6 +127,7 @@
       signOut: "Salir",
       close: "Cerrar",
       pending: "Pendiente de confirmación",
+      activeOrders: "Activos", historyOrders: "Historial", noActiveOrders: "No hay pedidos activos",
       startOrder: "Elegir pan y fecha",
       orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta.",
       phone: "Teléfono",
@@ -168,6 +170,7 @@
         })[char],
     );
   let activeTab = "home";
+  let orderView = "active";
   let orderToReveal = "";
   let noteQuery = "";
   let noteMonth = "";
@@ -213,7 +216,30 @@
       ? portalStatus(order.status)
       : order.status;
 
+  function orderProgressHtml(order) {
+    const stages = [
+      ["submitted", lang==="ru"?"Отправлен":lang==="es"?"Enviado":"Sent"],
+      ["confirmed", lang==="ru"?"Подтверждён":lang==="es"?"Confirmado":"Confirmed"],
+      ["shipped", lang==="ru"?"Отгружен":lang==="es"?"Enviado":"Shipped"],
+    ];
+    const rank = order.status==="shipped"||order.status==="completed"||order.status==="paid" ? 2 : order.status==="confirmed"||order.status==="processing" ? 1 : 0;
+    if(order.status==="cancelled")return `<div class="rw-order-progress cancelled"><strong>${lang==="ru"?"Заказ отменён":lang==="es"?"Pedido cancelado":"Order cancelled"}</strong></div>`;
+    return `<div class="rw-order-progress">${stages.map((stage,index)=>`<span class="${index<rank?"done":index===rank?"current":"next"}"><b>${index<rank?"✓":index+1}</b><em>${stage[1]}</em></span>`).join("")}</div>`;
+  }
+  function orderStatusHint(order) {
+    if(order.status==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
+    if(order.status==="confirmed"||order.status==="processing")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
+    if(order.status==="shipped"||order.status==="completed"||order.status==="paid")return lang==="ru"?"Заказ отгружен. Накладная доступна в документах.":lang==="es"?"El pedido fue enviado. El albarán está disponible en documentos.":"The order has shipped. The delivery note is available in documents.";
+    return "";
+  }
   const isActiveOrder = (order) => !["cancelled", "shipped", "paid", "completed"].includes(order.status);
+  function updateMobileOrdersBadge() {
+    const button=document.querySelector("#mobileOrders");if(!button)return;
+    const count=account?ownOrders().filter(isActiveOrder).length:0;
+    let badge=button.querySelector(".mobile-orders-badge");
+    if(!badge){badge=document.createElement("b");badge.className="mobile-orders-badge";button.appendChild(badge)}
+    badge.textContent=String(count);badge.hidden=!count;
+  }
   const cartCount = () => Object.values(cart || {}).reduce((sum, value) => sum + Number(value || 0), 0);
   const partnerTypeLabel = () => t(["restaurant", "shop", "hotel", "cafe", "catering", "other"].includes(account?.partnerType) ? account.partnerType : "other");
   function syncLabel() {
@@ -277,19 +303,30 @@
     return `<section class="rw-empty rw-new-order"><span>＋</span><h3>${t("newOrder")}</h3><p>${t("orderHelp")}</p><button class="button button-primary" data-rw-start>${t("startOrder")}</button></section>`;
   }
   function ordersHtml() {
-    const rows = ownOrders();
-    if (!rows.length)
+    const all = ownOrders();
+    if (!all.length)
       return `<section class="rw-empty"><h3>${t("emptyOrders")}</h3><button class="button button-primary" data-rw-start>${t("newOrder")}</button></section>`;
-    return `<section class="rw-list">${rows
+    const active = all.filter(isActiveOrder);
+    const history = all.filter((order) => !isActiveOrder(order));
+    const rows = orderView === "history" ? history : active;
+    return `<section class="rw-orders-page">
+      <div class="rw-order-view-tabs" role="tablist">
+        <button type="button" class="${orderView === "active" ? "active" : ""}" data-rw-order-view="active">${t("activeOrders")}<b>${active.length}</b></button>
+        <button type="button" class="${orderView === "history" ? "active" : ""}" data-rw-order-view="history">${t("historyOrders")}<b>${history.length}</b></button>
+      </div>
+      ${rows.length ? `<section class="rw-list">${rows
       .map(
         (order) => `<article class="rw-order" data-rw-order="${esc(order.id)}">
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small></span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(order.status)}">${esc(status(order))}</div>
+      ${orderProgressHtml(order)}
+      <p class="rw-order-status-hint">${esc(orderStatusHint(order))}</p>
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
       <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>
     </article>`,
       )
-      .join("")}</section>`;
+      .join("")}</section>` : `<section class="rw-empty"><h3>${orderView === "active" ? t("noActiveOrders") : t("emptyOrders")}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
+    </section>`;
   }
   function notesHtml() {
     const allNotes = ownNotes(),
@@ -483,6 +520,13 @@
           renderAccountModal();
         }),
     );
+    modal.querySelectorAll("[data-rw-order-view]").forEach(
+      (button) =>
+        (button.onclick = () => {
+          orderView = button.dataset.rwOrderView;
+          renderAccountModal();
+        }),
+    );
     const search = modal.querySelector("[data-rw-note-search]");
     if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => modal.querySelector("[data-rw-note-search]")?.focus()); };
     const month = modal.querySelector("[data-rw-note-month]");
@@ -546,6 +590,7 @@
       previousRender();
       return;
     }
+    updateMobileOrdersBadge();
     const counts = {
       orders: ownOrders().length,
       notes: ownNotes().length,
@@ -589,6 +634,16 @@
       head?.insertAdjacentHTML("beforeend", `<div class="rw-note-filters"><input type="search" data-rw-note-search value="${esc(noteQuery)}" placeholder="${t("noteSearch")}"><select data-rw-note-month><option value="">${t("allMonths")}</option>${[...new Set(ownNotes().map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))].map((month) => `<option value="${esc(month)}"${noteMonth === month ? " selected" : ""}>${esc(month)}</option>`).join("")}</select></div>`);
       bind(modal);
     }
+  };
+  window.panoraOpenPartnerOrders = () => {
+    if (!account) {
+      openPanel(document.querySelector("#profileModal"));
+      return;
+    }
+    activeTab = "orders";
+    orderView = "active";
+    renderAccountModal();
+    openPanel(document.querySelector("#profileModal"));
   };
   window.addEventListener("online", () => account && renderAccountModal());
   window.addEventListener("offline", () => account && renderAccountModal());
