@@ -1,0 +1,35 @@
+/* Panora 3.9 — real notification state indicator.
+   The bullet is now a DOM element, not a character in the button text. */
+#enableAdminNotifications .native-notification-dot{
+  display:inline-block;
+  width:9px;
+  height:9px;
+  min-width:9px;
+  border-radius:50%;
+  background:#111;
+  flex:0 0 9px;
+}
+@media (max-width:720px){
+  #view-orders #enableAdminNotifications{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:8px!important;
+  }
+  #view-orders #enableAdminNotifications .native-notification-dot{
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    margin:0!important;
+    display:inline-block!important;
+    width:9px!important;
+    height:9px!important;
+    min-width:9px!important;
+    flex:0 0 9px!important;
+  }
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+}
