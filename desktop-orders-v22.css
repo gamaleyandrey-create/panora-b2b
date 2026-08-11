@@ -1,0 +1,142 @@
+/* Panora 2.2 — desktop admin orders visual repair only.
+   No mobile or functional changes. */
+@media (min-width:721px){
+  /* Status filters: restore spacing, pill geometry and count badges. */
+  #view-orders .order-status-bar{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px!important;
+    margin:0 0 14px!important;
+  }
+  #view-orders .order-status-bar button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0 12px!important;
+    border:1px solid #d5ddd6!important;
+    border-radius:10px!important;
+    background:#fff!important;
+    color:#425047!important;
+    box-shadow:none!important;
+    font-size:12.5px!important;
+    font-weight:650!important;
+    line-height:1!important;
+    cursor:pointer!important;
+    white-space:nowrap!important;
+  }
+  #view-orders .order-status-bar button b{
+    display:inline-grid!important;
+    place-items:center!important;
+    min-width:22px!important;
+    height:22px!important;
+    padding:0 6px!important;
+    border-radius:999px!important;
+    background:#edf2ed!important;
+    color:#5f6b63!important;
+    font-size:11px!important;
+    font-weight:750!important;
+  }
+  #view-orders .order-status-bar button.active{
+    border-color:#315b42!important;
+    background:#315b42!important;
+    color:#fff!important;
+  }
+  #view-orders .order-status-bar button.active b{
+    background:rgba(255,255,255,.16)!important;
+    color:#fff!important;
+  }
+
+  /* The workflow text is decorative and duplicated the real actions.
+     Hide it on desktop so the action column contains only usable controls. */
+  #orderRows .order-flow{
+    display:none!important;
+  }
+
+  /* Keep all real row actions as a clean vertical stack. */
+  #orderRows td.order-action-cell{
+    min-width:0!important;
+    padding-top:12px!important;
+    padding-bottom:12px!important;
+  }
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:8px!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    margin:0!important;
+    padding:0 12px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:10px!important;
+    font-size:13px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+  }
+
+  /* More breathing room in the dense desktop table without changing columns/data. */
+  #view-orders tbody td{
+    line-height:1.38!important;
+  }
+  #orderRows .order-dates{
+    gap:7px!important;
+  }
+  #orderRows .order-items{
+    gap:8px!important;
+  }
+  #orderRows .order-item{
+    padding-bottom:7px!important;
+    border-bottom:1px solid #edf0ec!important;
+  }
+  #orderRows .order-item:last-child{
+    padding-bottom:0!important;
+    border-bottom:0!important;
+  }
+}
+
+
+/* Panora 2.2 — desktop order table visual refinement only. */
+@media (min-width:721px){
+  /* Status choices now live inside the main Filter panel. Keep the old quick bar
+     available for the untouched mobile layout, but remove it from desktop. */
+  #view-orders .order-status-bar{display:none!important}
+  #view-orders .order-filter-card .order-partner-filter{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px!important;align-items:end!important}
+  #view-orders .order-filter-card .order-partner-filter label{min-width:0!important}
+  #view-orders .order-filter-card .order-partner-filter select,
+  #view-orders .order-filter-card .order-partner-filter input{width:100%!important;min-width:0!important}
+  #view-orders .order-date-range{display:contents!important}
+
+  /* Dates: label and value must never visually merge. */
+  #orderRows .order-date-line{display:grid!important;gap:2px!important}
+  #orderRows .order-date-line em{display:block!important;margin:0!important;color:#6e7871!important;font-size:11px!important;font-style:italic!important;font-weight:650!important;line-height:1.15!important}
+  #orderRows .order-date-line strong{display:block!important;margin:0!important;line-height:1.3!important}
+
+  /* Partner type is metadata, not an order status. */
+  #orderRows .partner-type{min-height:22px!important;padding:3px 8px!important;border:1px solid #dfe4df!important;background:#f5f7f4!important;color:#68736b!important;font-size:10px!important;font-weight:700!important;letter-spacing:.01em!important}
+
+  /* Calm, consistent order-status badges. */
+  #orderRows .tag[class*="order-status-"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:27px!important;padding:5px 10px!important;border:1px solid transparent!important;border-radius:999px!important;font-size:11px!important;font-weight:750!important;line-height:1!important;white-space:nowrap!important;box-shadow:none!important}
+  #orderRows .order-status-submitted{background:#fff4e8!important;border-color:#eed9c0!important;color:#8a5a2b!important}
+  #orderRows .order-status-confirmed{background:#edf4ee!important;border-color:#d5e4d7!important;color:#315b42!important}
+  #orderRows .order-status-shipped{background:#eef3ed!important;border-color:#dce5da!important;color:#425c48!important}
+  #orderRows .order-status-cancelled{background:#f6f1ef!important;border-color:#e8deda!important;color:#786762!important}
+
+  /* Message action: text-only, no black speech-bubble mark. */
+  #orderRows .order-contact-icon{display:none!important}
+  #orderRows .order-contact-button{gap:0!important;border-color:#8aaa94!important;background:#fff!important;color:#2f6845!important}
+}
