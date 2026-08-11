@@ -1,0 +1,89 @@
+/* Panora 3.4 HOTFIX — mobile Orders toolbar.
+   CSS only. No MutationObserver/DOM rewriting.
+   Desktop Orders and statuses are untouched. */
+@media (max-width:720px){
+  #view-orders .head-actions{
+    display:grid!important;
+    grid-template-columns:minmax(0,.95fr) minmax(0,1.55fr)!important;
+    gap:10px!important;
+    width:100%!important;
+    align-items:stretch!important;
+  }
+
+  #view-orders #orderFilterToggle{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    padding:0 14px!important;
+    margin:0!important;
+    border:1px solid #d9e0da!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    color:#203027!important;
+    box-shadow:none!important;
+    font-size:14px!important;
+    font-weight:700!important;
+  }
+
+  #view-orders .notification-control-group{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 48px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    border:1px solid #d9e0da!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    overflow:hidden!important;
+    box-shadow:none!important;
+  }
+
+  #view-orders #enableAdminNotifications{
+    min-width:0!important;
+    width:100%!important;
+    min-height:46px!important;
+    padding:0 10px 0 14px!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#111!important;
+    box-shadow:none!important;
+    white-space:normal!important;
+    line-height:1.15!important;
+    font-size:13px!important;
+    font-weight:700!important;
+    text-align:left!important;
+  }
+
+  #view-orders #adminNotificationSound.notification-sound-toggle{
+    width:48px!important;
+    min-width:48px!important;
+    height:46px!important;
+    min-height:46px!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    border-left:1px solid #e1e6e2!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#2f6f49!important;
+    box-shadow:none!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+
+  #view-orders #adminNotificationSound svg{
+    width:22px!important;
+    height:22px!important;
+  }
+
+  #view-orders #addOrder{
+    grid-column:1/-1!important;
+    width:100%!important;
+    min-height:50px!important;
+    margin:0!important;
+    border-radius:11px!important;
+  }
+}
