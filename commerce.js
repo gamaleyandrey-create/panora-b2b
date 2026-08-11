@@ -298,7 +298,7 @@ function renderOrders() {
   const filterToggle=document.querySelector('#orderFilterToggle');
   const filterClose=document.querySelector('#orderFilterClose');
   const filterCount=document.querySelector('#orderFilterCount');
-  const activeFilterCount=(orderPartnerTypeFilter!=='all'?1:0)+(orderPartnerNameFilter!=='all'?1:0)+(orderDateFromFilter?1:0)+(orderDateToFilter?1:0);
+  const activeFilterCount=(orderStatusFilter!=='all'?1:0)+(orderPartnerTypeFilter!=='all'?1:0)+(orderPartnerNameFilter!=='all'?1:0)+(orderDateFromFilter?1:0)+(orderDateToFilter?1:0);
   if(filterPanel)filterPanel.hidden=!orderFilterOpen;
   if(filterToggle){
     filterToggle.setAttribute('aria-expanded',orderFilterOpen?'true':'false');
@@ -307,6 +307,11 @@ function renderOrders() {
   }
   if(filterClose)filterClose.onclick=()=>{orderFilterOpen=false;renderOrders()};
   if(filterCount){filterCount.textContent=String(activeFilterCount);filterCount.hidden=!activeFilterCount}
+  const statusSelect=document.querySelector('#orderStatusFilter');
+  if(statusSelect){
+    statusSelect.value=orderStatusFilter;
+    statusSelect.onchange=()=>{orderStatusFilter=statusSelect.value;renderOrders()};
+  }
   const select=document.querySelector('#orderPartnerTypeFilter');
   if(select){
     select.value=orderPartnerTypeFilter;
@@ -326,7 +331,7 @@ function renderOrders() {
   if(dateFrom){dateFrom.value=orderDateFromFilter;dateFrom.onchange=()=>{orderDateFromFilter=dateFrom.value;renderOrders()}}
   if(dateTo){dateTo.value=orderDateToFilter;dateTo.onchange=()=>{orderDateToFilter=dateTo.value;renderOrders()}}
   const reset=document.querySelector('#orderFiltersReset');
-  if(reset)reset.onclick=()=>{orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
+  if(reset)reset.onclick=()=>{orderStatusFilter='all';orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
 
   const visibleOrders=orders.filter(order=>{
     const partner=restaurant(order.restaurantId);
