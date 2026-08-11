@@ -1,0 +1,10 @@
+/* Panora 4.2 — editable money inputs. */
+[data-price],[data-custom-price],[data-ingredient-price]{
+  cursor:text;
+  -webkit-user-select:text;
+  user-select:text;
+}
+[data-price]:focus,[data-custom-price]:focus,[data-ingredient-price]:focus{
+  outline:2px solid rgba(47,111,73,.22);
+  outline-offset:1px;
+}

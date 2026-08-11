@@ -176,22 +176,27 @@ function renderRestaurants() {
       ? active
           .map(
             (r) =>
-              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="number" min="0" step="0.01" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="text" inputmode="decimal" autocomplete="off" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
           )
           .join("")
       : '<div class="empty-row">Добавьте первого партнёра и назначьте ему индивидуальные цены.</div>') +
     (removed.length
       ? `<section class="removed-restaurants"><h3>Удалённые партнёры</h3>${removed.map((r) => `<div><span><strong>${commerceEscape(r.name)}</strong><small>${commerceEscape(r.email)}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
       : "");
-  document.querySelectorAll("[data-price]").forEach(
-    (i) =>
-      (i.onchange = () => {
-        const [id, pid] = i.dataset.price.split(":");
-        restaurant(id).prices[pid] = Number(i.value);
-        cSave("panora-restaurants", restaurants);
-        renderCommerce();
-      }),
-  );
+  document.querySelectorAll("[data-price]").forEach((i) => {
+    const commit = () => {
+      const value=window.panoraParseDecimal?.(i.value);
+      if(value===null){i.value=Number(restaurant(i.dataset.price.split(":")[0])?.prices?.[i.dataset.price.split(":")[1]]||0).toFixed(2);return}
+      const [id,pid]=i.dataset.price.split(":");
+      restaurant(id).prices[pid]=value;
+      i.value=value.toFixed(2);
+      cSave("panora-restaurants",restaurants);
+      window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
+    };
+    i.onblur=commit;
+    i.onchange=commit;
+    i.onfocus=()=>{requestAnimationFrame(()=>i.select())};
+  });
   document
     .querySelectorAll("[data-delete-restaurant]")
     .forEach(
@@ -709,8 +714,8 @@ document.querySelector("#saveRestaurant").onclick = (e) => {
     taxId: String(f.get("taxId") || "").trim().toUpperCase(),
     billingAddress: String(f.get("billingAddress") || "").trim(),
     prices: {
-      plain: Number(f.get("plainPrice")),
-      pumpkin: Number(f.get("pumpkinPrice")),
+      plain: window.panoraParseDecimal?.(f.get("plainPrice")) ?? 0,
+      pumpkin: window.panoraParseDecimal?.(f.get("pumpkinPrice")) ?? 0,
     },
   });
   cSave("panora-restaurants", restaurants);
