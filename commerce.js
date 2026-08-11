@@ -191,7 +191,14 @@ function renderRestaurants() {
       restaurant(id).prices[pid]=value;
       i.value=value.toFixed(2);
       cSave("panora-restaurants",restaurants);
-      try{await window.panoraCloud?.flushRestaurants?.()}catch(error){console.warn("Panora wholesale cloud save",error)}
+      try{
+        if(window.panoraCloud?.saveRestaurantPriceConfirmed)await window.panoraCloud.saveRestaurantPriceConfirmed(id,pid,value);
+        else await window.panoraCloud?.flushRestaurants?.();
+      }catch(error){
+        console.warn("Panora wholesale cloud save",error);
+        alert(`Не удалось сохранить оптовую цену в облаке: ${error.message||error}`);
+        return;
+      }
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
       window.panoraPricing?.notifyWholesale(id,pid,value);
     };

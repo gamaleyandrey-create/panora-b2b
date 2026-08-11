@@ -9,7 +9,7 @@
  }
  function refreshRestaurantProducts(){
   try{
-   const managed=JSON.parse(localStorage.getItem('panora-products')||'[]');
+   const managed=readManaged().filter(p=>p&&p.active!==false);
    const accountId=localStorage.getItem('panora-account-id');
    const restaurantKey=localStorage.getItem('panora-portal-restaurants')?'panora-portal-restaurants':'panora-restaurants';
    const restaurants=JSON.parse(localStorage.getItem(restaurantKey)||'[]');
@@ -17,17 +17,19 @@
     const fresh=restaurants.find(r=>String(r.id)===String(accountId));
     if(fresh)account=fresh;
    }
-   const byId=new Map(managed.map(p=>[p.id,p]));
-   PRODUCTS.forEach(p=>{
-    const managedProduct=byId.get(p.id);
-    if(managedProduct){
-     p.price=Number(account&&account.prices?.[p.id]!=null?account.prices[p.id]:managedProduct.basePrice??managedProduct.price??p.price??0);
-    }else if(account?.prices?.[p.id]!=null){
-     p.price=Number(account.prices[p.id]);
-    }
-   });
+
+   const rebuilt=managed.map(toCatalogProduct);
+   if(rebuilt.length){
+    PRODUCTS.splice(0,PRODUCTS.length,...rebuilt);
+   }else{
+    PRODUCTS.forEach(product=>{
+     if(account?.prices?.[product.id]!=null)product.price=Number(account.prices[product.id]);
+    });
+   }
+
    renderProducts?.();
    renderCart?.();
+   try{renderAccountModal?.()}catch(_){}
   }catch(error){console.warn('Panora pricing refresh failed',error)}
  }
  window.refreshRestaurantProducts=refreshRestaurantProducts;
