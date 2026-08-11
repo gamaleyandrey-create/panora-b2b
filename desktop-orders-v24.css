@@ -1,0 +1,37 @@
+/* Panora 2.4 — desktop order actions + notification sound control. */
+@media (min-width:721px){
+  /* Operational actions stay clearly separated from the status column. */
+  #view-orders table th:nth-child(6),
+  #view-orders table td:nth-child(6){padding-right:22px!important}
+  #view-orders table th:nth-child(7),
+  #view-orders table td:nth-child(7){padding-left:22px!important}
+
+  /* Invoice is primary; QR is secondary and always directly below it. */
+  #orderRows .order-flow-actions{display:flex!important;flex-direction:column!important;gap:9px!important}
+  #orderRows .order-flow-actions [data-note]{order:1!important}
+  #orderRows .order-flow-actions [data-delivery-qr]{order:2!important}
+  #orderRows .order-flow-actions [data-delivery-qr]{
+    background:#fff!important;color:#557061!important;border:1px solid #b7c5ba!important;
+    box-shadow:none!important;font-weight:650!important
+  }
+
+  /* Notification and sound controls form one compact working group. */
+  #view-orders .notification-control-group{
+    display:inline-flex!important;align-items:center!important;gap:4px!important;
+    padding:3px!important;border:1px solid #d7ded8!important;border-radius:11px!important;
+    background:#fff!important;box-shadow:0 1px 2px rgba(34,55,41,.04)!important
+  }
+  #view-orders .notification-control-group #enableAdminNotifications{
+    margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
+    min-height:34px!important;padding:0 10px!important;border-radius:8px!important
+  }
+  #view-orders .notification-sound-toggle{
+    display:inline-grid!important;place-items:center!important;width:36px!important;height:34px!important;
+    min-width:36px!important;min-height:34px!important;margin:0!important;padding:0!important;
+    border:0!important;border-left:1px solid #e4e9e4!important;border-radius:0 8px 8px 0!important;
+    background:transparent!important;color:#315b42!important;box-shadow:none!important;cursor:pointer!important
+  }
+  #view-orders .notification-sound-toggle:hover{background:#f2f6f2!important}
+  #view-orders .notification-sound-toggle.sound-off{color:#8a928c!important}
+  #view-orders .notification-sound-toggle svg{width:19px;height:19px;display:block}
+}
