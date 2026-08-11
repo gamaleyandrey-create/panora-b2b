@@ -361,7 +361,7 @@ function renderOrders() {
           const itemHtml=o.items.map((i)=>typeof orderLine==='function'
             ? orderLine(o,i)
             : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
-          return `<tr class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
+          return `<tr data-order-id="${commerceEscape(o.id)}" class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
             <td class="order-mobile-number" data-label="Заказ"><strong>PN-${String(o.number).padStart(4, "0")}</strong></td>
             <td class="order-mobile-dates" data-label="Даты"><div class="order-dates">
               <span class="order-date-line"><em>Выпечка</em><strong class="date-desktop">${orderDateLabel(o.date, true)}</strong><strong class="date-mobile">${orderCompactDate(o.date)}</strong></span>

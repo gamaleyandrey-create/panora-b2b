@@ -13,3 +13,17 @@
 /* v335: utility controls live below the header and never cover primary navigation */
 .panora-event-settings{top:64px;right:14px}
 @media(max-width:720px){.panora-event-settings{top:62px;right:10px;bottom:auto}}
+
+/* Panora 2.5 — persistent working notification for unhandled new orders. */
+.panora-event-toast[data-persistent="true"]{box-shadow:0 14px 38px rgba(31,50,37,.19)}
+.panora-event-order-link{cursor:pointer}
+.panora-event-order-link:hover{background:#fbfdfb}
+.order-row-attention{animation:panoraOrderAttention 1.8s ease-out}
+@keyframes panoraOrderAttention{0%,35%{box-shadow:inset 4px 0 #39764d;background:#f2f8f3}100%{box-shadow:none}}
+
+
+/* Panora 2.6 — clickable notification destinations and clear interaction affordance. */
+.panora-event-actionable{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.panora-event-actionable:hover{background:#fbfdfb;box-shadow:0 14px 38px rgba(31,50,37,.18);transform:translateY(-1px)}
+.panora-event-actionable:focus-visible{outline:3px solid rgba(57,118,77,.2);outline-offset:2px}
+.panora-event-hint{display:inline-block;margin-top:6px;color:#39764d;font-size:11px;font-weight:800}
