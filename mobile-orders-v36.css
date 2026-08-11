@@ -1,0 +1,83 @@
+/* Panora 3.6 — mobile Bakery Orders aligned with FINAL desktop Orders.
+   Mobile only. Desktop FINAL Orders remains untouched. */
+@media (max-width:720px){
+  /* Remove the extra decorative dot added in 3.5.
+     The application's native notification state indicator remains authoritative. */
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* Partner type: desktop-like secondary text, not a heavy badge. */
+  #view-orders .partner-type,
+  #view-orders .order-partner-type,
+  #view-orders [data-partner-type]{
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+    border-radius:0!important;
+    color:#68766d!important;
+    font-size:13px!important;
+    font-weight:600!important;
+  }
+
+  /* Desktop-like status treatment/colors. */
+  #view-orders .status-badge,
+  #view-orders .order-status{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:auto!important;
+    min-height:32px!important;
+    padding:6px 10px!important;
+    border-radius:8px!important;
+    font-size:12px!important;
+    line-height:1!important;
+    font-weight:800!important;
+    letter-spacing:.025em!important;
+    box-shadow:none!important;
+  }
+
+  #view-orders .status-badge.status-confirmed,
+  #view-orders .order-status.status-confirmed,
+  #view-orders [data-status="confirmed"] .status-badge,
+  #view-orders [data-status="confirmed"] .order-status{
+    background:#eaf5ed!important;
+    border:1px solid #a9cdb2!important;
+    color:#2f6f49!important;
+  }
+
+  #view-orders .status-badge.status-shipped,
+  #view-orders .order-status.status-shipped,
+  #view-orders [data-status="shipped"] .status-badge,
+  #view-orders [data-status="shipped"] .order-status{
+    background:#edf3f8!important;
+    border:1px solid #b8c9d8!important;
+    color:#365d78!important;
+  }
+
+  /* Actions follow the FINAL desktop hierarchy on mobile:
+     invoice first, QR immediately after it. */
+  #view-orders .order-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:9px!important;
+  }
+  #view-orders .order-actions .invoice-btn,
+  #view-orders .order-actions [data-action="invoice"],
+  #view-orders .order-actions button[data-order-action="invoice"]{
+    order:30!important;
+    width:100%!important;
+  }
+  #view-orders .order-actions .qr-btn,
+  #view-orders .order-actions [data-action="qr"],
+  #view-orders .order-actions button[data-order-action="qr"]{
+    order:31!important;
+    width:100%!important;
+    background:#fff!important;
+    border:1px solid #cfd8d1!important;
+    color:#2f6f49!important;
+    box-shadow:none!important;
+  }
+}
