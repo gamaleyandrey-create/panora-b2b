@@ -55,7 +55,15 @@ let lang=localStorage.getItem('panora-lang')||(['ru','en','es'].includes(navigat
 let cart=JSON.parse(localStorage.getItem('panora-cart')||'{}');
 let selectedBakeDate=localStorage.getItem('panora-bake-date')||'';
 let activeCategory='all';
-const tr=path=>path.split('.').reduce((o,k)=>o&&o[k],I18N[lang])||path;
+const tr=path=>{
+ const value=path.split('.').reduce((o,k)=>o&&o[k],I18N[lang]);
+ if(value)return value;
+ const fallback={
+  'catalog.retailPrice':lang==='en'?'Retail price':lang==='es'?'Precio minorista':'Розничная цена',
+  'catalog.wholesalePrice':lang==='en'?'Your wholesale price':lang==='es'?'Tu precio mayorista':'Ваша оптовая цена'
+ };
+ return fallback[path]||path;
+};
 const money=n=>{const value=new Intl.NumberFormat(I18N[lang].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
 const pText=p=>p.text[lang];
 const unit=()=>lang==='ru'?'за 1 шт.':lang==='es'?'por 1 ud.':'per 1 pc';
