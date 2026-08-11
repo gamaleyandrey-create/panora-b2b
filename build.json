@@ -1,7 +1,7 @@
 {
-  "version": "339.4.0",
-  "build": "3394",
+  "version": "2.1.0",
+  "build": "2100",
   "channel": "test",
   "date": "2026-08-11",
-  "change": "remove-duplicate-dates-cloud"
+  "change": "desktop-orders-visual-repair"
 }
