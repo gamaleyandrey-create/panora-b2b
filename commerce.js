@@ -192,6 +192,7 @@ function renderRestaurants() {
       i.value=value.toFixed(2);
       cSave("panora-restaurants",restaurants);
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
+      window.panoraPricing?.notifyWholesale(id,pid,value);
     };
     i.onblur=commit;
     i.onchange=null;

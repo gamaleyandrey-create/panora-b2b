@@ -105,3 +105,8 @@ $('#fulfillmentSelect').onchange=toggleFulfillment;
 $('#checkoutForm').onsubmit=e=>{e.preventDefault();const data=new FormData(e.target),summary=cartData(),fulfillment=data.get('fulfillment'),items=summary.rows.map(p=>({id:p.id,quantityPieces:p.quantityPieces,total:p.total}));const order={id:'PN-'+Date.now().toString().slice(-6),restaurant:data.get('restaurant'),contact:data.get('contact'),phone:data.get('phone'),email:data.get('email'),address:fulfillment==='delivery'?data.get('address'):'',date:data.get('date'),dateLabel:formatDate(new Date(data.get('date')+'T09:00:00')),time:fulfillment==='delivery'?data.get('time'):'',fulfillment,fulfillmentLabel:fulfillment==='delivery'?tr('checkout.deliveryOption'):tr('checkout.pickupOption'),comment:data.get('comment'),total:summary.total,items};localStorage.setItem('panora-last-order',JSON.stringify(order));cart={};localStorage.removeItem('panora-cart');closePanels();renderProducts();renderCart();showShare(order)};
 applyLanguage();toggleFulfillment();
 
+
+
+window.addEventListener('panora:pricing-refresh',()=>{try{restoreAccount?.();refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
+window.addEventListener('panora:retail-price-changed',()=>{try{refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
+window.addEventListener('panora:wholesale-price-changed',()=>{try{restoreAccount?.();refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
