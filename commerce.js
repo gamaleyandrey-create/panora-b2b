@@ -194,7 +194,7 @@ function renderRestaurants() {
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
     };
     i.onblur=commit;
-    i.onchange=commit;
+    i.onchange=null;
     i.onfocus=()=>{requestAnimationFrame(()=>i.select())};
   });
   document
@@ -686,6 +686,10 @@ function renderReminders() {
   );
 }
 function renderCommerce() {
+  if(window.panoraMoneyEditing?.active){
+    const active=window.panoraMoneyEditing.element;
+    if(active&&(active.matches('[data-price]')||active.matches('[data-custom-price]')))return;
+  }
   renderRestaurants();
   renderOrders();
   renderAccounting();
