@@ -1,0 +1,43 @@
+/* Panora 2.9 — FINAL desktop version: Orders.
+   Fixes desktop date fields staying inside the filter panel.
+   Mobile is intentionally untouched. */
+@media (min-width:721px){
+  #view-orders>.order-filter-card .order-partner-filter{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:12px!important;
+    align-items:end!important;
+  }
+
+  #view-orders>.order-filter-card .order-partner-filter label,
+  #view-orders>.order-filter-card .order-date-range label{
+    min-width:0!important;
+    width:100%!important;
+  }
+
+  #view-orders>.order-filter-card .order-date-range{
+    display:contents!important;
+  }
+
+  #view-orders>.order-filter-card select,
+  #view-orders>.order-filter-card input[type="date"]{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  #view-orders>.order-filter-card input[type="date"]{
+    cursor:pointer!important;
+    padding:0 10px!important;
+    color-scheme:light;
+  }
+
+  #view-orders>.order-filter-card input[type="date"]::-webkit-calendar-picker-indicator{
+    opacity:1!important;
+    cursor:pointer!important;
+    width:18px!important;
+    height:18px!important;
+    margin-left:4px!important;
+  }
+}
