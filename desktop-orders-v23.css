@@ -1,0 +1,28 @@
+/* Panora 2.3 — desktop orders: clearer operational status, quieter partner metadata. */
+@media (min-width:721px){
+  /* Partner type is supporting information, not a badge. */
+  #orderRows .partner-type{
+    display:block!important;min-height:0!important;padding:0!important;margin-top:4px!important;
+    border:0!important;border-radius:0!important;background:transparent!important;
+    color:#758078!important;font-size:11px!important;font-weight:600!important;line-height:1.2!important;
+  }
+
+  /* Status remains a primary working signal: compact rectangular labels. */
+  #orderRows .tag[class*="order-status-"]{
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    min-width:112px!important;min-height:30px!important;padding:6px 10px!important;
+    border:1px solid transparent!important;border-radius:7px!important;
+    font-size:11px!important;font-weight:800!important;line-height:1!important;
+    letter-spacing:.025em!important;text-transform:uppercase!important;white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  #orderRows .order-status-submitted{background:#fff1df!important;border-color:#e8c99f!important;color:#87511f!important}
+  #orderRows .order-status-confirmed{background:#e7f0e9!important;border-color:#bdd1c1!important;color:#28563a!important}
+  #orderRows .order-status-shipped{background:#315b42!important;border-color:#315b42!important;color:#fff!important}
+  #orderRows .order-status-completed{background:#eef1ee!important;border-color:#d6ddd7!important;color:#536158!important}
+  #orderRows .order-status-cancelled{background:#f3e9e7!important;border-color:#d9b9b3!important;color:#874e47!important}
+
+  /* Cancelled rows stay identifiable without dominating the working list. */
+  #view-orders tr.order-row-cancelled{background:#fbf8f7!important;color:#6f6967!important}
+  #view-orders tr.order-row-cancelled>td:first-child{box-shadow:inset 3px 0 0 #c69a93!important}
+}
