@@ -1,0 +1,19 @@
+/* Panora 2.7 — desktop filter header spacing only. */
+@media (min-width:721px){
+  #view-orders .order-filter-head-actions{
+    display:flex!important;
+    align-items:center!important;
+    gap:16px!important;
+  }
+  #view-orders .order-filter-head-actions .order-filter-reset{
+    padding:6px 4px!important;
+    margin:0!important;
+    white-space:nowrap!important;
+  }
+  #view-orders .order-filter-head-actions .order-filter-close{
+    flex:0 0 36px!important;
+    width:36px!important;
+    height:36px!important;
+    margin:0!important;
+  }
+}
