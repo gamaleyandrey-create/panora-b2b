@@ -1,0 +1,16 @@
+/* Panora 4.0 — retail vs wholesale price semantics. */
+.product-card .price-kind{
+  display:block;
+  margin-bottom:3px;
+  color:#6f7a72;
+  font-size:11px;
+  font-weight:650;
+  line-height:1.2;
+}
+.price-row > span:first-child small{
+  display:block;
+  margin-top:3px;
+  color:#778179;
+  font-size:11px;
+  font-weight:600;
+}

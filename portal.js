@@ -218,8 +218,12 @@ function loginAccount(e) {
 }
 function logoutAccount() {
   account = null;
-  SHOW_PRICES = false;
-  PRODUCTS.forEach((p) => (p.price = 0));
+  SHOW_PRICES = true;
+  const managedRetail = (() => { try { return JSON.parse(localStorage.getItem("panora-products") || "[]"); } catch { return []; } })();
+  const retailById = new Map(managedRetail.map((item) => [item.id, Number(item.basePrice ?? item.price ?? 0)]));
+  PRODUCTS.forEach((p) => {
+    if (retailById.has(p.id)) p.price = retailById.get(p.id);
+  });
   localStorage.removeItem("panora-account-id");
   const f = $("#checkoutForm");
   f.restaurant.value = "";
