@@ -43,7 +43,7 @@
    const label=()=>{
      const permission=Notification.permission;
      const active=permission==='granted'&&pref();
-     button.textContent=active?'● Уведомления включены':permission==='granted'?'Уведомления выключены':'Включить уведомления';
+     button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Уведомления включены</span>':permission==='granted'?'Уведомления выключены':'Включить уведомления';
      button.classList.toggle('notifications-active',active);
      button.classList.toggle('notifications-off',permission==='granted'&&!active);
      button.setAttribute('aria-pressed',active?'true':'false');
