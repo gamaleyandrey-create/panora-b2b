@@ -184,13 +184,14 @@ function renderRestaurants() {
       ? `<section class="removed-restaurants"><h3>Удалённые партнёры</h3>${removed.map((r) => `<div><span><strong>${commerceEscape(r.name)}</strong><small>${commerceEscape(r.email)}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
       : "");
   document.querySelectorAll("[data-price]").forEach((i) => {
-    const commit = () => {
+    const commit = async () => {
       const value=window.panoraParseDecimal?.(i.value);
       if(value===null){i.value=Number(restaurant(i.dataset.price.split(":")[0])?.prices?.[i.dataset.price.split(":")[1]]||0).toFixed(2);return}
       const [id,pid]=i.dataset.price.split(":");
       restaurant(id).prices[pid]=value;
       i.value=value.toFixed(2);
       cSave("panora-restaurants",restaurants);
+      try{await window.panoraCloud?.flushRestaurants?.()}catch(error){console.warn("Panora wholesale cloud save",error)}
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
       window.panoraPricing?.notifyWholesale(id,pid,value);
     };

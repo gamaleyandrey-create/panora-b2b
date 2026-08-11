@@ -10,8 +10,9 @@
  function refreshRestaurantProducts(){
   try{
    const managed=JSON.parse(localStorage.getItem('panora-products')||'[]');
-   const restaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
    const accountId=localStorage.getItem('panora-account-id');
+   const restaurantKey=localStorage.getItem('panora-portal-restaurants')?'panora-portal-restaurants':'panora-restaurants';
+   const restaurants=JSON.parse(localStorage.getItem(restaurantKey)||'[]');
    if(accountId){
     const fresh=restaurants.find(r=>String(r.id)===String(accountId));
     if(fresh)account=fresh;

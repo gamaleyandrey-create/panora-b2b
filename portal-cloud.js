@@ -61,7 +61,7 @@
     error.code='PANORA_SESSION_EXPIRED';error.cause=cause||null;return error;
   }
   function clearBrokenSession(cause){
-    stopPartnerOrderPolling();
+    stopPartnerOrderPolling();stopPartnerPricingPolling();
     saveSession(null);
     account=null;
     localStorage.removeItem('panora-account-id');
@@ -156,7 +156,7 @@
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       if(products?.length)write('panora-products',products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}})));
-      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();renderProducts();renderCart();startPartnerOrderPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();renderProducts();renderCart();startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -195,9 +195,60 @@
     partnerOrderPoll=setInterval(()=>{if(!document.hidden)tick()},2000);
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0}
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account)refreshPartnerOrders().catch(()=>{})});
-  window.addEventListener('focus',()=>{if(session?.user&&account)refreshPartnerOrders().catch(()=>{})});
-  window.addEventListener('online',()=>{if(session?.user&&account)refreshPartnerOrders().catch(()=>{})});
+  let partnerPricingPoll=0,partnerPricingLoading=null;
+  async function refreshPartnerPricing(){
+    if(partnerPricingLoading)return partnerPricingLoading;
+    if(!session?.user?.id||!account?.id||!navigator.onLine)return null;
+    partnerPricingLoading=(async()=>{
+      const [prices,products]=await Promise.all([
+        api(`restaurant_prices?restaurant_id=eq.${encodeURIComponent(account.id)}&select=product_id,price`),
+        api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'})
+      ]);
+      const nextPrices=Object.fromEntries((prices||[]).map(item=>[item.product_id,Number(item.price)]));
+      const priceChanged=JSON.stringify(account.prices||{})!==JSON.stringify(nextPrices);
+      if(priceChanged){
+        account={...account,prices:nextPrices};
+        write('panora-restaurants',[account]);
+      }
+      if(products?.length){
+        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
+        const before=localStorage.getItem('panora-products')||'[]',after=JSON.stringify(nextProducts);
+        if(before!==after)localStorage.setItem('panora-products',after);
+      }
+      if(priceChanged||products?.length){
+        if(typeof refreshRestaurantProducts==='function')refreshRestaurantProducts();
+        else applyAccount();
+        renderAccountModal();
+        renderProducts();
+        renderCart();
+        window.dispatchEvent(new CustomEvent('panora:partner-pricing-updated',{detail:{priceChanged,productCount:products?.length||0}}));
+      }
+      return {priceChanged,productCount:products?.length||0};
+    })().finally(()=>partnerPricingLoading=null);
+    return partnerPricingLoading;
+  }
+  function startPartnerPricingPolling(){
+    clearInterval(partnerPricingPoll);
+    if(!session?.user||!account)return;
+    const tick=()=>refreshPartnerPricing().catch(error=>{
+      if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
+      console.warn('Panora partner pricing refresh',error);
+    });
+    tick();
+    partnerPricingPoll=setInterval(()=>{if(!document.hidden)tick()},2500);
+  }
+  function stopPartnerPricingPolling(){clearInterval(partnerPricingPoll);partnerPricingPoll=0}
+
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
+  window.addEventListener('focus',()=>{if(session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
+  window.addEventListener('online',()=>{if(session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
+
+  window.addEventListener('storage',event=>{
+    if(!session?.user||!account)return;
+    if(event.key==='panora-products'||event.key==='panora-restaurants'){
+      setTimeout(()=>refreshPartnerPricing().catch(()=>{}),700);
+    }
+  });
 
   async function signIn(email,password,signup=false){
     const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
@@ -222,7 +273,7 @@
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;
-  logoutAccount=async()=>{stopPartnerOrderPolling();try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
+  logoutAccount=async()=>{stopPartnerOrderPolling();stopPartnerPricingPolling();try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
@@ -355,5 +406,5 @@
     else{state('error',error.message);renderAccountModal()}
   }})();
   setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
-  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders};
+  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshPricing:refreshPartnerPricing};
 })();
