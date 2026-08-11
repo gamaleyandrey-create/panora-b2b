@@ -1,0 +1,37 @@
+/* Panora 3.8 — mobile notification native indicator positioning only.
+   No new dot is created. Desktop Orders are untouched. */
+@media (max-width:720px){
+  /* Undo the older experimental pseudo-dot completely. */
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* The real application indicator is kept in normal flow BEFORE the text. */
+  #view-orders #enableAdminNotifications .notification-status-dot,
+  #view-orders #enableAdminNotifications .notification-dot,
+  #view-orders #enableAdminNotifications .notify-dot,
+  #view-orders #enableAdminNotifications .status-dot,
+  #view-orders #enableAdminNotifications [class*="notification"][class*="dot"]{
+    position:static!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    transform:none!important;
+    display:inline-block!important;
+    width:8px!important;
+    height:8px!important;
+    min-width:8px!important;
+    margin:0 8px 0 0!important;
+    vertical-align:middle!important;
+    flex:0 0 8px!important;
+  }
+
+  #view-orders #enableAdminNotifications{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    flex-direction:row!important;
+  }
+}
