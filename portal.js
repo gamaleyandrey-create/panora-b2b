@@ -176,6 +176,16 @@ function applyAccount() {
   renderAccountModal();
   updateCheckoutAccess();
 }
+function portalCurrentProductPrice(product) {
+  if (!product) return 0;
+  if (account?.prices?.[product.id] != null) return Number(account.prices[product.id]);
+  try {
+    const managed = JSON.parse(localStorage.getItem("panora-products") || "[]");
+    const item = managed.find((p) => String(p.id) === String(product.id));
+    if (item) return Number(item.basePrice ?? item.price ?? 0);
+  } catch {}
+  return Number(product.basePrice ?? product.price ?? 0);
+}
 function renderAccountModal() {
   const modal = $("#profileModal");
   if (!account) {
@@ -188,7 +198,7 @@ function renderAccountModal() {
     .filter((o) => o.restaurantId === account.id)
     .slice()
     .reverse();
-  modal.innerHTML = `<div class="modal-head"><div><span class="kicker">Panora</span><h2>${tr("profile.title")}</h2></div><button class="close-button" data-portal-close>×</button></div><div class="account-head"><div class="account-avatar">${portalEscape(account.name[0].toUpperCase())}</div><div><strong>${portalEscape(account.name)}</strong><span>${portalEscape(account.email)}</span></div></div><div class="account-balance"><span>${accountText("debt")}</span><strong>${portalMoney(accountDebt())}</strong></div><section class="account-section"><h3>${accountText("prices")}</h3><div class="account-price"><span>${accountText("plain")}<small>${accountText("piece")}</small></span><strong>${portalMoney(account.prices.plain)}</strong></div><div class="account-price"><span>${accountText("pumpkin")}<small>${accountText("piece")}</small></span><strong>${portalMoney(account.prices.pumpkin)}</strong></div></section><section class="account-section"><h3>${accountText("orders")}</h3>${orders.length ? orders.map((o) => `<div class="account-order"><span><strong>PN-${String(o.number).padStart(4, "0")}</strong><small>${o.date} · ${o.items.reduce((s, i) => s + i.quantity, 0)} ${lang === "ru" ? "шт." : lang === "es" ? "uds." : "pcs"}</small></span><span>${o.status === "shipped" ? accountText("shipped") : accountText("confirmed")}</span></div>`).join("") : `<p>${accountText("noOrders")}</p>`}</section><div class="account-actions"><button class="button button-ghost" id="accountLogout">${accountText("logout")}</button><button class="button button-primary" data-portal-close>${accountText("close")}</button></div>`;
+  modal.innerHTML = `<div class="modal-head"><div><span class="kicker">Panora</span><h2>${tr("profile.title")}</h2></div><button class="close-button" data-portal-close>×</button></div><div class="account-head"><div class="account-avatar">${portalEscape(account.name[0].toUpperCase())}</div><div><strong>${portalEscape(account.name)}</strong><span>${portalEscape(account.email)}</span></div></div><div class="account-balance"><span>${accountText("debt")}</span><strong>${portalMoney(accountDebt())}</strong></div><section class="account-section"><h3>${accountText("prices")}</h3>${PRODUCTS.map((product) => `<div class="account-price"><span>${portalEscape(pText(product)[0])}<small>${accountText("piece")}</small></span><strong>${portalMoney(portalCurrentProductPrice(product))}</strong></div>`).join("")}</section><section class="account-section"><h3>${accountText("orders")}</h3>${orders.length ? orders.map((o) => `<div class="account-order"><span><strong>PN-${String(o.number).padStart(4, "0")}</strong><small>${o.date} · ${o.items.reduce((s, i) => s + i.quantity, 0)} ${lang === "ru" ? "шт." : lang === "es" ? "uds." : "pcs"}</small></span><span>${o.status === "shipped" ? accountText("shipped") : accountText("confirmed")}</span></div>`).join("") : `<p>${accountText("noOrders")}</p>`}</section><div class="account-actions"><button class="button button-ghost" id="accountLogout">${accountText("logout")}</button><button class="button button-primary" data-portal-close>${accountText("close")}</button></div>`;
   modal
     .querySelectorAll("[data-portal-close]")
     .forEach((b) => (b.onclick = closePanels));
@@ -928,3 +938,10 @@ renderAccountModal();
 showOrderItemCosts();
 updateCheckoutAccess();
 renderCart();
+
+window.addEventListener("panora:partner-pricing-updated", () => {
+  try { renderAccountModal(); } catch {}
+});
+window.addEventListener("panora:pricing-refresh", () => {
+  try { renderAccountModal(); } catch {}
+});

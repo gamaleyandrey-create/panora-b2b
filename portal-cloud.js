@@ -209,6 +209,7 @@
       if(priceChanged){
         account={...account,prices:nextPrices};
         write('panora-restaurants',[account]);
+        try{renderAccountModal()}catch{}
       }
       if(products?.length){
         const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
