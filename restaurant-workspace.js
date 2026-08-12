@@ -187,6 +187,8 @@
   let paymentSearch = "";
   let debtSearch = "";
   let paymentHistoryOpen = false;
+  let financeView = "active";
+  let financeArchiveSearch = "";
 
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
@@ -663,10 +665,26 @@
     const advance = Math.max(0,paid-delivered);
 
     const debts=currentDebtItems();
+    const debtById=new Map(debts.map(item=>[String(item.note.id),item]));
+    const fullyPaidNotes=notes.map(note=>{
+      const debtItem=debtById.get(String(note.id));
+      const total=Number(note.total||0);
+      const due=debtItem?Number(debtItem.due||0):0;
+      const paidAmount=Math.max(0,total-due);
+      const linkedPayments=confirmedPayments.filter(payment=>String(payment.deliveryNoteId||"")===String(note.id));
+      const latestPaymentDate=linkedPayments.map(payment=>payment.receivedAt||payment.date||"").filter(Boolean).sort().slice(-1)[0]||note.date||"";
+      return {note,total,paidAmount,due,closedAt:latestPaymentDate};
+    }).filter(item=>item.due<=0.009);
+
     const filteredDebts=debts.filter(({note})=>
       dateInRange(note.date,paymentDateFrom,paymentDateTo) &&
       (!debtSearch||noteNumber(note).toLowerCase().includes(debtSearch.toLowerCase()))
     );
+
+    const archivedFinance=fullyPaidNotes
+      .filter(({note})=>dateInRange(note.date,paymentDateFrom,paymentDateTo))
+      .filter(({note})=>!financeArchiveSearch||noteNumber(note).toLowerCase().includes(financeArchiveSearch.toLowerCase()))
+      .sort((a,b)=>String(b.closedAt||b.note.date||"").localeCompare(String(a.closedAt||a.note.date||"")));
 
     const sharedTimeline =
       typeof window.panoraFinanceTimeline === "function"
@@ -730,23 +748,43 @@
       })()}
 
       <section class="rw-current-debts">
-        <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
-        <div class="rw-debt-filters">
-          <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search value="${esc(debtSearch)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
-          <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
-          ${(debtSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-debt-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+        <div class="rw-finance-view-tabs">
+          <button type="button" class="${financeView==="active"?"active":""}" data-rw-finance-view="active"><span>${lang==="ru"?"Актуальные":lang==="es"?"Actuales":"Current"}</span><b>${debts.length}</b></button>
+          <button type="button" class="${financeView==="archive"?"active":""}" data-rw-finance-view="archive"><span>${lang==="ru"?"Архив":lang==="es"?"Archivo":"Archive"}</span><b>${fullyPaidNotes.length}</b></button>
         </div>
-        ${debts.length?`<div class="rw-debt-list">${debts.map(({note,paidAmount,due,dueDate,overdue})=>{
-          const searchText=noteNumber(note).toLowerCase();
-          const rangeMatch=dateInRange(note.date,paymentDateFrom,paymentDateTo);
-          const searchMatch=!debtSearch||searchText.includes(debtSearch.toLowerCase());
-          return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-debt-search-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
-            <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
-            <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
+
+        ${financeView==="active"?`
+          <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
+          <div class="rw-debt-filters">
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search value="${esc(debtSearch)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
+            <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
+            ${(debtSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-debt-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+          </div>
+          ${debts.length?`<div class="rw-debt-list">${debts.map(({note,paidAmount,due,dueDate,overdue})=>{
+            const searchText=noteNumber(note).toLowerCase();
+            const rangeMatch=dateInRange(note.date,paymentDateFrom,paymentDateTo);
+            const searchMatch=!debtSearch||searchText.includes(debtSearch.toLowerCase());
+            return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-debt-search-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
+              <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
+              <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
+              <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
+              <div class="rw-debt-due"><span>${overdue?(lang==="ru"?"Просрочено":lang==="es"?"Vencido":"Overdue"):(lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due")}</span><strong>${portalMoney(due)}</strong></div>
+            </article>`;
+          }).join("")}</div><div class="rw-no-debt" data-rw-debt-empty${filteredDebts.length?" hidden":""}>${lang==="ru"?"По выбранному фильтру задолженностей нет.":lang==="es"?"No hay deudas con este filtro.":"No debts match this filter."}</div>`:`<div class="rw-no-debt">${lang==="ru"?"Актуальной задолженности нет.":lang==="es"?"No hay deuda pendiente.":"No current debt."}</div>`}
+        `:`
+          <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Архив закрытых расчётов":lang==="es"?"Archivo de pagos cerrados":"Closed settlements archive"}</h4></div><strong>${fullyPaidNotes.length}</strong></div>
+          <div class="rw-debt-filters">
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search value="${esc(financeArchiveSearch)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
+            <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
+            ${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-finance-archive-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+          </div>
+          ${archivedFinance.length?`<div class="rw-finance-archive-list">${archivedFinance.map(({note,total,paidAmount,closedAt})=>`<article class="rw-finance-archive-item" data-rw-finance-archive-text="${esc(noteNumber(note).toLowerCase())}">
+            <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small></div>
+            <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(total)}</b></div>
             <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
-            <div class="rw-debt-due"><span>${overdue?(lang==="ru"?"Просрочено":lang==="es"?"Vencido":"Overdue"):(lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due")}</span><strong>${portalMoney(due)}</strong></div>
-          </article>`;
-        }).join("")}</div><div class="rw-no-debt" data-rw-debt-empty${filteredDebts.length?" hidden":""}>${lang==="ru"?"По выбранному фильтру задолженностей нет.":lang==="es"?"No hay deudas con este filtro.":"No debts match this filter."}</div>`:`<div class="rw-no-debt">${lang==="ru"?"Актуальной задолженности нет.":lang==="es"?"No hay deuda pendiente.":"No current debt."}</div>`}
+            <div><span>${lang==="ru"?"Закрыто":lang==="es"?"Cerrado":"Closed"}</span><b>${esc(localDate(closedAt||note.date))}</b></div>
+          </article>`).join("")}</div>`:`<div class="rw-no-debt">${lang==="ru"?"В архиве пока нет закрытых расчётов.":lang==="es"?"Todavía no hay pagos cerrados en el archivo.":"No closed settlements in the archive yet."}</div>`}
+        `}
       </section>
 
       <section class="rw-history-collapsible">
@@ -925,6 +963,24 @@
       if(empty)empty.hidden=visible>0;
     };
     modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelectorAll("[data-rw-finance-view]").forEach(button=>button.onclick=()=>{
+      financeView=button.dataset.rwFinanceView;
+      openFilterMenu="";
+      renderAccountModal();
+    });
+
+    const financeArchiveSearchInput=modal.querySelector("[data-rw-finance-archive-search]");
+    if(financeArchiveSearchInput)financeArchiveSearchInput.oninput=()=>{
+      financeArchiveSearch=financeArchiveSearchInput.value.trim();
+      const q=financeArchiveSearch.toLowerCase();
+      modal.querySelectorAll("[data-rw-finance-archive-text]").forEach(row=>{
+        row.hidden=Boolean(q&&!String(row.dataset.rwFinanceArchiveText||"").includes(q));
+      });
+    };
+    modal.querySelector("[data-rw-finance-archive-reset]")?.addEventListener("click",()=>{
+      financeArchiveSearch="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
+    });
+
     modal.querySelector("[data-rw-history-toggle]")?.addEventListener("click",()=>{
       paymentHistoryOpen=!paymentHistoryOpen;
       const content=modal.querySelector(".rw-history-content"),toggle=modal.querySelector("[data-rw-history-toggle]");
