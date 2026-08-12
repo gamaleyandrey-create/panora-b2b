@@ -714,3 +714,13 @@
  .rw-finance-archive-item{grid-template-columns:1fr 1fr}
  .rw-finance-archive-item>div:first-child{grid-column:1/-1}
 }
+
+/* Panora 5.14 · explicit person who confirmed receipt */
+.rw-receipt-confirmed{display:grid;grid-template-columns:auto auto 1fr;gap:7px 10px;align-items:baseline;margin:5px 0 10px;padding:10px 12px;border:1px solid #cfe0d2;border-radius:10px;background:#f4faf5}
+.rw-receipt-confirmed span{color:#657168;font-size:12px}
+.rw-receipt-confirmed strong{color:#285d3a;font-size:13px}
+.rw-receipt-confirmed small{color:#768078;font-size:11px;text-align:right}
+@media(max-width:620px){
+ .rw-receipt-confirmed{grid-template-columns:1fr}
+ .rw-receipt-confirmed small{text-align:left}
+}

@@ -141,7 +141,8 @@
     occurredAt:row.occurred_at,
     actorRole:row.actor_role||'',
     actorName:row.actor_name||'',
-    actorUserId:row.actor_user_id||null
+    actorUserId:row.actor_user_id||null,
+    source:row.source||''
   });
   const attachStatusHistory=(orders,rows)=>{
     const grouped=new Map();
@@ -152,7 +153,7 @@
     return (orders||[]).map(order=>({...order,statusHistory:(grouped.get(String(order.id))||[]).sort((a,b)=>String(a.occurredAt).localeCompare(String(b.occurredAt)))}));
   };
   async function fetchStatusEvents(){
-    try{return await api('order_status_events?select=id,order_id,status,occurred_at,actor_role,actor_name,actor_user_id&order=occurred_at.asc')}
+    try{return await api('order_status_events?select=id,order_id,status,occurred_at,actor_role,actor_name,actor_user_id,source&order=occurred_at.asc')}
     catch(error){
       if(error?.status!==404)console.warn('Panora status history',error);
       return [];

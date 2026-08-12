@@ -392,6 +392,21 @@
     return `<details class="rw-status-history"><summary>${lang==="ru"?"Дата, время и кто менял статус":lang==="es"?"Fecha, hora y quién cambió el estado":"Date, time and who changed status"}</summary><div>${events.map(event=>`<p><strong>${esc(statusStageLabel(event.status))}</strong><span>${esc(formatStatusTime(event.occurredAt)||"—")}</span><small>${esc(actorLabel(event))}</small></p>`).join("")}</div></details>`;
   }
 
+  function receiptConfirmationHtml(order){
+    const note=orderDeliveryNote(order);
+    const event=latestStatusEvent(order,"delivered");
+    const confirmedAt=note?.customerConfirmedAt||note?.offlineProof?.receivedAt||event?.occurredAt;
+    const receiver=String(note?.customerReceiver||note?.offlineProof?.receiver||event?.actorName||"").trim();
+    if(!confirmedAt||!receiver)return "";
+    const source=event?.source||"";
+    const method=source==="partner_remote"
+      ? (lang==="ru"?"удалённо":lang==="es"?"a distancia":"remotely")
+      : note?.offlineProof?.receivedAt
+        ? (lang==="ru"?"офлайн":lang==="es"?"sin conexión":"offline")
+        : (lang==="ru"?"при получении":lang==="es"?"en la recepción":"on receipt");
+    return `<div class="rw-receipt-confirmed"><span>${lang==="ru"?"Получение подтвердил":lang==="es"?"Recepción confirmada por":"Receipt confirmed by"}</span><strong>${esc(receiver)}</strong><small>${esc(formatStatusTime(confirmedAt))} · ${esc(method)}</small></div>`;
+  }
+
   function orderProgressHtml(order) {
     if(order.status==="cancelled")
       return `<div class="rw-order-progress cancelled"><strong>${lang==="ru"?"Заказ отменён":lang==="es"?"Pedido cancelado":"Order cancelled"}</strong></div>`;
@@ -561,6 +576,7 @@
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
       ${statusHistoryHtml(order)}
+      ${receiptConfirmationHtml(order)}
       <p class="rw-order-status-hint">${esc(orderStatusHint(order))}</p>
       ${lifecycle==="shipped"&&note&&!note.customerConfirmedAt&&!note.offlineProof?.receivedAt?`<button type="button" class="button button-primary rw-confirm-delivery-remote" data-rw-confirm-delivery="${esc(note.id)}" data-rw-confirm-order="${esc(order.id)}">${lang==="ru"?"Подтвердить получение":lang==="es"?"Confirmar recepción":"Confirm receipt"}</button>`:""}
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
@@ -903,9 +919,12 @@
     modal.querySelectorAll("[data-rw-confirm-delivery]").forEach(button=>button.onclick=()=>{
       const note=ownNotes().find(item=>String(item.id)===String(button.dataset.rwConfirmDelivery)),order=ownOrders().find(item=>String(item.id)===String(button.dataset.rwConfirmOrder));if(!note||!order)return;
       const previous=Math.max(0,Number(note.trayBalanceAfter||0)-Number(note.traysDelivered||0)+Number(note.traysReturned||0)),maxReturned=previous+Number(note.traysDelivered||0),dialog=document.createElement("dialog");dialog.className="rw-remote-confirm-dialog";
-      dialog.innerHTML=`<form method="dialog" class="rw-remote-confirm-card" data-rw-remote-form><button type="button" class="rw-remote-close">×</button><span class="kicker">Panora</span><h3>${lang==="ru"?"Подтвердить получение":lang==="es"?"Confirmar recepción":"Confirm receipt"}</h3><p>${lang==="ru"?`Подтверждаете, что заказ ${orderNumber(order)} и накладная ${noteNumber(note)} получены?`:`${orderNumber(order)} · ${noteNumber(note)}`}</p><label><span>${lang==="ru"?"Кто получил":lang==="es"?"Quién recibió":"Received by"}</span><input name="receiver" required minlength="2" maxlength="120" autocomplete="name" value="${esc(account?.contact||account?.name||"")}"></label><div class="rw-remote-trays"><label><span>${lang==="ru"?"Принято лотков":lang==="es"?"Bandejas recibidas":"Trays received"}</span><input name="traysReceived" type="number" min="0" max="${Number(note.traysDelivered||0)}" value="${Number(note.traysDelivered||0)}" required></label><label><span>${lang==="ru"?"Возвращено пустых":lang==="es"?"Bandejas devueltas":"Empty trays returned"}</span><input name="traysReturned" type="number" min="0" max="${maxReturned}" value="${Math.min(Number(note.traysReturned||0),maxReturned)}" required></label></div><label class="rw-remote-check"><input name="accepted" type="checkbox" required><span>${lang==="ru"?"Количество товара и лотков проверено. Подтверждаю получение удалённо.":"I confirm receipt remotely."}</span></label><button type="submit" class="button button-primary">${lang==="ru"?"Да, заказ получен":"Confirm receipt"}</button></form>`;
+      dialog.innerHTML=`<form method="dialog" class="rw-remote-confirm-card" data-rw-remote-form><button type="button" class="rw-remote-close">×</button><span class="kicker">Panora</span><h3>${lang==="ru"?"Подтвердить получение":lang==="es"?"Confirmar recepción":"Confirm receipt"}</h3><p>${lang==="ru"?`Подтверждаете, что заказ ${orderNumber(order)} и накладная ${noteNumber(note)} получены?`:`${orderNumber(order)} · ${noteNumber(note)}`}</p><label><span>${lang==="ru"?"Получатель — имя и фамилия":lang==="es"?"Receptor — nombre y apellido":"Recipient — first and last name"}</span><input name="receiver" required minlength="5" maxlength="120" autocomplete="name" placeholder="${lang==="ru"?"Например: Андрей Иванов":lang==="es"?"Ej.: Andrés García":"Example: Andrew Smith"}" value=""></label><div class="rw-remote-trays"><label><span>${lang==="ru"?"Принято лотков":lang==="es"?"Bandejas recibidas":"Trays received"}</span><input name="traysReceived" type="number" min="0" max="${Number(note.traysDelivered||0)}" value="${Number(note.traysDelivered||0)}" required></label><label><span>${lang==="ru"?"Возвращено пустых":lang==="es"?"Bandejas devueltas":"Empty trays returned"}</span><input name="traysReturned" type="number" min="0" max="${maxReturned}" value="${Math.min(Number(note.traysReturned||0),maxReturned)}" required></label></div><label class="rw-remote-check"><input name="accepted" type="checkbox" required><span>${lang==="ru"?"Количество товара и лотков проверено. Подтверждаю получение удалённо.":"I confirm receipt remotely."}</span></label><button type="submit" class="button button-primary">${lang==="ru"?"Да, заказ получен":"Confirm receipt"}</button></form>`;
       document.body.appendChild(dialog);dialog.showModal();const close=()=>dialog.remove();dialog.querySelector(".rw-remote-close").onclick=close;dialog.addEventListener("click",e=>{if(e.target===dialog)close()});
-      dialog.querySelector("[data-rw-remote-form]").onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,d=new FormData(form),receiver=String(d.get("receiver")||"").trim(),received=Number(d.get("traysReceived")),returned=Number(d.get("traysReturned")),submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await window.panoraPartnerDelivery?.confirmRemote(note.id,receiver,received,returned);close();}catch(error){alert(`${lang==="ru"?"Не удалось подтвердить получение":"Could not confirm receipt"}: ${error.message||error}`);submit.disabled=false;}};
+      dialog.querySelector("[data-rw-remote-form]").onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,d=new FormData(form),receiver=String(d.get("receiver")||"").trim(),received=Number(d.get("traysReceived")),returned=Number(d.get("traysReturned")),submit=form.querySelector('button[type="submit"]');
+        const receiverParts=receiver.split(/\s+/).filter(Boolean);
+        if(receiver.length<5||receiverParts.length<2){alert(lang==="ru"?"Укажите имя и фамилию получателя.":lang==="es"?"Indique el nombre y apellido del receptor.":"Enter the recipient's first and last name.");return;}
+        submit.disabled=true;try{await window.panoraPartnerDelivery?.confirmRemote(note.id,receiver,received,returned);close();}catch(error){alert(`${lang==="ru"?"Не удалось подтвердить получение":"Could not confirm receipt"}: ${error.message||error}`);submit.disabled=false;}};
     });
 
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
