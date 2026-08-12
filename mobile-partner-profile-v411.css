@@ -1,0 +1,16 @@
+/* Panora 4.11 — restore partner profile entry on mobile.
+   No desktop changes. */
+@media (max-width:720px){
+  #profileButton.account-entry{
+    display:inline-flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+  #mobileProfile{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+}
