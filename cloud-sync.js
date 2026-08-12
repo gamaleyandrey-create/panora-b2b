@@ -451,7 +451,7 @@
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
   async function refreshRestaurantPricesDirect(){
     if(!ready||document.hidden)return false;
-    if(window.panoraMoneyEditing?.active||restaurantTimer)return false;
+    if(window.panoraMoneyEditing?.active)return false;
 
     const rows=await request('restaurant_prices?select=restaurant_id,product_id,price,updated_at&order=restaurant_id.asc,product_id.asc');
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
@@ -503,7 +503,7 @@
   }
   async function refreshRestaurantsIfChanged(){
     if(!ready||document.hidden)return false;
-    if(window.panoraMoneyEditing?.active||restaurantTimer)return false;
+    if(window.panoraMoneyEditing?.active)return false;
     if(pending.restaurants)clearPending('restaurants');
 
     const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
@@ -524,6 +524,7 @@
     return true;
   }
   async function saveRestaurantsNow(){
+    clearTimeout(restaurantTimer);restaurantTimer=0;
     if(!ready||typeof restaurants==='undefined')return;
     status('Синхронизация…');
     await guardSection('restaurants','restaurants');
@@ -918,7 +919,14 @@ window.panoraRecalculateBalances=recalculateBalances;
   function queuePlans(){if(applyingCloud)return;const current=typeof plans!=='undefined'?plans:JSON.parse(localStorage.getItem('panora-production-plans')||'[]');const signature=planSignature(current);if(signature===String(baselines.plans||'')){clearPending('plans');delete conflicts.plans;saveConflicts();return}markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{showPending();fail('план',error)}),350)}
   function queueProducts(){if(applyingCloud)return;const signature=productSignature(localProducts());if(signature===String(baselines.products||'')){productDirty=false;clearPending('products');return}productDirty=true;markPending('products');clearTimeout(productTimer);productTimer=setTimeout(()=>flushProducts().catch(error=>fail('товары',error)),350)}
   function queueRecipes(){recipeDirty=true;recipeRevision++;markPending('recipes');clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
-  function queueRestaurants(){markPending('restaurants');clearTimeout(restaurantTimer);restaurantTimer=setTimeout(()=>saveRestaurantsNow().catch(error=>fail('партнёры',error)),350)}
+  function queueRestaurants(){
+    markPending('restaurants');
+    clearTimeout(restaurantTimer);
+    restaurantTimer=setTimeout(()=>{
+      restaurantTimer=0;
+      saveRestaurantsNow().catch(error=>fail('партнёры',error));
+    },350);
+  }
   async function flushRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=0;await saveRestaurantsNow();return true}
   async function saveRestaurantPriceConfirmed(restaurantId,productId,price){
     if(!ready)throw new Error('Облако ещё загружается');
