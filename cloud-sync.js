@@ -485,12 +485,10 @@
       clearPending('restaurants');
     }
 
-    if(changed){
-      window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-direct',count:(rows||[]).length}}));
-      window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length}}));
-      if(typeof renderRestaurants==='function')renderRestaurants();
-      else if(typeof renderCommerce==='function')renderCommerce();
-    }
+    window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-direct',count:(rows||[]).length,changed}}));
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length,changed}}));
+    if(typeof renderRestaurants==='function')renderRestaurants();
+    else if(typeof renderCommerce==='function')renderCommerce();
     return changed;
   }
 
