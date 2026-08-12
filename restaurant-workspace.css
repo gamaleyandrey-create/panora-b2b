@@ -782,3 +782,18 @@
 .rw-note-payment-state{display:flex!important;flex-wrap:wrap;gap:6px 16px;margin-top:8px;padding-top:8px;border-top:1px solid #edf0eb;color:#6c766f}
 .rw-note-payment-state b{color:#263d2e}
 .rw-note-payment-state span:last-child b{color:#2f6a49}
+
+/* Panora 5.22 · partner sidebar icon balance + sign out */
+.restaurant-workspace .rw-nav{min-height:100%}
+.restaurant-workspace .rw-nav-home i{font-size:18px;line-height:1}
+.restaurant-workspace .rw-nav-profile i svg{width:20px;height:20px}
+.restaurant-workspace .rw-nav-logout{margin-top:auto;color:#68736b!important}
+.restaurant-workspace .rw-nav-logout:hover{background:#f1f2ee!important;color:#24372b!important}
+.restaurant-workspace .rw-nav-logout i{font-size:17px;background:transparent}
+.restaurant-workspace .rw-footer [data-rw-logout]{display:none}
+@media(max-width:720px){
+  .restaurant-workspace .rw-nav-logout{display:none}
+  .restaurant-workspace .rw-footer [data-rw-logout]{display:inline-flex}
+  .restaurant-workspace .rw-nav-home i{font-size:16px}
+  .restaurant-workspace .rw-nav-profile i svg{width:18px;height:18px}
+}

@@ -1221,10 +1221,11 @@
                 const icon = badge === "__PROFILE__"
                   ? `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M3.6 20.5c.8-4.7 3.5-7 8.4-7s7.6 2.3 8.4 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>`
                   : badge;
-                return `<button class="${activeTab === key ? "active" : ""}" data-rw-tab="${key}"><i>${icon}</i><span>${label}</span></button>`;
+                return `<button class="${activeTab === key ? "active " : ""}rw-nav-${key}" data-rw-tab="${key}"><i>${icon}</i><span>${label}</span></button>`;
               },
             )
             .join("")}
+          <button type="button" class="rw-nav-logout" data-rw-logout><i aria-hidden="true">↪</i><span>${t("signOut")}</span></button>
         </nav>
         <main class="rw-content">${contentHtml()}</main>
       </div>
