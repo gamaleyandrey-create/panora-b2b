@@ -449,6 +449,44 @@
   const normalizeCloudPartnerType=value=>{const raw=String(value??'').trim().toLowerCase(),aliases={restaurant:'restaurant','ресторан':'restaurant',restaurante:'restaurant',shop:'shop','магазин':'shop',tienda:'shop',hotel:'hotel','отель':'hotel',cafe:'cafe','кафе':'cafe','café':'cafe',catering:'catering','кейтеринг':'catering',cátering:'catering',other:'other','другое':'other',otro:'other'};return aliases[raw]||'restaurant'};
   const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,whatsapp:r.whatsapp||null,telegram:r.telegram||null,extra_messengers:safeMessengerRows(r.extraMessengers),address:r.address||null,legal_name:r.legalName||null,tax_id:r.taxId||null,billing_address:r.billingAddress||null,language:r.language||'ru',partner_type:normalizeCloudPartnerType(r.partnerType),active:!r.deletedAt,updated_at:new Date().toISOString()});
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
+  async function refreshRestaurantPricesDirect(){
+    if(!ready||document.hidden)return false;
+    if(window.panoraMoneyEditing?.active||restaurantTimer)return false;
+
+    const rows=await request('restaurant_prices?select=restaurant_id,product_id,price,updated_at&order=restaurant_id.asc,product_id.asc');
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    if(!Array.isArray(local)||!local.length)return false;
+
+    const byRestaurant=new Map();
+    for(const row of rows||[]){
+      const id=String(row.restaurant_id||'');
+      if(!byRestaurant.has(id))byRestaurant.set(id,{});
+      byRestaurant.get(id)[row.product_id]=Number(row.price);
+    }
+
+    let changed=false;
+    const next=local.map(r=>{
+      const remote=byRestaurant.get(String(r.id));
+      if(!remote)return r;
+      const current=Object.fromEntries(Object.entries(r.prices||{}).map(([k,v])=>[k,Number(v)]));
+      if(JSON.stringify(current)!==JSON.stringify(remote)){
+        changed=true;
+        return {...r,prices:remote};
+      }
+      return r;
+    });
+
+    if(!changed)return false;
+    restaurants=next;
+    localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+    writeRestaurantBaseline(restaurants);
+    clearPending('restaurants');
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length}}));
+    if(typeof renderRestaurants==='function')renderRestaurants();
+    else if(typeof renderCommerce==='function')renderCommerce();
+    return true;
+  }
+
   async function loadRestaurants(){
     if(pending.restaurants&&!window.panoraMoneyEditing?.active&&!restaurantTimer)clearPending('restaurants');
     const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
@@ -459,6 +497,7 @@
       localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
       writeRestaurantBaseline(restaurants);
       clearPending('restaurants');
+      await refreshRestaurantPricesDirect();
       if(typeof renderCommerce==='function')renderCommerce();
     }else if(local.length){restaurants=local;ready=true;await saveRestaurantsNow()}
   }
@@ -897,7 +936,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     writeRestaurantBaseline(local);
     clearPending('restaurants');
     window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'confirmed-price',restaurantId,productId,price:Number(saved.price)}}));
-    setTimeout(()=>refreshRestaurantsIfChanged().catch(()=>{}),120);
+    setTimeout(()=>refreshRestaurantPricesDirect().catch(()=>{}),120);
     return Number(saved.price);
   }
   function queueOrders(){markPending('orders');clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().then(()=>clearPending('orders')).catch(error=>fail('заказы',error)),500)}
@@ -1113,13 +1152,13 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
     }),2000);
-    clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantsIfChanged().catch(error=>{
+    clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantPricesDirect().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
-      console.warn('Panora restaurant price refresh',error);
+      console.warn('Panora direct restaurant price refresh',error);
     }),1500);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{pending=readPending();if(ready)retrySync()});
@@ -1135,9 +1174,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready)refreshRestaurantsIfChanged().catch(error=>console.warn('Panora restaurant visibility refresh',error));
+    if(!document.hidden&&ready)refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));
   });
   window.addEventListener('focus',()=>{
-    if(ready)refreshRestaurantsIfChanged().catch(error=>console.warn('Panora restaurant focus refresh',error));
+    if(ready)refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));
   });
 })();
