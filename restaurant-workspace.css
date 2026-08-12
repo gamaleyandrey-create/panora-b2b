@@ -619,3 +619,34 @@
   .rw-status-history p{grid-template-columns:1fr auto}
   .rw-status-history p small{grid-column:1/-1;text-align:left}
 }
+
+/* Panora 5.06 · stable live search inputs */
+.rw-order[hidden],.rw-document[hidden],[data-rw-order-empty][hidden],[data-rw-note-empty][hidden]{display:none!important}
+
+/* Panora 5.07 · current debts + stable payment search */
+.rw-current-debts{display:grid;gap:10px;margin-top:18px}
+.rw-current-debts-head{display:flex;align-items:end;justify-content:space-between;gap:12px}
+.rw-current-debts-head h4{margin:2px 0 0;font:26px Georgia,serif}
+.rw-current-debts-head>strong{display:grid;place-items:center;min-width:30px;height:30px;border-radius:999px;background:#e8efe7;color:#315d42}
+.rw-debt-list{display:grid;gap:8px}
+.rw-debt-item{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(100px,.7fr) minmax(100px,.7fr) minmax(120px,.8fr);gap:14px;align-items:center;padding:13px 15px;border:1px solid #dce2db;border-radius:12px;background:#fff}
+.rw-debt-item>div{display:grid;gap:3px}
+.rw-debt-item span,.rw-debt-item small{color:#778078;font-size:11px}
+.rw-debt-item b,.rw-debt-item strong{font-size:14px}
+.rw-debt-due{text-align:right}
+.rw-debt-due strong{color:#315d42;font-size:18px}
+.rw-debt-item.overdue{border-color:#e7c7c1;background:#fffafa}
+.rw-debt-item.overdue .rw-debt-due span,.rw-debt-item.overdue .rw-debt-due strong{color:#a1463d}
+.rw-no-debt{padding:15px;border-radius:12px;background:#eef5ef;color:#456150}
+.rw-finance-history-filters{display:flex;align-items:end;gap:10px}
+.rw-payment-search{display:grid;gap:5px;min-width:260px}
+.rw-payment-search>span{color:#7a8179;font:700 11px Arial;text-transform:uppercase;letter-spacing:.05em}
+.rw-payment-search input{height:42px;box-sizing:border-box;padding:0 12px;border:1px solid #d6dbd4;border-radius:10px;background:#fbfbf8;color:#17231b;font:600 14px Arial;outline:none}
+.rw-operation[hidden],[data-rw-payment-empty][hidden]{display:none!important}
+@media(max-width:720px){
+ .rw-debt-item{grid-template-columns:1fr 1fr}
+ .rw-debt-item>div:first-child{grid-column:1/-1}
+ .rw-debt-due{text-align:left}
+ .rw-finance-history-filters{width:100%;display:grid;grid-template-columns:1fr}
+ .rw-payment-search{min-width:0}
+}

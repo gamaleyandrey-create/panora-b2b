@@ -184,6 +184,7 @@
 
   let paymentDateFrom = "";
   let paymentDateTo = "";
+  let paymentSearch = "";
 
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
@@ -505,7 +506,7 @@
     const working = all.filter(isActiveOrder);
     const archive = all.filter(isArchivedOrder);
     const source = orderView === "history" ? archive : working;
-    const rows = source.filter(orderMatchesStatus).filter(orderMatchesPeriod).filter(orderMatchesSearch);
+    const rows = source.filter(orderMatchesStatus).filter(orderMatchesPeriod);
 
     const statusOptions = [
       ["all", lang==="ru"?"Все статусы":lang==="es"?"Todos los estados":"All statuses"],
@@ -534,7 +535,9 @@
       ${rows.length ? `<section class="rw-list">${rows.map((order) => {
         const note=orderDeliveryNote(order);
         const lifecycle=orderLifecycleStatus(order);
-        return `<article class="rw-order" data-rw-order="${esc(order.id)}">
+        const searchText=`${orderNumber(order)} ${(order.items||[]).map(item=>itemName(item.product)).join(" ")}`.toLowerCase();
+        const searchHidden=orderSearch&&!searchText.includes(orderSearch.toLowerCase());
+        return `<article class="rw-order" data-rw-order="${esc(order.id)}" data-rw-order-search-text="${esc(searchText)}"${searchHidden?" hidden":""}>
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<small class="rw-order-note">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</small>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
@@ -543,7 +546,7 @@
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
       <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>
     </article>`;
-      }).join("")}</section>` : `<section class="rw-empty rw-filtered-empty"><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
+      }).join("")}</section><section class="rw-empty rw-filtered-empty" data-rw-order-empty hidden><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>` : `<section class="rw-empty rw-filtered-empty"><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
     </section>`;
   }
   function notesHtml() {
@@ -565,8 +568,7 @@
     const archive=allNotes.filter(noteArchived);
     const source=noteView==="history"?archive:working;
     const notes=source.filter(note=>
-      dateInRange(note.date,noteDateFrom,noteDateTo) &&
-      (!noteQuery||noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))
+      dateInRange(note.date,noteDateFrom,noteDateTo)
     );
 
     return `<section class="rw-note-library">
@@ -584,130 +586,112 @@
       <div class="rw-list">${notes.map((note) => {
         const order = noteOrder(note);
         const isMain = note.id === working[0]?.id && noteView==="active";
-        return `<article class="rw-document${isMain ? " rw-document-main" : ""}">
+        const noteSearchText=noteNumber(note).toLowerCase();
+        const noteSearchHidden=noteQuery&&!noteSearchText.includes(noteQuery.toLowerCase());
+        return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-search-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
       <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
-      }).join("")}</div>${notes.length ? "" : `<p class="rw-filter-empty">${t("nothingFound")}</p>`}
+      }).join("")}</div><p class="rw-filter-empty" data-rw-note-empty${notes.some(note=>!noteQuery||noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))?" hidden":""}>${t("nothingFound")}</p>
     </section>`;
   }
   function paymentsHtml() {
     window.panoraRecalculateBalances?.();
     const payments = ownPayments(),
       notes = ownNotes();
+
+    const confirmedPayments=payments.filter(payment=>payment.confirmed!==false&&payment.status!=="cancelled");
+    const pendingPayments=payments.filter(payment=>payment.confirmed===false&&payment.status!=="cancelled");
+
+    const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
+    const paid = confirmedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const pending = pendingPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+
+    const paidForNote=note=>confirmedPayments
+      .filter(payment=>String(payment.deliveryNoteId||"")===String(note.id))
+      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+
+    const debts=notes.map(note=>{
+      const paidAmount=paidForNote(note);
+      const due=Math.max(0,Number(note.total||0)-paidAmount);
+      return {note,paidAmount,due};
+    }).filter(item=>item.due>0.009)
+      .sort((a,b)=>String(a.note.paymentDueDate||a.note.date||"").localeCompare(String(b.note.paymentDueDate||b.note.date||"")));
+
     const sharedTimeline =
       typeof window.panoraFinanceTimeline === "function"
         ? window.panoraFinanceTimeline(account.id)
         : null;
-    const delivered = notes.reduce(
-      (sum, note) => sum + Number(note.total || 0),
-      0,
-    );
-    const paid = payments
-      .filter(
-        (payment) =>
-          payment.confirmed !== false && payment.status !== "cancelled",
-      )
-      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    const pending = payments
-      .filter(
-        (payment) =>
-          payment.confirmed === false && payment.status !== "cancelled",
-      )
-      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
     const operations = sharedTimeline
-      ? sharedTimeline.map((event) =>
-          event.kind === "delivery"
-            ? {
-                date: event.date,
-                kind: "delivery",
-                amount: event.amount,
-                label: noteNumber(event.note),
-                note: event.note,
-                sort: 0,
-                balanceAfter: event.balanceAfter,
-              }
-            : {
-                date: event.date,
-                kind: "payment",
-                amount: -event.amount,
-                label: event.payment.deliveryNoteId
-                  ? noteNumber(
-                      notes.find(
-                        (note) => note.id === event.payment.deliveryNoteId,
-                      ) || { number: "—" },
-                    )
-                  : t("withoutNote"),
-                payment: event.payment,
-                sort: 1,
-                balanceAfter: event.balanceAfter,
-              },
-        )
+      ? sharedTimeline.map(event=>
+          event.kind==="delivery"
+            ? {date:event.date,kind:"delivery",amount:event.amount,label:noteNumber(event.note),note:event.note,sort:0,balanceAfter:event.balanceAfter}
+            : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
+                ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
+                : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
       : [
-      ...notes.map((note) => ({
-        date: note.date,
-        kind: "delivery",
-        amount: Number(note.total || 0),
-        label: noteNumber(note),
-        note,
-        sort: 0,
-      })),
-      ...payments
-        .filter((payment) => payment.status !== "cancelled")
-        .map((payment) => ({
-          date: payment.date,
-          kind: "payment",
-          amount: -Number(payment.amount || 0),
-          label: payment.deliveryNoteId
-            ? noteNumber(
-                notes.find((note) => note.id === payment.deliveryNoteId) || {
-                  number: "—",
-                },
-              )
-            : t("withoutNote"),
-          payment,
-          sort: 1,
-        })),
-        ].sort(
-          (a, b) =>
-            String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
-        );
-    if (!sharedTimeline) {
-      let running = 0;
-      operations.forEach((operation) => {
-        if (
-          operation.kind === "delivery" ||
-          operation.payment?.confirmed !== false
-        )
-          running += operation.amount;
-        operation.balanceAfter = Math.max(0, running);
+          ...notes.map(note=>({date:note.date,kind:"delivery",amount:Number(note.total||0),label:noteNumber(note),note,sort:0})),
+          ...payments.filter(payment=>payment.status!=="cancelled").map(payment=>({
+            date:payment.date,kind:"payment",amount:-Number(payment.amount||0),
+            label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),
+            payment,sort:1
+          }))
+        ].sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.sort-b.sort);
+
+    if(!sharedTimeline){
+      let running=0;
+      operations.forEach(operation=>{
+        if(operation.kind==="delivery"||operation.payment?.confirmed!==false)running+=operation.amount;
+        operation.balanceAfter=Math.max(0,running);
       });
     }
-    const history = operations.slice().reverse();
-    const filteredHistory = history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
+
+    const history=operations.slice().reverse();
+    const filteredHistory=history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
+
     return `<section class="rw-finance">
-      <header><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${t("debt")}</span><strong>${portalMoney(Math.max(0, delivered - paid))}</strong></div></header>
+      <header><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${t("debt")}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong></div></header>
+
       <div class="rw-finance-stats">
         <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
         <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
         <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
       </div>
-      <div class="rw-finance-history-head"><h4>${t("operationHistory")}</h4><div class="rw-filter-menu rw-period-menu rw-payment-period"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div></div>
-      ${
-        filteredHistory.length
-          ? `<div class="rw-finance-history">${filteredHistory
-              .map(
-                (
-                  operation,
-                ) => `<article class="rw-operation ${operation.kind}${operation.payment?.confirmed === false ? " pending" : ""}">
-        <div><strong>${operation.kind === "delivery" ? `${t("delivery")} · ${esc(operation.label)}` : `${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate ? ` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}` : ""}${operation.payment?.method ? ` · ${esc(operation.payment.method)}` : ""}${operation.payment?.note ? ` · ${esc(operation.payment.note)}` : ""}</small></div>
-        <div class="rw-operation-amount"><b>${operation.amount < 0 ? "−" : "+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed === false ? t("pending") : `${t("balanceAfter")}: ${portalMoney(Math.max(0, operation.balanceAfter))}`}</small></div>
-      </article>`,
-              )
-              .join("")}</div>`
-          : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`
-      }
+
+      <section class="rw-current-debts">
+        <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong>${debts.length}</strong></div>
+        ${debts.length?`<div class="rw-debt-list">${debts.map(({note,paidAmount,due})=>{
+          const dueDate=note.paymentDueDate||"";
+          const overdue=dueDate&&dueDate<isoToday();
+          return `<article class="rw-debt-item${overdue?" overdue":""}">
+            <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
+            <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
+            <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
+            <div class="rw-debt-due"><span>${overdue?(lang==="ru"?"Просрочено":lang==="es"?"Vencido":"Overdue"):(lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due")}</span><strong>${portalMoney(due)}</strong></div>
+          </article>`;
+        }).join("")}</div>`:`<div class="rw-no-debt">${lang==="ru"?"Актуальной задолженности нет.":lang==="es"?"No hay deuda pendiente.":"No current debt."}</div>`}
+      </section>
+
+      <div class="rw-finance-history-head">
+        <h4>${t("operationHistory")}</h4>
+        <div class="rw-finance-history-filters">
+          <label class="rw-payment-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-payment-search value="${esc(paymentSearch)}" placeholder="${lang==="ru"?"Накладная или оплата":lang==="es"?"Albarán o pago":"Delivery note or payment"}"></label>
+          <div class="rw-filter-menu rw-period-menu rw-payment-period"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
+        </div>
+      </div>
+
+      ${filteredHistory.length
+        ? `<div class="rw-finance-history">${filteredHistory.map(operation=>{
+            const searchText=`${operation.label||""} ${operation.payment?.method||""} ${operation.payment?.note||""} ${operation.kind==="payment"?t("payment"):t("delivery")}`.toLowerCase();
+            const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
+            return `<article class="rw-operation ${operation.kind}${operation.payment?.confirmed===false?" pending":""}" data-rw-payment-search-text="${esc(searchText)}"${hidden?" hidden":""}>
+              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small></div>
+              <div class="rw-operation-amount"><b>${operation.amount<0?"−":"+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed===false?t("pending"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+            </article>`;
+          }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
+        : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
     </section>`;
   }
   function pricesHtml() {
@@ -802,11 +786,14 @@
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
     if (orderSearchInput) orderSearchInput.oninput = () => {
       orderSearch = orderSearchInput.value.trim();
-      renderAccountModal();
-      requestAnimationFrame(() => {
-        const next = modal.querySelector("[data-rw-order-search]");
-        if (next) { next.focus(); next.setSelectionRange(next.value.length,next.value.length); }
+      const q=orderSearch.toLowerCase();
+      let visible=0;
+      modal.querySelectorAll("[data-rw-order-search-text]").forEach(card=>{
+        const show=!q||String(card.dataset.rwOrderSearchText||"").includes(q);
+        card.hidden=!show;if(show)visible++;
       });
+      const empty=modal.querySelector("[data-rw-order-empty]");
+      if(empty)empty.hidden=visible>0;
     };
     modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderSearch=""; orderDateFrom=""; orderDateTo=""; openFilterMenu=""; renderAccountModal(); });
     modal.querySelectorAll("[data-rw-cal-nav]").forEach(button=>button.onclick=(event)=>{
@@ -839,8 +826,30 @@
       setRange(button.dataset.rwCalScope,"","");renderAccountModal();
     });
     const search = modal.querySelector("[data-rw-note-search]");
-    if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => {const next=modal.querySelector("[data-rw-note-search]");if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}}); };
+    if (search) search.oninput = () => {
+      noteQuery = search.value.trim();
+      const q=noteQuery.toLowerCase();
+      let visible=0;
+      modal.querySelectorAll("[data-rw-note-search-text]").forEach(card=>{
+        const show=!q||String(card.dataset.rwNoteSearchText||"").includes(q);
+        card.hidden=!show;if(show)visible++;
+      });
+      const empty=modal.querySelector("[data-rw-note-empty]");
+      if(empty)empty.hidden=visible>0;
+    };
     modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
+    const paymentSearchInput=modal.querySelector("[data-rw-payment-search]");
+    if(paymentSearchInput)paymentSearchInput.oninput=()=>{
+      paymentSearch=paymentSearchInput.value.trim();
+      const q=paymentSearch.toLowerCase();
+      let visible=0;
+      modal.querySelectorAll("[data-rw-payment-search-text]").forEach(row=>{
+        const show=!q||String(row.dataset.rwPaymentSearchText||"").includes(q);
+        row.hidden=!show;if(show)visible++;
+      });
+      const empty=modal.querySelector("[data-rw-payment-empty]");
+      if(empty)empty.hidden=visible>0;
+    };
     modal
       .querySelectorAll("[data-portal-close]")
       .forEach((button) => (button.onclick = closePanels));
