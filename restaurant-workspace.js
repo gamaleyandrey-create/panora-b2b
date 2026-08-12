@@ -178,6 +178,7 @@
   let noteQuery = "";
   let noteMonth = "";
   let notePeriodFilter = "all";
+  let openFilterMenu = "";
   const messengerRow = (item = {}) => `<div class="rw-extra-messenger" data-rw-messenger-row>
     <label><span>${t("messengerName")}</span><input data-rw-messenger-name maxlength="40" value="${esc(item.name || "")}" placeholder="Signal, Viber, LINE…"><small data-rw-messenger-error></small></label>
     <label><span>${t("messengerContact")}</span><input data-rw-messenger-contact maxlength="120" value="${esc(item.contact || "")}" placeholder="@username, +34…, https://…"><small></small></label>
@@ -411,8 +412,8 @@
         </div>
         <div class="rw-order-filters">
           <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}"></label>
-          <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status" hidden>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
-          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="period">${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="period" hidden>${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></div>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status"${openFilterMenu==="status"?"":" hidden"}>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="period">${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="period"${openFilterMenu==="period"?"":" hidden"}>${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></div>
           ${(orderStatusFilter!=="all"||orderPeriodFilter!=="all"||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
@@ -463,7 +464,7 @@
       <header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header>
       <div class="rw-note-filters">
         <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
-        <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc((periodOptions.find(([value])=>value===notePeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="note-period" hidden>${periodOptions.map(([value,label])=>`<button type="button" class="${notePeriodFilter===value?"active":""}" data-rw-note-period="${value}">${label}</button>`).join("")}</div></div>
+        <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc((periodOptions.find(([value])=>value===notePeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${periodOptions.map(([value,label])=>`<button type="button" class="${notePeriodFilter===value?"active":""}" data-rw-note-period="${value}">${label}</button>`).join("")}</div></div>
         ${(noteQuery||notePeriodFilter!=="all")?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
       <div class="rw-list">${notes.map((note) => {
@@ -647,6 +648,7 @@
       (button) =>
         (button.onclick = () => {
           activeTab = button.dataset.rwTab;
+          openFilterMenu = "";
           renderAccountModal();
         }),
     );
@@ -654,22 +656,27 @@
       (button) =>
         (button.onclick = () => {
           orderView = button.dataset.rwOrderView;
+          openFilterMenu = "";
           renderAccountModal();
         }),
     );
-    const closeFilterPanels=(except="")=>modal.querySelectorAll("[data-rw-filter-panel]").forEach((panel)=>{if(panel.dataset.rwFilterPanel!==except)panel.hidden=true;});
+    const closeFilterPanels=(except="")=>{
+      modal.querySelectorAll("[data-rw-filter-panel]").forEach((panel)=>{if(panel.dataset.rwFilterPanel!==except)panel.hidden=true;});
+      if(!except)openFilterMenu="";
+    };
     modal.querySelectorAll("[data-rw-filter-toggle]").forEach((button)=>button.onclick=(event)=>{
       event.preventDefault();event.stopPropagation();
       const key=button.dataset.rwFilterToggle;
       const panel=modal.querySelector(`[data-rw-filter-panel="${key}"]`);
       if(!panel)return;
-      const willOpen=panel.hidden;
+      const willOpen=openFilterMenu!==key;
       closeFilterPanels(key);
+      openFilterMenu=willOpen?key:"";
       panel.hidden=!willOpen;
     });
-    modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderStatusFilter=button.dataset.rwOrderStatus; renderAccountModal(); });
-    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderPeriodFilter=button.dataset.rwOrderPeriod; renderAccountModal(); });
-    modal.querySelectorAll("button[data-rw-note-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); notePeriodFilter=button.dataset.rwNotePeriod; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderStatusFilter=button.dataset.rwOrderStatus; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderPeriodFilter=button.dataset.rwOrderPeriod; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-note-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); notePeriodFilter=button.dataset.rwNotePeriod; openFilterMenu=""; renderAccountModal(); });
     modal.onclick=(event)=>{if(!event.target.closest(".rw-filter-menu"))closeFilterPanels();};
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
     if (orderSearchInput) orderSearchInput.oninput = () => {
@@ -680,10 +687,10 @@
         if (next) { next.focus(); next.setSelectionRange(next.value.length,next.value.length); }
       });
     };
-    modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderPeriodFilter="all"; orderSearch=""; renderAccountModal(); });
+    modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderPeriodFilter="all"; orderSearch=""; openFilterMenu=""; renderAccountModal(); });
     const search = modal.querySelector("[data-rw-note-search]");
     if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => {const next=modal.querySelector("[data-rw-note-search]");if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}}); };
-    modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; notePeriodFilter="all"; renderAccountModal(); });
+    modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; notePeriodFilter="all"; openFilterMenu=""; renderAccountModal(); });
     modal
       .querySelectorAll("[data-portal-close]")
       .forEach((button) => (button.onclick = closePanels));
@@ -786,11 +793,6 @@
         window.setTimeout(() => card?.classList.remove("rw-order-focus"), 1800);
       });
     }
-    if (activeTab === "notes") {
-      const head = modal.querySelector(".rw-note-library-head");
-      head?.insertAdjacentHTML("beforeend", `<div class="rw-note-filters"><input type="search" data-rw-note-search value="${esc(noteQuery)}" placeholder="${t("noteSearch")}"><select data-rw-note-month><option value="">${t("allMonths")}</option>${[...new Set(ownNotes().map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))].map((month) => `<option value="${esc(month)}"${noteMonth === month ? " selected" : ""}>${esc(month)}</option>`).join("")}</select></div>`);
-      bind(modal);
-    }
   };
   window.panoraOpenPartnerOrders = () => {
     if (!account) {
@@ -814,11 +816,12 @@
   const mobileProfileButton = document.querySelector("#mobileProfile");
   if (mobileProfileButton) mobileProfileButton.onclick = () => window.panoraOpenPartnerProfile();
 
-  window.addEventListener("online", () => account && renderAccountModal());
-  window.addEventListener("offline", () => account && renderAccountModal());
-  window.addEventListener("panora:restaurant-sync", () => account && renderAccountModal());
-  window.addEventListener("panora:partner-pricing-updated", () => account && renderAccountModal());
-  window.addEventListener("panora:pricing-refresh", () => account && renderAccountModal());
-  window.addEventListener("panora:retail-catalog-updated", () => account && renderAccountModal());
-  window.addEventListener("panora:partner-data-updated", () => account && renderAccountModal());
+  const backgroundWorkspaceRender=()=>{if(account&&!openFilterMenu)renderAccountModal();};
+  window.addEventListener("online", backgroundWorkspaceRender);
+  window.addEventListener("offline", backgroundWorkspaceRender);
+  window.addEventListener("panora:restaurant-sync", backgroundWorkspaceRender);
+  window.addEventListener("panora:partner-pricing-updated", backgroundWorkspaceRender);
+  window.addEventListener("panora:pricing-refresh", backgroundWorkspaceRender);
+  window.addEventListener("panora:retail-catalog-updated", backgroundWorkspaceRender);
+  window.addEventListener("panora:partner-data-updated", backgroundWorkspaceRender);
 })();

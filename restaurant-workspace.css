@@ -565,3 +565,10 @@
  .rw-note-search{grid-column:1/-1}
  .rw-note-filters .rw-order-filter-reset{grid-column:1/-1}
 }
+
+/* Panora 5.03 · stable filters during background sync */
+.rw-orders-toolbar,.rw-note-filters{position:relative;z-index:30}
+.rw-filter-menu{z-index:31}
+.rw-filter-menu:has(.rw-filter-popover:not([hidden])){z-index:90}
+.rw-filter-popover{z-index:100}
+.rw-note-library-head .rw-note-filters{display:none!important}
