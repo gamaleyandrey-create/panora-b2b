@@ -186,6 +186,7 @@
   let paymentDateTo = "";
   let paymentSearch = "";
   let debtSearch = "";
+  let paymentHistoryOpen = false;
 
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
@@ -643,6 +644,7 @@
     const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid = confirmedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     const pending = disputedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const advance = Math.max(0,paid-delivered);
 
     const debts=currentDebtItems();
     const filteredDebts=debts.filter(({note})=>
@@ -685,9 +687,10 @@
     return `<section class="rw-finance">
       <header><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${t("debt")}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong></div></header>
 
-      <div class="rw-finance-stats">
+      <div class="rw-finance-stats rw-finance-stats-4">
         <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
         <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
+        <article class="rw-finance-advance"><span>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}</span><strong>${portalMoney(advance)}</strong></article>
         <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
       </div>
 
@@ -730,8 +733,11 @@
         }).join("")}</div><div class="rw-no-debt" data-rw-debt-empty${filteredDebts.length?" hidden":""}>${lang==="ru"?"По выбранному фильтру задолженностей нет.":lang==="es"?"No hay deudas con este filtro.":"No debts match this filter."}</div>`:`<div class="rw-no-debt">${lang==="ru"?"Актуальной задолженности нет.":lang==="es"?"No hay deuda pendiente.":"No current debt."}</div>`}
       </section>
 
+      <section class="rw-history-collapsible">
+        <button type="button" class="rw-history-toggle" data-rw-history-toggle aria-expanded="${paymentHistoryOpen?"true":"false"}"><span>${t("operationHistory")}</span><span class="rw-history-toggle-meta">${operations.length} <i>${paymentHistoryOpen?"⌃":"⌄"}</i></span></button>
+        <div class="rw-history-content"${paymentHistoryOpen?"":" hidden"}>
       <div class="rw-finance-history-head">
-        <h4>${t("operationHistory")}</h4>
+        <h4>${lang==="ru"?"Фильтры истории":lang==="es"?"Filtros del historial":"History filters"}</h4>
         <div class="rw-finance-history-filters">
           <label class="rw-payment-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-payment-search value="${esc(paymentSearch)}" placeholder="${lang==="ru"?"Накладная или оплата":lang==="es"?"Albarán o pago":"Delivery note or payment"}"></label>
         </div>
@@ -747,6 +753,8 @@
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
+        </div>
+      </section>
     </section>`;
   }
   function pricesHtml() {
@@ -893,6 +901,12 @@
       if(empty)empty.hidden=visible>0;
     };
     modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelector("[data-rw-history-toggle]")?.addEventListener("click",()=>{
+      paymentHistoryOpen=!paymentHistoryOpen;
+      const content=modal.querySelector(".rw-history-content"),toggle=modal.querySelector("[data-rw-history-toggle]");
+      if(content)content.hidden=!paymentHistoryOpen;
+      if(toggle){toggle.setAttribute("aria-expanded",paymentHistoryOpen?"true":"false");const icon=toggle.querySelector("i");if(icon)icon.textContent=paymentHistoryOpen?"⌃":"⌄";}
+    });
     const debtSearchInput=modal.querySelector("[data-rw-debt-search]");
     if(debtSearchInput)debtSearchInput.oninput=()=>{
       debtSearch=debtSearchInput.value.trim();
