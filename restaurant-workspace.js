@@ -614,6 +614,19 @@
     };
     const working=allNotes.filter(note=>!noteArchived(note));
     const archive=allNotes.filter(noteArchived);
+
+    const noteDebtMap=new Map(currentDebtItems().map(item=>[String(item.note.id),item]));
+    const notePaymentSummary=note=>{
+      const total=Number(note.total||0);
+      const debtItem=noteDebtMap.get(String(note.id));
+      const due=debtItem?Number(debtItem.due||0):0;
+      return {
+        total,
+        paid:Math.max(0,total-due),
+        due:Math.max(0,due)
+      };
+    };
+
     const source=noteView==="history"?archive:working;
     const notes=source.filter(note=>
       dateInRange(note.date,noteDateFrom,noteDateTo)
@@ -642,7 +655,7 @@
         const noteSearchText=noteNumber(note).toLowerCase();
         const noteSearchHidden=noteQuery&&!noteSearchText.includes(noteQuery.toLowerCase());
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
-      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>`<span>${esc(itemName(item.product))} · <b>${Number(item.quantity||0)} ${t("pieces")}</b></span>`).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
+      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>`<span>${esc(itemName(item.product))} · <b>${Number(item.quantity||0)} ${t("pieces")}</b> · <b>${portalMoney(Number((order.prices||account.prices||{})[item.product]||0))}/${lang==="ru"?"шт.":lang==="es"?"ud.":"pc."}</b></span>`).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}${(()=>{const fin=notePaymentSummary(note);return `<small class="rw-note-payment-state"><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}: <b>${portalMoney(fin.total)}</b></span><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}: <b>${portalMoney(fin.paid)}</b></span><span>${lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due"}: <b>${portalMoney(fin.due)}</b></span></small>`})()}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;

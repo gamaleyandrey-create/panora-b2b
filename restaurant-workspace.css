@@ -774,3 +774,11 @@
 .rw-note-products{display:flex;flex-direction:column;gap:2px;margin-top:5px;color:var(--ink,#173126)}
 .rw-note-products span{display:block}
 .rw-note-products b{font-weight:700}
+
+/* Panora 5.21 · delivery-note unit price and payment state */
+.rw-note-products{display:grid!important;gap:3px;margin-top:7px;color:#68736b}
+.rw-note-products span{display:block}
+.rw-note-products b{color:#314b3a}
+.rw-note-payment-state{display:flex!important;flex-wrap:wrap;gap:6px 16px;margin-top:8px;padding-top:8px;border-top:1px solid #edf0eb;color:#6c766f}
+.rw-note-payment-state b{color:#263d2e}
+.rw-note-payment-state span:last-child b{color:#2f6a49}
