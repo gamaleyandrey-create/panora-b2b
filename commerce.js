@@ -1095,13 +1095,13 @@ document.querySelector("#savePayment").onclick = async (e) => {
     form.reset();
     renderCommerce();
     alert(
-      "Оплата сохранена в облаке и ожидает подтверждения получения средств.",
+      "Оплата принята. Задолженность партнёра уменьшена сразу; партнёр может оспорить операцию в течение 3 дней.",
     );
   } catch (error) {
     alert(`Оплата не сохранена: ${error.message}`);
   } finally {
     button.disabled = false;
-    button.textContent = "Записать на подтверждение";
+    button.textContent = "Принять оплату";
   }
 };
 function printNote(orderId) {

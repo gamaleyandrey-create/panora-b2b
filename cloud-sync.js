@@ -710,7 +710,7 @@
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));status('Облако ✓');
   }
-  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==='confirmed',confirmedAt:row.confirmed_at||null,status:row.status});
+  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status!=='cancelled',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,recordedBy:row.recorded_by||row.confirmed_by||null});
   function cachePayment(row){
     const payment=rowPayment(row);
     const index=payments.findIndex(item=>item.id===payment.id);
@@ -732,7 +732,7 @@
     const valid=payments.filter(payment=>restaurants.some(r=>r.id===payment.restaurantId)&&Number(payment.amount)>0);
     if(!valid.length)return;
     status('Синхронизация…');
-    const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':payment.confirmed===false?'pending':'confirmed',received_at:`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmed===false?null:payment.confirmedAt||new Date().toISOString(),confirmed_by:payment.confirmed===false?null:session.user?.id||null}));
+    const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':'confirmed',received_at:payment.receivedAt||`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmedAt||new Date().toISOString(),confirmed_by:session.user?.id||null,recorded_by:payment.recordedBy||session.user?.id||null,dispute_status:payment.disputeStatus||'none',dispute_reason:payment.disputeReason||null,disputed_at:payment.disputedAt||null,dispute_deadline:payment.disputeDeadline||null}));
     await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});status('Облако ✓');
   }
   async function recordPaymentAtomic(input){
