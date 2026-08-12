@@ -663,3 +663,17 @@
   .rw-debt-search{grid-column:1/-1}
   .rw-debt-filters .rw-order-filter-reset{grid-column:1/-1}
 }
+
+/* Panora 5.09 · immediate bakery payments + 3-day dispute window */
+.rw-payment-notices{display:grid;gap:8px;margin-top:14px}
+.rw-payment-notice{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid #cfe0d2;border-radius:12px;background:#f5faf5}
+.rw-payment-notice>div{display:grid;gap:3px}
+.rw-payment-notice small{color:#6f7b72;font-size:11px}
+.rw-payment-notice>strong{font-size:17px}
+.rw-dispute-payment{height:36px;padding:0 12px;border:1px solid #d9b4ad;border-radius:9px;background:#fff;color:#9c433a;font-weight:700;cursor:pointer}
+.rw-payment-dispute-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border-radius:11px;background:#fff1ee;color:#9a433b}
+.rw-operation.disputed{border-color:#e2bdb6;background:#fff9f7}
+@media(max-width:720px){
+ .rw-payment-notice{grid-template-columns:1fr auto}
+ .rw-payment-notice .rw-dispute-payment{grid-column:1/-1;width:100%}
+}

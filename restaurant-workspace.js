@@ -37,7 +37,7 @@
       finance: "Баланс и оплаты",
       deliveredTotal: "Поставлено",
       paidTotal: "Оплачено",
-      pendingTotal: "Ожидает подтверждения",
+      pendingTotal: "В споре",
       operationHistory: "История операций",
       payment: "Оплата",
       withoutNote: "без накладной",
@@ -92,7 +92,7 @@
       finance: "Balance and payments",
       deliveredTotal: "Delivered",
       paidTotal: "Paid",
-      pendingTotal: "Awaiting confirmation",
+      pendingTotal: "In dispute",
       operationHistory: "Transaction history",
       payment: "Payment",
       withoutNote: "without delivery note",
@@ -598,13 +598,27 @@
     </section>`;
   }
   const currentDebtItems=()=>{
-    const notes=ownNotes();
-    const confirmedPayments=ownPayments().filter(payment=>payment.confirmed!==false&&payment.status!=="cancelled");
-    const paidForNote=note=>confirmedPayments
-      .filter(payment=>String(payment.deliveryNoteId||"")===String(note.id))
-      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
+    const payments=ownPayments().filter(payment=>payment.status!=="cancelled");
+
+    const allocated=new Map(notes.map(note=>[String(note.id),0]));
+    // Explicitly linked payments are applied to their delivery note first.
+    payments.filter(payment=>payment.deliveryNoteId).forEach(payment=>{
+      const key=String(payment.deliveryNoteId);
+      if(allocated.has(key))allocated.set(key,allocated.get(key)+Number(payment.amount||0));
+    });
+    // Unlinked bakery receipts reduce the oldest outstanding invoices first.
+    let pool=payments.filter(payment=>!payment.deliveryNoteId).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    for(const note of notes){
+      if(pool<=0)break;
+      const key=String(note.id),already=allocated.get(key)||0;
+      const remaining=Math.max(0,Number(note.total||0)-already);
+      const used=Math.min(pool,remaining);
+      allocated.set(key,already+used);pool-=used;
+    }
+
     return notes.map(note=>{
-      const paidAmount=paidForNote(note);
+      const paidAmount=Math.min(Number(note.total||0),allocated.get(String(note.id))||0);
       const due=Math.max(0,Number(note.total||0)-paidAmount);
       const dueDate=note.paymentDueDate||"";
       const overdue=Boolean(dueDate&&dueDate<isoToday());
@@ -614,7 +628,7 @@
         if(a.overdue!==b.overdue)return a.overdue?-1:1;
         const ad=a.dueDate||a.note.date||"9999-12-31";
         const bd=b.dueDate||b.note.date||"9999-12-31";
-        return String(ad).localeCompare(String(bd)) || Number(a.note.number||0)-Number(b.note.number||0);
+        return String(ad).localeCompare(String(bd))||Number(a.note.number||0)-Number(b.note.number||0);
       });
   };
 
@@ -623,12 +637,12 @@
     const payments = ownPayments(),
       notes = ownNotes();
 
-    const confirmedPayments=payments.filter(payment=>payment.confirmed!==false&&payment.status!=="cancelled");
-    const pendingPayments=payments.filter(payment=>payment.confirmed===false&&payment.status!=="cancelled");
+    const confirmedPayments=payments.filter(payment=>payment.status!=="cancelled");
+    const disputedPayments=payments.filter(payment=>payment.status!=="cancelled"&&payment.disputeStatus==="open");
 
     const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid = confirmedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    const pending = pendingPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const pending = disputedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
 
     const debts=currentDebtItems();
     const filteredDebts=debts.filter(({note})=>
@@ -677,6 +691,25 @@
         <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
       </div>
 
+      ${(()=>{
+        const now=Date.now();
+        const disputable=payments.filter(payment=>{
+          if(payment.status==="cancelled"||payment.disputeStatus==="open")return false;
+          const deadline=new Date(payment.disputeDeadline||"").getTime();
+          return Number.isFinite(deadline)&&deadline>now;
+        }).sort((a,b)=>String(b.receivedAt||b.date).localeCompare(String(a.receivedAt||a.date)));
+        const disputes=payments.filter(payment=>payment.disputeStatus==="open");
+        if(!disputable.length&&!disputes.length)return "";
+        return `<section class="rw-payment-notices">
+          ${disputes.length?`<div class="rw-payment-dispute-banner"><strong>${lang==="ru"?"Есть оспоренные оплаты":lang==="es"?"Hay pagos disputados":"There are disputed payments"}</strong><span>${disputes.length} · ${portalMoney(disputes.reduce((sum,p)=>sum+Number(p.amount||0),0))}</span></div>`:""}
+          ${disputable.map(payment=>`<article class="rw-payment-notice">
+            <div><strong>${lang==="ru"?"Panora зарегистрировала оплату":lang==="es"?"Panora registró un pago":"Panora recorded a payment"}</strong><small>${esc(formatStatusTime(payment.receivedAt||payment.date))} · ${esc(payment.method||"")}${payment.deliveryNoteId?` · ${esc(noteNumber(notes.find(n=>n.id===payment.deliveryNoteId)||{number:"—"}))}`:""}</small><small>${lang==="ru"?"Оспорить можно до":lang==="es"?"Se puede disputar hasta":"Can be disputed until"} ${esc(formatStatusTime(payment.disputeDeadline))}</small></div>
+            <strong>${portalMoney(payment.amount)}</strong>
+            <button type="button" class="rw-dispute-payment" data-rw-dispute-payment="${esc(payment.id)}">${lang==="ru"?"Оспорить":lang==="es"?"Disputar":"Dispute"}</button>
+          </article>`).join("")}
+        </section>`;
+      })()}
+
       <section class="rw-current-debts">
         <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
         <div class="rw-debt-filters">
@@ -708,9 +741,9 @@
         ? `<div class="rw-finance-history">${filteredHistory.map(operation=>{
             const searchText=`${operation.label||""} ${operation.payment?.method||""} ${operation.payment?.note||""} ${operation.kind==="payment"?t("payment"):t("delivery")}`.toLowerCase();
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
-            return `<article class="rw-operation ${operation.kind}${operation.payment?.confirmed===false?" pending":""}" data-rw-payment-search-text="${esc(searchText)}"${hidden?" hidden":""}>
+            return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search-text="${esc(searchText)}"${hidden?" hidden":""}>
               <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small></div>
-              <div class="rw-operation-amount"><b>${operation.amount<0?"−":"+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.confirmed===false?t("pending"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+              <div class="rw-operation-amount"><b>${operation.amount<0?"−":"+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
@@ -876,6 +909,21 @@
     };
     modal.querySelector("[data-rw-debt-filter-reset]")?.addEventListener("click",()=>{
       debtSearch="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
+    });
+
+    modal.querySelectorAll("[data-rw-dispute-payment]").forEach(button=>button.onclick=async()=>{
+      const payment=ownPayments().find(item=>String(item.id)===String(button.dataset.rwDisputePayment));
+      if(!payment)return;
+      const reason=prompt(lang==="ru"?"Почему вы оспариваете эту оплату?":lang==="es"?"¿Por qué disputas este pago?":"Why are you disputing this payment?");
+      if(reason===null)return;
+      if(String(reason).trim().length<3)return alert(lang==="ru"?"Укажите причину спора.":lang==="es"?"Indica el motivo de la disputa.":"Enter a dispute reason.");
+      button.disabled=true;
+      try{
+        await window.panoraPartnerPayments?.dispute(payment.id,reason);
+      }catch(error){
+        alert(`${lang==="ru"?"Не удалось открыть спор":lang==="es"?"No se pudo abrir la disputa":"Could not open dispute"}: ${error.message||error}`);
+        button.disabled=false;
+      }
     });
 
     const paymentSearchInput=modal.querySelector("[data-rw-payment-search]");
