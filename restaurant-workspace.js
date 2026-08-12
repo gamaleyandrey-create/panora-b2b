@@ -27,7 +27,7 @@
       signOut: "Выйти",
       close: "Закрыть",
       pending: "Ожидает подтверждения",
-      activeOrders: "Активные", historyOrders: "История", noActiveOrders: "Активных заказов нет",
+      activeOrders: "Рабочие", historyOrders: "Архив", noActiveOrders: "Рабочих заказов нет",
       startOrder: "Выбрать хлеб и дату",
       orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине.",
       phone: "Телефон",
@@ -127,7 +127,7 @@
       signOut: "Salir",
       close: "Cerrar",
       pending: "Pendiente de confirmación",
-      activeOrders: "Activos", historyOrders: "Historial", noActiveOrders: "No hay pedidos activos",
+      activeOrders: "En curso", historyOrders: "Archivo", noActiveOrders: "No hay pedidos en curso",
       startOrder: "Elegir pan y fecha",
       orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta.",
       phone: "Teléfono",
@@ -171,6 +171,9 @@
     );
   let activeTab = "home";
   let orderView = "active";
+  let orderStatusFilter = "all";
+  let orderPeriodFilter = "all";
+  let orderSearch = "";
   let orderToReveal = "";
   let noteQuery = "";
   let noteMonth = "";
@@ -216,23 +219,99 @@
       ? portalStatus(order.status)
       : order.status;
 
+  const orderDeliveryNote = (order) =>
+    ownNotes().find((note) => String(note.orderId) === String(order.id)) || null;
+
+  const confirmedDeliveryAt = (order) => {
+    const note = orderDeliveryNote(order);
+    return note?.customerConfirmedAt || note?.offlineProof?.receivedAt || null;
+  };
+
+  const archiveReferenceDate = (order) => {
+    const confirmed = confirmedDeliveryAt(order);
+    if (confirmed) return new Date(confirmed);
+    // Legacy completed/paid orders may pre-date customer confirmation support.
+    if (["completed","paid"].includes(order.status) && (order.deliveryDate || order.date))
+      return new Date(`${String(order.deliveryDate || order.date).slice(0,10)}T23:59:59`);
+    return null;
+  };
+
+  const isArchivedOrder = (order) => {
+    if (order.status === "cancelled") return true;
+    const deliveredAt = archiveReferenceDate(order);
+    if (!deliveredAt || Number.isNaN(deliveredAt.getTime())) return false;
+    return Date.now() - deliveredAt.getTime() >= 7 * 24 * 60 * 60 * 1000;
+  };
+
+  const isActiveOrder = (order) => !isArchivedOrder(order);
+
+  const orderLifecycleStatus = (order) => {
+    if (order.status === "cancelled") return "cancelled";
+    if (confirmedDeliveryAt(order) || ["completed","paid"].includes(order.status)) return "delivered";
+    if (order.status === "shipped") return "shipped";
+    if (["confirmed","processing"].includes(order.status)) return "confirmed";
+    return "submitted";
+  };
+
   function orderProgressHtml(order) {
+    if(order.status==="cancelled")
+      return `<div class="rw-order-progress cancelled"><strong>${lang==="ru"?"Заказ отменён":lang==="es"?"Pedido cancelado":"Order cancelled"}</strong></div>`;
     const stages = [
       ["submitted", lang==="ru"?"Отправлен":lang==="es"?"Enviado":"Sent"],
       ["confirmed", lang==="ru"?"Подтверждён":lang==="es"?"Confirmado":"Confirmed"],
       ["shipped", lang==="ru"?"Отгружен":lang==="es"?"Enviado":"Shipped"],
+      ["delivered", lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"],
     ];
-    const rank = order.status==="shipped"||order.status==="completed"||order.status==="paid" ? 2 : order.status==="confirmed"||order.status==="processing" ? 1 : 0;
-    if(order.status==="cancelled")return `<div class="rw-order-progress cancelled"><strong>${lang==="ru"?"Заказ отменён":lang==="es"?"Pedido cancelado":"Order cancelled"}</strong></div>`;
+    const current=orderLifecycleStatus(order);
+    const rank=Math.max(0,stages.findIndex(([key])=>key===current));
     return `<div class="rw-order-progress">${stages.map((stage,index)=>`<span class="${index<rank?"done":index===rank?"current":"next"}"><b>${index<rank?"✓":index+1}</b><em>${stage[1]}</em></span>`).join("")}</div>`;
   }
+
   function orderStatusHint(order) {
-    if(order.status==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
-    if(order.status==="confirmed"||order.status==="processing")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
-    if(order.status==="shipped"||order.status==="completed"||order.status==="paid")return lang==="ru"?"Заказ отгружен. Накладная доступна в документах.":lang==="es"?"El pedido fue enviado. El albarán está disponible en documentos.":"The order has shipped. The delivery note is available in documents.";
+    const lifecycle=orderLifecycleStatus(order);
+    if(lifecycle==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
+    if(lifecycle==="confirmed")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
+    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он ещё 7 дней останется в рабочих.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá 7 días en curso.":"The order has shipped. After receipt confirmation it remains in Working for 7 days.";
+    if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив через 7 дней.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente en 7 días.":"Delivery completed. The order moves to Archive automatically after 7 days.";
     return "";
   }
-  const isActiveOrder = (order) => !["cancelled", "shipped", "paid", "completed"].includes(order.status);
+
+  const orderMatchesPeriod=(order)=>{
+    if(orderPeriodFilter==="all")return true;
+    const raw=String(order.deliveryDate||order.date||"").slice(0,10);
+    if(!raw)return false;
+    const d=new Date(`${raw}T12:00:00`);
+    const now=new Date();
+    if(orderPeriodFilter==="today")return d.toDateString()===now.toDateString();
+    if(orderPeriodFilter==="week"){
+      const start=new Date(now);start.setHours(0,0,0,0);
+      const day=(start.getDay()+6)%7;start.setDate(start.getDate()-day);
+      const finish=new Date(start);finish.setDate(start.getDate()+7);
+      return d>=start&&d<finish;
+    }
+    if(orderPeriodFilter==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    if(orderPeriodFilter==="3months"){
+      const start=new Date(now);start.setMonth(start.getMonth()-3);
+      return d>=start&&d<=now;
+    }
+    if(orderPeriodFilter==="year")return d.getFullYear()===now.getFullYear();
+    return true;
+  };
+
+  const orderMatchesStatus=(order)=>{
+    if(orderStatusFilter==="all")return true;
+    return orderLifecycleStatus(order)===orderStatusFilter;
+  };
+
+  const orderMatchesSearch=(order)=>{
+    if(!orderSearch)return true;
+    const q=orderSearch.toLowerCase();
+    const note=orderDeliveryNote(order);
+    return orderNumber(order).toLowerCase().includes(q) ||
+      (note && noteNumber(note).toLowerCase().includes(q)) ||
+      order.items.some(item=>String(itemName(item.product)).toLowerCase().includes(q));
+  };
+
   function updateMobileOrdersBadge() {
     const button=document.querySelector("#mobileOrders");if(!button)return;
     const count=account?ownOrders().filter(isActiveOrder).length:0;
@@ -306,26 +385,51 @@
     const all = ownOrders();
     if (!all.length)
       return `<section class="rw-empty"><h3>${t("emptyOrders")}</h3><button class="button button-primary" data-rw-start>${t("newOrder")}</button></section>`;
-    const active = all.filter(isActiveOrder);
-    const history = all.filter((order) => !isActiveOrder(order));
-    const rows = orderView === "history" ? history : active;
+
+    const working = all.filter(isActiveOrder);
+    const archive = all.filter(isArchivedOrder);
+    const source = orderView === "history" ? archive : working;
+    const rows = source.filter(orderMatchesStatus).filter(orderMatchesPeriod).filter(orderMatchesSearch);
+
+    const statusOptions = [
+      ["all", lang==="ru"?"Все статусы":lang==="es"?"Todos los estados":"All statuses"],
+      ["submitted", lang==="ru"?"Отправлены":lang==="es"?"Enviados":"Sent"],
+      ["confirmed", lang==="ru"?"Подтверждены":lang==="es"?"Confirmados":"Confirmed"],
+      ["shipped", lang==="ru"?"Отгружены":lang==="es"?"Expedidos":"Shipped"],
+      ["delivered", lang==="ru"?"Доставлены":lang==="es"?"Entregados":"Delivered"],
+      ["cancelled", lang==="ru"?"Отменены":lang==="es"?"Cancelados":"Cancelled"],
+    ];
+
+    const periodOptions = orderView==="history"
+      ? [["all",lang==="ru"?"За всё время":lang==="es"?"Todo el período":"All time"],["3months",lang==="ru"?"3 месяца":lang==="es"?"3 meses":"3 months"],["year",lang==="ru"?"Этот год":lang==="es"?"Este año":"This year"]]
+      : [["all",lang==="ru"?"Все даты":lang==="es"?"Todas las fechas":"All dates"],["today",lang==="ru"?"Сегодня":lang==="es"?"Hoy":"Today"],["week",lang==="ru"?"Эта неделя":lang==="es"?"Esta semana":"This week"],["month",lang==="ru"?"Этот месяц":lang==="es"?"Este mes":"This month"]];
+
     return `<section class="rw-orders-page">
-      <div class="rw-order-view-tabs" role="tablist">
-        <button type="button" class="${orderView === "active" ? "active" : ""}" data-rw-order-view="active">${t("activeOrders")}<b>${active.length}</b></button>
-        <button type="button" class="${orderView === "history" ? "active" : ""}" data-rw-order-view="history">${t("historyOrders")}<b>${history.length}</b></button>
-      </div>
-      ${rows.length ? `<section class="rw-list">${rows
-      .map(
-        (order) => `<article class="rw-order" data-rw-order="${esc(order.id)}">
-      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small></span><b>${portalMoney(orderTotal(order))}</b></header>
-      <div class="rw-order-status status-${esc(order.status)}">${esc(status(order))}</div>
+      <header class="rw-orders-toolbar">
+        <div class="rw-order-view-tabs" role="tablist">
+          <button type="button" class="${orderView === "active" ? "active" : ""}" data-rw-order-view="active"><span>${t("activeOrders")}</span><b>${working.length}</b></button>
+          <button type="button" class="${orderView === "history" ? "active" : ""}" data-rw-order-view="history"><span>${t("historyOrders")}</span><b>${archive.length}</b></button>
+        </div>
+        <div class="rw-order-filters">
+          <label class="rw-order-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Заказ или накладная":lang==="es"?"Pedido o albarán":"Order or delivery note"}"></label>
+          <label><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><select data-rw-order-status>${statusOptions.map(([value,label])=>`<option value="${value}"${orderStatusFilter===value?" selected":""}>${label}</option>`).join("")}</select></label>
+          <label><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><select data-rw-order-period>${periodOptions.map(([value,label])=>`<option value="${value}"${orderPeriodFilter===value?" selected":""}>${label}</option>`).join("")}</select></label>
+          ${(orderStatusFilter!=="all"||orderPeriodFilter!=="all"||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+        </div>
+      </header>
+      ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и недавно доставленные заказы. После подтверждения доставки заказ автоматически переносится в архив через 7 дней.":lang==="es"?"Los pedidos actuales y recién entregados permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente en 7 días.":"Current and recently delivered orders stay in Working. After delivery confirmation they move to Archive automatically after 7 days."}</p>`:""}
+      ${rows.length ? `<section class="rw-list">${rows.map((order) => {
+        const note=orderDeliveryNote(order);
+        const lifecycle=orderLifecycleStatus(order);
+        return `<article class="rw-order" data-rw-order="${esc(order.id)}">
+      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<small class="rw-order-note">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</small>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
+      <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
       <p class="rw-order-status-hint">${esc(orderStatusHint(order))}</p>
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
       <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>
-    </article>`,
-      )
-      .join("")}</section>` : `<section class="rw-empty"><h3>${orderView === "active" ? t("noActiveOrders") : t("emptyOrders")}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
+    </article>`;
+      }).join("")}</section>` : `<section class="rw-empty rw-filtered-empty"><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
     </section>`;
   }
   function notesHtml() {
@@ -527,6 +631,20 @@
           renderAccountModal();
         }),
     );
+    const orderStatusSelect = modal.querySelector("[data-rw-order-status]");
+    if (orderStatusSelect) orderStatusSelect.onchange = () => { orderStatusFilter = orderStatusSelect.value; renderAccountModal(); };
+    const orderPeriodSelect = modal.querySelector("[data-rw-order-period]");
+    if (orderPeriodSelect) orderPeriodSelect.onchange = () => { orderPeriodFilter = orderPeriodSelect.value; renderAccountModal(); };
+    const orderSearchInput = modal.querySelector("[data-rw-order-search]");
+    if (orderSearchInput) orderSearchInput.oninput = () => {
+      orderSearch = orderSearchInput.value.trim();
+      renderAccountModal();
+      requestAnimationFrame(() => {
+        const next = modal.querySelector("[data-rw-order-search]");
+        if (next) { next.focus(); next.setSelectionRange(next.value.length,next.value.length); }
+      });
+    };
+    modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderPeriodFilter="all"; orderSearch=""; renderAccountModal(); });
     const search = modal.querySelector("[data-rw-note-search]");
     if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => modal.querySelector("[data-rw-note-search]")?.focus()); };
     const month = modal.querySelector("[data-rw-note-month]");
