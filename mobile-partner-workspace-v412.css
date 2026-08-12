@@ -1,0 +1,31 @@
+/* Panora 4.12 — partner workspace mobile navigation */
+@media (max-width:720px){
+  body:not(.admin-page) .restaurant-workspace .rw-nav{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:2px!important;
+    overflow:visible!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"]{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button{
+    min-width:0!important;
+    padding-left:1px!important;
+    padding-right:1px!important;
+    font-size:9px!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button span{
+    display:block!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}
+@media (max-width:360px){
+  body:not(.admin-page) .restaurant-workspace .rw-nav button{font-size:8px!important}
+}

@@ -645,7 +645,23 @@
     renderAccountModal();
     openPanel(document.querySelector("#profileModal"));
   };
+  window.panoraOpenPartnerProfile = () => {
+    if (!account) {
+      openPanel(document.querySelector("#profileModal"));
+      return;
+    }
+    activeTab = "profile";
+    renderAccountModal();
+    openPanel(document.querySelector("#profileModal"));
+  };
+  const mobileProfileButton = document.querySelector("#mobileProfile");
+  if (mobileProfileButton) mobileProfileButton.onclick = () => window.panoraOpenPartnerProfile();
+
   window.addEventListener("online", () => account && renderAccountModal());
   window.addEventListener("offline", () => account && renderAccountModal());
   window.addEventListener("panora:restaurant-sync", () => account && renderAccountModal());
+  window.addEventListener("panora:partner-pricing-updated", () => account && renderAccountModal());
+  window.addEventListener("panora:pricing-refresh", () => account && renderAccountModal());
+  window.addEventListener("panora:retail-catalog-updated", () => account && renderAccountModal());
+  window.addEventListener("panora:partner-data-updated", () => account && renderAccountModal());
 })();
