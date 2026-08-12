@@ -183,6 +183,7 @@
   let noteDateFrom = "";
   let noteDateTo = "";
   let noteFiltersOpen = false;
+  let noteToReveal = "";
 
   let paymentDateFrom = "";
   let paymentDateTo = "";
@@ -583,7 +584,7 @@
         const searchText=`${orderNumber(order)} ${(order.items||[]).map(item=>itemName(item.product)).join(" ")}`.toLowerCase();
         const searchHidden=orderSearch&&!searchText.includes(orderSearch.toLowerCase());
         return `<article class="rw-order" data-rw-order="${esc(order.id)}" data-rw-order-search-text="${esc(searchText)}"${searchHidden?" hidden":""}>
-      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<small class="rw-order-note">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</small>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
+      <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<button type="button" class="rw-order-note rw-linked-document" data-rw-open-note="${esc(note.id)}">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</button>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
       ${statusHistoryHtml(order)}
@@ -640,8 +641,8 @@
         const isMain = note.id === working[0]?.id && noteView==="active";
         const noteSearchText=noteNumber(note).toLowerCase();
         const noteSearchHidden=noteQuery&&!noteSearchText.includes(noteQuery.toLowerCase());
-        return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-search-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
-      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
+        return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
+      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
@@ -798,7 +799,7 @@
             const searchText=noteNumber(note).toLowerCase();
             const rangeMatch=dateInRange(note.date,paymentDateFrom,paymentDateTo);
             const searchMatch=!debtSearch||searchText.includes(debtSearch.toLowerCase());
-            return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-debt-search-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
+            return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link" data-rw-debt-search-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
               <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
               <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
               <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
@@ -1140,6 +1141,21 @@
           (button.onclick = () =>
             restaurantCancelOrder(button.dataset.rwCancel)),
       );
+    modal.querySelectorAll("[data-rw-open-note]").forEach((button) => button.onclick = (event) => {
+      event.stopPropagation();
+      activeTab = "notes"; noteToReveal = button.dataset.rwOpenNote || "";
+      renderAccountModal();
+    });
+    modal.querySelectorAll("[data-rw-open-order]").forEach((button) => button.onclick = (event) => {
+      event.stopPropagation();
+      activeTab = "orders"; orderToReveal = button.dataset.rwOpenOrder || "";
+      renderAccountModal();
+    });
+    modal.querySelectorAll("[data-rw-open-debt-note]").forEach((card) => {
+      const open = () => { activeTab = "notes"; noteToReveal = card.dataset.rwOpenDebtNote || ""; renderAccountModal(); };
+      card.onclick = open;
+      card.onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } };
+    });
     modal.querySelectorAll("[data-rw-note]").forEach(
       (button) =>
         (button.onclick = () => {
@@ -1202,6 +1218,16 @@
       <footer class="rw-footer"><button class="button button-ghost" data-rw-logout>${t("signOut")}</button><button class="button button-primary" data-portal-close>${t("close")}</button></footer>`;
     bind(modal);
     modal.querySelector("[data-rw-mobile-profile]")?.addEventListener("click", () => { activeTab = "profile"; renderAccountModal(); });
+    if (activeTab === "notes" && noteToReveal) {
+      const targetId = noteToReveal;
+      noteToReveal = "";
+      requestAnimationFrame(() => {
+        const card = [...modal.querySelectorAll("[data-rw-note-id]")].find((item) => item.dataset.rwNoteId === targetId);
+        card?.scrollIntoView({ behavior: "smooth", block: "center" });
+        card?.classList.add("rw-order-focus");
+        window.setTimeout(() => card?.classList.remove("rw-order-focus"), 1800);
+      });
+    }
     if (activeTab === "orders" && orderToReveal) {
       const targetId = orderToReveal;
       orderToReveal = "";
