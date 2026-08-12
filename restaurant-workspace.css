@@ -549,3 +549,19 @@
 .rw-filter-popover button{min-height:38px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:#243128;text-align:left;font:600 14px Arial;cursor:pointer}
 .rw-filter-popover button:hover,.rw-filter-popover button.active{background:#e9f1e9;color:#285d3a}
 @media(max-width:720px){.rw-filter-popover{position:fixed;z-index:9999;left:16px;right:16px;top:auto;bottom:82px;max-height:52vh;overflow:auto;padding:9px;border-radius:16px}.rw-filter-popover button{min-height:46px;font-size:15px}}
+
+/* Panora 5.02 · stable filters for Orders and Delivery notes */
+.rw-filter-trigger{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;width:100%;height:42px;padding:0 12px;border:1px solid #d6dbd4;border-radius:10px;background:#fbfbf8;color:#17231b;font:600 14px Arial;cursor:pointer}
+.rw-filter-trigger i{font-style:normal;font-size:16px;color:#59645d}
+.rw-filter-menu{position:relative}
+.rw-filter-menu .rw-filter-popover[hidden]{display:none!important}
+.rw-note-filters{display:grid;grid-template-columns:minmax(260px,1fr) minmax(180px,220px) auto;gap:10px;align-items:end;margin:0 0 14px;padding:12px;border:1px solid #e1e3dc;border-radius:14px;background:#fff}
+.rw-note-filters label{display:grid;gap:5px}
+.rw-note-filters label>span{color:#7a8179;font:700 11px Arial;text-transform:uppercase;letter-spacing:.05em}
+.rw-note-filters input{width:100%;height:42px;box-sizing:border-box;padding:0 12px;border:1px solid #d6dbd4;border-radius:10px;background:#fbfbf8;color:#17231b;font:600 14px Arial;outline:none}
+.rw-note-filters input:focus{border-color:#7da18a;box-shadow:0 0 0 3px rgba(61,111,77,.10)}
+@media(max-width:720px){
+ .rw-note-filters{grid-template-columns:1fr 1fr}
+ .rw-note-search{grid-column:1/-1}
+ .rw-note-filters .rw-order-filter-reset{grid-column:1/-1}
+}

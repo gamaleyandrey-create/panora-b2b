@@ -177,6 +177,7 @@
   let orderToReveal = "";
   let noteQuery = "";
   let noteMonth = "";
+  let notePeriodFilter = "all";
   const messengerRow = (item = {}) => `<div class="rw-extra-messenger" data-rw-messenger-row>
     <label><span>${t("messengerName")}</span><input data-rw-messenger-name maxlength="40" value="${esc(item.name || "")}" placeholder="Signal, Viber, LINE…"><small data-rw-messenger-error></small></label>
     <label><span>${t("messengerContact")}</span><input data-rw-messenger-contact maxlength="120" value="${esc(item.contact || "")}" placeholder="@username, +34…, https://…"><small></small></label>
@@ -306,9 +307,7 @@
   const orderMatchesSearch=(order)=>{
     if(!orderSearch)return true;
     const q=orderSearch.toLowerCase();
-    const note=orderDeliveryNote(order);
     return orderNumber(order).toLowerCase().includes(q) ||
-      (note && noteNumber(note).toLowerCase().includes(q)) ||
       order.items.some(item=>String(itemName(item.product)).toLowerCase().includes(q));
   };
 
@@ -411,9 +410,9 @@
           <button type="button" class="${orderView === "history" ? "active" : ""}" data-rw-order-view="history"><span>${t("historyOrders")}</span><b>${archive.length}</b></button>
         </div>
         <div class="rw-order-filters">
-          <label class="rw-order-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Заказ или накладная":lang==="es"?"Pedido o albarán":"Order or delivery note"}"></label>
-          <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><details data-rw-filter-details><summary>${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}</summary><div class="rw-filter-popover">${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></details></div>
-          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><details data-rw-filter-details><summary>${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}</summary><div class="rw-filter-popover">${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></details></div>
+          <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}"></label>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status" hidden>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="period">${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="period" hidden>${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></div>
           ${(orderStatusFilter!=="all"||orderPeriodFilter!=="all"||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
@@ -437,10 +436,37 @@
       orders = ownOrders();
     if (!allNotes.length)
       return `<section class="rw-empty"><h3>${t("emptyNotes")}</h3></section>`;
-    const months = [...new Set(allNotes.map((note) => String(note.date || "").slice(0, 7)).filter(Boolean))];
-    const notes = allNotes.filter((note) => (!noteMonth || String(note.date || "").startsWith(noteMonth)) && (!noteQuery || noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase())));
-    return `<section class="rw-note-library"><header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header><div class="rw-list">${notes
-      .map((note) => {
+
+    const now=new Date();
+    const noteMatchesPeriod=(note)=>{
+      if(notePeriodFilter==="all")return true;
+      const raw=String(note.date||"").slice(0,10);
+      if(!raw)return false;
+      const d=new Date(`${raw}T12:00:00`);
+      if(notePeriodFilter==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+      if(notePeriodFilter==="3months"){const start=new Date(now);start.setMonth(start.getMonth()-3);return d>=start&&d<=now}
+      if(notePeriodFilter==="year")return d.getFullYear()===now.getFullYear();
+      return true;
+    };
+    const periodOptions=[
+      ["all",lang==="ru"?"Все даты":lang==="es"?"Todas las fechas":"All dates"],
+      ["month",lang==="ru"?"Этот месяц":lang==="es"?"Este mes":"This month"],
+      ["3months",lang==="ru"?"3 месяца":lang==="es"?"3 meses":"3 months"],
+      ["year",lang==="ru"?"Этот год":lang==="es"?"Este año":"This year"],
+    ];
+    const notes = allNotes.filter((note) =>
+      noteMatchesPeriod(note) &&
+      (!noteQuery || noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))
+    );
+
+    return `<section class="rw-note-library">
+      <header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header>
+      <div class="rw-note-filters">
+        <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
+        <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc((periodOptions.find(([value])=>value===notePeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="note-period" hidden>${periodOptions.map(([value,label])=>`<button type="button" class="${notePeriodFilter===value?"active":""}" data-rw-note-period="${value}">${label}</button>`).join("")}</div></div>
+        ${(noteQuery||notePeriodFilter!=="all")?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+      </div>
+      <div class="rw-list">${notes.map((note) => {
         const order = orders.find((item) => item.id === note.orderId);
         const isMain = note.id === allNotes[0].id;
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}">
@@ -448,8 +474,8 @@
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${t("openNote")} Panora</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
-      })
-      .join("")}</div>${notes.length ? "" : `<p class="rw-filter-empty">${t("nothingFound")}</p>`}</section>`;
+      }).join("")}</div>${notes.length ? "" : `<p class="rw-filter-empty">${t("nothingFound")}</p>`}
+    </section>`;
   }
   function paymentsHtml() {
     window.panoraRecalculateBalances?.();
@@ -631,12 +657,20 @@
           renderAccountModal();
         }),
     );
-    modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=()=>{ orderStatusFilter=button.dataset.rwOrderStatus; renderAccountModal(); });
-    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=()=>{ orderPeriodFilter=button.dataset.rwOrderPeriod; renderAccountModal(); });
-    modal.querySelectorAll("[data-rw-filter-details]").forEach((details)=>details.addEventListener("toggle",()=>{
-      if(!details.open)return;
-      modal.querySelectorAll("[data-rw-filter-details]").forEach((other)=>{if(other!==details)other.open=false;});
-    }));
+    const closeFilterPanels=(except="")=>modal.querySelectorAll("[data-rw-filter-panel]").forEach((panel)=>{if(panel.dataset.rwFilterPanel!==except)panel.hidden=true;});
+    modal.querySelectorAll("[data-rw-filter-toggle]").forEach((button)=>button.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      const key=button.dataset.rwFilterToggle;
+      const panel=modal.querySelector(`[data-rw-filter-panel="${key}"]`);
+      if(!panel)return;
+      const willOpen=panel.hidden;
+      closeFilterPanels(key);
+      panel.hidden=!willOpen;
+    });
+    modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderStatusFilter=button.dataset.rwOrderStatus; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderPeriodFilter=button.dataset.rwOrderPeriod; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-note-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); notePeriodFilter=button.dataset.rwNotePeriod; renderAccountModal(); });
+    modal.onclick=(event)=>{if(!event.target.closest(".rw-filter-menu"))closeFilterPanels();};
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
     if (orderSearchInput) orderSearchInput.oninput = () => {
       orderSearch = orderSearchInput.value.trim();
@@ -648,9 +682,8 @@
     };
     modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderPeriodFilter="all"; orderSearch=""; renderAccountModal(); });
     const search = modal.querySelector("[data-rw-note-search]");
-    if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => modal.querySelector("[data-rw-note-search]")?.focus()); };
-    const month = modal.querySelector("[data-rw-note-month]");
-    if (month) month.onchange = () => { noteMonth = month.value; renderAccountModal(); };
+    if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => {const next=modal.querySelector("[data-rw-note-search]");if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}}); };
+    modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; notePeriodFilter="all"; renderAccountModal(); });
     modal
       .querySelectorAll("[data-portal-close]")
       .forEach((button) => (button.onclick = closePanels));
