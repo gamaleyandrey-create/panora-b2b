@@ -182,6 +182,7 @@
   let noteQuery = "";
   let noteDateFrom = "";
   let noteDateTo = "";
+  let noteFiltersOpen = false;
 
   let paymentDateFrom = "";
   let paymentDateTo = "";
@@ -619,8 +620,13 @@
         <button type="button" class="${noteView==="active"?"active":""}" data-rw-note-view="active"><span>${lang==="ru"?"Рабочие":lang==="es"?"En curso":"Working"}</span><b>${working.length}</b></button>
         <button type="button" class="${noteView==="history"?"active":""}" data-rw-note-view="history"><span>${lang==="ru"?"Архив":lang==="es"?"Archivo":"Archive"}</span><b>${archive.length}</b></button>
       </div>
-      <div class="rw-note-filters">
-        <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
+      <button type="button" class="rw-note-filters-toggle${(noteQuery||noteDateFrom||noteDateTo)?" has-active":""}" data-rw-note-filters-toggle aria-expanded="${noteFiltersOpen?"true":"false"}">
+        <span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>
+        ${(noteQuery||noteDateFrom||noteDateTo)?`<b>${[noteQuery,noteDateFrom||noteDateTo].filter(Boolean).length}</b>`:""}
+        <i>${noteFiltersOpen?"⌃":"⌄"}</i>
+      </button>
+      <div class="rw-note-filters"${noteFiltersOpen?"":" hidden"}>
+        <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
         <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc(periodLabel(noteDateFrom,noteDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${calendarHtml("note",noteDateFrom,noteDateTo)}</div></div>
         ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
@@ -904,6 +910,7 @@
         (button.onclick = () => {
           noteView = button.dataset.rwNoteView;
           openFilterMenu = "";
+          noteFiltersOpen = false;
           renderAccountModal();
         }),
     );
@@ -915,6 +922,17 @@
       if(toggle){
         toggle.setAttribute("aria-expanded",orderFiltersOpen?"true":"false");
         const icon=toggle.querySelector("i");if(icon)icon.textContent=orderFiltersOpen?"⌃":"⌄";
+      }
+    });
+
+    modal.querySelector("[data-rw-note-filters-toggle]")?.addEventListener("click",()=>{
+      noteFiltersOpen=!noteFiltersOpen;
+      const filters=modal.querySelector(".rw-note-filters");
+      const toggle=modal.querySelector("[data-rw-note-filters-toggle]");
+      if(filters)filters.hidden=!noteFiltersOpen;
+      if(toggle){
+        toggle.setAttribute("aria-expanded",noteFiltersOpen?"true":"false");
+        const icon=toggle.querySelector("i");if(icon)icon.textContent=noteFiltersOpen?"⌃":"⌄";
       }
     });
 
@@ -988,17 +1006,20 @@
       setRange(button.dataset.rwCalScope,"","");renderAccountModal();
     });
     const search = modal.querySelector("[data-rw-note-search]");
-    if (search) search.oninput = () => {
-      noteQuery = search.value.trim();
-      const q=noteQuery.toLowerCase();
-      let visible=0;
-      modal.querySelectorAll("[data-rw-note-search-text]").forEach(card=>{
-        const show=!q||String(card.dataset.rwNoteSearchText||"").includes(q);
-        card.hidden=!show;if(show)visible++;
-      });
-      const empty=modal.querySelector("[data-rw-note-empty]");
-      if(empty)empty.hidden=visible>0;
-    };
+    if (search) {
+      search.dataset.rwStableInput="1";
+      search.oninput = () => {
+        noteQuery = search.value.trim();
+        const q=noteQuery.toLowerCase();
+        let visible=0;
+        modal.querySelectorAll("[data-rw-note-search-text]").forEach(card=>{
+          const show=!q||String(card.dataset.rwNoteSearchText||"").includes(q);
+          card.hidden=!show;if(show)visible++;
+        });
+        const empty=modal.querySelector("[data-rw-note-empty]");
+        if(empty)empty.hidden=visible>0;
+      };
+    }
     modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
     modal.querySelectorAll("[data-rw-finance-view]").forEach(button=>button.onclick=()=>{
       financeView=button.dataset.rwFinanceView;

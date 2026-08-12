@@ -732,3 +732,11 @@
 .rw-order-filters-toggle b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#e5efe6;color:#315d42;font-size:11px}
 .rw-order-filters-toggle.has-active{border-color:#9fbaa6;background:#f5faf5}
 @media(max-width:720px){.rw-order-filters-toggle{width:100%;justify-content:center}}
+
+/* Panora 5.16 · hidden delivery-note filters + stable typing */
+.rw-note-filters[hidden]{display:none!important}
+.rw-note-filters-toggle{display:flex;align-items:center;gap:8px;width:max-content;min-height:40px;margin:12px 0;padding:0 13px;border:1px solid #d8ddd6;border-radius:11px;background:#fff;color:#34443a;font:700 13px Arial;cursor:pointer}
+.rw-note-filters-toggle i{font-style:normal;color:#748078}
+.rw-note-filters-toggle b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#e5efe6;color:#315d42;font-size:11px}
+.rw-note-filters-toggle.has-active{border-color:#9fbaa6;background:#f5faf5}
+@media(max-width:720px){.rw-note-filters-toggle{width:100%;justify-content:center}}
