@@ -82,7 +82,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
   const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
@@ -429,6 +429,22 @@
       localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
       if(typeof renderCommerce==='function')renderCommerce();
     }else if(local.length){restaurants=local;ready=true;await saveRestaurantsNow()}
+  }
+  async function refreshRestaurantsIfChanged(){
+    if(!ready||pending.restaurants||document.hidden)return false;
+    if(window.panoraMoneyEditing?.active)return false;
+    const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    const mapped=(rows||[]).map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
+    const before=JSON.stringify(local.map(r=>({id:r.id,prices:r.prices,updated:r.deletedAt||null,name:r.name,email:r.email})));
+    const after=JSON.stringify(mapped.map(r=>({id:r.id,prices:r.prices,updated:r.deletedAt||null,name:r.name,email:r.email})));
+    if(before===after)return false;
+    restaurants=mapped;
+    localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+    rememberRevision('restaurants',rows);
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'cloud',count:restaurants.length}}));
+    if(typeof renderCommerce==='function')renderCommerce();
+    return true;
   }
   async function saveRestaurantsNow(){
     if(!ready||typeof restaurants==='undefined')return;
@@ -1039,11 +1055,17 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     clearInterval(planPoll);planPoll=setInterval(()=>refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
+    clearInterval(restaurantPoll);
+    restaurantPoll=setInterval(()=>refreshRestaurantsIfChanged().catch(error=>{
+      if(window.panoraHandleSessionError?.(error))return;
+      console.warn('Panora restaurant price refresh',error);
+    }),2500);
+
       console.warn('Panora plan refresh',error);
     }),2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('online',()=>{pending=readPending();if(ready)retrySync()});
@@ -1059,3 +1081,10 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
 })();
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&ready)refreshRestaurantsIfChanged().catch(()=>{});
+  });
+  window.addEventListener('focus',()=>{
+    if(ready)refreshRestaurantsIfChanged().catch(()=>{});
+  });
