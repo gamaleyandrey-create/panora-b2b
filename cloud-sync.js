@@ -450,7 +450,7 @@
   const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,whatsapp:r.whatsapp||null,telegram:r.telegram||null,extra_messengers:safeMessengerRows(r.extraMessengers),address:r.address||null,legal_name:r.legalName||null,tax_id:r.taxId||null,billing_address:r.billingAddress||null,language:r.language||'ru',partner_type:normalizeCloudPartnerType(r.partnerType),active:!r.deletedAt,updated_at:new Date().toISOString()});
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
   async function loadRestaurants(){
-    if(pending.restaurants){await saveRestaurantsNow();return}
+    if(pending.restaurants&&!window.panoraMoneyEditing?.active&&!restaurantTimer)clearPending('restaurants');
     const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
     rememberRevision('restaurants',rows);
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
@@ -465,32 +465,22 @@
   async function refreshRestaurantsIfChanged(){
     if(!ready||document.hidden)return false;
     if(window.panoraMoneyEditing?.active||restaurantTimer)return false;
+    if(pending.restaurants)clearPending('restaurants');
+
     const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     const mapped=(rows||[]).map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
-    const cloudSignature=restaurantSignature(mapped);
-    const localSignature=restaurantSignature(local);
-    const baseline=readRestaurantBaseline();
+    const before=restaurantSignature(local);
+    const after=restaurantSignature(mapped);
 
-    if(localSignature===cloudSignature){
-      writeRestaurantBaseline(mapped);
-      clearPending('restaurants');
-      return false;
-    }
-
-    /* If the current local state differs from both the last accepted baseline
-       and current cloud, it is a real local edit. Give its debounce/save path
-       one chance to finish instead of overwriting it. */
-    if(baseline && localSignature!==baseline && pending.restaurants){
-      return false;
-    }
+    writeRestaurantBaseline(mapped);
+    if(before===after)return false;
 
     restaurants=mapped;
     localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
-    writeRestaurantBaseline(restaurants);
     clearPending('restaurants');
     rememberRevision('restaurants',rows);
-    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'cloud',count:restaurants.length}}));
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'cloud-authoritative',count:restaurants.length}}));
     if(typeof renderCommerce==='function')renderCommerce();
     return true;
   }
@@ -500,7 +490,16 @@
     await guardSection('restaurants','restaurants');
     if(restaurants.length)await request('restaurants?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(restaurants.map(restaurantRow))});
     const prices=restaurants.flatMap(r=>Object.entries(r.prices||{}).map(([product_id,price])=>({restaurant_id:r.id,product_id,price:Number(price),updated_at:new Date().toISOString()})));
-    if(prices.length)await request('restaurant_prices?on_conflict=restaurant_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(prices)});
+    if(prices.length){
+      const remotePrices=await request('restaurant_prices?select=restaurant_id,product_id');
+      const existing=new Set((remotePrices||[]).map(row=>`${row.restaurant_id}:${row.product_id}`));
+      const missingPrices=prices.filter(row=>!existing.has(`${row.restaurant_id}:${row.product_id}`));
+      if(missingPrices.length)await request('restaurant_prices?on_conflict=restaurant_id,product_id',{
+        method:'POST',
+        headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify(missingPrices)
+      });
+    }
     revisions.restaurants=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('restaurants');delete conflicts.restaurants;saveConflicts();
     clearPending('restaurants');writeRestaurantBaseline(restaurants);window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh'));
     status('Облако ✓');

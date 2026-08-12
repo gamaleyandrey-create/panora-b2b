@@ -1346,5 +1346,9 @@ window.addEventListener("storage",event=>{
   }
 });
 window.addEventListener("panora:restaurants-ui-refresh",()=>{
-  try{reloadRestaurantsFromStorage();renderRestaurants();}catch{}
+  try{
+    reloadRestaurantsFromStorage();
+    renderRestaurants();
+    fillRestaurants();
+  }catch{}
 });
