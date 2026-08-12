@@ -769,3 +769,8 @@
 .rw-linked-order{margin-top:2px}
 .rw-debt-item[data-rw-open-debt-note]{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
 .rw-debt-item[data-rw-open-debt-note]:hover,.rw-debt-item[data-rw-open-debt-note]:focus-visible{border-color:#b9cbbd;box-shadow:0 3px 12px rgba(48,79,59,.08);outline:none}
+
+/* Panora 5.20 — product composition in partner delivery-note cards */
+.rw-note-products{display:flex;flex-direction:column;gap:2px;margin-top:5px;color:var(--ink,#173126)}
+.rw-note-products span{display:block}
+.rw-note-products b{font-weight:700}
