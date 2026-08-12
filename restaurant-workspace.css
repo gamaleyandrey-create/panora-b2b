@@ -749,3 +749,16 @@
 .rw-finance-filters-toggle.has-active{border-color:#9fbaa6;background:#f5faf5}
 .rw-finance-stats[hidden],.rw-debt-filters[hidden]{display:none!important}
 @media(max-width:720px){.rw-finance-summary-toggle,.rw-finance-filters-toggle{width:100%;justify-content:center}}
+
+/* Panora 5.18 · payments layout and stable explicit filters */
+.rw-finance-main-head{display:block!important}
+.rw-finance-main-head>div{display:grid;justify-items:start}
+.rw-finance-main-head .rw-finance-debt{margin-top:16px;min-width:300px;background:#fff;color:#1d3527;border:1px solid #cfd8d0;box-shadow:none}
+.rw-finance-main-head .rw-finance-debt span{color:#69746d}
+.rw-finance-main-head .rw-finance-debt strong{color:#2f6844}
+.rw-finance-main-head .rw-finance-debt small{color:#647269}
+.rw-debt-filters:not([hidden]){display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.8fr) auto auto;align-items:end;gap:12px}
+.rw-debt-search small{display:block;margin-top:6px;color:#7a827b;font-size:12px}
+.rw-finance-filter-apply{min-height:46px;padding:0 22px;border:1px solid #315d42;border-radius:10px;background:#315d42;color:#fff;font-weight:700;cursor:pointer}
+@media(max-width:900px){.rw-debt-filters:not([hidden]){grid-template-columns:1fr 1fr}.rw-finance-main-head .rw-finance-debt{min-width:0;width:100%}}
+@media(max-width:620px){.rw-debt-filters:not([hidden]){grid-template-columns:1fr}}

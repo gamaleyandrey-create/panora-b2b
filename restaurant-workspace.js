@@ -193,6 +193,8 @@
   let financeArchiveSearch = "";
   let financeSummaryOpen = false;
   let financeFiltersOpen = false;
+  let debtSearchDraft = "";
+  let financeArchiveSearchDraft = "";
 
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
@@ -749,7 +751,7 @@
     const filteredHistory=history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
 
     return `<section class="rw-finance">
-      <header class="rw-finance-main-head"><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}</div></header>
+      <header class="rw-finance-main-head"><div><span class="kicker">Panora</span><h3>${t("finance")}</h3><div class="rw-finance-debt"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}</div></div></header>
 
       <button type="button" class="rw-finance-summary-toggle" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Сводка по балансу":lang==="es"?"Resumen del saldo":"Balance summary"}</span><i>${financeSummaryOpen?"⌃":"⌄"}</i></button>
       <div class="rw-finance-stats rw-finance-stats-4"${financeSummaryOpen?"":" hidden"}>
@@ -788,7 +790,7 @@
           <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
           <button type="button" class="rw-finance-filters-toggle${(debtSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(debtSearch||paymentDateFrom||paymentDateTo)?`<b>${[debtSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search value="${esc(debtSearch)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search value="${esc(debtSearchDraft||debtSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-debt-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(debtSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-debt-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -807,7 +809,7 @@
           <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Архив закрытых расчётов":lang==="es"?"Archivo de pagos cerrados":"Closed settlements archive"}</h4></div><strong>${fullyPaidNotes.length}</strong></div>
           <button type="button" class="rw-finance-filters-toggle${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<b>${[financeArchiveSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search value="${esc(financeArchiveSearch)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search value="${esc(financeArchiveSearchDraft||financeArchiveSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-finance-archive-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-finance-archive-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -1044,19 +1046,22 @@
       financeView=button.dataset.rwFinanceView;
       openFilterMenu="";
       financeFiltersOpen=false;
+      debtSearchDraft=debtSearch;
+      financeArchiveSearchDraft=financeArchiveSearch;
       renderAccountModal();
     });
 
     const financeArchiveSearchInput=modal.querySelector("[data-rw-finance-archive-search]");
-    if(financeArchiveSearchInput)financeArchiveSearchInput.oninput=()=>{
-      financeArchiveSearch=financeArchiveSearchInput.value.trim();
-      const q=financeArchiveSearch.toLowerCase();
-      modal.querySelectorAll("[data-rw-finance-archive-text]").forEach(row=>{
-        row.hidden=Boolean(q&&!String(row.dataset.rwFinanceArchiveText||"").includes(q));
-      });
-    };
+    if(financeArchiveSearchInput){
+      financeArchiveSearchInput.oninput=()=>{financeArchiveSearchDraft=financeArchiveSearchInput.value;};
+      financeArchiveSearchInput.onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();modal.querySelector("[data-rw-finance-archive-apply]")?.click();}};
+    }
+    modal.querySelector("[data-rw-finance-archive-apply]")?.addEventListener("click",()=>{
+      financeArchiveSearch=financeArchiveSearchDraft.trim();
+      renderAccountModal();
+    });
     modal.querySelector("[data-rw-finance-archive-reset]")?.addEventListener("click",()=>{
-      financeArchiveSearch="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
+      financeArchiveSearch="";financeArchiveSearchDraft="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
     });
 
     modal.querySelector("[data-rw-history-toggle]")?.addEventListener("click",()=>{
@@ -1066,21 +1071,16 @@
       if(toggle){toggle.setAttribute("aria-expanded",paymentHistoryOpen?"true":"false");const icon=toggle.querySelector("i");if(icon)icon.textContent=paymentHistoryOpen?"⌃":"⌄";}
     });
     const debtSearchInput=modal.querySelector("[data-rw-debt-search]");
-    if(debtSearchInput)debtSearchInput.oninput=()=>{
-      debtSearch=debtSearchInput.value.trim();
-      const q=debtSearch.toLowerCase();
-      let visible=0;
-      modal.querySelectorAll("[data-rw-debt-search-text]").forEach(row=>{
-        const date=row.dataset.rwDebtDate||"";
-        const inRange=(!paymentDateFrom||date>=paymentDateFrom)&&(!paymentDateTo||date<=paymentDateTo);
-        const show=inRange&&(!q||String(row.dataset.rwDebtSearchText||"").includes(q));
-        row.hidden=!show;if(show)visible++;
-      });
-      const empty=modal.querySelector("[data-rw-debt-empty]");
-      if(empty)empty.hidden=visible>0;
-    };
+    if(debtSearchInput){
+      debtSearchInput.oninput=()=>{debtSearchDraft=debtSearchInput.value;};
+      debtSearchInput.onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();modal.querySelector("[data-rw-debt-filter-apply]")?.click();}};
+    }
+    modal.querySelector("[data-rw-debt-filter-apply]")?.addEventListener("click",()=>{
+      debtSearch=debtSearchDraft.trim();
+      renderAccountModal();
+    });
     modal.querySelector("[data-rw-debt-filter-reset]")?.addEventListener("click",()=>{
-      debtSearch="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
+      debtSearch="";debtSearchDraft="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
     });
 
     modal.querySelectorAll("[data-rw-dispute-payment]").forEach(button=>button.onclick=async()=>{

@@ -182,7 +182,11 @@
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
-      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();renderProducts();renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));
+      const active=document.activeElement;
+      const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+      if(!editingWorkspace)renderAccountModal();
+      renderProducts();renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
