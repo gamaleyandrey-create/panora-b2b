@@ -49,6 +49,13 @@ const euro = (n) => {
   return lang === "ru" ? `${value} €` : `€ ${value}`;
 };
 const restaurant = (id) => restaurants.find((r) => r.id === id);
+const reloadRestaurantsFromStorage=()=>{
+  try{
+    const fresh=JSON.parse(localStorage.getItem("panora-restaurants")||"[]");
+    if(Array.isArray(fresh)) restaurants=fresh;
+  }catch{}
+};
+
 const activeRestaurants = () => restaurants.filter((r) => !r.deletedAt);
 const commerceProducts = () => {
   let saved = [];
@@ -168,6 +175,7 @@ function fillRestaurants() {
   document.querySelector("#paymentRestaurant").innerHTML = options;
 }
 function renderRestaurants() {
+  reloadRestaurantsFromStorage();
   const root = document.querySelector("#restaurantCards"),
     active = activeRestaurants(),
     removed = restaurants.filter((r) => r.deletedAt);
@@ -199,8 +207,10 @@ function renderRestaurants() {
         alert(`Не удалось сохранить оптовую цену в облаке: ${error.message||error}`);
         return;
       }
+      reloadRestaurantsFromStorage();
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
       window.panoraPricing?.notifyWholesale(id,pid,value);
+      setTimeout(()=>{reloadRestaurantsFromStorage();renderRestaurants();},0);
     };
     i.onblur=commit;
     i.onchange=null;
@@ -1329,3 +1339,12 @@ document.querySelector("#exportPlan").onclick = () =>
 syncPlansFromOrders();
 renderCommerce();
 renderAll();
+
+window.addEventListener("storage",event=>{
+  if(event.key==="panora-restaurants"){
+    try{reloadRestaurantsFromStorage();renderRestaurants();}catch{}
+  }
+});
+window.addEventListener("panora:restaurants-ui-refresh",()=>{
+  try{reloadRestaurantsFromStorage();renderRestaurants();}catch{}
+});
