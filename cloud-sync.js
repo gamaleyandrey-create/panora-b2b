@@ -451,33 +451,38 @@
   const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,whatsapp:r.whatsapp||null,telegram:r.telegram||null,extra_messengers:safeMessengerRows(r.extraMessengers),address:r.address||null,legal_name:r.legalName||null,tax_id:r.taxId||null,billing_address:r.billingAddress||null,language:r.language||'ru',partner_type:normalizeCloudPartnerType(r.partnerType),active:!r.deletedAt,updated_at:new Date().toISOString()});
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
   async function refreshRestaurantPricesDirect(){
-    if(!ready||document.hidden)return false;
+    if(!ready)return false;
     const activeMoneyInput=window.panoraMoneyEditing?.element||null;
 
-    const rows=await request('restaurant_prices?select=restaurant_id,product_id,price,updated_at&order=restaurant_id.asc,product_id.asc');
+    const remoteRestaurants=await request('restaurants?select=id,email,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+
+    const byRemoteId=new Map();
+    const byEmail=new Map();
+    for(const row of remoteRestaurants||[]){
+      const prices=Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)]));
+      byRemoteId.set(String(row.id),prices);
+      byEmail.set(String(row.email||'').trim().toLowerCase(),prices);
+    }
+
     const priceMap={};
-    for(const row of rows||[]){
-      const rid=String(row.restaurant_id||'');
-      if(!priceMap[rid])priceMap[rid]={};
-      priceMap[rid][row.product_id]=Number(row.price);
+    for(const row of remoteRestaurants||[])priceMap[String(row.id)]=byRemoteId.get(String(row.id))||{};
+    for(const restaurant of local||[]){
+      const rid=String(restaurant?.id||'');
+      const email=String(restaurant?.email||'').trim().toLowerCase();
+      const remote=byRemoteId.get(rid)||byEmail.get(email);
+      if(remote)priceMap[rid]=remote;
     }
 
     const beforeMap=localStorage.getItem(adminRestaurantPricesKey)||'{}';
     const afterMap=JSON.stringify(priceMap);
+    if(beforeMap===afterMap)return false;
     localStorage.setItem(adminRestaurantPricesKey,afterMap);
 
-    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
-    let changed=beforeMap!==afterMap;
     if(Array.isArray(local)&&local.length){
       const next=local.map(r=>{
         const remote=priceMap[String(r.id)];
-        if(!remote)return r;
-        const current=Object.fromEntries(Object.entries(r.prices||{}).map(([k,v])=>[k,Number(v)]));
-        if(JSON.stringify(current)!==JSON.stringify(remote)){
-          changed=true;
-          return {...r,prices:remote};
-        }
-        return r;
+        return remote?{...r,prices:remote}:r;
       });
       restaurants=next;
       localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
@@ -485,21 +490,25 @@
       clearPending('restaurants');
     }
 
-    window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-direct',count:(rows||[]).length,changed}}));
-    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length,changed}}));
+    window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-stable',count:(remoteRestaurants||[]).length}}));
 
-    if(activeMoneyInput&&document.contains(activeMoneyInput)&&activeMoneyInput.matches?.('[data-price]')){
-      document.querySelectorAll('#restaurantCards input[data-price]').forEach(input=>{
-        if(input===activeMoneyInput)return;
-        const [rid,pid]=String(input.dataset.price||'').split(':');
-        const value=priceMap?.[rid]?.[pid];
-        if(value==null||!Number.isFinite(Number(value)))return;
-        const next=Number(value).toFixed(2);
-        if(input.value!==next)input.value=next;
-      });
-    }else if(typeof renderRestaurants==='function')renderRestaurants();
-    else if(typeof renderCommerce==='function')renderCommerce();
-    return changed;
+    document.querySelectorAll('#restaurantCards input[data-price]').forEach(input=>{
+      if(input===activeMoneyInput)return;
+      const [rid,pid]=String(input.dataset.price||'').split(':');
+      const value=priceMap?.[rid]?.[pid];
+      if(value==null||!Number.isFinite(Number(value)))return;
+      const next=Number(value).toFixed(2);
+      if(input.value!==next)input.value=next;
+    });
+    document.querySelectorAll('#restaurantCards input[data-custom-price]').forEach(input=>{
+      if(input===activeMoneyInput)return;
+      const [rid,pid]=String(input.dataset.customPrice||'').split(':');
+      const value=priceMap?.[rid]?.[pid];
+      if(value==null||!Number.isFinite(Number(value)))return;
+      const next=Number(value).toFixed(2);
+      if(input.value!==next)input.value=next;
+    });
+    return true;
   }
 
   async function loadRestaurants(){
@@ -1185,7 +1194,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantPricesDirect().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora direct restaurant price refresh',error);
-    }),1500);
+    }),2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};

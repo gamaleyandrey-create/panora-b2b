@@ -1364,5 +1364,5 @@ window.addEventListener("panora:restaurants-ui-refresh",()=>{
 });
 
 window.addEventListener("panora:admin-prices-updated",()=>{
-  try{reloadRestaurantsFromStorage();renderRestaurants();}catch{}
+  try{reloadRestaurantsFromStorage();}catch{}
 });
