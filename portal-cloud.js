@@ -211,6 +211,13 @@
     })().finally(()=>partnerOrdersLoading=null);
     return partnerOrdersLoading;
   }
+  async function confirmDeliveryRemote(noteId,receiver,traysReceived,traysReturned){
+    const rows=await api('rpc/panora_confirm_delivery_remote',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({p_note_id:noteId,p_receiver:String(receiver||'').trim(),p_trays_received:Number(traysReceived||0),p_trays_returned:Number(traysReturned||0)})});
+    if(!rows?.length)throw new Error(labels('Не удалось подтвердить получение','Could not confirm receipt','No se pudo confirmar la recepción'));
+    await loadAll(true); return rows[0];
+  }
+  window.panoraPartnerDelivery={confirmRemote:confirmDeliveryRemote};
+
   async function disputePayment(paymentId,reason){
     const rows=await api('rpc/panora_dispute_payment',{
       method:'POST',

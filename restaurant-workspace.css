@@ -693,3 +693,5 @@
 .rw-home-finance-card.has-advance small{color:#2f6a49;font-weight:700}
 .rw-balance small{display:block;margin-top:5px;color:#477056;font-size:12px}
 .rw-balance small b{font-size:12px}
+
+.rw-confirm-delivery-remote{margin:2px 0 12px;align-self:flex-start}.rw-remote-confirm-dialog{width:min(560px,calc(100vw - 28px));padding:0;border:0;border-radius:18px;box-shadow:0 24px 80px rgba(18,32,23,.24)}.rw-remote-confirm-dialog::backdrop{background:rgba(16,27,20,.48)}.rw-remote-confirm-card{position:relative;display:grid;gap:15px;padding:24px}.rw-remote-confirm-card h3{margin:0;font:30px Georgia,serif}.rw-remote-confirm-card label{display:grid;gap:6px;font:700 12px Arial}.rw-remote-confirm-card input{height:42px;padding:0 11px;border:1px solid #d7dcd5;border-radius:10px}.rw-remote-trays{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rw-remote-check{grid-template-columns:auto 1fr!important;font-weight:500!important}.rw-remote-check input{height:auto}.rw-remote-close{position:absolute;right:14px;top:12px;width:34px;height:34px;border:0;border-radius:50%;font-size:22px}@media(max-width:560px){.rw-remote-trays{grid-template-columns:1fr}}
