@@ -3,6 +3,7 @@
   const pendingKey='panora-cloud-pending-v283';
   const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v323',backupKey='panora-cloud-backups-v286',syncSchemaKey='panora-cloud-sync-schema';
   const restaurantBaselineKey='panora-cloud-restaurants-baseline-v415';
+  const adminRestaurantPricesKey='panora-admin-restaurant-prices-v420';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -454,37 +455,43 @@
     if(window.panoraMoneyEditing?.active)return false;
 
     const rows=await request('restaurant_prices?select=restaurant_id,product_id,price,updated_at&order=restaurant_id.asc,product_id.asc');
-    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
-    if(!Array.isArray(local)||!local.length)return false;
-
-    const byRestaurant=new Map();
+    const priceMap={};
     for(const row of rows||[]){
-      const id=String(row.restaurant_id||'');
-      if(!byRestaurant.has(id))byRestaurant.set(id,{});
-      byRestaurant.get(id)[row.product_id]=Number(row.price);
+      const rid=String(row.restaurant_id||'');
+      if(!priceMap[rid])priceMap[rid]={};
+      priceMap[rid][row.product_id]=Number(row.price);
     }
 
-    let changed=false;
-    const next=local.map(r=>{
-      const remote=byRestaurant.get(String(r.id));
-      if(!remote)return r;
-      const current=Object.fromEntries(Object.entries(r.prices||{}).map(([k,v])=>[k,Number(v)]));
-      if(JSON.stringify(current)!==JSON.stringify(remote)){
-        changed=true;
-        return {...r,prices:remote};
-      }
-      return r;
-    });
+    const beforeMap=localStorage.getItem(adminRestaurantPricesKey)||'{}';
+    const afterMap=JSON.stringify(priceMap);
+    localStorage.setItem(adminRestaurantPricesKey,afterMap);
 
-    if(!changed)return false;
-    restaurants=next;
-    localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
-    writeRestaurantBaseline(restaurants);
-    clearPending('restaurants');
-    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length}}));
-    if(typeof renderRestaurants==='function')renderRestaurants();
-    else if(typeof renderCommerce==='function')renderCommerce();
-    return true;
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    let changed=beforeMap!==afterMap;
+    if(Array.isArray(local)&&local.length){
+      const next=local.map(r=>{
+        const remote=priceMap[String(r.id)];
+        if(!remote)return r;
+        const current=Object.fromEntries(Object.entries(r.prices||{}).map(([k,v])=>[k,Number(v)]));
+        if(JSON.stringify(current)!==JSON.stringify(remote)){
+          changed=true;
+          return {...r,prices:remote};
+        }
+        return r;
+      });
+      restaurants=next;
+      localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+      writeRestaurantBaseline(restaurants);
+      clearPending('restaurants');
+    }
+
+    if(changed){
+      window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-direct',count:(rows||[]).length}}));
+      window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length}}));
+      if(typeof renderRestaurants==='function')renderRestaurants();
+      else if(typeof renderCommerce==='function')renderCommerce();
+    }
+    return changed;
   }
 
   async function loadRestaurants(){
@@ -943,6 +950,13 @@ window.panoraRecalculateBalances=recalculateBalances;
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     writeRestaurantBaseline(local);
     clearPending('restaurants');
+    try{
+      const priceMap=JSON.parse(localStorage.getItem(adminRestaurantPricesKey)||'{}');
+      if(!priceMap[restaurantId])priceMap[restaurantId]={};
+      priceMap[restaurantId][productId]=Number(saved.price);
+      localStorage.setItem(adminRestaurantPricesKey,JSON.stringify(priceMap));
+    }catch{}
+    window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'confirmed-price',restaurantId,productId,price:Number(saved.price)}}));
     window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'confirmed-price',restaurantId,productId,price:Number(saved.price)}}));
     setTimeout(()=>refreshRestaurantPricesDirect().catch(()=>{}),120);
     return Number(saved.price);

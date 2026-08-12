@@ -56,6 +56,16 @@ const reloadRestaurantsFromStorage=()=>{
   }catch{}
 };
 
+const adminRestaurantPriceMap=()=>{
+  try{return JSON.parse(localStorage.getItem("panora-admin-restaurant-prices-v420")||"{}")||{}}
+  catch{return{}}
+};
+const adminPartnerPrice=(restaurantId,productId,fallback=0)=>{
+  const map=adminRestaurantPriceMap();
+  const value=map?.[String(restaurantId)]?.[productId];
+  return value==null?Number(fallback||0):Number(value);
+};
+
 const activeRestaurants = () => restaurants.filter((r) => !r.deletedAt);
 const commerceProducts = () => {
   let saved = [];
@@ -184,7 +194,7 @@ function renderRestaurants() {
       ? active
           .map(
             (r) =>
-              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="text" inputmode="decimal" autocomplete="off" value="${Number(r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="text" inputmode="decimal" autocomplete="off" value="${adminPartnerPrice(r.id,product.id,r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
           )
           .join("")
       : '<div class="empty-row">Добавьте первого партнёра и назначьте ему индивидуальные цены.</div>') +
@@ -194,7 +204,7 @@ function renderRestaurants() {
   document.querySelectorAll("[data-price]").forEach((i) => {
     const commit = async () => {
       const value=window.panoraParseDecimal?.(i.value);
-      if(value===null){i.value=Number(restaurant(i.dataset.price.split(":")[0])?.prices?.[i.dataset.price.split(":")[1]]||0).toFixed(2);return}
+      if(value===null){const [rid,pid]=i.dataset.price.split(":");i.value=adminPartnerPrice(rid,pid,restaurant(rid)?.prices?.[pid]||0).toFixed(2);return}
       const [id,pid]=i.dataset.price.split(":");
       restaurant(id).prices[pid]=value;
       i.value=value.toFixed(2);
@@ -1351,4 +1361,8 @@ window.addEventListener("panora:restaurants-ui-refresh",()=>{
     renderRestaurants();
     fillRestaurants();
   }catch{}
+});
+
+window.addEventListener("panora:admin-prices-updated",()=>{
+  try{reloadRestaurantsFromStorage();renderRestaurants();}catch{}
 });
