@@ -332,18 +332,77 @@
     return "submitted";
   };
 
+  const statusStageLabel=key=>({
+    submitted:lang==="ru"?"Заказ создан":lang==="es"?"Pedido creado":"Order created",
+    confirmed:lang==="ru"?"Подтверждён":lang==="es"?"Confirmado":"Confirmed",
+    shipped:lang==="ru"?"Отгружен":lang==="es"?"Enviado":"Shipped",
+    delivered:lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered",
+    cancelled:lang==="ru"?"Отменён":lang==="es"?"Cancelado":"Cancelled",
+    processing:lang==="ru"?"Подтверждён":lang==="es"?"Confirmado":"Confirmed",
+    completed:lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered",
+    paid:lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered",
+  }[key]||key);
+
+  const formatStatusTime=value=>{
+    if(!value)return "";
+    const d=new Date(value);
+    if(Number.isNaN(d.getTime()))return "";
+    return new Intl.DateTimeFormat(lang==="ru"?"ru-RU":lang==="es"?"es-ES":"en-GB",{
+      day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"
+    }).format(d);
+  };
+
+  const actorLabel=event=>{
+    if(!event)return "";
+    const name=String(event.actorName||"").trim();
+    if(event.actorRole==="restaurant_receiver")
+      return `${lang==="ru"?"Получил":lang==="es"?"Recibió":"Received by"}: ${name||"—"}`;
+    if(event.actorRole==="restaurant")
+      return `${lang==="ru"?"Партнёр":lang==="es"?"Socio":"Partner"}: ${name||account?.name||"—"}`;
+    if(event.actorRole==="admin")
+      return `${lang==="ru"?"Пекарня":lang==="es"?"Panadería":"Bakery"}: ${name||"Panora"}`;
+    return name||"Panora";
+  };
+
+  const effectiveStatusHistory=order=>{
+    const raw=Array.isArray(order.statusHistory)?order.statusHistory.slice():[];
+    const note=orderDeliveryNote(order);
+    const has=status=>raw.some(event=>event.status===status);
+    if(!has("submitted")&&order.createdAt)raw.push({status:"submitted",occurredAt:order.createdAt,actorRole:"restaurant",actorName:account?.name||""});
+    const deliveredAt=note?.customerConfirmedAt||note?.offlineProof?.receivedAt;
+    if(deliveredAt&&!has("delivered"))raw.push({status:"delivered",occurredAt:deliveredAt,actorRole:"restaurant_receiver",actorName:note?.customerReceiver||note?.offlineProof?.receiver||""});
+    const normalized=raw.map(event=>({...event,status:["processing"].includes(event.status)?"confirmed":["completed","paid"].includes(event.status)?"delivered":event.status}));
+    const orderRank={submitted:0,confirmed:1,shipped:2,delivered:3,cancelled:4};
+    return normalized.sort((a,b)=>String(a.occurredAt||"").localeCompare(String(b.occurredAt||""))||((orderRank[a.status]??9)-(orderRank[b.status]??9)));
+  };
+
+  const latestStatusEvent=(order,statusKey)=>{
+    const list=effectiveStatusHistory(order).filter(event=>event.status===statusKey);
+    return list[list.length-1]||null;
+  };
+
+  function statusHistoryHtml(order){
+    const events=effectiveStatusHistory(order);
+    if(!events.length)return "";
+    return `<details class="rw-status-history"><summary>${lang==="ru"?"Дата, время и кто менял статус":lang==="es"?"Fecha, hora y quién cambió el estado":"Date, time and who changed status"}</summary><div>${events.map(event=>`<p><strong>${esc(statusStageLabel(event.status))}</strong><span>${esc(formatStatusTime(event.occurredAt)||"—")}</span><small>${esc(actorLabel(event))}</small></p>`).join("")}</div></details>`;
+  }
+
   function orderProgressHtml(order) {
     if(order.status==="cancelled")
       return `<div class="rw-order-progress cancelled"><strong>${lang==="ru"?"Заказ отменён":lang==="es"?"Pedido cancelado":"Order cancelled"}</strong></div>`;
     const stages = [
-      ["submitted", lang==="ru"?"Отправлен":lang==="es"?"Enviado":"Sent"],
+      ["submitted", lang==="ru"?"Заказ создан":lang==="es"?"Pedido creado":"Order created"],
       ["confirmed", lang==="ru"?"Подтверждён":lang==="es"?"Confirmado":"Confirmed"],
       ["shipped", lang==="ru"?"Отгружен":lang==="es"?"Enviado":"Shipped"],
       ["delivered", lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"],
     ];
     const current=orderLifecycleStatus(order);
     const rank=Math.max(0,stages.findIndex(([key])=>key===current));
-    return `<div class="rw-order-progress">${stages.map((stage,index)=>`<span class="${index<rank?"done":index===rank?"current":"next"}"><b>${index<rank?"✓":index+1}</b><em>${stage[1]}</em></span>`).join("")}</div>`;
+    return `<div class="rw-order-progress">${stages.map((stage,index)=>{
+      const event=latestStatusEvent(order,stage[0]);
+      const meta=event?`${formatStatusTime(event.occurredAt)} · ${actorLabel(event)}`:"";
+      return `<span class="${index<rank?"done":index===rank?"current":"next"}"${meta?` title="${esc(meta)}"`:""}><b>${index<rank?"✓":index+1}</b><em>${stage[1]}</em>${meta?`<small class="rw-stage-meta">${esc(formatStatusTime(event.occurredAt))}</small>`:""}</span>`;
+    }).join("")}</div>`;
   }
 
   function orderStatusHint(order) {
@@ -479,6 +538,7 @@
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<small class="rw-order-note">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</small>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
+      ${statusHistoryHtml(order)}
       <p class="rw-order-status-hint">${esc(orderStatusHint(order))}</p>
       <ul>${order.items.map((item) => `<li><span>${esc(itemName(item.product))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(Number((order.prices || account.prices)[item.product] || 0))}</small></strong></li>`).join("")}</ul>
       <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</footer>

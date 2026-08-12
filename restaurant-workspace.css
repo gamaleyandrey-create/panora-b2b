@@ -601,3 +601,21 @@
   .rw-finance-history-head{align-items:stretch;flex-direction:column}
   .rw-payment-period{width:100%;min-width:0}
 }
+
+/* Panora 5.05 · status audit trail */
+.rw-order-progress .rw-stage-meta{display:block;color:#7e877f;font:500 10px/1.2 Arial;white-space:nowrap}
+.rw-status-history{margin:7px 0 10px;border:1px solid #e0e5df;border-radius:10px;background:#fafbf8}
+.rw-status-history summary{padding:9px 11px;color:#4c5e51;font:700 12px Arial;cursor:pointer;list-style:none}
+.rw-status-history summary::-webkit-details-marker{display:none}
+.rw-status-history summary::after{content:"⌄";float:right;color:#7c857d}
+.rw-status-history[open] summary::after{content:"⌃"}
+.rw-status-history>div{display:grid;padding:0 11px 8px}
+.rw-status-history p{display:grid;grid-template-columns:minmax(120px,1fr) auto minmax(160px,1fr);gap:10px;align-items:center;margin:0;padding:7px 0;border-top:1px solid #e8ebe6}
+.rw-status-history p strong{font-size:12px}
+.rw-status-history p span,.rw-status-history p small{color:#737d75;font-size:11px}
+.rw-status-history p small{text-align:right}
+@media(max-width:720px){
+  .rw-order-progress .rw-stage-meta{display:none}
+  .rw-status-history p{grid-template-columns:1fr auto}
+  .rw-status-history p small{grid-column:1/-1;text-align:left}
+}
