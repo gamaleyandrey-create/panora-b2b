@@ -1,0 +1,50 @@
+/* Panora 4.16 — mobile partner profile icon matches main page */
+@media (max-width:720px){
+  body:not(.admin-page) .restaurant-workspace .rw-nav{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"]{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"] i{
+    display:grid!important;
+    place-items:center!important;
+    width:29px!important;
+    height:27px!important;
+    margin:0 auto 3px!important;
+    background:transparent!important;
+    border-radius:0!important;
+    font-size:0!important;
+    color:currentColor!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"] i svg{
+    display:block!important;
+    width:24px!important;
+    height:24px!important;
+    overflow:visible!important;
+  }
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"] span{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:100%!important;
+    max-width:none!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    white-space:nowrap!important;
+    font-size:9px!important;
+    line-height:1.05!important;
+    text-align:center!important;
+  }
+}
+@media (max-width:360px){
+  body:not(.admin-page) .restaurant-workspace .rw-nav button[data-rw-tab="profile"] span{
+    font-size:8px!important;
+  }
+}

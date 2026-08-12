@@ -2,6 +2,7 @@
   const cfg=window.PANORA_SUPABASE;
   const pendingKey='panora-cloud-pending-v283';
   const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v323',backupKey='panora-cloud-backups-v286',syncSchemaKey='panora-cloud-sync-schema';
+  const restaurantBaselineKey='panora-cloud-restaurants-baseline-v415';
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -52,6 +53,13 @@
   // v325.5: one-time cleanup of stale production-plan pending/conflict state
   // left by earlier multi-device builds. A clean startup must treat Supabase as
   // authoritative; merely opening a second device is not a local plan edit.
+  const restaurantPendingCleanupKey='panora-cloud-restaurant-pending-cleanup-v415';
+  if(localStorage.getItem(restaurantPendingCleanupKey)!=='1'){
+    if(pending.restaurants===true)delete pending.restaurants;
+    Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey);
+    localStorage.setItem(restaurantPendingCleanupKey,'1');
+  }
+
   const planCleanupKey='panora-cloud-plan-cleanup-v3255';
   if(localStorage.getItem(planCleanupKey)!=='1'){
     delete pending.plans;
@@ -78,6 +86,28 @@
     localStorage.setItem(planContentSyncKey,'1');
   }
 
+  const restaurantSyncShape=list=>(Array.isArray(list)?list:[]).map(r=>({
+    id:String(r?.id||''),
+    name:String(r?.name||''),
+    email:String(r?.email||''),
+    phone:String(r?.phone||''),
+    address:String(r?.address||''),
+    legalName:String(r?.legalName||''),
+    taxId:String(r?.taxId||''),
+    billingAddress:String(r?.billingAddress||''),
+    language:String(r?.language||'ru'),
+    partnerType:String(r?.partnerType||'restaurant'),
+    deletedAt:String(r?.deletedAt||''),
+    prices:Object.fromEntries(Object.entries(r?.prices||{}).sort(([a],[b])=>String(a).localeCompare(String(b))).map(([k,v])=>[k,Number(v)]))
+  })).sort((a,b)=>a.id.localeCompare(b.id));
+  const restaurantSignature=list=>JSON.stringify(restaurantSyncShape(list));
+  const readRestaurantBaseline=()=>localStorage.getItem(restaurantBaselineKey)||'';
+  const writeRestaurantBaseline=list=>localStorage.setItem(restaurantBaselineKey,restaurantSignature(list));
+  const restaurantHasRealLocalChanges=()=>{
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    const baseline=readRestaurantBaseline();
+    return !!baseline && restaurantSignature(local)!==baseline;
+  };
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
@@ -427,20 +457,38 @@
     if(rows?.length){
       restaurants=rows.map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
       localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+      writeRestaurantBaseline(restaurants);
+      clearPending('restaurants');
       if(typeof renderCommerce==='function')renderCommerce();
     }else if(local.length){restaurants=local;ready=true;await saveRestaurantsNow()}
   }
   async function refreshRestaurantsIfChanged(){
-    if(!ready||pending.restaurants||document.hidden)return false;
-    if(window.panoraMoneyEditing?.active)return false;
+    if(!ready||document.hidden)return false;
+    if(window.panoraMoneyEditing?.active||restaurantTimer)return false;
     const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     const mapped=(rows||[]).map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
-    const before=JSON.stringify(local.map(r=>({id:r.id,prices:r.prices,updated:r.deletedAt||null,name:r.name,email:r.email})));
-    const after=JSON.stringify(mapped.map(r=>({id:r.id,prices:r.prices,updated:r.deletedAt||null,name:r.name,email:r.email})));
-    if(before===after)return false;
+    const cloudSignature=restaurantSignature(mapped);
+    const localSignature=restaurantSignature(local);
+    const baseline=readRestaurantBaseline();
+
+    if(localSignature===cloudSignature){
+      writeRestaurantBaseline(mapped);
+      clearPending('restaurants');
+      return false;
+    }
+
+    /* If the current local state differs from both the last accepted baseline
+       and current cloud, it is a real local edit. Give its debounce/save path
+       one chance to finish instead of overwriting it. */
+    if(baseline && localSignature!==baseline && pending.restaurants){
+      return false;
+    }
+
     restaurants=mapped;
     localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+    writeRestaurantBaseline(restaurants);
+    clearPending('restaurants');
     rememberRevision('restaurants',rows);
     window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'cloud',count:restaurants.length}}));
     if(typeof renderCommerce==='function')renderCommerce();
@@ -454,7 +502,7 @@
     const prices=restaurants.flatMap(r=>Object.entries(r.prices||{}).map(([product_id,price])=>({restaurant_id:r.id,product_id,price:Number(price),updated_at:new Date().toISOString()})));
     if(prices.length)await request('restaurant_prices?on_conflict=restaurant_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(prices)});
     revisions.restaurants=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('restaurants');delete conflicts.restaurants;saveConflicts();
-    clearPending('restaurants');window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh'));
+    clearPending('restaurants');writeRestaurantBaseline(restaurants);window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh'));
     status('Облако ✓');
   }
   const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
@@ -845,6 +893,12 @@ window.panoraRecalculateBalances=recalculateBalances;
     const verified=await request(`restaurant_prices?restaurant_id=eq.${encodeURIComponent(restaurantId)}&product_id=eq.${encodeURIComponent(productId)}&select=restaurant_id,product_id,price&limit=1`);
     const saved=verified?.[0];
     if(!saved||Math.abs(Number(saved.price)-Number(price))>0.0001)throw new Error('Supabase не подтвердил новую оптовую цену');
+    clearTimeout(restaurantTimer);restaurantTimer=0;
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    writeRestaurantBaseline(local);
+    clearPending('restaurants');
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'confirmed-price',restaurantId,productId,price:Number(saved.price)}}));
+    setTimeout(()=>refreshRestaurantsIfChanged().catch(()=>{}),120);
     return Number(saved.price);
   }
   function queueOrders(){markPending('orders');clearTimeout(orderTimer);orderTimer=setTimeout(()=>saveOrdersNow().then(()=>clearPending('orders')).catch(error=>fail('заказы',error)),500)}
@@ -1063,7 +1117,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantsIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora restaurant price refresh',error);
-    }),2500);
+    }),1500);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
