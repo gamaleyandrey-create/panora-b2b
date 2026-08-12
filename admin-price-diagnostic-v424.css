@@ -1,0 +1,8 @@
+.panora-price-diagnostic{margin:12px 0 18px;border:1px solid #d9e2db;border-radius:14px;background:#fff}
+.panora-price-diagnostic>summary{cursor:pointer;padding:12px 14px;font-weight:700;color:#355b42}
+.panora-price-diagnostic-body{padding:0 14px 14px;overflow:auto;font-size:12px}
+.panora-price-diagnostic table{width:100%;border-collapse:collapse;margin:10px 0}
+.panora-price-diagnostic th,.panora-price-diagnostic td{padding:7px 8px;border-bottom:1px solid #eef2ef;text-align:left;white-space:nowrap}
+.panora-price-diagnostic tr.diff{background:#fff4e8}
+.panora-price-diagnostic .diag-error{margin:8px 0;padding:9px;border-radius:8px;background:#fff0f0;color:#9b2525}
+.panora-price-diagnostic button{padding:9px 12px}

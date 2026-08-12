@@ -1191,10 +1191,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
     }),2000);
-    clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantPricesDirect().catch(error=>{
-      if(window.panoraHandleSessionError?.(error))return;
-      console.warn('Panora direct restaurant price refresh',error);
-    }),2000);
+    clearInterval(restaurantPoll);restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
