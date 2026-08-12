@@ -1,0 +1,10 @@
+/* Panora 4.9 — mobile bakery: current partner price field. */
+@media (max-width:720px){
+  [data-price]{
+    font-size:16px!important;
+    line-height:1.2!important;
+    color:#17251d!important;
+    -webkit-text-fill-color:#17251d!important;
+    opacity:1!important;
+  }
+}
