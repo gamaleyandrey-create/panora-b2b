@@ -412,8 +412,8 @@
         </div>
         <div class="rw-order-filters">
           <label class="rw-order-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Заказ или накладная":lang==="es"?"Pedido o albarán":"Order or delivery note"}"></label>
-          <label><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><select data-rw-order-status>${statusOptions.map(([value,label])=>`<option value="${value}"${orderStatusFilter===value?" selected":""}>${label}</option>`).join("")}</select></label>
-          <label><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><select data-rw-order-period>${periodOptions.map(([value,label])=>`<option value="${value}"${orderPeriodFilter===value?" selected":""}>${label}</option>`).join("")}</select></label>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><details data-rw-filter-details><summary>${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}</summary><div class="rw-filter-popover">${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></details></div>
+          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><details data-rw-filter-details><summary>${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}</summary><div class="rw-filter-popover">${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></details></div>
           ${(orderStatusFilter!=="all"||orderPeriodFilter!=="all"||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
@@ -631,10 +631,12 @@
           renderAccountModal();
         }),
     );
-    const orderStatusSelect = modal.querySelector("[data-rw-order-status]");
-    if (orderStatusSelect) orderStatusSelect.onchange = () => { orderStatusFilter = orderStatusSelect.value; renderAccountModal(); };
-    const orderPeriodSelect = modal.querySelector("[data-rw-order-period]");
-    if (orderPeriodSelect) orderPeriodSelect.onchange = () => { orderPeriodFilter = orderPeriodSelect.value; renderAccountModal(); };
+    modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=()=>{ orderStatusFilter=button.dataset.rwOrderStatus; renderAccountModal(); });
+    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=()=>{ orderPeriodFilter=button.dataset.rwOrderPeriod; renderAccountModal(); });
+    modal.querySelectorAll("[data-rw-filter-details]").forEach((details)=>details.addEventListener("toggle",()=>{
+      if(!details.open)return;
+      modal.querySelectorAll("[data-rw-filter-details]").forEach((other)=>{if(other!==details)other.open=false;});
+    }));
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
     if (orderSearchInput) orderSearchInput.oninput = () => {
       orderSearch = orderSearchInput.value.trim();
