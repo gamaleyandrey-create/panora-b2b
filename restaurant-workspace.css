@@ -740,3 +740,12 @@
 .rw-note-filters-toggle b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#e5efe6;color:#315d42;font-size:11px}
 .rw-note-filters-toggle.has-active{border-color:#9fbaa6;background:#f5faf5}
 @media(max-width:720px){.rw-note-filters-toggle{width:100%;justify-content:center}}
+
+/* Panora 5.17 · finance essentials first */
+.rw-finance-main-head{align-items:end}.rw-finance-debt small{display:block;margin-top:4px;color:#dce9df;font-size:12px}
+.rw-finance-summary-toggle,.rw-finance-filters-toggle{display:flex;align-items:center;gap:8px;width:max-content;min-height:40px;padding:0 13px;border:1px solid #d8ddd6;border-radius:11px;background:#fff;color:#34443a;font:700 13px Arial;cursor:pointer}
+.rw-finance-summary-toggle{margin:12px 0}.rw-finance-summary-toggle i,.rw-finance-filters-toggle i{font-style:normal;color:#748078}
+.rw-finance-filters-toggle{margin:10px 0}.rw-finance-filters-toggle b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#e5efe6;color:#315d42;font-size:11px}
+.rw-finance-filters-toggle.has-active{border-color:#9fbaa6;background:#f5faf5}
+.rw-finance-stats[hidden],.rw-debt-filters[hidden]{display:none!important}
+@media(max-width:720px){.rw-finance-summary-toggle,.rw-finance-filters-toggle{width:100%;justify-content:center}}

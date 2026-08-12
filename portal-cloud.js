@@ -323,7 +323,10 @@
     try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();setTimeout(()=>openPanel(document.querySelector('#profileModal')),180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
-  renderAccountModal=function(){
+  renderAccountModal=function(force=false){
+    const active=document.activeElement;
+    const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+    if(editingWorkspace&&!force)return;
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
     if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
