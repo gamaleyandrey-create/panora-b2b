@@ -208,10 +208,12 @@ function renderRestaurants() {
       const [id,pid]=i.dataset.price.split(":");
       restaurant(id).prices[pid]=value;
       i.value=value.toFixed(2);
-      cSave("panora-restaurants",restaurants);
+      // Wholesale prices live only in public.restaurant_prices.
+      // Do not queue the whole restaurant record when only a price changed.
+      localStorage.setItem("panora-restaurants",JSON.stringify(restaurants));
       try{
         if(window.panoraCloud?.saveRestaurantPriceConfirmed)await window.panoraCloud.saveRestaurantPriceConfirmed(id,pid,value);
-        else await window.panoraCloud?.flushRestaurants?.();
+        else throw new Error("Модуль облачных цен ещё не готов");
       }catch(error){
         console.warn("Panora wholesale cloud save",error);
         alert(`Не удалось сохранить оптовую цену в облаке: ${error.message||error}`);
@@ -220,7 +222,7 @@ function renderRestaurants() {
       reloadRestaurantsFromStorage();
       window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
       window.panoraPricing?.notifyWholesale(id,pid,value);
-      setTimeout(()=>{reloadRestaurantsFromStorage();renderRestaurants();},0);
+      i.value=Number(value).toFixed(2);
     };
     i.onblur=commit;
     i.onchange=null;
