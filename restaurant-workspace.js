@@ -444,6 +444,19 @@
     if (!navigator.onLine) return t("offline");
     return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
   }
+  const partnerFinanceSummary=()=>{
+    const delivered=ownNotes().reduce((sum,note)=>sum+Number(note.total||0),0);
+    const paid=ownPayments()
+      .filter(payment=>payment.status!=="cancelled")
+      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    return {
+      delivered,
+      paid,
+      debt:Math.max(0,delivered-paid),
+      advance:Math.max(0,paid-delivered)
+    };
+  };
+
   function homeHtml() {
     const orders = ownOrders();
     const active = orders.filter(isActiveOrder).sort((a, b) => String(a.deliveryDate || a.date).localeCompare(String(b.deliveryDate || b.date)))[0];
@@ -451,11 +464,12 @@
     const notes = ownNotes();
     const trays = notes.length ? Number(notes[0].trayBalanceAfter || 0) : 0;
     const draftCount = cartCount();
+    const finance=partnerFinanceSummary();
     return `<section class="rw-home">
       <header class="rw-overview-head"><div><span class="kicker">Panora</span><h3>${t("overview")}</h3></div><span class="rw-sync ${navigator.onLine ? "online" : "offline"}"><i></i>${syncLabel()}</span></header>
       <div class="rw-summary-grid">
         <button type="button" class="rw-summary-card" data-rw-summary="${active ? "delivery" : "new"}"${active ? ` data-rw-order-target="${esc(active.id)}"` : ""}><span>${t("nextDelivery")}</span><strong>${active ? esc(localDate(active.deliveryDate || active.date)) : "—"}</strong><small>${active ? esc(orderNumber(active)) : t("noActiveOrder")}</small></button>
-        <button type="button" class="rw-summary-card" data-rw-summary="payments"><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong><small>${t("finance")}</small></button>
+        <button type="button" class="rw-summary-card rw-home-finance-card${finance.advance>0?" has-advance":""}" data-rw-summary="payments"><span>${t("debt")}</span><strong>${portalMoney(finance.debt)}</strong><small>${finance.advance>0?`${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(finance.advance)}`:t("finance")}</small></button>
         <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
       </div>
       ${active ? `<article class="rw-current-order"><div><span>${t("activeOrder")}</span><strong>${esc(orderNumber(active))}</strong><small>${esc(status(active))} · ${esc(localDate(active.deliveryDate || active.date))}</small></div><b>${portalMoney(orderTotal(active))}</b><button class="button button-ghost" data-rw-tab="orders">${t("orders")}</button></article>` : ""}
@@ -464,9 +478,10 @@
   }
 
   function profileHtml() {
+    const finance=partnerFinanceSummary();
     return `<section class="rw-profile-page"><aside class="rw-profile rw-profile-summary">
       <div class="rw-profile-main"><span class="account-avatar">${esc(account.name?.[0]?.toUpperCase() || "R")}</span><span><strong>${esc(account.name)}</strong><small>${esc(account.email)}</small></span></div>
-      <div class="rw-balance"><span>${t("debt")}</span><strong>${portalMoney(accountDebt())}</strong></div>
+      <div class="rw-balance"><span>${t("debt")}</span><strong>${portalMoney(finance.debt)}</strong>${finance.advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: <b>${portalMoney(finance.advance)}</b></small>`:""}</div>
     </aside><form class="rw-profile-form" data-rw-profile-form>
       <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
       <div class="rw-profile-grid">

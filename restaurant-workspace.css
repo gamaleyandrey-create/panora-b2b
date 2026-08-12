@@ -687,3 +687,9 @@
 .rw-history-content[hidden]{display:none!important}.rw-history-content .rw-finance-history-head{margin-top:0}
 @media(max-width:1050px){.rw-finance-stats-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.rw-finance-stats-4{grid-template-columns:1fr}.rw-history-toggle{font-size:22px}}
+
+/* Panora 5.11 · debt never goes negative; overpayment is advance */
+.rw-home-finance-card.has-advance{border-color:#c9ddcd;background:#f8fcf8}
+.rw-home-finance-card.has-advance small{color:#2f6a49;font-weight:700}
+.rw-balance small{display:block;margin-top:5px;color:#477056;font-size:12px}
+.rw-balance small b{font-size:12px}
