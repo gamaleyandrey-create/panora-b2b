@@ -156,7 +156,7 @@
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==='confirmed',status:p.status})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
-      if(products?.length)write('panora-products',products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),priceUpdatedAt:Date.now(),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}})));
+      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
       account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));renderAccountModal();renderProducts();renderCart();startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
@@ -215,9 +215,9 @@
         try{renderAccountModal()}catch{}
       }
       if(products?.length){
-        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),basePrice:Number(p.price),priceUpdatedAt:Date.now(),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
-        const before=localStorage.getItem('panora-products')||'[]',after=JSON.stringify(nextProducts);
-        if(before!==after)localStorage.setItem('panora-products',after);
+        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
+        const before=localStorage.getItem('panora-partner-products')||'[]',after=JSON.stringify(nextProducts);
+        if(before!==after)localStorage.setItem('panora-partner-products',after);
       }
       if(priceChanged||products?.length){
         if(typeof refreshRestaurantProducts==='function')refreshRestaurantProducts();
@@ -249,7 +249,7 @@
 
   window.addEventListener('storage',event=>{
     if(!session?.user||!account)return;
-    if(event.key==='panora-products'||event.key==='panora-restaurants'){
+    if(event.key==='panora-public-products'||event.key==='panora-partner-products'||event.key==='panora-restaurants'){
       setTimeout(()=>refreshPartnerPricing().catch(()=>{}),700);
     }
   });

@@ -42,7 +42,7 @@ const PRODUCTS=[
 {id:'pumpkin',category:'yeastfree',price:5,pieces:12,weight:750,image:'bread-pumpkin.jpg',bg:'#e5c789',text:{ru:['Тыквенный бездрожжевой хлеб с семенами','Бездрожжевой тыквенный хлеб с семенами.','Бездрожжевой'],en:['Yeast-free pumpkin bread with seeds','Yeast-free pumpkin bread with seeds.','Yeast-free'],es:['Pan de calabaza sin levadura con semillas','Pan de calabaza sin levadura con semillas.','Sin levadura']}}
 ];
 try{
- const managedProducts=JSON.parse(localStorage.getItem('panora-products')||'[]');
+ const managedProducts=JSON.parse(localStorage.getItem('panora-public-products')||localStorage.getItem('panora-products')||'[]');
  if(managedProducts.length){
   const builtIns=PRODUCTS.slice(),managedById=new Map(managedProducts.map(p=>[p.id,p])),combined=[...builtIns.map(base=>managedById.get(base.id)||base),...managedProducts.filter(p=>!builtIns.some(base=>base.id===p.id))];
   PRODUCTS.splice(0,PRODUCTS.length,...combined.filter(p=>p.active!==false).map(p=>{const base=builtIns.find(x=>x.id===p.id)||p;return{id:p.id,category:'yeastfree',price:Number(p.basePrice??p.price??0),pieces:12,weight:Number(p.weight||base.weight||750),image:p.image||base.image||'icon.svg',bg:base.bg||'#e9dfca',text:p.text||{ru:[p.names?.ru||p.id,p.descriptions?.ru||'',p.names?.ru||p.id],en:[p.names?.en||p.names?.ru||p.id,p.descriptions?.en||p.descriptions?.ru||'',p.names?.en||p.names?.ru||p.id],es:[p.names?.es||p.names?.ru||p.id,p.descriptions?.es||p.descriptions?.ru||'',p.names?.es||p.names?.ru||p.id]}}}));

@@ -30,6 +30,6 @@
  };
 
  window.addEventListener('storage',event=>{
-   if(event.key==='panora-products'||event.key==='panora-restaurants')refreshClientPrices();
+   if(event.key==='panora-products'||event.key==='panora-public-products'||event.key==='panora-partner-products'||event.key==='panora-restaurants')refreshClientPrices();
  });
 })();

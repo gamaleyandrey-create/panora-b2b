@@ -180,7 +180,7 @@ function portalCurrentProductPrice(product) {
   if (!product) return 0;
   if (account?.prices?.[product.id] != null) return Number(account.prices[product.id]);
   try {
-    const managed = JSON.parse(localStorage.getItem("panora-products") || "[]");
+    const managed = JSON.parse(localStorage.getItem("panora-public-products") || localStorage.getItem("panora-products") || "[]");
     const item = managed.find((p) => String(p.id) === String(product.id));
     if (item) return Number(item.basePrice ?? item.price ?? 0);
   } catch {}
@@ -229,7 +229,7 @@ function loginAccount(e) {
 function logoutAccount() {
   account = null;
   SHOW_PRICES = true;
-  const managedRetail = (() => { try { return JSON.parse(localStorage.getItem("panora-products") || "[]"); } catch { return []; } })();
+  const managedRetail = (() => { try { return JSON.parse(localStorage.getItem("panora-public-products") || localStorage.getItem("panora-products") || "[]"); } catch { return []; } })();
   const retailById = new Map(managedRetail.map((item) => [item.id, Number(item.basePrice ?? item.price ?? 0)]));
   PRODUCTS.forEach((p) => {
     if (retailById.has(p.id)) p.price = retailById.get(p.id);

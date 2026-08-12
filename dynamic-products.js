@@ -1,6 +1,6 @@
 (()=>{
  const builtInFallbacks=new Map(PRODUCTS.filter(p=>['plain','pumpkin'].includes(p.id)).map(p=>[p.id,{...p}]));
- function readManaged(){try{return JSON.parse(localStorage.getItem('panora-products')||'[]')}catch{return[]}}
+ function readManaged(){try{return JSON.parse(localStorage.getItem('panora-public-products')||localStorage.getItem('panora-partner-products')||localStorage.getItem('panora-products')||'[]')}catch{return[]}}
  function toCatalogProduct(p){
   const fallback=builtInFallbacks.get(p.id)||{};
   const ru=p.names?.ru||fallback.text?.ru?.[0]||p.id;
@@ -34,12 +34,13 @@
  }
  window.refreshRestaurantProducts=refreshRestaurantProducts;
  window.addEventListener('panora:products-changed',refreshRestaurantProducts);
+ window.addEventListener('panora:public-products-changed',refreshRestaurantProducts);
  window.addEventListener('panora:pricing-refresh',refreshRestaurantProducts);
  window.addEventListener('panora:retail-price-changed',refreshRestaurantProducts);
  window.addEventListener('panora:wholesale-price-changed',refreshRestaurantProducts);
 
  window.addEventListener('storage',event=>{
-  if(event.key==='panora-products'||event.key==='panora-restaurants'){
+  if(event.key==='panora-products'||event.key==='panora-public-products'||event.key==='panora-partner-products'||event.key==='panora-restaurants'){
    if(event.key==='panora-restaurants'&&typeof restoreAccount==='function')restoreAccount();
    refreshRestaurantProducts();
   }
