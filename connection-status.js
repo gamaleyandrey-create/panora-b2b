@@ -70,7 +70,7 @@
     if(datasetState==='error'||/ошиб|error|conflict|конфликт/.test(t))return 'error';
     if(datasetState==='local'||/устройств|офлайн|offline|отправим при подключении/.test(t))return 'local';
     if(/отправляем изменения|ожидает/.test(t))return 'pending';
-    if(datasetState==='syncing'||/синх|загруз|сохранение|сохраняем|проверяем|повтор|sync|loading/.test(t))return 'syncing';
+    if(datasetState==='syncing'||/синхронизац|загруз|сохранение|сохраняем|проверяем|отправляем|syncing|loading/.test(t))return 'syncing';
     return 'synced';
   }
 
@@ -80,6 +80,7 @@
     if(source){
       const state=classify(source.textContent,source.dataset.syncState);
       let text=source.textContent?.trim()||labels[state];
+      if(state==='error') text=labels.error;
       const pending=Number(window.panoraCloud?.pendingCount||0);
       if(state==='local'&&pending>0)text='Сохранено на устройстве · отправим при подключении';
       if(state==='pending'&&pending>0)text='Отправляем изменения…';

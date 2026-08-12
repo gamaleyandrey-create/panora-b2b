@@ -90,7 +90,7 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    const syncing=/загруз|синх|повтор|loading|sync|retry|cargando|sincron/i.test(text);
+    const syncing=/загруз|синхронизац|отправ|провер|loading|syncing|cargando|sincron/i.test(text);
     const local=/устройств|офлайн|offline|device|dispositivo|отправим при подключении/i.test(text);
     el.dataset.syncState=error?'error':syncing?'syncing':local?'local':'synced';
     el.style.cursor=error?'pointer':'';
@@ -1031,8 +1031,11 @@ window.panoraRecalculateBalances=recalculateBalances;
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){
-    if(window.panoraHandleSessionError?.(error)) return;
-    fail('повтор',error);return false}
+    if(window.panoraHandleSessionError?.(error)) return false;
+    console.error('Panora cloud retry failed',error);
+    audit('sync.failed',`синхронизация: ${error?.message||error}`,'error');
+    status('Ошибка синхронизации',true,error?.message||String(error));
+    return false}
     })().finally(()=>retrying=null);
     return retrying;
   }
@@ -1055,14 +1058,12 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     clearInterval(planPoll);planPoll=setInterval(()=>refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
-    clearInterval(restaurantPoll);
-    restaurantPoll=setInterval(()=>refreshRestaurantsIfChanged().catch(error=>{
+      console.warn('Panora plan refresh',error);
+    }),2000);
+    clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>refreshRestaurantsIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora restaurant price refresh',error);
     }),2500);
-
-      console.warn('Panora plan refresh',error);
-    }),2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
@@ -1080,11 +1081,10 @@ window.panoraRecalculateBalances=recalculateBalances;
   };
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
-})();
-
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready)refreshRestaurantsIfChanged().catch(()=>{});
+    if(!document.hidden&&ready)refreshRestaurantsIfChanged().catch(error=>console.warn('Panora restaurant visibility refresh',error));
   });
   window.addEventListener('focus',()=>{
-    if(ready)refreshRestaurantsIfChanged().catch(()=>{});
+    if(ready)refreshRestaurantsIfChanged().catch(error=>console.warn('Panora restaurant focus refresh',error));
   });
+})();
