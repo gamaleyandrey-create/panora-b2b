@@ -193,15 +193,23 @@
       const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
       const next=(rows||[]).map(mapOrder);
       const previous=read('panora-orders')||[];
-      const before=JSON.stringify(previous);
-      const after=JSON.stringify(next);
+      const comparable=order=>({
+        id:order.id,number:order.number,restaurantId:order.restaurantId,date:order.date,
+        deliveryDate:order.deliveryDate,items:order.items,prices:order.prices,taxRate:order.taxRate,
+        status:order.status,comment:order.comment||'',cancellationReason:order.cancellationReason||'',
+        createdAt:order.createdAt
+      });
+      const before=JSON.stringify(previous.map(comparable));
+      const after=JSON.stringify(next.map(comparable));
       if(before!==after){
         const previousById=new Map(previous.map(order=>[order.id,order.status]));
         const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
         const eventRows=changed.length?await fetchStatusEvents():[];
         const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
         write('panora-orders',enriched);
-        renderAccountModal();
+        const active=document.activeElement;
+        const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+        if(!editingWorkspace)renderAccountModal();
         window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length,changed}}));
         if(changed.some(change=>change.status==='shipped')){
           setTimeout(()=>loadAll(true).catch(()=>{}),80);

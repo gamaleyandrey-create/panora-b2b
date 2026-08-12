@@ -176,6 +176,7 @@
   let orderDateFrom = "";
   let orderDateTo = "";
   let orderToReveal = "";
+  let orderFiltersOpen = false;
 
   let noteView = "active";
   let noteQuery = "";
@@ -558,8 +559,13 @@
           <button type="button" class="${orderView === "active" ? "active" : ""}" data-rw-order-view="active"><span>${t("activeOrders")}</span><b>${working.length}</b></button>
           <button type="button" class="${orderView === "history" ? "active" : ""}" data-rw-order-view="history"><span>${t("historyOrders")}</span><b>${archive.length}</b></button>
         </div>
-        <div class="rw-order-filters">
-          <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}"></label>
+        <button type="button" class="rw-order-filters-toggle${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?" has-active":""}" data-rw-order-filters-toggle aria-expanded="${orderFiltersOpen?"true":"false"}">
+          <span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>
+          ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<b>${[orderSearch,orderStatusFilter!=="all",orderDateFrom||orderDateTo].filter(Boolean).length}</b>`:""}
+          <i>${orderFiltersOpen?"⌃":"⌄"}</i>
+        </button>
+        <div class="rw-order-filters"${orderFiltersOpen?"":" hidden"}>
+          <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}" autocomplete="off" spellcheck="false"></label>
           <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status"${openFilterMenu==="status"?"":" hidden"}>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
           <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="order-period">${esc(periodLabel(orderDateFrom,orderDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="order-period"${openFilterMenu==="order-period"?"":" hidden"}>${calendarHtml("order",orderDateFrom,orderDateTo)}</div></div>
           ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
@@ -889,6 +895,7 @@
         (button.onclick = () => {
           orderView = button.dataset.rwOrderView;
           openFilterMenu = "";
+          orderFiltersOpen = false;
           renderAccountModal();
         }),
     );
@@ -900,6 +907,17 @@
           renderAccountModal();
         }),
     );
+    modal.querySelector("[data-rw-order-filters-toggle]")?.addEventListener("click",()=>{
+      orderFiltersOpen=!orderFiltersOpen;
+      const filters=modal.querySelector(".rw-order-filters");
+      const toggle=modal.querySelector("[data-rw-order-filters-toggle]");
+      if(filters)filters.hidden=!orderFiltersOpen;
+      if(toggle){
+        toggle.setAttribute("aria-expanded",orderFiltersOpen?"true":"false");
+        const icon=toggle.querySelector("i");if(icon)icon.textContent=orderFiltersOpen?"⌃":"⌄";
+      }
+    });
+
     const closeFilterPanels=(except="")=>{
       modal.querySelectorAll("[data-rw-filter-panel]").forEach((panel)=>{if(panel.dataset.rwFilterPanel!==except)panel.hidden=true;});
       if(!except)openFilterMenu="";
@@ -1176,7 +1194,11 @@
   const mobileProfileButton = document.querySelector("#mobileProfile");
   if (mobileProfileButton) mobileProfileButton.onclick = () => window.panoraOpenPartnerProfile();
 
-  const backgroundWorkspaceRender=()=>{if(account&&!openFilterMenu)renderAccountModal();};
+  const workspaceInputFocused=()=>{
+    const active=document.activeElement;
+    return Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+  };
+  const backgroundWorkspaceRender=()=>{if(account&&!openFilterMenu&&!workspaceInputFocused())renderAccountModal();};
   window.addEventListener("online", backgroundWorkspaceRender);
   window.addEventListener("offline", backgroundWorkspaceRender);
   window.addEventListener("panora:restaurant-sync", backgroundWorkspaceRender);
