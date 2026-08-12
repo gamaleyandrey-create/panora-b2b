@@ -172,13 +172,90 @@
   let activeTab = "home";
   let orderView = "active";
   let orderStatusFilter = "all";
-  let orderPeriodFilter = "all";
   let orderSearch = "";
+  let orderDateFrom = "";
+  let orderDateTo = "";
   let orderToReveal = "";
+
+  let noteView = "active";
   let noteQuery = "";
-  let noteMonth = "";
-  let notePeriodFilter = "all";
+  let noteDateFrom = "";
+  let noteDateTo = "";
+
+  let paymentDateFrom = "";
+  let paymentDateTo = "";
+
   let openFilterMenu = "";
+  const calendarMonth = { order:"", note:"", payment:"" };
+
+  const isoToday=()=>new Date().toISOString().slice(0,10);
+  const normalizeIso=value=>String(value||"").slice(0,10);
+  const dateInRange=(value,from,to)=>{
+    const raw=normalizeIso(value);
+    if(!raw)return false;
+    if(from&&raw<from)return false;
+    if(to&&raw>to)return false;
+    return true;
+  };
+  const periodLabel=(from,to)=>{
+    if(!from&&!to)return lang==="ru"?"Все даты":lang==="es"?"Todas las fechas":"All dates";
+    if(from&&to&&from===to)return localDate(from);
+    if(from&&to)return `${localDate(from)} — ${localDate(to)}`;
+    if(from)return `${lang==="ru"?"с":lang==="es"?"desde":"from"} ${localDate(from)}`;
+    return `${lang==="ru"?"до":lang==="es"?"hasta":"to"} ${localDate(to)}`;
+  };
+  const monthKey=value=>{
+    const raw=normalizeIso(value)||isoToday();
+    return raw.slice(0,7);
+  };
+  const shiftMonth=(key,delta)=>{
+    const [y,m]=String(key||monthKey()).split("-").map(Number);
+    const d=new Date(y,m-1+delta,1,12);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  };
+  const calendarTitle=key=>{
+    const [y,m]=String(key||monthKey()).split("-").map(Number);
+    return new Intl.DateTimeFormat(lang==="ru"?"ru-RU":lang==="es"?"es-ES":"en-GB",{month:"long",year:"numeric"}).format(new Date(y,m-1,1,12));
+  };
+  const calendarDays=(scope,from,to)=>{
+    const key=calendarMonth[scope]||monthKey(from||to||isoToday());
+    calendarMonth[scope]=key;
+    const [year,month]=key.split("-").map(Number);
+    const first=new Date(year,month-1,1,12);
+    const start=(first.getDay()+6)%7;
+    const days=new Date(year,month,0,12).getDate();
+    const cells=[];
+    for(let i=0;i<start;i++)cells.push('<span class="rw-cal-empty"></span>');
+    for(let day=1;day<=days;day++){
+      const iso=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+      const selected=iso===from||iso===to;
+      const inRange=from&&to&&iso>=from&&iso<=to;
+      cells.push(`<button type="button" class="rw-cal-day${selected?" selected":""}${inRange?" in-range":""}" data-rw-cal-date="${iso}" data-rw-cal-scope="${scope}">${day}</button>`);
+    }
+    return cells.join("");
+  };
+  const calendarHtml=(scope,from,to)=>{
+    const weekdays=lang==="ru"?["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]:lang==="es"?["Lu","Ma","Mi","Ju","Vi","Sa","Do"]:["Mo","Tu","We","Th","Fr","Sa","Su"];
+    return `<div class="rw-calendar" data-rw-calendar="${scope}">
+      <div class="rw-cal-quick">
+        <button type="button" data-rw-cal-quick="today" data-rw-cal-scope="${scope}">${lang==="ru"?"Сегодня":lang==="es"?"Hoy":"Today"}</button>
+        <button type="button" data-rw-cal-quick="week" data-rw-cal-scope="${scope}">${lang==="ru"?"7 дней":lang==="es"?"7 días":"7 days"}</button>
+        <button type="button" data-rw-cal-quick="month" data-rw-cal-scope="${scope}">${lang==="ru"?"Месяц":lang==="es"?"Mes":"Month"}</button>
+        <button type="button" data-rw-cal-quick="year" data-rw-cal-scope="${scope}">${lang==="ru"?"Год":lang==="es"?"Año":"Year"}</button>
+        <button type="button" data-rw-cal-quick="all" data-rw-cal-scope="${scope}">${lang==="ru"?"Всё":lang==="es"?"Todo":"All"}</button>
+      </div>
+      <div class="rw-cal-head"><button type="button" data-rw-cal-nav="-1" data-rw-cal-scope="${scope}">‹</button><strong>${esc(calendarTitle(calendarMonth[scope]||monthKey(from||to||isoToday())))}</strong><button type="button" data-rw-cal-nav="1" data-rw-cal-scope="${scope}">›</button></div>
+      <div class="rw-cal-week">${weekdays.map(x=>`<span>${x}</span>`).join("")}</div>
+      <div class="rw-cal-grid">${calendarDays(scope,from,to)}</div>
+      <div class="rw-cal-range"><span>${periodLabel(from,to)}</span>${(from||to)?`<button type="button" data-rw-cal-clear data-rw-cal-scope="${scope}">${lang==="ru"?"Очистить":lang==="es"?"Limpiar":"Clear"}</button>`:""}</div>
+    </div>`;
+  };
+  const getRange=scope=>scope==="order"?[orderDateFrom,orderDateTo]:scope==="note"?[noteDateFrom,noteDateTo]:[paymentDateFrom,paymentDateTo];
+  const setRange=(scope,from,to)=>{
+    if(scope==="order"){orderDateFrom=from;orderDateTo=to}
+    else if(scope==="note"){noteDateFrom=from;noteDateTo=to}
+    else {paymentDateFrom=from;paymentDateTo=to}
+  };
   const messengerRow = (item = {}) => `<div class="rw-extra-messenger" data-rw-messenger-row>
     <label><span>${t("messengerName")}</span><input data-rw-messenger-name maxlength="40" value="${esc(item.name || "")}" placeholder="Signal, Viber, LINE…"><small data-rw-messenger-error></small></label>
     <label><span>${t("messengerContact")}</span><input data-rw-messenger-contact maxlength="120" value="${esc(item.contact || "")}" placeholder="@username, +34…, https://…"><small></small></label>
@@ -278,27 +355,7 @@
     return "";
   }
 
-  const orderMatchesPeriod=(order)=>{
-    if(orderPeriodFilter==="all")return true;
-    const raw=String(order.deliveryDate||order.date||"").slice(0,10);
-    if(!raw)return false;
-    const d=new Date(`${raw}T12:00:00`);
-    const now=new Date();
-    if(orderPeriodFilter==="today")return d.toDateString()===now.toDateString();
-    if(orderPeriodFilter==="week"){
-      const start=new Date(now);start.setHours(0,0,0,0);
-      const day=(start.getDay()+6)%7;start.setDate(start.getDate()-day);
-      const finish=new Date(start);finish.setDate(start.getDate()+7);
-      return d>=start&&d<finish;
-    }
-    if(orderPeriodFilter==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
-    if(orderPeriodFilter==="3months"){
-      const start=new Date(now);start.setMonth(start.getMonth()-3);
-      return d>=start&&d<=now;
-    }
-    if(orderPeriodFilter==="year")return d.getFullYear()===now.getFullYear();
-    return true;
-  };
+  const orderMatchesPeriod=(order)=>dateInRange(order.deliveryDate||order.date,orderDateFrom,orderDateTo);
 
   const orderMatchesStatus=(order)=>{
     if(orderStatusFilter==="all")return true;
@@ -400,9 +457,6 @@
       ["cancelled", lang==="ru"?"Отменены":lang==="es"?"Cancelados":"Cancelled"],
     ];
 
-    const periodOptions = orderView==="history"
-      ? [["all",lang==="ru"?"За всё время":lang==="es"?"Todo el período":"All time"],["3months",lang==="ru"?"3 месяца":lang==="es"?"3 meses":"3 months"],["year",lang==="ru"?"Этот год":lang==="es"?"Este año":"This year"]]
-      : [["all",lang==="ru"?"Все даты":lang==="es"?"Todas las fechas":"All dates"],["today",lang==="ru"?"Сегодня":lang==="es"?"Hoy":"Today"],["week",lang==="ru"?"Эта неделя":lang==="es"?"Esta semana":"This week"],["month",lang==="ru"?"Этот месяц":lang==="es"?"Este mes":"This month"]];
 
     return `<section class="rw-orders-page">
       <header class="rw-orders-toolbar">
@@ -413,8 +467,8 @@
         <div class="rw-order-filters">
           <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}"></label>
           <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status"${openFilterMenu==="status"?"":" hidden"}>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
-          <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="period">${esc((periodOptions.find(([value])=>value===orderPeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="period"${openFilterMenu==="period"?"":" hidden"}>${periodOptions.map(([value,label])=>`<button type="button" class="${orderPeriodFilter===value?"active":""}" data-rw-order-period="${value}">${label}</button>`).join("")}</div></div>
-          ${(orderStatusFilter!=="all"||orderPeriodFilter!=="all"||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+          <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="order-period">${esc(periodLabel(orderDateFrom,orderDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="order-period"${openFilterMenu==="order-period"?"":" hidden"}>${calendarHtml("order",orderDateFrom,orderDateTo)}</div></div>
+          ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
       ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и недавно доставленные заказы. После подтверждения доставки заказ автоматически переносится в архив через 7 дней.":lang==="es"?"Los pedidos actuales y recién entregados permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente en 7 días.":"Current and recently delivered orders stay in Working. After delivery confirmation they move to Archive automatically after 7 days."}</p>`:""}
@@ -438,38 +492,38 @@
     if (!allNotes.length)
       return `<section class="rw-empty"><h3>${t("emptyNotes")}</h3></section>`;
 
-    const now=new Date();
-    const noteMatchesPeriod=(note)=>{
-      if(notePeriodFilter==="all")return true;
-      const raw=String(note.date||"").slice(0,10);
-      if(!raw)return false;
-      const d=new Date(`${raw}T12:00:00`);
-      if(notePeriodFilter==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
-      if(notePeriodFilter==="3months"){const start=new Date(now);start.setMonth(start.getMonth()-3);return d>=start&&d<=now}
-      if(notePeriodFilter==="year")return d.getFullYear()===now.getFullYear();
-      return true;
+    const noteOrder=note=>orders.find((item)=>String(item.id)===String(note.orderId));
+    const noteArchived=note=>{
+      const order=noteOrder(note);
+      if(order)return isArchivedOrder(order);
+      const confirmed=note.customerConfirmedAt||note.offlineProof?.receivedAt;
+      if(!confirmed)return false;
+      const d=new Date(confirmed);
+      return !Number.isNaN(d.getTime()) && Date.now()-d.getTime()>=7*24*60*60*1000;
     };
-    const periodOptions=[
-      ["all",lang==="ru"?"Все даты":lang==="es"?"Todas las fechas":"All dates"],
-      ["month",lang==="ru"?"Этот месяц":lang==="es"?"Este mes":"This month"],
-      ["3months",lang==="ru"?"3 месяца":lang==="es"?"3 meses":"3 months"],
-      ["year",lang==="ru"?"Этот год":lang==="es"?"Este año":"This year"],
-    ];
-    const notes = allNotes.filter((note) =>
-      noteMatchesPeriod(note) &&
-      (!noteQuery || noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))
+    const working=allNotes.filter(note=>!noteArchived(note));
+    const archive=allNotes.filter(noteArchived);
+    const source=noteView==="history"?archive:working;
+    const notes=source.filter(note=>
+      dateInRange(note.date,noteDateFrom,noteDateTo) &&
+      (!noteQuery||noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))
     );
 
     return `<section class="rw-note-library">
       <header class="rw-note-library-head"><div><span class="kicker">Panora</span><h3>${t("noteLibrary")}</h3><p>${t("noteLibraryHint")}</p></div></header>
+      <div class="rw-order-view-tabs rw-note-view-tabs" role="tablist">
+        <button type="button" class="${noteView==="active"?"active":""}" data-rw-note-view="active"><span>${lang==="ru"?"Рабочие":lang==="es"?"En curso":"Working"}</span><b>${working.length}</b></button>
+        <button type="button" class="${noteView==="history"?"active":""}" data-rw-note-view="history"><span>${lang==="ru"?"Архив":lang==="es"?"Archivo":"Archive"}</span><b>${archive.length}</b></button>
+      </div>
       <div class="rw-note-filters">
         <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}"></label>
-        <div class="rw-filter-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc((periodOptions.find(([value])=>value===notePeriodFilter)||periodOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${periodOptions.map(([value,label])=>`<button type="button" class="${notePeriodFilter===value?"active":""}" data-rw-note-period="${value}">${label}</button>`).join("")}</div></div>
-        ${(noteQuery||notePeriodFilter!=="all")?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
+        <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc(periodLabel(noteDateFrom,noteDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${calendarHtml("note",noteDateFrom,noteDateTo)}</div></div>
+        ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
+      ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и ещё 7 дней после подтверждения получения. Затем она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y 7 días más tras confirmar la recepción. Después pasa al archivo junto con el pedido.":"A delivery note stays in Working until delivery is complete and for 7 days after receipt confirmation, then moves to Archive with the order."}</p>`:""}
       <div class="rw-list">${notes.map((note) => {
-        const order = orders.find((item) => item.id === note.orderId);
-        const isMain = note.id === allNotes[0].id;
+        const order = noteOrder(note);
+        const isMain = note.id === working[0]?.id && noteView==="active";
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}">
       <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong><small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
@@ -571,6 +625,7 @@
       });
     }
     const history = operations.slice().reverse();
+    const filteredHistory = history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
     return `<section class="rw-finance">
       <header><div><span class="kicker">Panora</span><h3>${t("finance")}</h3></div><div class="rw-finance-debt"><span>${t("debt")}</span><strong>${portalMoney(Math.max(0, delivered - paid))}</strong></div></header>
       <div class="rw-finance-stats">
@@ -578,10 +633,10 @@
         <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
         <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
       </div>
-      <h4>${t("operationHistory")}</h4>
+      <div class="rw-finance-history-head"><h4>${t("operationHistory")}</h4><div class="rw-filter-menu rw-period-menu rw-payment-period"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div></div>
       ${
-        history.length
-          ? `<div class="rw-finance-history">${history
+        filteredHistory.length
+          ? `<div class="rw-finance-history">${filteredHistory
               .map(
                 (
                   operation,
@@ -660,6 +715,14 @@
           renderAccountModal();
         }),
     );
+    modal.querySelectorAll("[data-rw-note-view]").forEach(
+      (button) =>
+        (button.onclick = () => {
+          noteView = button.dataset.rwNoteView;
+          openFilterMenu = "";
+          renderAccountModal();
+        }),
+    );
     const closeFilterPanels=(except="")=>{
       modal.querySelectorAll("[data-rw-filter-panel]").forEach((panel)=>{if(panel.dataset.rwFilterPanel!==except)panel.hidden=true;});
       if(!except)openFilterMenu="";
@@ -675,8 +738,6 @@
       panel.hidden=!willOpen;
     });
     modal.querySelectorAll("button[data-rw-order-status]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderStatusFilter=button.dataset.rwOrderStatus; openFilterMenu=""; renderAccountModal(); });
-    modal.querySelectorAll("button[data-rw-order-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); orderPeriodFilter=button.dataset.rwOrderPeriod; openFilterMenu=""; renderAccountModal(); });
-    modal.querySelectorAll("button[data-rw-note-period]").forEach((button)=>button.onclick=(event)=>{event.stopPropagation(); notePeriodFilter=button.dataset.rwNotePeriod; openFilterMenu=""; renderAccountModal(); });
     modal.onclick=(event)=>{if(!event.target.closest(".rw-filter-menu"))closeFilterPanels();};
     const orderSearchInput = modal.querySelector("[data-rw-order-search]");
     if (orderSearchInput) orderSearchInput.oninput = () => {
@@ -687,10 +748,39 @@
         if (next) { next.focus(); next.setSelectionRange(next.value.length,next.value.length); }
       });
     };
-    modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderPeriodFilter="all"; orderSearch=""; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelector("[data-rw-order-filter-reset]")?.addEventListener("click",()=>{ orderStatusFilter="all"; orderSearch=""; orderDateFrom=""; orderDateTo=""; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelectorAll("[data-rw-cal-nav]").forEach(button=>button.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      const scope=button.dataset.rwCalScope;
+      calendarMonth[scope]=shiftMonth(calendarMonth[scope]||monthKey(getRange(scope)[0]||getRange(scope)[1]||isoToday()),Number(button.dataset.rwCalNav));
+      renderAccountModal();
+    });
+    modal.querySelectorAll("[data-rw-cal-date]").forEach(button=>button.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      const scope=button.dataset.rwCalScope,iso=button.dataset.rwCalDate;
+      let [from,to]=getRange(scope);
+      if(!from || (from&&to)){from=iso;to="";}
+      else if(iso<from){to=from;from=iso}else to=iso;
+      setRange(scope,from,to);
+      renderAccountModal();
+    });
+    modal.querySelectorAll("[data-rw-cal-quick]").forEach(button=>button.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      const scope=button.dataset.rwCalScope,key=button.dataset.rwCalQuick;
+      const today=isoToday();let from="",to="";
+      if(key==="today"){from=today;to=today}
+      else if(key==="week"){const d=new Date(`${today}T12:00:00`);d.setDate(d.getDate()-6);from=d.toISOString().slice(0,10);to=today}
+      else if(key==="month"){from=`${today.slice(0,7)}-01`;to=today}
+      else if(key==="year"){from=`${today.slice(0,4)}-01-01`;to=today}
+      setRange(scope,from,to);calendarMonth[scope]=monthKey(to||from||today);renderAccountModal();
+    });
+    modal.querySelectorAll("[data-rw-cal-clear]").forEach(button=>button.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      setRange(button.dataset.rwCalScope,"","");renderAccountModal();
+    });
     const search = modal.querySelector("[data-rw-note-search]");
     if (search) search.oninput = () => { noteQuery = search.value.trim(); renderAccountModal(); requestAnimationFrame(() => {const next=modal.querySelector("[data-rw-note-search]");if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}}); };
-    modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; notePeriodFilter="all"; openFilterMenu=""; renderAccountModal(); });
+    modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
     modal
       .querySelectorAll("[data-portal-close]")
       .forEach((button) => (button.onclick = closePanels));

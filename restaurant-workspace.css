@@ -572,3 +572,32 @@
 .rw-filter-menu:has(.rw-filter-popover:not([hidden])){z-index:90}
 .rw-filter-popover{z-index:100}
 .rw-note-library-head .rw-note-filters{display:none!important}
+
+/* Panora 5.04 · unified calendar periods + delivery note archive */
+.rw-calendar-popover{width:340px;right:0;left:auto;padding:10px}
+.rw-calendar{display:grid;gap:9px}
+.rw-cal-quick{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.rw-cal-quick button{min-height:32px;padding:5px 4px;border:0;border-radius:8px;background:#f1f4ef;color:#425048;font:700 11px Arial;cursor:pointer;text-align:center}
+.rw-cal-quick button:hover{background:#e4eee5;color:#285d3a}
+.rw-cal-head{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:5px}
+.rw-cal-head strong{text-align:center;text-transform:capitalize;font:700 14px Arial}
+.rw-cal-head button{height:34px;border:0;border-radius:8px;background:#f4f5f1;font-size:22px;cursor:pointer}
+.rw-cal-week,.rw-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.rw-cal-week span{text-align:center;color:#879087;font:700 10px Arial}
+.rw-cal-day,.rw-cal-empty{aspect-ratio:1;display:grid;place-items:center}
+.rw-cal-day{border:0;border-radius:999px;background:transparent;color:#253229;font:600 12px Arial;cursor:pointer}
+.rw-cal-day:hover{background:#edf3ed}
+.rw-cal-day.in-range{border-radius:8px;background:#edf4ee}
+.rw-cal-day.selected{background:#315d42;color:#fff}
+.rw-cal-range{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:7px;border-top:1px solid #e6e9e3;color:#5f675f;font-size:11px}
+.rw-cal-range button{border:0;background:transparent;color:#a04b3e;text-decoration:underline;cursor:pointer}
+.rw-note-view-tabs{margin-bottom:12px}
+.rw-finance-history-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin:18px 0 10px}
+.rw-finance-history-head h4{margin:0}
+.rw-payment-period{min-width:220px}
+@media(max-width:720px){
+  .rw-calendar-popover{position:fixed!important;left:10px!important;right:10px!important;bottom:76px!important;top:auto!important;width:auto!important;max-height:72vh;overflow:auto}
+  .rw-cal-quick{grid-template-columns:repeat(3,1fr)}
+  .rw-finance-history-head{align-items:stretch;flex-direction:column}
+  .rw-payment-period{width:100%;min-width:0}
+}
