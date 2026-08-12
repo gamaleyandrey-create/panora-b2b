@@ -452,7 +452,7 @@
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
   async function refreshRestaurantPricesDirect(){
     if(!ready||document.hidden)return false;
-    if(window.panoraMoneyEditing?.active)return false;
+    const activeMoneyInput=window.panoraMoneyEditing?.element||null;
 
     const rows=await request('restaurant_prices?select=restaurant_id,product_id,price,updated_at&order=restaurant_id.asc,product_id.asc');
     const priceMap={};
@@ -487,7 +487,17 @@
 
     window.dispatchEvent(new CustomEvent('panora:admin-prices-updated',{detail:{source:'supabase-direct',count:(rows||[]).length,changed}}));
     window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'restaurant-prices-direct',count:(rows||[]).length,changed}}));
-    if(typeof renderRestaurants==='function')renderRestaurants();
+
+    if(activeMoneyInput&&document.contains(activeMoneyInput)&&activeMoneyInput.matches?.('[data-price]')){
+      document.querySelectorAll('#restaurantCards input[data-price]').forEach(input=>{
+        if(input===activeMoneyInput)return;
+        const [rid,pid]=String(input.dataset.price||'').split(':');
+        const value=priceMap?.[rid]?.[pid];
+        if(value==null||!Number.isFinite(Number(value)))return;
+        const next=Number(value).toFixed(2);
+        if(input.value!==next)input.value=next;
+      });
+    }else if(typeof renderRestaurants==='function')renderRestaurants();
     else if(typeof renderCommerce==='function')renderCommerce();
     return changed;
   }

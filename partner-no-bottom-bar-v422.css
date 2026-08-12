@@ -1,0 +1,6 @@
+/* Panora 4.22 — partner main page without lower navigation bar. */
+@media(max-width:760px){
+  body:not(.admin-page) .mobile-nav{display:none!important}
+  body:not(.admin-page) .cart-fab{bottom:calc(16px + env(safe-area-inset-bottom))!important}
+  body:not(.admin-page) .how-section{padding-bottom:65px!important}
+}
