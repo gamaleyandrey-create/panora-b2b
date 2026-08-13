@@ -1418,8 +1418,7 @@
           <button type="button" class="rw-nav-logout" data-rw-logout><i aria-hidden="true">↪</i><span>${t("signOut")}</span></button>
         </nav>
         <main class="rw-content">${contentHtml()}</main>
-      </div>
-      <footer class="rw-footer"><button class="button button-ghost" data-rw-logout>${t("signOut")}</button><button class="button button-primary" data-portal-close>${t("close")}</button></footer>`;
+      </div>`;
     bind(modal);
     modal.querySelector("[data-rw-mobile-profile]")?.addEventListener("click", () => { activeTab = "profile"; renderAccountModal(); });
     if (activeTab === "notes" && noteToReveal) {

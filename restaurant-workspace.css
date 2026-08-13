@@ -1308,3 +1308,57 @@
 .rw-new-product-price>strong{color:#31563f;font-size:20px}
 .rw-new-wholesale-rule{display:block;margin:7px 0 4px;color:#56705e;font-size:11px;font-weight:700;line-height:1.35}
 .rw-new-limit-warning{padding:7px 9px;border-radius:9px;background:#fff3df;color:#8c552d;font-weight:600}
+
+
+/* Panora 5.46 · compact partner finance + simpler exit actions */
+@media(min-width:721px){
+  .restaurant-workspace .rw-nav{min-height:0!important;height:max-content!important;align-self:start!important}
+  .restaurant-workspace .rw-nav-logout{
+    margin-top:10px!important;
+    padding-top:14px!important;
+    border-top:1px solid #e1e4dd!important;
+    border-radius:0 0 10px 10px!important;
+  }
+}
+.restaurant-workspace .rw-footer{display:none!important}
+
+/* Finance: keep the same information but remove the large empty vertical gaps. */
+.rw-finance{gap:12px!important}
+.rw-finance-main-head{margin:0!important}
+.rw-finance-main-head>div{
+  display:grid!important;
+  grid-template-columns:auto minmax(230px,310px)!important;
+  grid-template-areas:"kicker kicker" "title debt"!important;
+  align-items:end!important;
+  gap:4px 22px!important;
+  width:min(760px,100%)!important;
+}
+.rw-finance-main-head .kicker{grid-area:kicker!important}
+.rw-finance-main-head h3{grid-area:title!important;margin:0!important}
+.rw-finance-main-head .rw-finance-debt{
+  grid-area:debt!important;
+  margin:0!important;
+  min-width:0!important;
+  padding:11px 15px!important;
+  background:#fff!important;
+  color:#17231b!important;
+  border:1px solid #d9dbd4!important;
+}
+.rw-finance-main-head .rw-finance-debt strong{color:#2f6a46!important}
+.rw-finance-summary-toggle{margin:0!important}
+.rw-current-debts{display:grid!important;gap:10px!important;margin-top:0!important}
+.rw-finance-view-tabs{margin:0!important}
+.rw-current-debts-head{margin:0!important}
+.rw-finance-filters-toggle{margin:0!important}
+.rw-debt-list{margin-top:0!important}
+
+@media(max-width:720px){
+  .rw-finance{gap:10px!important}
+  .rw-finance-main-head>div{
+    grid-template-columns:1fr!important;
+    grid-template-areas:"kicker" "title" "debt"!important;
+    gap:4px!important;
+    width:100%!important;
+  }
+  .rw-finance-main-head .rw-finance-debt{margin-top:5px!important}
+}
