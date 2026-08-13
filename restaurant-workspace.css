@@ -845,3 +845,10 @@
     height:18px!important;
   }
 }
+
+/* Panora 5.24 · partner note item subtotal and historical unit price */
+.rw-note-products{gap:2px!important;margin-top:8px!important}
+.rw-note-product-name{display:block!important;color:#68736b}
+.rw-note-product-math{display:block!important;color:#6f7971}
+.rw-note-product-math b{color:#58665d}
+.rw-note-product-math strong{color:#2e5d3f;font-weight:800}
