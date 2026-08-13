@@ -1418,3 +1418,56 @@
     padding-bottom:11px!important;
   }
 }
+
+
+/* Panora 5.48 · finance header composition */
+@media(min-width:721px){
+  /* Lift finance content toward the top of the workspace. */
+  .rw-finance{
+    transform:translateY(-18px)!important;
+  }
+
+  /* Debt card is compact: 290 × about 64 px. */
+  .rw-finance-main-head>div{
+    grid-template-columns:minmax(360px,1fr) 290px!important;
+    gap:16px!important;
+  }
+  .rw-finance-main-head .rw-finance-debt{
+    width:290px!important;
+    min-height:64px!important;
+    padding:7px 13px!important;
+  }
+  .rw-finance-main-head .rw-finance-debt span{
+    font-size:14px!important;
+    line-height:1.1!important;
+  }
+  .rw-finance-main-head .rw-finance-debt strong{
+    font-size:25px!important;
+    line-height:1!important;
+    margin-top:3px!important;
+  }
+
+  /* Put the debt card on the same visual row as Active / Archive.
+     The header keeps only the title; card is visually lowered to tabs row. */
+  .rw-finance-main-head .rw-finance-debt{
+    transform:translateY(91px)!important;
+  }
+  .rw-finance-view-tabs{
+    margin-top:0!important;
+  }
+
+  /* Counter belongs to the current-debts heading, not the far edge. */
+  .rw-current-debts-head{
+    justify-content:flex-start!important;
+    gap:10px!important;
+    width:max-content!important;
+  }
+  .rw-current-debts-head>strong{
+    margin-left:0!important;
+    flex:0 0 auto!important;
+  }
+}
+@media(max-width:720px){
+  .rw-finance{transform:none!important}
+  .rw-finance-main-head .rw-finance-debt{transform:none!important}
+}
