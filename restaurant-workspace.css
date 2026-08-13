@@ -1073,3 +1073,35 @@
     text-align:left;
   }
 }
+
+/* Panora 5.39 · quantity dropdowns + stable mobile product imagery */
+.rw-new-qty-select{display:block!important;width:min(260px,100%)!important}
+.rw-new-qty-select label{display:grid;grid-template-columns:auto 96px;align-items:center;gap:12px;width:100%}
+.rw-new-qty-select label>span{font-size:13px;color:#737d75}
+.rw-new-qty-select select{
+  width:96px;
+  min-height:50px;
+  padding:0 34px 0 14px;
+  border:1px solid #cbd7cd;
+  border-radius:12px;
+  background:#fff;
+  color:#18251d;
+  font:700 18px/1 Arial,sans-serif;
+}
+.rw-new-product-photo{aspect-ratio:1/1;contain:layout paint;background:#f0eee7}
+.rw-new-product-photo img{
+  display:block;
+  width:100%;
+  height:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  backface-visibility:hidden;
+  transform:translateZ(0);
+}
+@media(max-width:720px){
+  .rw-new-product-photo{min-height:0!important;aspect-ratio:1/1}
+  .rw-new-product-photo img{min-height:0!important}
+  .rw-new-qty-select{width:100%!important}
+  .rw-new-qty-select label{grid-template-columns:1fr 92px}
+  .rw-new-qty-select select{width:92px;min-height:46px}
+}

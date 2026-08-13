@@ -578,12 +578,15 @@
         ${products.map(product=>{
           const qty=Number(cart?.[product.id]||0);
           return `<article class="rw-new-product-card">
-            <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}"></div>
+            <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" height="320" loading="eager" decoding="async" data-rw-product-image></div>
             <div class="rw-new-product-body"><h4>${esc(product.name)}</h4><div class="rw-new-product-price">${portalMoney(product.price)} <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
-              <div class="rw-new-qty" data-rw-new-qty-wrap="${esc(product.id)}">
-                <button type="button" data-rw-new-qty="${esc(product.id)}" data-delta="-1" aria-label="−">−</button>
-                <strong>${qty}</strong>
-                <button type="button" data-rw-new-qty="${esc(product.id)}" data-delta="1" aria-label="+">+</button>
+              <div class="rw-new-qty rw-new-qty-select" data-rw-new-qty-wrap="${esc(product.id)}">
+                <label>
+                  <span>${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}</span>
+                  <select data-rw-new-qty-select="${esc(product.id)}" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
+                    ${Array.from({length:51},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
+                  </select>
+                </label>
               </div>
             </div>
           </article>`;
@@ -1225,12 +1228,11 @@
     modal
       .querySelector("[data-rw-logout]")
       ?.addEventListener("click", logoutAccount);
-    modal.querySelectorAll("[data-rw-new-qty]").forEach(button=>{
-      button.onclick=()=>{
-        const id=String(button.dataset.rwNewQty||"");
-        const delta=Number(button.dataset.delta||0);
-        if(!id||!delta)return;
-        const next=Math.max(0,Number(cart?.[id]||0)+delta);
+    modal.querySelectorAll("[data-rw-new-qty-select]").forEach(select=>{
+      select.onchange=()=>{
+        const id=String(select.dataset.rwNewQtySelect||"");
+        const next=Math.max(0,Number(select.value||0));
+        if(!id)return;
         if(next>0)cart[id]=next; else delete cart[id];
         localStorage.setItem("panora-cart",JSON.stringify(cart));
         try{renderProducts();renderCart()}catch{}
