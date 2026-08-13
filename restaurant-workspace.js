@@ -583,7 +583,7 @@
               <div class="rw-new-qty rw-new-qty-select" data-rw-new-qty-wrap="${esc(product.id)}">
                 <label>
                   <span>${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}</span>
-                  <select data-rw-new-qty-select="${esc(product.id)}" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
+                  <select data-rw-new-qty-select="${esc(product.id)}" data-rw-stable-select="qty" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
                     ${Array.from({length:51},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
                   </select>
                 </label>
@@ -593,9 +593,9 @@
         }).join("")}
       </div>
       <aside class="rw-new-cart">
-        <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong>${count} ${t("pieces")}</strong></div>
-        <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong>${portalMoney(total)}</strong></div>
-        <label><span>${t("delivery")}</span><select data-rw-new-date>
+        <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong data-rw-new-count>${count} ${t("pieces")}</strong></div>
+        <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
+        <label><span>${t("delivery")}</span><select data-rw-new-date data-rw-stable-select="date">
           ${options.length?options.map(option=>`<option value="${esc(option.value)}"${option.value===chosen?" selected":""}>${esc(option.label)}</option>`).join(""):`<option value="">${lang==="ru"?"Выберите дату в календаре":lang==="es"?"Elige una fecha":"Choose a date"}</option>`}
         </select></label>
         <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Перейти к оформлению":lang==="es"?"Continuar":"Continue"}</button>
@@ -1228,6 +1228,20 @@
     modal
       .querySelector("[data-rw-logout]")
       ?.addEventListener("click", logoutAccount);
+    const refreshNewOrderSummary=()=>{
+      const products=newOrderProducts();
+      const count=cartCount();
+      const total=products.reduce((sum,product)=>sum+Number(cart?.[product.id]||0)*product.price,0);
+      const countNode=modal.querySelector("[data-rw-new-count]");
+      const totalNode=modal.querySelector("[data-rw-new-total]");
+      const nextButton=modal.querySelector("[data-rw-new-open-cart]");
+      if(countNode)countNode.textContent=`${count} ${t("pieces")}`;
+      if(totalNode)totalNode.textContent=portalMoney(total);
+      if(nextButton){
+        nextButton.toggleAttribute("disabled",!count);
+        nextButton.classList.toggle("is-disabled",!count);
+      }
+    };
     modal.querySelectorAll("[data-rw-new-qty-select]").forEach(select=>{
       select.onchange=()=>{
         const id=String(select.dataset.rwNewQtySelect||"");
@@ -1235,8 +1249,10 @@
         if(!id)return;
         if(next>0)cart[id]=next; else delete cart[id];
         localStorage.setItem("panora-cart",JSON.stringify(cart));
+        // Keep the native select mounted. Rebuilding the whole modal here caused
+        // focus loss and visible jumps on desktop/mobile.
         try{renderProducts();renderCart()}catch{}
-        renderAccountModal();
+        refreshNewOrderSummary();
       };
     });
     const newDate=modal.querySelector("[data-rw-new-date]");

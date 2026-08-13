@@ -1105,3 +1105,49 @@
   .rw-new-qty-select label{grid-template-columns:1fr 92px}
   .rw-new-qty-select select{width:92px;min-height:46px}
 }
+
+/* Panora 5.40 · stable native dropdowns in New order */
+.rw-new-qty-select{
+  min-height:52px;
+  contain:layout;
+}
+.rw-new-qty-select label{
+  grid-template-columns:minmax(0,1fr) 104px!important;
+  min-height:52px;
+}
+.rw-new-qty-select select,
+.rw-new-cart select{
+  box-sizing:border-box;
+  appearance:auto;
+  -webkit-appearance:menulist;
+  font-variant-numeric:tabular-nums;
+  line-height:normal;
+  transform:none!important;
+  transition:border-color .12s ease,box-shadow .12s ease!important;
+}
+.rw-new-qty-select select{
+  width:104px!important;
+  min-width:104px!important;
+  max-width:104px!important;
+}
+.rw-new-qty-select select:focus,
+.rw-new-cart select:focus{
+  outline:3px solid rgba(54,94,69,.12);
+  outline-offset:1px;
+  border-color:#7f9d86;
+}
+.rw-new-open-cart.is-disabled,
+.rw-new-cart .button:disabled{
+  opacity:.45;
+  pointer-events:none;
+}
+@media(max-width:720px){
+  .rw-new-qty-select label{
+    grid-template-columns:minmax(0,1fr) 96px!important;
+  }
+  .rw-new-qty-select select{
+    width:96px!important;
+    min-width:96px!important;
+    max-width:96px!important;
+  }
+}
