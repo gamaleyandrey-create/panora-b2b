@@ -852,3 +852,43 @@
 .rw-note-product-math{display:block!important;color:#6f7971}
 .rw-note-product-math b{color:#58665d}
 .rw-note-product-math strong{color:#2e5d3f;font-weight:800}
+
+/* Panora 5.25 · consistent navigation hover cues */
+.rw-debt-item[data-rw-open-debt-note],
+.rw-finance-archive-item[data-rw-open-debt-note]{
+  cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+.rw-finance-archive-item[data-rw-open-debt-note]:focus-visible,
+.rw-debt-item[data-rw-open-debt-note]:focus-visible{
+  outline:3px solid rgba(55,103,72,.14);
+  outline-offset:2px;
+}
+.rw-linked-document,.rw-linked-order{
+  border-radius:6px;
+  transition:background-color .14s ease,color .14s ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .rw-debt-item[data-rw-open-debt-note]:hover,
+  .rw-finance-archive-item[data-rw-open-debt-note]:hover{
+    background:#f7faf6;
+    border-color:#afc5b4;
+    box-shadow:0 4px 14px rgba(48,79,59,.07);
+  }
+  .rw-linked-document:hover,.rw-linked-order:hover{
+    padding-left:4px;
+    padding-right:4px;
+    margin-left:-4px;
+    margin-right:-4px;
+    background:#eef5ee;
+    color:#2f5d40;
+    text-decoration:none;
+  }
+}
+/* Touch devices keep cards visually stable; tap navigation still works. */
+@media (hover:none){
+  .rw-debt-item[data-rw-open-debt-note],
+  .rw-finance-archive-item[data-rw-open-debt-note]{
+    box-shadow:none;
+  }
+}

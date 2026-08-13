@@ -827,7 +827,7 @@
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-finance-archive-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
-          ${archivedFinance.length?`<div class="rw-finance-archive-list">${archivedFinance.map(({note,total,paidAmount,closedAt})=>`<article class="rw-finance-archive-item" data-rw-finance-archive-text="${esc(noteNumber(note).toLowerCase())}">
+          ${archivedFinance.length?`<div class="rw-finance-archive-list">${archivedFinance.map(({note,total,paidAmount,closedAt})=>`<article class="rw-finance-archive-item" data-rw-finance-archive-text="${esc(noteNumber(note).toLowerCase())}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link">
             <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small></div>
             <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(total)}</b></div>
             <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
