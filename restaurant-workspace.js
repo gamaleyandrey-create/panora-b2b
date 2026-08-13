@@ -924,7 +924,42 @@
     const products = PRODUCTS.filter(
       (product) => account.prices?.[product.id] != null,
     );
-    return `<section class="rw-prices"><h3>${t("prices")}</h3>${products.map((product) => `<div><span>${esc(itemName(product.id))}</span><strong>${portalMoney(account.prices[product.id])}</strong></div>`).join("")}</section>`;
+    const productDescription = (product) => {
+      const fromText = product?.text?.[lang]?.[1];
+      if (fromText) return String(fromText);
+      const managed = (() => {
+        try {
+          const list = JSON.parse(localStorage.getItem("panora-products") || "[]");
+          return Array.isArray(list) ? list.find(item => String(item.id) === String(product.id)) : null;
+        } catch (_) { return null; }
+      })();
+      return String(
+        managed?.descriptions?.[lang] ||
+        managed?.descriptions?.ru ||
+        ""
+      );
+    };
+    return `<section class="rw-prices rw-profile-prices">
+      <header class="rw-profile-prices-head">
+        <div><h3>${t("prices")}</h3><p>${lang==="ru"?"Ваши действующие цены на продукцию Panora.":lang==="es"?"Tus precios actuales de productos Panora.":"Your current Panora product prices."}</p></div>
+      </header>
+      <div class="rw-profile-price-list">
+        ${products.map((product) => {
+          const description = productDescription(product);
+          const image = product.image || "icon.svg";
+          const weight = Number(product.weight || 0);
+          return `<article class="rw-profile-price-row">
+            <div class="rw-profile-price-photo"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="lazy"></div>
+            <div class="rw-profile-price-copy">
+              <strong>${esc(itemName(product.id))}</strong>
+              ${description ? `<p>${esc(description)}</p>` : ""}
+              ${weight ? `<small>${weight} г · ${lang==="ru"?"цена за 1 шт.":lang==="es"?"precio por 1 ud.":"price per 1 pc."}</small>` : `<small>${lang==="ru"?"Цена за 1 шт.":lang==="es"?"Precio por 1 ud.":"Price per 1 pc."}</small>`}
+            </div>
+            <div class="rw-profile-price-value"><span>${lang==="ru"?"Ваша цена":lang==="es"?"Tu precio":"Your price"}</span><strong>${portalMoney(account.prices[product.id])}</strong></div>
+          </article>`;
+        }).join("")}
+      </div>
+    </section>`;
   }
   function contentHtml() {
     if (activeTab === "home") return homeHtml();
