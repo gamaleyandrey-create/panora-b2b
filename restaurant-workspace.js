@@ -1453,6 +1453,17 @@
     renderAccountModal();
     openPanel(document.querySelector("#profileModal"));
   };
+  window.panoraOpenPartnerOrder = (orderId) => {
+    if (!account) {
+      openPanel(document.querySelector("#profileModal"));
+      return;
+    }
+    activeTab = "orders";
+    orderView = "active";
+    orderToReveal = String(orderId || "");
+    renderAccountModal();
+    openPanel(document.querySelector("#profileModal"));
+  };
   window.panoraOpenPartnerProfile = () => {
     if (!account) {
       openPanel(document.querySelector("#profileModal"));

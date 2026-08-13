@@ -454,10 +454,19 @@
          Keep them after success so the next order is prefilled even while a
          delayed profile RPC is still being reconciled with the cloud. */
       saveCheckoutProfile();
-      cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();renderAccountModal();const sentMessage=labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`);
+      cart={};localStorage.removeItem('panora-cart');await window.panoraFormDrafts?.confirmSaved?.(form);form.reset();closePanels();renderProducts();renderCart();const sentMessage=labels(`Заказ PN-${String(saved.order_number||created.order_number).padStart(4,'0')} отправлен пекарне`,`Order PN-${String(saved.order_number||created.order_number).padStart(4,'0')} sent`,`Pedido PN-${String(saved.order_number||created.order_number).padStart(4,'0')} enviado`);
       showToast(sentMessage);
       state('ok',labels('Синхронизировано','Synced','Sincronizado'));
-      loadAll(true).catch(error=>console.warn('Panora order refresh',error));
+      try{
+        await loadAll(true);
+      }catch(refreshError){
+        console.warn('Panora order refresh',refreshError);
+      }
+      // Stay inside the partner workflow after checkout: show the order that
+      // has just been created instead of exposing the public home page.
+      if(window.panoraOpenPartnerOrder)window.panoraOpenPartnerOrder(id);
+      else if(window.panoraOpenPartnerOrders)window.panoraOpenPartnerOrders();
+      else{renderAccountModal();openPanel(document.querySelector('#profileModal'))}
     }catch(error){
       if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error)){
         clearBrokenSession(error);
