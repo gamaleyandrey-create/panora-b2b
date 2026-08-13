@@ -45,10 +45,10 @@ try{
  const managedProducts=JSON.parse(localStorage.getItem('panora-public-products')||localStorage.getItem('panora-products')||'[]');
  if(managedProducts.length){
   const builtIns=PRODUCTS.slice(),managedById=new Map(managedProducts.map(p=>[p.id,p])),combined=[...builtIns.map(base=>managedById.get(base.id)||base),...managedProducts.filter(p=>!builtIns.some(base=>base.id===p.id))];
-  PRODUCTS.splice(0,PRODUCTS.length,...combined.filter(p=>p.active!==false).map(p=>{const base=builtIns.find(x=>x.id===p.id)||p;return{id:p.id,category:'yeastfree',price:Number(p.basePrice??p.price??0),pieces:12,weight:Number(p.weight||base.weight||750),image:p.image||base.image||'icon.svg',gallery:Array.isArray(p.gallery)?p.gallery:[],bg:base.bg||'#e9dfca',text:p.text||{ru:[p.names?.ru||p.id,p.descriptions?.ru||'',p.names?.ru||p.id],en:[p.names?.en||p.names?.ru||p.id,p.descriptions?.en||p.descriptions?.ru||'',p.names?.en||p.names?.ru||p.id],es:[p.names?.es||p.names?.ru||p.id,p.descriptions?.es||p.descriptions?.ru||'',p.names?.es||p.names?.ru||p.id]}}}));
+  PRODUCTS.splice(0,PRODUCTS.length,...combined.filter(p=>p.active!==false).map(p=>{const base=builtIns.find(x=>x.id===p.id)||p;const retailPrice=Number(p.basePrice??p.retailPrice??p.price??0),wholesaleMinQty=Math.max(1,Number(p.wholesaleMinQty||12));return{id:p.id,category:'yeastfree',price:retailPrice,retailPrice,wholesalePrice:retailPrice,wholesaleMinQty,pieces:wholesaleMinQty,weight:Number(p.weight||base.weight||750),image:p.image||base.image||'icon.svg',gallery:Array.isArray(p.gallery)?p.gallery:[],bg:base.bg||'#e9dfca',text:p.text||{ru:[p.names?.ru||p.id,p.descriptions?.ru||'',p.names?.ru||p.id],en:[p.names?.en||p.names?.ru||p.id,p.descriptions?.en||p.descriptions?.ru||'',p.names?.en||p.names?.ru||p.id],es:[p.names?.es||p.names?.ru||p.id,p.descriptions?.es||p.descriptions?.ru||'',p.names?.es||p.names?.ru||p.id]}}}));
  }
 }catch(error){console.warn('Product cards could not be loaded',error)}
-const MIN_PIECES=12,MAX_PIECES_PER_PRODUCT=200,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48;let SHOW_PRICES=true;
+const MIN_PIECES=1,MAX_PIECES_PER_PRODUCT=200,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48;let SHOW_PRICES=true;
 const CONTACTS={email:'gamaley1@gmail.com',whatsapp:'34611187640',telegram:'anastasiiagamalei'};
 const $=s=>document.querySelector(s);
 let lang=localStorage.getItem('panora-lang')||(['ru','en','es'].includes(navigator.language.slice(0,2))?navigator.language.slice(0,2):'en');
@@ -82,12 +82,67 @@ function availablePieces(id){const plan=productionPlans().find(p=>p.open&&p.bake
 function catalogAvailablePieces(id){const plans=productionPlans(),now=new Date();if(!plans.length)return MAX_PIECES_PER_PRODUCT;return plans.some(p=>p.open&&p.product===id&&new Date(p.cutoff)>now)?MAX_PIECES_PER_PRODUCT:0}
 function qtyControl(id,qty){const max=catalogAvailablePieces(id);if(max===0)return `<div class="sold-out"><strong>${lang==='ru'?'Нет ближайшей выпечки':lang==='es'?'No hay próximo horneado':'No upcoming bake'}</strong><span>${lang==='ru'?'Следите за расписанием':lang==='es'?'Consulta el calendario':'Check the schedule'}</span></div>`;const safeQty=Math.min(qty,max),options=Array.from({length:max+1},(_,n)=>`<option value="${n}" ${n===safeQty?'selected':''}>${piecesLabel(n)}</option>`).join('');return `<label class="piece-select"><select aria-label="${lang==='ru'?'Количество, шт.':lang==='es'?'Cantidad, uds.':'Quantity, pcs'}" data-qty-select="${id}">${options}</select></label>`}
 function privatePriceText(){return lang==='ru'?'Цена в личном кабинете':lang==='es'?'Precio en la cuenta personal':'Price in your account'}
-function renderProducts(){const visible=activeCategory==='all'?PRODUCTS:PRODUCTS.filter(p=>p.category===activeCategory);$('#productGrid').innerHTML=visible.map(p=>{const x=pText(p),qty=cart[p.id]||0,priceKind=account?tr('catalog.wholesalePrice'):tr('catalog.retailPrice');const gallery=[p.image,...(Array.isArray(p.gallery)?p.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);return `<article class="product-card"><div class="product-image" style="--product-bg:${p.bg}"><img data-product-main="${p.id}" src="${p.image}" alt="${x[0]}" loading="lazy"><span class="product-tag">${x[2]}</span></div>${gallery.length>1?`<div class="product-gallery-thumbs">${gallery.map((src,index)=>`<button type="button" class="${index===0?'active':''}" data-product-thumb="${p.id}" data-product-src="${src}" aria-label="${x[0]} ${index+1}"><img src="${src}" alt=""></button>`).join('')}</div>`:""}<div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p><div class="product-meta"><span>${weight(p)} / ${tr('catalog.piece')}</span><span>${unit(p)}</span></div><div class="product-buy"><div class="price private-price"><small class="price-kind">${priceKind}</small><strong>${SHOW_PRICES?money(p.price):privatePriceText()}</strong></div>${qtyControl(p.id,qty)}</div></div></article>`}).join('');bindQty()}
+function wholesaleMinQty(p){return Math.max(1,Number(p?.wholesaleMinQty||12))}
+function retailUnitPrice(p){return Number(p?.retailPrice ?? p?.basePrice ?? p?.price ?? 0)}
+function wholesaleUnitPrice(p){return Number(p?.wholesalePrice ?? (account?.prices?.[p?.id]) ?? p?.price ?? retailUnitPrice(p))}
+function effectiveUnitPrice(p,qty){
+ const retail=retailUnitPrice(p);
+ if(!account)return retail;
+ return Number(qty||0)>=wholesaleMinQty(p)?wholesaleUnitPrice(p):retail;
+}
+function tierWarningText(p,qty){
+ if(!account||!qty||qty>=wholesaleMinQty(p))return '';
+ const min=wholesaleMinQty(p),retail=retailUnitPrice(p),wholesale=wholesaleUnitPrice(p);
+ return lang==='ru'
+  ?`Выбрано меньше ${min} шт. — применяется розничная цена ${money(retail)}/шт. Оптовая ${money(wholesale)}/шт. действует от ${min} шт.`
+  :lang==='es'
+   ?`Menos de ${min} uds.: se aplica el precio minorista ${money(retail)}/ud. El mayorista ${money(wholesale)}/ud. se aplica desde ${min} uds.`
+   :`Below ${min} pcs: retail price ${money(retail)}/pc applies. Wholesale ${money(wholesale)}/pc applies from ${min} pcs.`;
+}
+function updateProductTierUI(id,qty){
+ const p=PRODUCTS.find(item=>String(item.id)===String(id));if(!p)return;
+ document.querySelectorAll(`[data-tier-product="${CSS.escape(String(id))}"]`).forEach(card=>{
+  const price=card.querySelector('[data-tier-price]'),kind=card.querySelector('[data-tier-kind]'),warning=card.querySelector('[data-tier-warning]');
+  const min=wholesaleMinQty(p),isWholesale=Boolean(account&&Number(qty)>=min);
+  if(price)price.textContent=SHOW_PRICES?money(effectiveUnitPrice(p,qty)):privatePriceText();
+  if(kind)kind.textContent=account?(isWholesale?tr('catalog.wholesalePrice'):tr('catalog.retailPrice')):tr('catalog.retailPrice');
+  if(warning){const text=tierWarningText(p,qty);warning.textContent=text;warning.hidden=!text}
+ });
+}
+function renderProducts(){
+ const visible=activeCategory==='all'?PRODUCTS:PRODUCTS.filter(p=>p.category===activeCategory);
+ $('#productGrid').innerHTML=visible.map(p=>{
+  const x=pText(p),qty=cart[p.id]||0,min=wholesaleMinQty(p),unitPrice=effectiveUnitPrice(p,qty);
+  const isWholesale=Boolean(account&&qty>=min);
+  const priceKind=account?(isWholesale?tr('catalog.wholesalePrice'):tr('catalog.retailPrice')):tr('catalog.retailPrice');
+  const warning=tierWarningText(p,qty);
+  const threshold=account?(lang==='ru'?`Оптовая цена от ${min} шт.`:lang==='es'?`Precio mayorista desde ${min} uds.`:`Wholesale from ${min} pcs`):'';
+  const gallery=[p.image,...(Array.isArray(p.gallery)?p.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
+  return `<article class="product-card" data-tier-product="${p.id}">
+   <div class="product-image" style="--product-bg:${p.bg}"><img data-product-main="${p.id}" src="${p.image}" alt="${x[0]}" loading="lazy"><span class="product-tag">${x[2]}</span></div>
+   ${gallery.length>1?`<div class="product-gallery-thumbs">${gallery.map((src,index)=>`<button type="button" class="${index===0?'active':''}" data-product-thumb="${p.id}" data-product-src="${src}" aria-label="${x[0]} ${index+1}"><img src="${src}" alt=""></button>`).join('')}</div>`:""}
+   <div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p>
+   <div class="product-meta"><span>${weight(p)} / ${tr('catalog.piece')}</span><span>${unit(p)}</span></div>
+   ${threshold?`<small class="product-wholesale-threshold">${threshold}</small>`:""}
+   <div class="product-buy"><div class="price private-price"><small class="price-kind" data-tier-kind>${priceKind}</small><strong data-tier-price>${SHOW_PRICES?money(unitPrice):privatePriceText()}</strong></div>${qtyControl(p.id,qty)}</div>
+   <p class="product-tier-warning" data-tier-warning${warning?"":" hidden"}>${warning}</p>
+   </div></article>`;
+ }).join('');
+ bindQty()
+}
 function bindQty(){document.querySelectorAll('[data-qty-select]').forEach(s=>s.onchange=()=>setQty(s.dataset.qtySelect,Number(s.value)));document.querySelectorAll('[data-product-thumb]').forEach(button=>button.onclick=()=>{const id=button.dataset.productThumb,main=document.querySelector(`[data-product-main="${CSS.escape(id)}"]`);if(main)main.src=button.dataset.productSrc||main.src;button.closest('.product-card')?.querySelectorAll('[data-product-thumb]').forEach(b=>b.classList.toggle('active',b===button))})}
-function setQty(id,qty){qty=Math.min(qty,catalogAvailablePieces(id));if(qty>0)cart[id]=qty;else delete cart[id];localStorage.setItem('panora-cart',JSON.stringify(cart));document.querySelectorAll('[data-qty-select]').forEach(select=>{if(select.dataset.qtySelect===id&&Number(select.value)!==qty)select.value=String(qty)});syncCartDeliveryDate();renderCart();if(qty>0)showToast(tr('cart.added'))}
+function setQty(id,qty){qty=Math.min(qty,catalogAvailablePieces(id));if(qty>0)cart[id]=qty;else delete cart[id];localStorage.setItem('panora-cart',JSON.stringify(cart));document.querySelectorAll('[data-qty-select]').forEach(select=>{if(select.dataset.qtySelect===id&&Number(select.value)!==qty)select.value=String(qty)});updateProductTierUI(id,qty);syncCartDeliveryDate();renderCart();if(qty>0)showToast(tr('cart.added'))}
 function changeQty(id,delta){cart[id]=Math.max(0,(cart[id]||0)+delta);if(!cart[id])delete cart[id];localStorage.setItem('panora-cart',JSON.stringify(cart));renderProducts();renderCart();if(delta>0)showToast(tr('cart.added'))}
-function cartData(){const rows=PRODUCTS.filter(p=>cart[p.id]).map(p=>({...p,quantityPieces:cart[p.id],total:p.price*cart[p.id]}));return{rows,total:rows.reduce((s,p)=>s+p.total,0),count:rows.reduce((s,p)=>s+p.quantityPieces,0)}}
-function renderCart(){const{rows,total,count}=cartData();['cartTotal','subtotal','summaryTotal','checkoutTotal'].forEach(id=>$('#'+id).textContent=SHOW_PRICES?money(total):'—');$('#cartCount').textContent=count;$('#cartButton').classList.toggle('visible',count>0);$('#cartEmpty').style.display=count?'none':'block';$('#cartSummary').style.display=count?'block':'none';$('#cartItems').innerHTML=rows.map(p=>`<div class="cart-item"><div class="cart-thumb"><span></span></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)}</small>${qtyControl(p.id,p.quantityPieces)}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`).join('');bindQty();$('#minimumHint').style.display=count&&count<MIN_PIECES?'block':'none';$('#minimumHint').textContent=lang==='ru'?`Минимальный заказ — 12 шт. Добавьте ещё ${MIN_PIECES-count} шт.`:lang==='es'?`Pedido mínimo: 12 uds. Añade ${MIN_PIECES-count} uds.`:`Minimum order: 12 pcs. Add ${MIN_PIECES-count} more.`;$('#checkoutButton').disabled=count<MIN_PIECES}
+function cartData(){const rows=PRODUCTS.filter(p=>cart[p.id]).map(p=>{const quantityPieces=Number(cart[p.id]||0),unitPrice=effectiveUnitPrice(p,quantityPieces);return{...p,quantityPieces,unitPrice,total:unitPrice*quantityPieces}});return{rows,total:rows.reduce((s,p)=>s+p.total,0),count:rows.reduce((s,p)=>s+p.quantityPieces,0)}}
+function renderCart(){
+ const{rows,total,count}=cartData();
+ ['cartTotal','subtotal','summaryTotal','checkoutTotal'].forEach(id=>$('#'+id).textContent=SHOW_PRICES?money(total):'—');
+ $('#cartCount').textContent=count;$('#cartButton').classList.toggle('visible',count>0);$('#cartEmpty').style.display=count?'none':'block';$('#cartSummary').style.display=count?'block':'none';
+ $('#cartItems').innerHTML=rows.map(p=>{const warning=tierWarningText(p,p.quantityPieces),min=wholesaleMinQty(p),wholesale=account&&p.quantityPieces>=min;return `<div class="cart-item"><div class="cart-thumb"><span></span></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)} · ${wholesale?(lang==='ru'?'оптовая цена':lang==='es'?'precio mayorista':'wholesale price'):(lang==='ru'?'розничная цена':lang==='es'?'precio minorista':'retail price')} ${money(p.unitPrice)}/шт.</small>${qtyControl(p.id,p.quantityPieces)}${warning?`<p class="cart-tier-warning">${warning}</p>`:""}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`}).join('');
+ bindQty();
+ $('#minimumHint').style.display='none';
+ $('#checkoutButton').disabled=count<1
+}
 function openPanel(panel){$('#overlay').classList.add('open');panel.classList.add('open');panel.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
 function closePanels(){document.querySelectorAll('.drawer,.modal').forEach(p=>{p.classList.remove('open');p.setAttribute('aria-hidden','true')});$('#overlay').classList.remove('open');document.body.style.overflow=''}
 function showToast(text){const e=$('#toast');e.textContent=text;e.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>e.classList.remove('show'),1800)}
