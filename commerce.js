@@ -416,12 +416,12 @@ function renderOrders() {
   const statusSelect=document.querySelector('#orderStatusFilter');
   if(statusSelect){
     statusSelect.value=orderStatusFilter;
-    statusSelect.onchange=()=>{orderStatusFilter=statusSelect.value;renderOrders()};
+    statusSelect.onchange=()=>{orderStatusFilter=statusSelect.value;requestAnimationFrame(()=>renderOrders())};
   }
   const select=document.querySelector('#orderPartnerTypeFilter');
   if(select){
     select.value=orderPartnerTypeFilter;
-    select.onchange=()=>{orderPartnerTypeFilter=select.value;renderOrders()};
+    select.onchange=()=>{orderPartnerTypeFilter=select.value;requestAnimationFrame(()=>renderOrders())};
   }
   const partnerSelect=document.querySelector('#orderPartnerNameFilter');
   if(partnerSelect){
@@ -449,8 +449,8 @@ function renderOrders() {
   }
   const dateFrom=document.querySelector('#orderDateFromFilter');
   const dateTo=document.querySelector('#orderDateToFilter');
-  if(dateFrom){dateFrom.value=orderDateFromFilter;dateFrom.onchange=()=>{orderDateFromFilter=dateFrom.value;renderOrders()}}
-  if(dateTo){dateTo.value=orderDateToFilter;dateTo.onchange=()=>{orderDateToFilter=dateTo.value;renderOrders()}}
+  if(dateFrom){dateFrom.value=orderDateFromFilter;dateFrom.onchange=()=>{orderDateFromFilter=dateFrom.value;requestAnimationFrame(()=>renderOrders())}}
+  if(dateTo){dateTo.value=orderDateToFilter;dateTo.onchange=()=>{orderDateToFilter=dateTo.value;requestAnimationFrame(()=>renderOrders())}}
   const reset=document.querySelector('#orderFiltersReset');
   if(reset)reset.onclick=()=>{orderStatusFilter='all';orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
 

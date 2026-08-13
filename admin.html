@@ -111,7 +111,7 @@
         <button type="button" id="cancelBakeDay" hidden aria-hidden="true" tabindex="-1">Отменить день выпечки</button>
         <div class="plan-navigation">
           <div class="week-navigation"><button id="prevWeek">← Предыдущая неделя</button><strong id="periodLabel"></strong><button id="nextWeek">Следующая неделя →</button><button id="today">Текущая неделя</button></div>
-          <div class="date-jump"><label><span id="planDateJumpLabel">Выбрать дату</span><input id="planDateJump" type="date"></label><button id="goToPlanDate">Показать неделю</button></div>
+          <div class="date-jump"><label><span id="planDateJumpLabel">Выбрать дату</span><input id="planDateJump" data-panora-no-draft="1" type="date"></label><button id="goToPlanDate">Показать неделю</button></div>
         </div>
         <div class="summary-grid"><article><span data-t="planned">Запланировано</span><strong id="plannedPieces">0 шт.</strong></article><article><span data-t="ordered">Заказано</span><strong id="orderedPieces">0 шт.</strong></article><article><span data-t="reserve">Свободно</span><strong id="freePieces">0 шт.</strong></article></div>
         <div id="planList" class="plan-list"></div>
@@ -142,10 +142,10 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Заказы и отгрузки</h2><p>Заказ ведётся в штуках. При отгрузке создаётся накладная и задолженность.</p></div><div class="head-actions"><button class="secondary order-filter-toggle" id="orderFilterToggle" type="button" aria-expanded="false" aria-controls="orderFilterPanel"><span aria-hidden="true">☷</span><span>Фильтр</span><b id="orderFilterCount" hidden>0</b></button><button class="secondary" id="enableAdminNotifications">Включить уведомления</button><button class="primary" id="addOrder">+ Новый заказ</button></div></div><section class="order-filter-card" id="orderFilterPanel" aria-label="Фильтр заказов и отгрузок" hidden>
       <div class="order-filter-head"><div><strong>Фильтр</strong><span>Партнёр и период поставки</span></div><div class="order-filter-head-actions"><button type="button" class="order-filter-reset" id="orderFiltersReset">Сбросить</button><button type="button" class="order-filter-close" id="orderFilterClose" aria-label="Закрыть">×</button></div></div>
       <div class="order-partner-filter">
-        <label class="order-status-filter-field"><span>Статус заказа</span><select id="orderStatusFilter"><option value="all">Все статусы</option><option value="new">Новые</option><option value="confirmed">Подтверждённые</option><option value="shipped">Отгруженные</option><option value="completed">Завершённые</option></select></label>
-        <label><span>Тип партнёра</span><select id="orderPartnerTypeFilter"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label>
-        <label><span>Партнёр</span><select id="orderPartnerNameFilter"><option value="all">Все партнёры</option></select></label>
-        <div class="order-date-range"><label><span>Поставка с</span><input id="orderDateFromFilter" type="date"></label><label><span>по</span><input id="orderDateToFilter" type="date"></label></div>
+        <label class="order-status-filter-field"><span>Статус заказа</span><select id="orderStatusFilter" data-panora-no-draft="1"><option value="all">Все статусы</option><option value="new">Новые</option><option value="confirmed">Подтверждённые</option><option value="shipped">Отгруженные</option><option value="completed">Завершённые</option></select></label>
+        <label><span>Тип партнёра</span><select id="orderPartnerTypeFilter" data-panora-no-draft="1"><option value="all">Все типы</option><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label>
+        <label><span>Партнёр</span><select id="orderPartnerNameFilter" data-panora-no-draft="1"><option value="all">Все партнёры</option></select></label>
+        <div class="order-date-range"><label><span>Поставка с</span><input id="orderDateFromFilter" data-panora-no-draft="1" type="date"></label><label><span>по</span><input id="orderDateToFilter" data-panora-no-draft="1" type="date"></label></div>
       </div>
       <strong id="orderPartnerFilterSummary">Все заказы</strong>
     </section>
@@ -192,7 +192,7 @@
 <script src="admin.js?v=3380"></script>
 <script src="stable-price-inputs-v42.js?v=4200"></script>
 <script src="money-edit-lock-v43.js?v=5280"></script>
-<script src="commerce.js?v=5330"></script>
+<script src="commerce.js?v=5420"></script>
 <script src="desktop-order-date-filter-v28.js?v=2800"></script>
 <script src="invoice-settings.js?v=3380"></script>
 <script src="invoice-tax-display.js?v=3380"></script>
@@ -215,7 +215,7 @@
 <script src="order-notifications.js?v=2500"></script>
 <script src="order-communication.js?v=3388"></script>
 <script src="audit-log.js?v=3380"></script>
-<script src="input-stability.js?v=5400"></script>
+<script src="input-stability.js?v=5420"></script>
 <script src="cloud-sync.js?v=5370"></script>
 <script src="recipe-percent.js?v=3380"></script>
 <script src="daily-order-summary.js?v=3380"></script>

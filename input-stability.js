@@ -12,7 +12,7 @@
   // Direct partner prices have their own explicit-save draft model.
   // Exclude them from the generic form-draft engine, otherwise an old form draft
   // can overwrite the authoritative Supabase value when the field receives focus.
-  const controls = 'input:not([data-direct-price]):not([type="password"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),textarea,select:not([data-rw-stable-select]),[contenteditable="true"]';
+  const controls = 'input:not([data-direct-price]):not([data-panora-no-draft]):not([data-rw-stable-input]):not([type="password"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),textarea:not([data-panora-no-draft]),select:not([data-rw-stable-select]):not([data-panora-no-draft]),[contenteditable="true"]:not([data-panora-no-draft])';
   const timers = new Map();
   const requestVersion = new Map();
   const hydrated = new Set();
@@ -36,7 +36,15 @@
   };
   const role = () => location.pathname.includes("admin") ? "bakery" : location.pathname.includes("confirm") ? "confirmation" : "partner";
   const esc = (value) => globalThis.CSS?.escape ? CSS.escape(value) : String(value).replace(/["\\]/g, "\\$&");
-  const isEditable = (node) => node instanceof Element && node.matches(controls) && !SKIP_TYPES.has(String(node.type || "").toLowerCase()) && !node.disabled;
+  const isTransient = (node) => {
+    if (!(node instanceof Element)) return false;
+    const id = String(node.id || "").toLowerCase();
+    const dataKeys = Object.keys(node.dataset || {}).map(key => key.toLowerCase());
+    return node.matches?.('[type="search"],[data-panora-no-draft],[data-rw-stable-input],[data-rw-stable-select],[data-qty-select]') ||
+      /(?:search|filter)/.test(id) ||
+      dataKeys.some(key => /(?:search|filter)/.test(key));
+  };
+  const isEditable = (node) => node instanceof Element && node.matches(controls) && !isTransient(node) && !SKIP_TYPES.has(String(node.type || "").toLowerCase()) && !node.disabled;
   const formOf = (field) => field.closest("form") || field.closest("dialog,[role=dialog],section,article,main") || document.body;
   const formId = (form) => form.id || form.getAttribute?.("data-panora-form") || form.getAttribute?.("data-rw-profile-form") !== null && "partner-profile" || stablePath(form);
   const identityData = (node) => {
@@ -102,6 +110,10 @@
   };
   const applyValue = (field, saved) => {
     if (!saved || field.dataset.panoraApplying === "1") return;
+    // Never overwrite the value underneath the user's cursor. This was the
+    // main source of "field throws me out / value jumps back" behaviour when
+    // MutationObserver or a cloud refresh ran during typing.
+    if (document.activeElement === field || field.dataset.panoraLiveEditing === "1") return;
     field.dataset.panoraApplying = "1";
     try {
       if (field.type === "checkbox" || field.type === "radio") field.checked = Boolean(saved.checked);
@@ -247,6 +259,16 @@
     actions.append(keep, cloud); box.append(title, help, note, actions); document.body.append(box); keep.focus();
   };
 
+  document.addEventListener("focusin", event => {
+    if (isEditable(event.target)) event.target.dataset.panoraLiveEditing = "1";
+  }, true);
+  document.addEventListener("focusout", event => {
+    if (!isEditable(event.target)) return;
+    const field = event.target;
+    queueMicrotask(() => {
+      if (document.activeElement !== field) delete field.dataset.panoraLiveEditing;
+    });
+  }, true);
   document.addEventListener("input", event => { if (isEditable(event.target) && event.target.dataset.panoraApplying !== "1") saveLocal(event.target); }, true);
   document.addEventListener("change", event => { if (isEditable(event.target) && event.target.dataset.panoraApplying !== "1") saveLocal(event.target); }, true);
   document.addEventListener("reset", event => { const form = event.target; setTimeout(() => discard(form)); }, true);
@@ -257,7 +279,12 @@
   new MutationObserver(() => {
     if (mutationQueued) return;
     mutationQueued = true;
-    queueMicrotask(() => { mutationQueued = false; restoreAll(); allContainers().forEach(pullRemote); });
+    queueMicrotask(() => {
+      mutationQueued = false;
+      // Restore non-focused fields only. applyValue has a second focus guard.
+      restoreAll();
+      allContainers().forEach(pullRemote);
+    });
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   window.panoraFormDrafts = {
