@@ -27,12 +27,14 @@
 
   let active=false;
   let loading=false;
-  let editingKey="";
-  const savingKeys=new Set();
   let lastRows=[];
   let ws=null;
   let reconnectTimer=0;
   let realtimeOk=false;
+
+  // Drafts are kept locally until the bakery explicitly presses "Сохранить цены".
+  const drafts=new Map(); // key restaurantId:productId -> number
+  const savingRestaurants=new Set();
 
   const products=()=>{
     try{
@@ -44,9 +46,34 @@
     const p=products().find(x=>String(x.id)===String(id));
     return p?.names?.ru||p?.name||String(id);
   };
+  const partnerTypeLabel=value=>({
+    restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',
+    catering:'Кейтеринг',other:'Другое'
+  }[String(value||'').toLowerCase()]||'Партнёр');
 
   const screen=()=>document.querySelector('#view-restaurants');
   const cards=()=>document.querySelector('#restaurantCards');
+  const draftKey=(restaurantId,productId)=>`${restaurantId}:${productId}`;
+  const partnerHasDrafts=restaurantId=>[...drafts.keys()].some(key=>key.startsWith(`${restaurantId}:`));
+
+  const syncCaches=(restaurantId,values)=>{
+    try{
+      const restaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+      const next=(Array.isArray(restaurants)?restaurants:[]).map(r=>{
+        if(String(r.id)!==String(restaurantId))return r;
+        return {...r,prices:{...(r.prices||{}),...values}};
+      });
+      localStorage.setItem('panora-restaurants',JSON.stringify(next));
+    }catch{}
+    try{
+      const map=JSON.parse(localStorage.getItem('panora-admin-restaurant-prices-v420')||'{}')||{};
+      map[String(restaurantId)]??={};
+      Object.entries(values).forEach(([productId,price])=>{
+        map[String(restaurantId)][productId]=Number(price);
+      });
+      localStorage.setItem('panora-admin-restaurant-prices-v420',JSON.stringify(map));
+    }catch{}
+  };
 
   const render=rows=>{
     const root=cards();
@@ -55,142 +82,194 @@
     root.innerHTML=(rows||[]).map(r=>{
       const prices=Object.fromEntries((r.restaurant_prices||[]).map(x=>[String(x.product_id),Number(x.price)]));
       const productList=products();
+      const restaurantId=String(r.id);
       return `<article class="restaurant-card" data-direct-restaurant="${esc(r.id)}">
-        <div class="restaurant-card-head"><span class="tag">${esc(r.partner_type||'restaurant')}</span></div>
+        <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
         ${productList.map(p=>{
-          const value=prices[String(p.id)];
-          const shown=Number(value??p.basePrice??p.price??0).toFixed(2);
-          return `<label class="price-row"><span>${esc(productLabel(p.id))}<small>Оптовая цена</small></span><span><input data-direct-price="${esc(r.id)}:${esc(p.id)}" type="text" inputmode="decimal" autocomplete="off" value="${shown}"> €</span></label>`;
+          const productId=String(p.id);
+          const key=draftKey(restaurantId,productId);
+          const saved=Number(prices[productId]??p.basePrice??p.price??0);
+          const shown=drafts.has(key)?Number(drafts.get(key)):saved;
+          return `<label class="price-row${drafts.has(key)?' price-row-dirty':''}" data-direct-price-row="${esc(key)}">
+            <span>${esc(productLabel(p.id))}<small>Оптовая цена</small></span>
+            <span><input data-direct-price="${esc(key)}" type="text" inputmode="decimal" autocomplete="off" value="${shown.toFixed(2)}"> €</span>
+          </label>`;
         }).join('')}
+        <div class="partner-price-savebar${partnerHasDrafts(restaurantId)?' is-visible':''}" data-price-savebar="${esc(restaurantId)}">
+          <span class="partner-price-status" data-price-status="${esc(restaurantId)}">${partnerHasDrafts(restaurantId)?'Есть несохранённые изменения':''}</span>
+          <button type="button" class="partner-price-save" data-save-partner-prices="${esc(restaurantId)}"${partnerHasDrafts(restaurantId)?'':' hidden'}>Сохранить цены</button>
+        </div>
       </article>`;
     }).join('')||'<div class="empty-row">Нет партнёров.</div>';
 
     root.querySelectorAll('input[data-direct-price]').forEach(input=>{
       const key=String(input.dataset.directPrice||'');
-      let dirty=false;
-      let lastSaved=String(input.value||'');
+      const [restaurantId,productId]=key.split(':');
 
-      const parse=()=> {
+      const parse=()=>{
         const raw=String(input.value||'').replace(/\s+/g,'').replace(',','.').trim();
         if(raw==='')return null;
         const value=Number(raw);
         return Number.isFinite(value)&&value>=0?value:null;
       };
-      const state=value=>{
-        input.dataset.saveState=value||'';
-        input.closest('.price-row')?.setAttribute('data-save-state',value||'');
-      };
 
-      const commit=async()=>{
-        if(!dirty||savingKeys.has(key))return;
-        const [restaurantId,productId]=key.split(':');
+      const markDirty=()=>{
         const value=parse();
-        if(!restaurantId||!productId||value===null){
-          state('error');
-          input.value=lastSaved;
-          dirty=false;
+        const partner=lastRows.find(r=>String(r.id)===String(restaurantId));
+        const savedRow=(partner?.restaurant_prices||[]).find(x=>String(x.product_id)===String(productId));
+        const saved=Number(savedRow?.price??0);
+        const row=input.closest('.price-row');
+        if(value===null){
+          row?.classList.add('price-row-error');
           return;
         }
-
-        const shown=Number(value).toFixed(2);
-        input.value=shown;
-        savingKeys.add(key);
-        state('saving');
-
-        try{
-          const saved=await rest('restaurant_prices?on_conflict=restaurant_id,product_id',{
-            method:'POST',
-            headers:{Prefer:'resolution=merge-duplicates,return=representation'},
-            body:JSON.stringify([{restaurant_id:restaurantId,product_id:productId,price:Number(value),updated_at:new Date().toISOString()}])
-          });
-          const returned=Array.isArray(saved)?saved[0]:null;
-          if(!returned)throw new Error('Supabase не вернул сохранённую цену');
-
-          // Verify exactly what the database now contains.
-          const verified=await rest(
-            `restaurant_prices?restaurant_id=eq.${encodeURIComponent(restaurantId)}&product_id=eq.${encodeURIComponent(productId)}&select=restaurant_id,product_id,price,updated_at&limit=1`
-          );
-          const row=verified?.[0];
-          if(!row||Math.abs(Number(row.price)-Number(value))>0.0001){
-            throw new Error('Supabase не подтвердил новую цену');
-          }
-
-          const finalValue=Number(row.price).toFixed(2);
-          lastSaved=finalValue;
-          input.value=finalValue;
-          dirty=false;
-          state('saved');
-
-          // Keep the common bakery caches aligned with this direct editor.
-          try{
-            const restaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
-            const next=(Array.isArray(restaurants)?restaurants:[]).map(r=>{
-              if(String(r.id)!==String(restaurantId))return r;
-              return {...r,prices:{...(r.prices||{}),[productId]:Number(row.price)}};
-            });
-            localStorage.setItem('panora-restaurants',JSON.stringify(next));
-          }catch{}
-          try{
-            const map=JSON.parse(localStorage.getItem('panora-admin-restaurant-prices-v420')||'{}')||{};
-            map[String(restaurantId)]??={};
-            map[String(restaurantId)][productId]=Number(row.price);
-            localStorage.setItem('panora-admin-restaurant-prices-v420',JSON.stringify(map));
-          }catch{}
-
-          // Update the in-memory rows so a later render cannot restore the old price.
-          const partner=lastRows.find(r=>String(r.id)===String(restaurantId));
-          if(partner){
-            partner.restaurant_prices=Array.isArray(partner.restaurant_prices)?partner.restaurant_prices:[];
-            const existing=partner.restaurant_prices.find(x=>String(x.product_id)===String(productId));
-            if(existing){existing.price=Number(row.price);existing.updated_at=row.updated_at}
-            else partner.restaurant_prices.push({product_id:productId,price:Number(row.price),updated_at:row.updated_at});
-          }
-
-          window.dispatchEvent(new CustomEvent('panora:partner-prices-changed',{
-            detail:{restaurantId,productId,price:Number(row.price),source:'bakery-direct'}
-          }));
-        }catch(error){
-          console.error('Panora direct wholesale save',error);
-          state('error');
-          alert(`Не удалось сохранить оптовую цену: ${error.message||error}`);
-          // Restore the last confirmed value instead of silently fighting the user.
-          input.value=lastSaved;
-          dirty=false;
-        }finally{
-          savingKeys.delete(key);
-          if(editingKey===key)editingKey='';
+        row?.classList.remove('price-row-error');
+        if(Math.abs(Number(value)-saved)<0.0001){
+          drafts.delete(key);
+          row?.classList.remove('price-row-dirty');
+        }else{
+          drafts.set(key,Number(value));
+          row?.classList.add('price-row-dirty');
         }
+        updateSavebar(restaurantId);
       };
 
-      input.addEventListener('focus',()=>{
-        editingKey=key;
-        state('editing');
-        requestAnimationFrame(()=>input.select());
-      });
-      input.addEventListener('input',()=>{
-        dirty=true;
-        editingKey=key;
-        state('editing');
-      });
-      input.addEventListener('change',()=>{dirty=true;commit()});
+      input.addEventListener('focus',()=>requestAnimationFrame(()=>input.select()));
+      input.addEventListener('input',markDirty);
+      input.addEventListener('change',markDirty);
       input.addEventListener('keydown',event=>{
         if(event.key==='Enter'){
           event.preventDefault();
-          dirty=true;
-          commit().then(()=>input.blur());
+          input.blur(); // explicit Save button remains the only save action
         }
       });
-      input.addEventListener('blur',()=>{
-        if(editingKey===key)editingKey='';
-        commit();
-      });
+      input.addEventListener('blur',markDirty);
+    });
+
+    root.querySelectorAll('[data-save-partner-prices]').forEach(button=>{
+      button.addEventListener('click',()=>savePartnerPrices(button.dataset.savePartnerPrices));
     });
   };
 
+  const updateSavebar=restaurantId=>{
+    const root=cards();
+    if(!root)return;
+    const bar=root.querySelector(`[data-price-savebar="${CSS.escape(String(restaurantId))}"]`);
+    const button=root.querySelector(`[data-save-partner-prices="${CSS.escape(String(restaurantId))}"]`);
+    const status=root.querySelector(`[data-price-status="${CSS.escape(String(restaurantId))}"]`);
+    const dirty=partnerHasDrafts(String(restaurantId));
+    bar?.classList.toggle('is-visible',dirty||savingRestaurants.has(String(restaurantId)));
+    if(button){
+      button.hidden=!dirty;
+      button.disabled=savingRestaurants.has(String(restaurantId));
+      button.textContent=savingRestaurants.has(String(restaurantId))?'Сохраняем…':'Сохранить цены';
+    }
+    if(status&&!savingRestaurants.has(String(restaurantId))){
+      status.textContent=dirty?'Есть несохранённые изменения':'';
+      status.className='partner-price-status';
+    }
+  };
+
+  const savePartnerPrices=async restaurantId=>{
+    restaurantId=String(restaurantId||'');
+    if(!restaurantId||savingRestaurants.has(restaurantId))return;
+
+    const entries=[...drafts.entries()]
+      .filter(([key])=>key.startsWith(`${restaurantId}:`))
+      .map(([key,price])=>({productId:key.slice(restaurantId.length+1),price:Number(price)}));
+
+    if(!entries.length)return;
+
+    const root=cards();
+    const status=root?.querySelector(`[data-price-status="${CSS.escape(restaurantId)}"]`);
+    savingRestaurants.add(restaurantId);
+    updateSavebar(restaurantId);
+    if(status){
+      status.textContent='Сохраняем цены…';
+      status.className='partner-price-status is-saving';
+    }
+
+    try{
+      const payload=entries.map(({productId,price})=>({
+        restaurant_id:restaurantId,
+        product_id:productId,
+        price:Number(price),
+        updated_at:new Date().toISOString()
+      }));
+
+      await rest('restaurant_prices?on_conflict=restaurant_id,product_id',{
+        method:'POST',
+        headers:{Prefer:'resolution=merge-duplicates,return=representation'},
+        body:JSON.stringify(payload)
+      });
+
+      const verified=await rest(
+        `restaurant_prices?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=restaurant_id,product_id,price,updated_at`
+      );
+      const verifiedMap=Object.fromEntries((verified||[]).map(row=>[String(row.product_id),Number(row.price)]));
+
+      for(const {productId,price} of entries){
+        if(!(productId in verifiedMap)||Math.abs(Number(verifiedMap[productId])-Number(price))>0.0001){
+          throw new Error(`Supabase не подтвердил цену для ${productLabel(productId)}`);
+        }
+      }
+
+      const confirmed={};
+      for(const {productId} of entries){
+        confirmed[productId]=Number(verifiedMap[productId]);
+        drafts.delete(draftKey(restaurantId,productId));
+      }
+      syncCaches(restaurantId,confirmed);
+
+      const partner=lastRows.find(r=>String(r.id)===restaurantId);
+      if(partner){
+        partner.restaurant_prices=Array.isArray(partner.restaurant_prices)?partner.restaurant_prices:[];
+        Object.entries(confirmed).forEach(([productId,price])=>{
+          const existing=partner.restaurant_prices.find(x=>String(x.product_id)===String(productId));
+          if(existing)existing.price=Number(price);
+          else partner.restaurant_prices.push({product_id:productId,price:Number(price),updated_at:new Date().toISOString()});
+        });
+      }
+
+      render(lastRows);
+      const nextStatus=cards()?.querySelector(`[data-price-status="${CSS.escape(restaurantId)}"]`);
+      const nextBar=cards()?.querySelector(`[data-price-savebar="${CSS.escape(restaurantId)}"]`);
+      if(nextStatus){
+        nextStatus.textContent='Цены сохранены';
+        nextStatus.className='partner-price-status is-saved';
+      }
+      nextBar?.classList.add('is-visible');
+      setTimeout(()=>{
+        const currentStatus=cards()?.querySelector(`[data-price-status="${CSS.escape(restaurantId)}"]`);
+        const currentBar=cards()?.querySelector(`[data-price-savebar="${CSS.escape(restaurantId)}"]`);
+        if(currentStatus&&!partnerHasDrafts(restaurantId)){
+          currentStatus.textContent='';
+          currentStatus.className='partner-price-status';
+          currentBar?.classList.remove('is-visible');
+        }
+      },1800);
+
+      window.dispatchEvent(new CustomEvent('panora:partner-prices-changed',{
+        detail:{restaurantId,prices:confirmed,source:'bakery-explicit-save'}
+      }));
+    }catch(error){
+      console.error('Panora explicit partner price save',error);
+      if(status){
+        status.textContent='Не удалось сохранить. Проверьте соединение и повторите.';
+        status.className='partner-price-status is-error';
+      }
+      alert(`Не удалось сохранить цены: ${error.message||error}`);
+    }finally{
+      savingRestaurants.delete(restaurantId);
+      updateSavebar(restaurantId);
+    }
+  };
+
   const refresh=async()=>{
-    if(!active||loading||editingKey||savingKeys.size)return;
+    // Never redraw while there are unsaved user changes.
+    if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
       const rows=await rest('restaurants?select=id,name,email,address,partner_type,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
@@ -268,7 +347,6 @@
   document.addEventListener('visibilitychange',()=>{if(active&&!document.hidden)refresh()});
   window.addEventListener('focus',()=>{if(active)refresh()});
 
-  // If page restores directly on partners view.
   setTimeout(()=>{
     const view=screen();
     if(view?.classList.contains('active'))activate();
