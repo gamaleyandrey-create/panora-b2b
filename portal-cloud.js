@@ -171,8 +171,8 @@
       const profiles=await api(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`),profile=profiles?.[0];
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
-      const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents()
+      const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
+        api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
@@ -181,10 +181,11 @@
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
-      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
+      const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||12))]));
+      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||12)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
       account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));
       const active=document.activeElement;
-      const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+      const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
       if(!editingWorkspace)renderAccountModal();
       renderProducts();renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
@@ -212,7 +213,7 @@
         const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
         write('panora-orders',enriched);
         const active=document.activeElement;
-        const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+        const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
         if(!editingWorkspace)renderAccountModal();
         window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length,changed}}));
         if(changed.some(change=>change.status==='shipped')){
@@ -259,10 +260,12 @@
     if(partnerPricingLoading)return partnerPricingLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return null;
     partnerPricingLoading=(async()=>{
-      const [prices,products]=await Promise.all([
+      const [prices,products,rules]=await Promise.all([
         api(`restaurant_prices?restaurant_id=eq.${encodeURIComponent(account.id)}&select=product_id,price`).catch(()=>[]),
-        api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'})
+        api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),
+        api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
+      const ruleMap=new Map((rules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||12))]));
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const directPrices=Object.fromEntries((prices||[]).map(item=>[item.product_id,Number(item.price)]));
       const nextPrices=Object.keys(rpcPrices).length?rpcPrices:directPrices;
@@ -273,7 +276,7 @@
         try{renderAccountModal()}catch{}
       }
       if(products?.length){
-        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
+        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||12)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
         const before=localStorage.getItem('panora-partner-products')||'[]',after=JSON.stringify(nextProducts);
         if(before!==after)localStorage.setItem('panora-partner-products',after);
       }
@@ -329,7 +332,7 @@
   const legacyRender=renderAccountModal;
   renderAccountModal=function(force=false){
     const active=document.activeElement;
-    const editingWorkspace=Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+    const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
     if(editingWorkspace&&!force)return;
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
@@ -349,12 +352,20 @@
     await api('rpc/panora_update_partner_profile',{method:'POST',body:JSON.stringify({p_name:patch.name,p_phone:patch.phone,p_address:patch.address,p_whatsapp:patch.whatsapp,p_telegram:patch.telegram,p_extra_messengers:patch.extra_messengers,p_legal_name:patch.legal_name,p_tax_id:patch.tax_id,p_billing_address:patch.billing_address,p_contact_person:patch.contact_person,p_delivery_comment:patch.delivery_comment,p_receiving_hours:patch.receiving_hours,p_receiving_days:patch.receiving_days,p_notify_order:patch.notify_order,p_notify_shipment:patch.notify_shipment,p_notify_invoice:patch.notify_invoice,p_notify_payment:patch.notify_payment,p_language:patch.language,p_partner_type:patch.partner_type})});
     account={...account,...patch,partnerType:patch.partner_type,whatsapp:patch.whatsapp||'',telegram:patch.telegram||'',extraMessengers:patch.extra_messengers,legalName:patch.legal_name||'',taxId:patch.tax_id||'',billingAddress:patch.billing_address||'',contactPerson:patch.contact_person||'',deliveryComment:patch.delivery_comment||'',receivingHours:patch.receiving_hours||'',receivingDays:patch.receiving_days||'',notifyOrder:patch.notify_order,notifyShipment:patch.notify_shipment,notifyInvoice:patch.notify_invoice,notifyPayment:patch.notify_payment};delete account.partner_type;delete account.extra_messengers;delete account.legal_name;delete account.tax_id;delete account.billing_address;write('panora-restaurants',[account]);applyAccount();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));state('ok',labels('Профиль сохранён','Profile saved','Perfil guardado'));return account;
   }};
+  const tierPriceForOrderItem=(item)=>{
+    const managed=(()=>{try{return JSON.parse(localStorage.getItem('panora-public-products')||'[]')}catch{return[]}})();
+    const product=(managed||[]).find(p=>String(p.id)===String(item.product))||{};
+    const min=Math.max(1,Number(product.wholesaleMinQty||12));
+    const retail=Number(product.basePrice||0);
+    const wholesale=Number(account?.prices?.[item.product] ?? retail);
+    return Number(item.quantity)>=min?wholesale:retail;
+  };
   async function createOrderDirect(id,date,deliveryDate,items,comment){
     const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
     if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
     const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
     const created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
-    await api('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:Number(account.prices[item.product])}))) });
+    await api('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item)}))) });
     return created;
   }
   async function verifyCreatedOrder(id){
@@ -426,6 +437,16 @@
       try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
       catch(error){const unusableRpc=error.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(error.message);if(!unusableRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
       if(!created)throw new Error('Order was not created');
+      try{
+        await api('rpc/panora_apply_order_tier_prices',{method:'POST',body:JSON.stringify({p_order_id:id})});
+      }catch(priceError){
+        console.warn('Panora tier price apply',priceError);
+        // Direct fallback already stores the correct unit_price. For RPC-created
+        // orders the server migration is required; fail visibly rather than save
+        // a wholesale price for a retail-sized quantity.
+        if(created&&priceError?.status!==404)throw priceError;
+        if(created&&priceError?.status===404)throw new Error(labels('Обновите SQL Panora 5.44: правило розничной/оптовой цены ещё не установлено.','Run the Panora 5.44 SQL update: tier pricing is not installed yet.','Ejecuta el SQL de Panora 5.44: aún no está instalada la tarifa por cantidad.'));
+      }
       const saved=await verifyCreatedOrder(id);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
       localStorage.removeItem(orderAttemptKey(account.id));

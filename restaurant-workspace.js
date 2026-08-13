@@ -541,17 +541,29 @@
       <button class="button button-primary rw-profile-save" type="submit">${t("saveProfile")}</button>
     </form></section>`;
   }
+  const NEW_ORDER_QTY_CAP = 500;
   const newOrderProducts=()=> (Array.isArray(PRODUCTS)?PRODUCTS:[])
     .filter(product=>product&&product.active!==false)
     .map(product=>{
       const id=String(product.id);
       const name=itemName(id);
-      const price=Number(account?.prices?.[id] ?? product.price ?? product.basePrice ?? 0);
+      const retailPrice=Number(product.retailPrice ?? product.basePrice ?? product.price ?? 0);
+      const wholesalePrice=Number(account?.prices?.[id] ?? product.wholesalePrice ?? product.price ?? retailPrice);
+      const wholesaleMinQty=Math.max(1,Number(product.wholesaleMinQty||12));
       const image=product.image||"icon.svg";
       const gallery=[image,...(Array.isArray(product.gallery)?product.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
-      return {id,name,price,image,gallery};
+      return {id,name,retailPrice,wholesalePrice,wholesaleMinQty,image,gallery};
     });
 
+  const newOrderTierPrice=(product,qty)=>Number(qty||0)>=product.wholesaleMinQty?product.wholesalePrice:product.retailPrice;
+  const newOrderTierWarning=(product,qty)=>{
+    if(!qty||Number(qty)>=product.wholesaleMinQty)return "";
+    return lang==="ru"
+      ?`Меньше ${product.wholesaleMinQty} шт. — розничная цена ${portalMoney(product.retailPrice)}/шт. Оптовая ${portalMoney(product.wholesalePrice)}/шт. действует от ${product.wholesaleMinQty} шт.`
+      :lang==="es"
+       ?`Menos de ${product.wholesaleMinQty} uds.: precio minorista ${portalMoney(product.retailPrice)}/ud. El mayorista ${portalMoney(product.wholesalePrice)}/ud. se aplica desde ${product.wholesaleMinQty} uds.`
+       :`Below ${product.wholesaleMinQty} pcs: retail ${portalMoney(product.retailPrice)}/pc applies. Wholesale ${portalMoney(product.wholesalePrice)}/pc applies from ${product.wholesaleMinQty} pcs.`;
+  };
   const newOrderDeliveryOptions=()=>{
     try{
       if(typeof getBakeDates==="function"){
@@ -570,23 +582,29 @@
     const products=newOrderProducts();
     const options=newOrderDeliveryOptions();
     const count=cartCount();
-    const total=products.reduce((sum,product)=>sum+Number(cart?.[product.id]||0)*product.price,0);
+    const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
     const chosen=String(localStorage.getItem("panora-bake-date")||"");
     return `<section class="rw-new-order-page">
       <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. Дату поставки подтвердите ниже.":lang==="es"?"Elige el pan y la cantidad. Confirma la fecha de entrega abajo.":"Choose bread and quantity. Confirm the delivery date below."}</p></div></header>
       <div class="rw-new-product-grid">
         ${products.map(product=>{
-          const qty=Number(cart?.[product.id]||0);
-          return `<article class="rw-new-product-card">
+          const qty=Math.max(0,Math.min(NEW_ORDER_QTY_CAP,Number(cart?.[product.id]||0)));
+          const unitPrice=newOrderTierPrice(product,qty);
+          const warning=newOrderTierWarning(product,qty);
+          const isWholesale=qty>=product.wholesaleMinQty;
+          return `<article class="rw-new-product-card" data-rw-new-product="${esc(product.id)}">
             <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" height="320" loading="eager" decoding="async" data-rw-product-image></div>
-            <div class="rw-new-product-body"><h4>${esc(product.name)}</h4><div class="rw-new-product-price">${portalMoney(product.price)} <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
+            <div class="rw-new-product-body"><h4>${esc(product.name)}</h4>
+              <div class="rw-new-product-price"><span data-rw-new-price-kind>${isWholesale?(lang==="ru"?"Оптовая цена":lang==="es"?"Precio mayorista":"Wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price")}</span><strong data-rw-new-unit-price>${portalMoney(unitPrice)}</strong> <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
+              <small class="rw-new-wholesale-rule">${lang==="ru"?`Оптовая цена ${portalMoney(product.wholesalePrice)}/шт. от ${product.wholesaleMinQty} шт.`:lang==="es"?`Mayorista ${portalMoney(product.wholesalePrice)}/ud. desde ${product.wholesaleMinQty} uds.`:`Wholesale ${portalMoney(product.wholesalePrice)}/pc from ${product.wholesaleMinQty} pcs`}</small>
               <div class="rw-new-qty rw-new-qty-select" data-rw-new-qty-wrap="${esc(product.id)}">
                 <label>
                   <span>${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}</span>
                   <select data-rw-new-qty-select="${esc(product.id)}" data-panora-no-draft="1" data-rw-stable-select="qty" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
-                    ${Array.from({length:51},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
+                    ${Array.from({length:Math.min(NEW_ORDER_QTY_CAP+1,Math.max(51,product.wholesaleMinQty+25))},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
                   </select>
                 </label>
+                <small class="rw-new-limit-warning"${warning?"":" hidden"}>${warning}</small>
               </div>
             </div>
           </article>`;
@@ -1235,7 +1253,7 @@
     const refreshNewOrderSummary=()=>{
       const products=newOrderProducts();
       const count=cartCount();
-      const total=products.reduce((sum,product)=>sum+Number(cart?.[product.id]||0)*product.price,0);
+      const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
       const countNode=modal.querySelector("[data-rw-new-count]");
       const totalNode=modal.querySelector("[data-rw-new-total]");
       const nextButton=modal.querySelector("[data-rw-new-open-cart]");
@@ -1249,10 +1267,22 @@
     modal.querySelectorAll("[data-rw-new-qty-select]").forEach(select=>{
       select.onchange=()=>{
         const id=String(select.dataset.rwNewQtySelect||"");
-        const next=Math.max(0,Number(select.value||0));
+        const next=Math.max(0,Math.min(NEW_ORDER_QTY_CAP,Number(select.value||0)));
         if(!id)return;
+        select.value=String(next);
         if(next>0)cart[id]=next; else delete cart[id];
         localStorage.setItem("panora-cart",JSON.stringify(cart));
+        const product=newOrderProducts().find(item=>String(item.id)===id);
+        const card=select.closest("[data-rw-new-product]");
+        if(product&&card){
+          const warningText=newOrderTierWarning(product,next);
+          const warning=card.querySelector(".rw-new-limit-warning");
+          const price=card.querySelector("[data-rw-new-unit-price]");
+          const kind=card.querySelector("[data-rw-new-price-kind]");
+          if(warning){warning.textContent=warningText;warning.hidden=!warningText}
+          if(price)price.textContent=portalMoney(newOrderTierPrice(product,next));
+          if(kind)kind.textContent=next>=product.wholesaleMinQty?(lang==="ru"?"Оптовая цена":lang==="es"?"Precio mayorista":"Wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price");
+        }
         // Keep the native select mounted. Rebuilding the whole modal here caused
         // focus loss and visible jumps on desktop/mobile.
         try{renderProducts();renderCart()}catch{}

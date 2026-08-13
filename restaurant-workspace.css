@@ -1290,3 +1290,21 @@
     margin-top:2px!important;
   }
 }
+
+/* Panora 5.43 · per-product order limit */
+.rw-new-limit-warning{
+  display:block;
+  margin-top:7px;
+  max-width:260px;
+  color:#9a5a31;
+  font-size:11px;
+  line-height:1.35;
+}
+.rw-new-limit-warning[hidden]{display:none!important}
+
+/* Panora 5.44 · product-specific wholesale threshold */
+.rw-new-product-price{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.rw-new-product-price>span{width:100%;color:#6e786f;font-size:11px;font-weight:700}
+.rw-new-product-price>strong{color:#31563f;font-size:20px}
+.rw-new-wholesale-rule{display:block;margin:7px 0 4px;color:#56705e;font-size:11px;font-weight:700;line-height:1.35}
+.rw-new-limit-warning{padding:7px 9px;border-radius:9px;background:#fff3df;color:#8c552d;font-weight:600}

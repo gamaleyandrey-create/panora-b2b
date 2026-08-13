@@ -25,12 +25,21 @@
    }
    const rows=await response.json();
    if(!Array.isArray(rows)||!rows.length)return [];
+   let rules=[];
+   try{
+    const ruleResponse=await fetch(`${cfg.url}/rest/v1/rpc/panora_public_order_rules`,{
+     method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json',Accept:'application/json'},body:'{}',cache:'no-store'
+    });
+    if(ruleResponse.ok)rules=await ruleResponse.json();
+   }catch{}
+   const ruleMap=new Map((Array.isArray(rules)?rules:[]).map(row=>[String(row.id),row]));
    const next=rows.map(p=>({
     id:p.id,
     builtIn:['plain','pumpkin'].includes(p.id),
     active:p.active!==false,
     weight:Number(p.weight_g||0),
     basePrice:Number(p.retail_price||0),
+    wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||12)),
     image:p.image_url||'icon.svg',
     names:{ru:p.name_ru||p.id,en:p.name_en||p.name_ru||p.id,es:p.name_es||p.name_ru||p.id},
     descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}
