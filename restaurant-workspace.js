@@ -507,10 +507,10 @@
     </aside><form class="rw-profile-form" data-rw-profile-form>
       <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
       <div class="rw-profile-grid">
-        <label><span>${t("partnerType")}</span><select name="partnerType">${["restaurant", "shop", "hotel", "cafe", "catering", "other"].map((type) => `<option value="${type}"${(account.partnerType || "restaurant") === type ? " selected" : ""}>${t(type)}</option>`).join("")}</select></label>
-        <label><span>${t("restaurantName")} *</span><input name="name" required maxlength="120" value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
-        <label><span>${t("phone")} *</span><input name="phone" required maxlength="30" type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
-        <label class="rw-profile-wide"><span>${t("address")} *</span><input name="address" required maxlength="300" autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
+        <label class="rw-required-field"><span>${t("partnerType")} <b class="rw-required-mark">*</b><small class="rw-required-word">${lang==="ru"?"обязательно":lang==="es"?"obligatorio":"required"}</small></span><select name="partnerType" required>${["restaurant", "shop", "hotel", "cafe", "catering", "other"].map((type) => `<option value="${type}"${(account.partnerType || "restaurant") === type ? " selected" : ""}>${t(type)}</option>`).join("")}</select></label>
+        <label class="rw-required-field"><span>${t("restaurantName")} <b class="rw-required-mark">*</b><small class="rw-required-word">${lang==="ru"?"обязательно":lang==="es"?"obligatorio":"required"}</small></span><input name="name" required maxlength="120" value="${esc(account.name || "")}" autocomplete="organization"><small data-rw-field-error="name"></small></label>
+        <label class="rw-required-field"><span>${t("phone")} <b class="rw-required-mark">*</b><small class="rw-required-word">${lang==="ru"?"обязательно":lang==="es"?"obligatorio":"required"}</small></span><input name="phone" required maxlength="30" type="tel" inputmode="tel" autocomplete="tel" value="${esc(account.phone || "")}" placeholder="+34 …"><small data-rw-field-error="phone"></small></label>
+        <label class="rw-profile-wide rw-required-field"><span>${t("address")} <b class="rw-required-mark">*</b><small class="rw-required-word">${lang==="ru"?"обязательно":lang==="es"?"obligatorio":"required"}</small></span><input name="address" required maxlength="300" autocomplete="street-address" value="${esc(account.address || "")}" placeholder="${t("address")}"><small data-rw-field-error="address"></small></label>
         <label><span>${t("contactPerson")}</span><input name="contactPerson" maxlength="120" value="${esc(account.contactPerson || "")}" autocomplete="name"></label>
         <label><span>${t("receivingHours")}</span><input name="receivingHours" maxlength="80" value="${esc(account.receivingHours || "")}" placeholder="08:00–11:00"></label>
         <label class="rw-profile-wide"><span>${t("receivingDays")}</span><input name="receivingDays" maxlength="120" value="${esc(account.receivingDays || "")}" placeholder="${lang==="ru"?"Пн–Сб":lang==="es"?"Lun–Sáb":"Mon–Sat"}"></label>
@@ -541,8 +541,63 @@
       <button class="button button-primary rw-profile-save" type="submit">${t("saveProfile")}</button>
     </form></section>`;
   }
+  const newOrderProducts=()=> (Array.isArray(PRODUCTS)?PRODUCTS:[])
+    .filter(product=>product&&product.active!==false)
+    .map(product=>{
+      const id=String(product.id);
+      const name=itemName(id);
+      const price=Number(account?.prices?.[id] ?? product.price ?? product.basePrice ?? 0);
+      const image=product.image||"icon.svg";
+      const gallery=[image,...(Array.isArray(product.gallery)?product.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
+      return {id,name,price,image,gallery};
+    });
+
+  const newOrderDeliveryOptions=()=>{
+    try{
+      if(typeof getBakeDates==="function"){
+        return getBakeDates(6).map(item=>{
+          const value=typeof dateValue==="function"?dateValue(item.date):String(item.deliveryDate||"");
+          const delivery=item.deliveryDate||value;
+          const label=localDate(delivery||value);
+          return {value:delivery||value,label};
+        }).filter(item=>item.value);
+      }
+    }catch{}
+    return [];
+  };
+
   function newOrderHtml() {
-    return `<section class="rw-empty rw-new-order"><span>＋</span><h3>${t("newOrder")}</h3><p>${t("orderHelp")}</p><button class="button button-primary" data-rw-start>${t("startOrder")}</button></section>`;
+    const products=newOrderProducts();
+    const options=newOrderDeliveryOptions();
+    const count=cartCount();
+    const total=products.reduce((sum,product)=>sum+Number(cart?.[product.id]||0)*product.price,0);
+    const chosen=String(localStorage.getItem("panora-bake-date")||"");
+    return `<section class="rw-new-order-page">
+      <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. Дату поставки подтвердите ниже.":lang==="es"?"Elige el pan y la cantidad. Confirma la fecha de entrega abajo.":"Choose bread and quantity. Confirm the delivery date below."}</p></div></header>
+      <div class="rw-new-product-grid">
+        ${products.map(product=>{
+          const qty=Number(cart?.[product.id]||0);
+          return `<article class="rw-new-product-card">
+            <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}"></div>
+            <div class="rw-new-product-body"><h4>${esc(product.name)}</h4><div class="rw-new-product-price">${portalMoney(product.price)} <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
+              <div class="rw-new-qty" data-rw-new-qty-wrap="${esc(product.id)}">
+                <button type="button" data-rw-new-qty="${esc(product.id)}" data-delta="-1" aria-label="−">−</button>
+                <strong>${qty}</strong>
+                <button type="button" data-rw-new-qty="${esc(product.id)}" data-delta="1" aria-label="+">+</button>
+              </div>
+            </div>
+          </article>`;
+        }).join("")}
+      </div>
+      <aside class="rw-new-cart">
+        <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong>${count} ${t("pieces")}</strong></div>
+        <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong>${portalMoney(total)}</strong></div>
+        <label><span>${t("delivery")}</span><select data-rw-new-date>
+          ${options.length?options.map(option=>`<option value="${esc(option.value)}"${option.value===chosen?" selected":""}>${esc(option.label)}</option>`).join(""):`<option value="">${lang==="ru"?"Выберите дату в календаре":lang==="es"?"Elige una fecha":"Choose a date"}</option>`}
+        </select></label>
+        <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Перейти к оформлению":lang==="es"?"Continuar":"Continue"}</button>
+      </aside>
+    </section>`;
   }
   function ordersHtml() {
     const all = ownOrders();
@@ -1135,6 +1190,38 @@
     modal
       .querySelector("[data-rw-logout]")
       ?.addEventListener("click", logoutAccount);
+    modal.querySelectorAll("[data-rw-new-qty]").forEach(button=>{
+      button.onclick=()=>{
+        const id=String(button.dataset.rwNewQty||"");
+        const delta=Number(button.dataset.delta||0);
+        if(!id||!delta)return;
+        const next=Math.max(0,Number(cart?.[id]||0)+delta);
+        if(next>0)cart[id]=next; else delete cart[id];
+        localStorage.setItem("panora-cart",JSON.stringify(cart));
+        try{renderProducts();renderCart()}catch{}
+        renderAccountModal();
+      };
+    });
+    const newDate=modal.querySelector("[data-rw-new-date]");
+    if(newDate)newDate.onchange=()=>{
+      if(newDate.value){
+        localStorage.setItem("panora-bake-date",newDate.value);
+        try{selectedBakeDate=newDate.value;syncCartDeliveryDate?.()}catch{}
+      }
+    };
+    modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
+      button.onclick=()=>{
+        if(!cartCount())return;
+        const date=modal.querySelector("[data-rw-new-date]")?.value;
+        if(date){
+          localStorage.setItem("panora-bake-date",date);
+          try{selectedBakeDate=date;syncCartDeliveryDate?.()}catch{}
+        }
+        closePanels();
+        try{renderProducts();renderCart();openPanel(document.querySelector("#cartDrawer"))}catch{}
+      };
+    });
+
     modal.querySelectorAll("[data-rw-start]").forEach(
       (button) =>
         (button.onclick = () => {

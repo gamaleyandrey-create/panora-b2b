@@ -20,3 +20,9 @@
 .product-image>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}.product-card:hover .product-image>img{transform:scale(1.035)}.product-tag{z-index:1}
 @media(max-width:760px){.language-select{height:34px}.top-actions{gap:7px}.qty-control strong{font-size:10px}}
 .customer-confirmed{display:block;margin-top:.45rem;color:#326044;font-size:.78rem;font-weight:700;line-height:1.3}
+
+/* Panora 5.37 · additional product photos */
+.product-gallery-thumbs{display:flex;gap:7px;padding:8px 10px 0;overflow-x:auto;background:#fff}
+.product-gallery-thumbs button{width:50px;height:50px;flex:0 0 50px;padding:0;border:1px solid var(--line);background:#fff;cursor:pointer;overflow:hidden}
+.product-gallery-thumbs button.active{border-color:var(--green);box-shadow:0 0 0 2px rgba(54,94,69,.09)}
+.product-gallery-thumbs img{width:100%;height:100%;object-fit:cover}
