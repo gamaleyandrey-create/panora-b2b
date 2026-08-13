@@ -797,3 +797,51 @@
   .restaurant-workspace .rw-nav-home i{font-size:16px}
   .restaurant-workspace .rw-nav-profile i svg{width:18px;height:18px}
 }
+
+/* Panora 5.23 · restore partner smartphone layout after 5.22 sidebar change */
+@media(max-width:720px){
+  /* 5.22 made the desktop sidebar 100% high so Logout can sit at the bottom.
+     On phones this same rule was inherited by the fixed bottom bar and stretched it.
+     Explicitly restore the proven mobile bottom-navigation geometry. */
+  .restaurant-workspace .rw-nav{
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    top:auto!important;
+    bottom:0!important;
+    width:100%!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    margin:0!important;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+  }
+  .restaurant-workspace .rw-nav-logout{
+    display:none!important;
+  }
+  .restaurant-workspace .rw-content{
+    width:100%!important;
+    min-width:0!important;
+  }
+  .restaurant-workspace .rw-footer{
+    position:static!important;
+    width:100%!important;
+    margin:18px 0 0!important;
+    padding:0!important;
+    background:transparent!important;
+    border:0!important;
+  }
+  .restaurant-workspace .rw-footer [data-rw-logout]{
+    display:inline-flex!important;
+  }
+  .restaurant-workspace .rw-nav-home i{
+    font-size:16px!important;
+  }
+  .restaurant-workspace .rw-nav-profile i svg{
+    width:18px!important;
+    height:18px!important;
+  }
+}
