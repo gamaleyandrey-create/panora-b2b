@@ -27,6 +27,8 @@
 
   let active=false;
   let loading=false;
+  let editingKey="";
+  const savingKeys=new Set();
   let lastRows=[];
   let ws=null;
   let reconnectTimer=0;
@@ -66,39 +68,129 @@
     }).join('')||'<div class="empty-row">Нет партнёров.</div>';
 
     root.querySelectorAll('input[data-direct-price]').forEach(input=>{
-      input.addEventListener('focus',()=>requestAnimationFrame(()=>input.select()));
-      input.addEventListener('blur',async()=>{
-        const [restaurantId,productId]=String(input.dataset.directPrice||'').split(':');
-        const raw=String(input.value||'').replace(',','.').trim();
+      const key=String(input.dataset.directPrice||'');
+      let dirty=false;
+      let lastSaved=String(input.value||'');
+
+      const parse=()=> {
+        const raw=String(input.value||'').replace(/\s+/g,'').replace(',','.').trim();
+        if(raw==='')return null;
         const value=Number(raw);
-        if(!restaurantId||!productId||!Number.isFinite(value)||value<0){
-          await refresh();
+        return Number.isFinite(value)&&value>=0?value:null;
+      };
+      const state=value=>{
+        input.dataset.saveState=value||'';
+        input.closest('.price-row')?.setAttribute('data-save-state',value||'');
+      };
+
+      const commit=async()=>{
+        if(!dirty||savingKeys.has(key))return;
+        const [restaurantId,productId]=key.split(':');
+        const value=parse();
+        if(!restaurantId||!productId||value===null){
+          state('error');
+          input.value=lastSaved;
+          dirty=false;
           return;
         }
-        input.disabled=true;
+
+        const shown=Number(value).toFixed(2);
+        input.value=shown;
+        savingKeys.add(key);
+        state('saving');
+
         try{
           const saved=await rest('restaurant_prices?on_conflict=restaurant_id,product_id',{
             method:'POST',
             headers:{Prefer:'resolution=merge-duplicates,return=representation'},
-            body:JSON.stringify([{restaurant_id:restaurantId,product_id:productId,price:value,updated_at:new Date().toISOString()}])
+            body:JSON.stringify([{restaurant_id:restaurantId,product_id:productId,price:Number(value),updated_at:new Date().toISOString()}])
           });
-          const row=Array.isArray(saved)?saved[0]:null;
-          if(!row)throw new Error('Supabase не вернул сохранённую цену');
-          input.value=Number(row.price).toFixed(2);
-          await refresh();
+          const returned=Array.isArray(saved)?saved[0]:null;
+          if(!returned)throw new Error('Supabase не вернул сохранённую цену');
+
+          // Verify exactly what the database now contains.
+          const verified=await rest(
+            `restaurant_prices?restaurant_id=eq.${encodeURIComponent(restaurantId)}&product_id=eq.${encodeURIComponent(productId)}&select=restaurant_id,product_id,price,updated_at&limit=1`
+          );
+          const row=verified?.[0];
+          if(!row||Math.abs(Number(row.price)-Number(value))>0.0001){
+            throw new Error('Supabase не подтвердил новую цену');
+          }
+
+          const finalValue=Number(row.price).toFixed(2);
+          lastSaved=finalValue;
+          input.value=finalValue;
+          dirty=false;
+          state('saved');
+
+          // Keep the common bakery caches aligned with this direct editor.
+          try{
+            const restaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+            const next=(Array.isArray(restaurants)?restaurants:[]).map(r=>{
+              if(String(r.id)!==String(restaurantId))return r;
+              return {...r,prices:{...(r.prices||{}),[productId]:Number(row.price)}};
+            });
+            localStorage.setItem('panora-restaurants',JSON.stringify(next));
+          }catch{}
+          try{
+            const map=JSON.parse(localStorage.getItem('panora-admin-restaurant-prices-v420')||'{}')||{};
+            map[String(restaurantId)]??={};
+            map[String(restaurantId)][productId]=Number(row.price);
+            localStorage.setItem('panora-admin-restaurant-prices-v420',JSON.stringify(map));
+          }catch{}
+
+          // Update the in-memory rows so a later render cannot restore the old price.
+          const partner=lastRows.find(r=>String(r.id)===String(restaurantId));
+          if(partner){
+            partner.restaurant_prices=Array.isArray(partner.restaurant_prices)?partner.restaurant_prices:[];
+            const existing=partner.restaurant_prices.find(x=>String(x.product_id)===String(productId));
+            if(existing){existing.price=Number(row.price);existing.updated_at=row.updated_at}
+            else partner.restaurant_prices.push({product_id:productId,price:Number(row.price),updated_at:row.updated_at});
+          }
+
+          window.dispatchEvent(new CustomEvent('panora:partner-prices-changed',{
+            detail:{restaurantId,productId,price:Number(row.price),source:'bakery-direct'}
+          }));
         }catch(error){
           console.error('Panora direct wholesale save',error);
+          state('error');
           alert(`Не удалось сохранить оптовую цену: ${error.message||error}`);
-          await refresh();
+          // Restore the last confirmed value instead of silently fighting the user.
+          input.value=lastSaved;
+          dirty=false;
         }finally{
-          input.disabled=false;
+          savingKeys.delete(key);
+          if(editingKey===key)editingKey='';
         }
+      };
+
+      input.addEventListener('focus',()=>{
+        editingKey=key;
+        state('editing');
+        requestAnimationFrame(()=>input.select());
+      });
+      input.addEventListener('input',()=>{
+        dirty=true;
+        editingKey=key;
+        state('editing');
+      });
+      input.addEventListener('change',()=>{dirty=true;commit()});
+      input.addEventListener('keydown',event=>{
+        if(event.key==='Enter'){
+          event.preventDefault();
+          dirty=true;
+          commit().then(()=>input.blur());
+        }
+      });
+      input.addEventListener('blur',()=>{
+        if(editingKey===key)editingKey='';
+        commit();
       });
     });
   };
 
   const refresh=async()=>{
-    if(!active||loading)return;
+    if(!active||loading||editingKey||savingKeys.size)return;
     loading=true;
     try{
       const rows=await rest('restaurants?select=id,name,email,address,partner_type,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');

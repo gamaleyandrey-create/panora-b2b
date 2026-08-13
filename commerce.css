@@ -717,3 +717,9 @@ body.admin-page #saveState{
   white-space:nowrap!important;
   border:0!important;
 }
+
+/* Panora 5.28 · stable direct wholesale price editing */
+.price-row[data-save-state="editing"] input{border-color:#8ea795}
+.price-row[data-save-state="saving"] input{border-color:#5f836a;box-shadow:0 0 0 3px rgba(58,104,73,.08)}
+.price-row[data-save-state="saved"] input{border-color:#b4c8b8}
+.price-row[data-save-state="error"] input{border-color:#b65b52;background:#fff8f7}
