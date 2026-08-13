@@ -892,3 +892,5 @@
     box-shadow:none;
   }
 }
+/* Panora 5.31 partner profile */
+.rw-profile-grid textarea{box-sizing:border-box;width:100%;min-height:92px;padding:11px 12px;border:1px solid #cfd3cc;border-radius:8px;background:#fff;color:#17231b;font:16px/1.45 Arial;resize:vertical}.rw-profile-grid textarea:focus{outline:3px solid #dcebdd;border-color:#53775d}.rw-notification-settings{margin-top:18px;padding:17px;border:1px solid #dce4da;border-radius:12px;background:#fafcf9}.rw-notification-settings h4{margin:0 0 12px;font:700 17px Arial;color:#26372d}.rw-notification-settings>div{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}.rw-notification-settings label{display:flex;align-items:center;gap:9px;font:600 14px Arial;color:#455049}.rw-notification-settings input{width:18px;height:18px;accent-color:#315f3d}@media(max-width:720px){.rw-notification-settings>div{grid-template-columns:1fr}}
