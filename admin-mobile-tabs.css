@@ -9,3 +9,9 @@
  body.admin-menu-open .admin-nav{inset:auto 10px calc(76px + env(safe-area-inset-bottom)) 10px!important;max-height:calc(100dvh - 155px)!important;transform:translateY(10px) scale(.98)!important;transform-origin:bottom center!important}
  body.admin-menu-open .admin-nav{transform:none!important}
 }
+
+/* Panora 5.26 · bakery wholesale price save state */
+.price-row[data-save-state="editing"] input{border-color:#9db2a2}
+.price-row[data-save-state="saving"] input{border-color:#6f947a;box-shadow:0 0 0 2px rgba(65,102,76,.08)}
+.price-row[data-save-state="saved"] input{border-color:#b8cbbd}
+.price-row[data-save-state="error"] input{border-color:#b8645c;background:#fff8f7}

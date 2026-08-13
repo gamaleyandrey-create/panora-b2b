@@ -61,9 +61,14 @@ const adminRestaurantPriceMap=()=>{
   catch{return{}}
 };
 const adminPartnerPrice=(restaurantId,productId,fallback=0)=>{
+  // The restaurant object is refreshed from public.restaurant_prices by cloud-sync.
+  // The separate admin price map is cache only and must never override a fresher
+  // restaurant value in the bakery UI.
+  const current=restaurant(restaurantId)?.prices?.[productId];
+  if(current!=null&&Number.isFinite(Number(current)))return Number(current);
   const map=adminRestaurantPriceMap();
-  const value=map?.[String(restaurantId)]?.[productId];
-  return value==null?Number(fallback||0):Number(value);
+  const cached=map?.[String(restaurantId)]?.[productId];
+  return cached==null?Number(fallback||0):Number(cached);
 };
 
 const activeRestaurants = () => restaurants.filter((r) => !r.deletedAt);
@@ -202,31 +207,87 @@ function renderRestaurants() {
       ? `<section class="removed-restaurants"><h3>Удалённые партнёры</h3>${removed.map((r) => `<div><span><strong>${commerceEscape(r.name)}</strong><small>${commerceEscape(r.email)}</small></span><button data-restore-restaurant="${r.id}" type="button">Восстановить</button></div>`).join("")}</section>`
       : "");
   document.querySelectorAll("[data-price]").forEach((i) => {
+    let saving=false;
+    let lastSaved=i.value;
+    const setState=(state)=>{
+      i.dataset.saveState=state||"";
+      const row=i.closest(".price-row");
+      if(row)row.dataset.saveState=state||"";
+    };
     const commit = async () => {
-      const value=window.panoraParseDecimal?.(i.value);
-      if(value===null){const [rid,pid]=i.dataset.price.split(":");i.value=adminPartnerPrice(rid,pid,restaurant(rid)?.prices?.[pid]||0).toFixed(2);return}
-      const [id,pid]=i.dataset.price.split(":");
-      restaurant(id).prices[pid]=value;
-      i.value=value.toFixed(2);
-      // Wholesale prices live only in public.restaurant_prices.
-      // Do not queue the whole restaurant record when only a price changed.
-      localStorage.setItem("panora-restaurants",JSON.stringify(restaurants));
-      try{
-        if(window.panoraCloud?.saveRestaurantPriceConfirmed)await window.panoraCloud.saveRestaurantPriceConfirmed(id,pid,value);
-        else throw new Error("Модуль облачных цен ещё не готов");
-      }catch(error){
-        console.warn("Panora wholesale cloud save",error);
-        alert(`Не удалось сохранить оптовую цену в облаке: ${error.message||error}`);
+      if(saving)return;
+      const parsed=window.panoraParseDecimal?.(i.value);
+      const [id,pid]=String(i.dataset.price||"").split(":");
+      if(!id||!pid)return;
+      if(parsed===null){
+        i.value=adminPartnerPrice(id,pid,restaurant(id)?.prices?.[pid]||0).toFixed(2);
+        setState("error");
         return;
       }
-      reloadRestaurantsFromStorage();
-      window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:value}}));
-      window.panoraPricing?.notifyWholesale(id,pid,value);
-      i.value=Number(value).toFixed(2);
+      const value=Number(parsed);
+      const shown=value.toFixed(2);
+      if(shown===lastSaved&&Number(restaurant(id)?.prices?.[pid])===value){
+        i.value=shown;setState("saved");return;
+      }
+
+      // Update both bakery caches immediately, before waiting for the network.
+      const r=restaurant(id);
+      if(r){
+        r.prices??={};
+        r.prices[pid]=value;
+      }
+      try{
+        const map=adminRestaurantPriceMap();
+        map[String(id)]??={};
+        map[String(id)][pid]=value;
+        localStorage.setItem("panora-admin-restaurant-prices-v420",JSON.stringify(map));
+      }catch{}
+      localStorage.setItem("panora-restaurants",JSON.stringify(restaurants));
+      i.value=shown;
+      lastSaved=shown;
+      saving=true;
+      setState("saving");
+
+      try{
+        if(!window.panoraCloud?.saveRestaurantPriceConfirmed)throw new Error("Модуль облачных цен ещё не готов");
+        const confirmed=await window.panoraCloud.saveRestaurantPriceConfirmed(id,pid,value);
+
+        // Update the currently mounted node, because cloud events are allowed to
+        // rerender the bakery partner cards during/after confirmation.
+        reloadRestaurantsFromStorage();
+        const live=document.querySelector(`#restaurantCards input[data-price="${CSS.escape(id+":"+pid)}"]`);
+        const finalValue=Number(confirmed).toFixed(2);
+        if(live){
+          live.value=finalValue;
+          live.dataset.saveState="saved";
+          live.closest(".price-row")?.setAttribute("data-save-state","saved");
+        }
+        window.dispatchEvent(new CustomEvent("panora:partner-prices-changed",{detail:{restaurantId:id,productId:pid,price:Number(confirmed)}}));
+        window.panoraPricing?.notifyWholesale(id,pid,Number(confirmed));
+      }catch(error){
+        console.warn("Panora wholesale cloud save",error);
+        setState("error");
+        // Pull back the authoritative cloud price instead of leaving a silent stale value.
+        try{await window.panoraCloud?.refreshRestaurantPrices?.()}catch{}
+        reloadRestaurantsFromStorage();
+        const actual=adminPartnerPrice(id,pid,restaurant(id)?.prices?.[pid]||0);
+        const live=document.querySelector(`#restaurantCards input[data-price="${CSS.escape(id+":"+pid)}"]`);
+        if(live)live.value=Number(actual).toFixed(2);
+        alert(`Не удалось сохранить оптовую цену в облаке: ${error.message||error}`);
+      }finally{
+        saving=false;
+      }
     };
+    i.oninput=()=>setState("editing");
     i.onblur=commit;
-    i.onchange=null;
-    i.onfocus=()=>{requestAnimationFrame(()=>i.select())};
+    i.onchange=commit;
+    i.onkeydown=(event)=>{
+      if(event.key==="Enter"){
+        event.preventDefault();
+        commit().then(()=>i.blur());
+      }
+    };
+    i.onfocus=()=>{setState("editing");requestAnimationFrame(()=>i.select())};
   });
   document
     .querySelectorAll("[data-delete-restaurant]")
