@@ -559,6 +559,21 @@ async function cancelOrder(id) {
     alert(`Не удалось отменить заказ: ${error.message}`);
   }
 }
+function accountingDate(value) {
+  if (!value || value === "—") return "—";
+  try {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value))
+      ? new Date(`${value}T12:00:00`)
+      : new Date(value);
+    return new Intl.DateTimeFormat("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
+  } catch (_) {
+    return String(value);
+  }
+}
 function renderAccounting() {
   let shipped = 0,
     paid = 0;
@@ -580,7 +595,7 @@ function renderAccounting() {
                 .pop() || "—";
           shipped += s;
           paid += p;
-          return `<tr><td><strong>${commerceEscape(r.name)}</strong></td><td class="${s - p > 0 ? "negative" : ""}"><strong>${euro(s - p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${last}</td></tr>`;
+          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></td><td class="${s - p > 0 ? "negative" : ""}"><strong>${euro(s - p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';

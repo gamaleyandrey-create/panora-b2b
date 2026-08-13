@@ -4,13 +4,49 @@
   if (!dialog || !body) return;
   let selectedId = null;
 
+  const prettyDate = (value) => {
+    if (!value) return "—";
+    try {
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value))
+        ? new Date(`${value}T12:00:00`)
+        : new Date(value);
+      return new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(date);
+    } catch (_) {
+      return String(value);
+    }
+  };
+
+  const activeDebtsFor = (id) => {
+    const notes = deliveryNotes
+      .filter(note => note.restaurantId === id)
+      .map(note => {
+        const paid = payments
+          .filter(payment =>
+            payment.restaurantId === id &&
+            paymentConfirmed(payment) &&
+            payment.status !== "cancelled" &&
+            (payment.deliveryNoteId === note.id || (!payment.deliveryNoteId && false))
+          )
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        return {
+          note,
+          paid,
+          due: Math.max(0, Number(note.total || 0) - paid),
+        };
+      })
+      .filter(item => item.due > 0.005)
+      .sort((a,b) => String(a.note.date || "").localeCompare(String(b.note.date || "")));
+    return notes;
+  };
+
   function bindRows() {
-    [...body.querySelectorAll("tr")].forEach((row, index) => {
-      const client = restaurants[index];
-      if (!client) return;
-      row.dataset.accountRestaurant = client.id;
+    [...body.querySelectorAll("tr[data-account-restaurant]")].forEach((row) => {
       row.tabIndex = 0;
-      row.title = "Открыть операции партнёра";
+      row.title = "Открыть расчёты и операции партнёра";
     });
   }
 
@@ -104,11 +140,28 @@
     $("#accountDetailDebt").textContent = euro(shipped - paid);
     $("#accountDetailShipped").textContent = euro(shipped);
     $("#accountDetailPaid").textContent = euro(paid);
+
+    const debts = activeDebtsFor(id);
+    let debtBlock = dialog.querySelector("#accountDetailDebts");
+    if (!debtBlock) {
+      debtBlock = document.createElement("section");
+      debtBlock.id = "accountDetailDebts";
+      debtBlock.className = "account-detail-debts";
+      const head = dialog.querySelector(".account-detail-head");
+      head?.before(debtBlock);
+    }
+    debtBlock.innerHTML = debts.length
+      ? `<div class="account-detail-debts-head"><h3>Актуальные задолженности</h3><strong>${debts.length}</strong></div>
+         <div class="account-detail-debt-list">${debts.map(({note,paid,due}) =>
+           `<article><div><strong>DN-${String(note.number).padStart(4,"0")}</strong><span>Поставка: ${prettyDate(note.date)}</span>${note.paymentDueDate?`<small>Оплатить до: ${prettyDate(note.paymentDueDate)}</small>`:""}</div><div><span>Сумма ${euro(note.total)}</span><span>Оплачено ${euro(paid)}</span><b>К оплате ${euro(due)}</b></div></article>`
+         ).join("")}</div>`
+      : `<div class="account-detail-debts-head"><h3>Актуальные задолженности</h3></div><p class="account-detail-no-debt">Задолженности нет.</p>`;
+
     $("#accountDetailHistory").innerHTML = history.length
       ? history
           .map(
             (item) =>
-              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${item.date}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value"><b>${item.amount < 0 ? "−" : "+"}${euro(Math.abs(item.amount))}</b><small>Задолженность после операции: ${euro(Math.max(0, Number(item.balanceAfter || 0)))}</small>${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
+              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value"><b>${item.amount < 0 ? "−" : "+"}${euro(Math.abs(item.amount))}</b><small>Задолженность после операции: ${euro(Math.max(0, Number(item.balanceAfter || 0)))}</small>${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
           )
           .join("")
       : '<p class="empty-row">Операций пока нет.</p>';
