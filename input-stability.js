@@ -12,7 +12,7 @@
   // Direct partner prices have their own explicit-save draft model.
   // Exclude them from the generic form-draft engine, otherwise an old form draft
   // can overwrite the authoritative Supabase value when the field receives focus.
-  const controls = 'input:not([data-direct-price]):not([type="password"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),textarea,select,[contenteditable="true"]';
+  const controls = 'input:not([data-direct-price]):not([type="password"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),textarea,select:not([data-rw-stable-select]),[contenteditable="true"]';
   const timers = new Map();
   const requestVersion = new Map();
   const hydrated = new Set();
