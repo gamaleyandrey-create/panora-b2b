@@ -583,7 +583,7 @@
               <div class="rw-new-qty rw-new-qty-select" data-rw-new-qty-wrap="${esc(product.id)}">
                 <label>
                   <span>${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}</span>
-                  <select data-rw-new-qty-select="${esc(product.id)}" data-rw-stable-select="qty" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
+                  <select data-rw-new-qty-select="${esc(product.id)}" data-panora-no-draft="1" data-rw-stable-select="qty" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
                     ${Array.from({length:51},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
                   </select>
                 </label>
@@ -595,7 +595,7 @@
       <aside class="rw-new-cart">
         <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong data-rw-new-count>${count} ${t("pieces")}</strong></div>
         <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
-        <label><span>${t("delivery")}</span><select data-rw-new-date data-rw-stable-select="date">
+        <label><span>${t("delivery")}</span><select data-rw-new-date data-panora-no-draft="1" data-rw-stable-select="date">
           ${options.length?options.map(option=>`<option value="${esc(option.value)}"${option.value===chosen?" selected":""}>${esc(option.label)}</option>`).join(""):`<option value="">${lang==="ru"?"Выберите дату в календаре":lang==="es"?"Elige una fecha":"Choose a date"}</option>`}
         </select></label>
         <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Перейти к оформлению":lang==="es"?"Continuar":"Continue"}</button>
@@ -634,7 +634,7 @@
           <i>${orderFiltersOpen?"⌃":"⌄"}</i>
         </button>
         <div class="rw-order-filters"${orderFiltersOpen?"":" hidden"}>
-          <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}" autocomplete="off" spellcheck="false"></label>
+          <label class="rw-order-search"><span>${lang==="ru"?"Заказ":lang==="es"?"Pedido":"Order"}</span><input data-rw-order-search data-panora-no-draft="1" value="${esc(orderSearch)}" placeholder="${lang==="ru"?"Номер заказа":lang==="es"?"Número de pedido":"Order number"}" autocomplete="off" spellcheck="false"></label>
           <div class="rw-filter-menu"><span>${lang==="ru"?"Статус":lang==="es"?"Estado":"Status"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="status">${esc((statusOptions.find(([value])=>value===orderStatusFilter)||statusOptions[0])[1])}<i>⌄</i></button><div class="rw-filter-popover" data-rw-filter-panel="status"${openFilterMenu==="status"?"":" hidden"}>${statusOptions.map(([value,label])=>`<button type="button" class="${orderStatusFilter===value?"active":""}" data-rw-order-status="${value}">${label}</button>`).join("")}</div></div>
           <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="order-period">${esc(periodLabel(orderDateFrom,orderDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="order-period"${openFilterMenu==="order-period"?"":" hidden"}>${calendarHtml("order",orderDateFrom,orderDateTo)}</div></div>
           ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
@@ -646,7 +646,7 @@
         const lifecycle=orderLifecycleStatus(order);
         const searchText=`${orderNumber(order)} ${(order.items||[]).map(item=>itemName(item.product)).join(" ")}`.toLowerCase();
         const searchHidden=orderSearch&&!searchText.includes(orderSearch.toLowerCase());
-        return `<article class="rw-order" data-rw-order="${esc(order.id)}" data-rw-order-search-text="${esc(searchText)}"${searchHidden?" hidden":""}>
+        return `<article class="rw-order" data-rw-order="${esc(order.id)}" data-rw-order-search data-panora-no-draft="1"-text="${esc(searchText)}"${searchHidden?" hidden":""}>
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<button type="button" class="rw-order-note rw-linked-document" data-rw-open-note="${esc(note.id)}">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</button>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
       ${orderProgressHtml(order)}
@@ -707,7 +707,7 @@
         <i>${noteFiltersOpen?"⌃":"⌄"}</i>
       </button>
       <div class="rw-note-filters"${noteFiltersOpen?"":" hidden"}>
-        <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
+        <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search data-panora-no-draft="1" value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
         <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc(periodLabel(noteDateFrom,noteDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${calendarHtml("note",noteDateFrom,noteDateTo)}</div></div>
         ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
@@ -717,7 +717,7 @@
         const isMain = note.id === working[0]?.id && noteView==="active";
         const noteSearchText=noteNumber(note).toLowerCase();
         const noteSearchHidden=noteQuery&&!noteSearchText.includes(noteQuery.toLowerCase());
-        return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
+        return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search data-panora-no-draft="1"-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
       <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>{const qty=Number(item.quantity||0),priceSource=(order.prices&&Object.prototype.hasOwnProperty.call(order.prices,item.product))?order.prices:account.prices||{},unit=Number(priceSource[item.product]||0),line=qty*unit;return `<span class="rw-note-product-name">${esc(itemName(item.product))}</span><span class="rw-note-product-math"><b>${qty} ${t("pieces")}</b> × <b>${portalMoney(unit)}</b> = <strong>${portalMoney(line)}</strong></span>`}).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}${(()=>{const fin=notePaymentSummary(note);return `<small class="rw-note-payment-state"><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}: <b>${portalMoney(fin.total)}</b></span><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}: <b>${portalMoney(fin.paid)}</b></span><span>${lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due"}: <b>${portalMoney(fin.due)}</b></span></small>`})()}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${lang==="ru"?"Распечатать накладную":lang==="es"?"Imprimir albarán":"Print delivery note"}</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
@@ -867,7 +867,7 @@
           <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
           <button type="button" class="rw-finance-filters-toggle${(debtSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(debtSearch||paymentDateFrom||paymentDateTo)?`<b>${[debtSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search value="${esc(debtSearchDraft||debtSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-debt-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search data-panora-no-draft="1" value="${esc(debtSearchDraft||debtSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-debt-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(debtSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-debt-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -875,7 +875,7 @@
             const searchText=noteNumber(note).toLowerCase();
             const rangeMatch=dateInRange(note.date,paymentDateFrom,paymentDateTo);
             const searchMatch=!debtSearch||searchText.includes(debtSearch.toLowerCase());
-            return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link" data-rw-debt-search-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
+            return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link" data-rw-debt-search data-panora-no-draft="1"-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
               <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
               <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
               <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
@@ -886,7 +886,7 @@
           <div class="rw-current-debts-head"><div><span class="kicker">Panora</span><h4>${lang==="ru"?"Архив закрытых расчётов":lang==="es"?"Archivo de pagos cerrados":"Closed settlements archive"}</h4></div><strong>${fullyPaidNotes.length}</strong></div>
           <button type="button" class="rw-finance-filters-toggle${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<b>${[financeArchiveSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search value="${esc(financeArchiveSearchDraft||financeArchiveSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-finance-archive-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search data-panora-no-draft="1" value="${esc(financeArchiveSearchDraft||financeArchiveSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-finance-archive-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-finance-archive-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -905,7 +905,7 @@
       <div class="rw-finance-history-head">
         <h4>${lang==="ru"?"Фильтры истории":lang==="es"?"Filtros del historial":"History filters"}</h4>
         <div class="rw-finance-history-filters">
-          <label class="rw-payment-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-payment-search value="${esc(paymentSearch)}" placeholder="${lang==="ru"?"Накладная или оплата":lang==="es"?"Albarán o pago":"Delivery note or payment"}"></label>
+          <label class="rw-payment-search"><span>${lang==="ru"?"Поиск":lang==="es"?"Buscar":"Search"}</span><input data-rw-payment-search data-panora-no-draft="1" value="${esc(paymentSearch)}" placeholder="${lang==="ru"?"Накладная или оплата":lang==="es"?"Albarán o pago":"Delivery note or payment"}"></label>
         </div>
       </div>
 
@@ -913,7 +913,7 @@
         ? `<div class="rw-finance-history">${filteredHistory.map(operation=>{
             const searchText=`${operation.label||""} ${operation.payment?.method||""} ${operation.payment?.note||""} ${operation.kind==="payment"?t("payment"):t("delivery")}`.toLowerCase();
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
-            return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search-text="${esc(searchText)}"${hidden?" hidden":""}>
+            return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
               <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small></div>
               <div class="rw-operation-amount"><b>${operation.amount<0?"−":"+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
             </article>`;
@@ -1342,6 +1342,17 @@
   }
   renderAccountModal = function () {
     const modal = document.querySelector("#profileModal");
+    const activeControl = document.activeElement;
+    if (
+      modal?.classList.contains("restaurant-workspace") &&
+      activeControl &&
+      modal.contains(activeControl) &&
+      ["INPUT","TEXTAREA","SELECT"].includes(activeControl.tagName)
+    ) {
+      // Keep the live native control mounted while the user is typing or while
+      // a select/date picker is open. Background sync will repaint after blur.
+      return;
+    }
     if (!account) {
       modal?.classList.remove("restaurant-workspace");
       previousRender();
@@ -1426,7 +1437,11 @@
 
   const workspaceInputFocused=()=>{
     const active=document.activeElement;
-    return Boolean(active&&active.closest?.("#restaurantWorkspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+    return Boolean(
+      active &&
+      active.closest?.("#profileModal.restaurant-workspace") &&
+      ["INPUT","TEXTAREA","SELECT"].includes(active.tagName)
+    );
   };
   const backgroundWorkspaceRender=()=>{if(account&&!openFilterMenu&&!workspaceInputFocused())renderAccountModal();};
   window.addEventListener("online", backgroundWorkspaceRender);
