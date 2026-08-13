@@ -1,7 +1,7 @@
 /* Panora 4.3 — stable money editing lock. */
 (function(){
   'use strict';
-  const SELECTOR='[data-price],[data-custom-price],[data-ingredient-price]';
+  const SELECTOR='[data-price],[data-custom-price],[data-direct-price],[data-ingredient-price]';
   let activeInput=null;
   window.panoraMoneyEditing={
     get active(){return !!(activeInput&&document.contains(activeInput));},
