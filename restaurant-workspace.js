@@ -331,7 +331,7 @@
     if (order.status === "cancelled") return true;
     const deliveredAt = archiveReferenceDate(order);
     if (!deliveredAt || Number.isNaN(deliveredAt.getTime())) return false;
-    return Date.now() - deliveredAt.getTime() >= 7 * 24 * 60 * 60 * 1000;
+    return Date.now() - deliveredAt.getTime() >= 5 * 24 * 60 * 60 * 1000;
   };
 
   const isActiveOrder = (order) => !isArchivedOrder(order);
@@ -436,8 +436,8 @@
     const lifecycle=orderLifecycleStatus(order);
     if(lifecycle==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
     if(lifecycle==="confirmed")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
-    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он ещё 7 дней останется в рабочих.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá 7 días en curso.":"The order has shipped. After receipt confirmation it remains in Working for 7 days.";
-    if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив через 7 дней.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente en 7 días.":"Delivery completed. The order moves to Archive automatically after 7 days.";
+    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он ещё 5 дней останется в рабочих.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá 7 días en curso.":"The order has shipped. After receipt confirmation it remains in Working for 7 days.";
+    if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив через 5 дней.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente en 7 días.":"Delivery completed. The order moves to Archive automatically after 7 days.";
     return "";
   }
 
@@ -497,12 +497,12 @@
         <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
       </div>
       ${active ? (()=>{const priceSource=active.prices||account.prices||{};const note=notes.find(n=>n.orderId===active.id);return `<article class="rw-current-order"><div class="rw-current-order-main"><span>${t("activeOrder")}</span><div class="rw-current-order-title"><strong>${esc(orderNumber(active))}</strong><em>${esc(status(active))}</em></div><small><b>${t("delivery")}:</b> ${esc(localDate(active.deliveryDate || active.date))}</small>${active.bakeDate?`<small><b>${t("bake")}:</b> ${esc(localDate(active.bakeDate))}</small>`:""}<ul class="rw-current-order-items">${(active.items||[]).map(item=>{const qty=Number(item.quantity||0),unit=Number(priceSource[item.product]||0);return `<li><span>${esc(itemName(item.product))}</span><strong>${qty} ${t("pieces")} × ${portalMoney(unit)} = ${portalMoney(qty*unit)}</strong></li>`}).join("")}</ul>${note?`<small><b>${t("notes")}:</b> ${esc(noteNumber(note))}</small>`:""}</div><div class="rw-current-order-total"><span>${lang==="ru"?"Итого":lang==="es"?"Total":"Total"}</span><b>${portalMoney(orderTotal(active))}</b></div><button class="button button-ghost" data-rw-open-order="${esc(active.id)}">${lang==="ru"?"Открыть заказ":lang==="es"?"Abrir pedido":"Open order"}</button></article>`})() : ""}
-      <div class="rw-quick-actions"><button class="button button-primary" data-rw-start>${draftCount ? `${t("continueOrder")} · ${draftCount} ${t("pieces")}` : t("newOrder")}</button>${last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : ""}</div>
+      <div class="rw-quick-actions">${active ? (last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : "") : `<button class="button button-primary" data-rw-start>${draftCount ? `${t("continueOrder")} · ${draftCount} ${t("pieces")}` : t("newOrder")}</button>${last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : ""}`}</div>
     </section>`;
   }
 
   function profileHtml() {
-    return `<section class="rw-profile-page"><aside class="rw-profile rw-profile-summary">
+    return `<section class="rw-profile-page"><aside class="rw-profile rw-profile-summary" aria-label="${esc(account.name)}">
       <div class="rw-profile-main"><span class="account-avatar">${esc(account.name?.[0]?.toUpperCase() || "R")}</span><span><strong>${esc(account.name)}</strong><small>${esc(account.email)}</small></span></div>
     </aside><form class="rw-profile-form" data-rw-profile-form>
       <header><h3>${t("profileData")}</h3><p>${t("profileHint")}</p></header>
@@ -582,7 +582,7 @@
           ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
-      ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и недавно доставленные заказы. После подтверждения доставки заказ автоматически переносится в архив через 7 дней.":lang==="es"?"Los pedidos actuales y recién entregados permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente en 7 días.":"Current and recently delivered orders stay in Working. After delivery confirmation they move to Archive automatically after 7 days."}</p>`:""}
+      ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и недавно доставленные заказы. После подтверждения доставки заказ автоматически переносится в архив через 5 дней.":lang==="es"?"Los pedidos actuales y recién entregados permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente en 7 días.":"Current and recently delivered orders stay in Working. After delivery confirmation they move to Archive automatically after 7 days."}</p>`:""}
       ${rows.length ? `<section class="rw-list">${rows.map((order) => {
         const note=orderDeliveryNote(order);
         const lifecycle=orderLifecycleStatus(order);
@@ -615,7 +615,7 @@
       const confirmed=note.customerConfirmedAt||note.offlineProof?.receivedAt;
       if(!confirmed)return false;
       const d=new Date(confirmed);
-      return !Number.isNaN(d.getTime()) && Date.now()-d.getTime()>=7*24*60*60*1000;
+      return !Number.isNaN(d.getTime()) && Date.now()-d.getTime()>=5 * 24 * 60 * 60 * 1000;
     };
     const working=allNotes.filter(note=>!noteArchived(note));
     const archive=allNotes.filter(noteArchived);
@@ -653,7 +653,7 @@
         <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc(periodLabel(noteDateFrom,noteDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${calendarHtml("note",noteDateFrom,noteDateTo)}</div></div>
         ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
-      ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и ещё 7 дней после подтверждения получения. Затем она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y 7 días más tras confirmar la recepción. Después pasa al archivo junto con el pedido.":"A delivery note stays in Working until delivery is complete and for 7 days after receipt confirmation, then moves to Archive with the order."}</p>`:""}
+      ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и ещё 5 дней после подтверждения получения. Затем она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y 7 días más tras confirmar la recepción. Después pasa al archivo junto con el pedido.":"A delivery note stays in Working until delivery is complete and for 7 days after receipt confirmation, then moves to Archive with the order."}</p>`:""}
       <div class="rw-list">${notes.map((note) => {
         const order = noteOrder(note);
         const isMain = note.id === working[0]?.id && noteView==="active";
