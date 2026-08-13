@@ -1151,3 +1151,142 @@
     max-width:96px!important;
   }
 }
+
+/* Panora 5.41 · stable personalized-price product cards */
+.rw-profile-prices{
+  padding:20px!important;
+  overflow:hidden;
+}
+.rw-profile-prices-head{
+  margin-bottom:14px!important;
+}
+.rw-profile-price-list{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important;
+  align-items:stretch;
+}
+.rw-profile-price-row{
+  display:grid!important;
+  grid-template-columns:96px minmax(0,1fr)!important;
+  grid-template-rows:auto 1fr auto!important;
+  column-gap:14px!important;
+  row-gap:8px!important;
+  min-width:0!important;
+  min-height:220px!important;
+  padding:16px!important;
+  border:1px solid #dfe5dd!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  overflow:hidden!important;
+}
+.rw-profile-price-photo{
+  grid-column:1!important;
+  grid-row:1 / span 3!important;
+  align-self:start!important;
+  width:96px!important;
+  height:96px!important;
+  min-width:96px!important;
+  min-height:96px!important;
+  border-radius:12px!important;
+  overflow:hidden!important;
+  background:#f1eee7!important;
+}
+.rw-profile-price-photo img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  object-fit:cover!important;
+  aspect-ratio:1/1!important;
+}
+.rw-profile-price-copy{
+  grid-column:2!important;
+  grid-row:1 / span 2!important;
+  display:block!important;
+  min-width:0!important;
+}
+.rw-profile-price-copy>strong{
+  display:block!important;
+  margin:0 0 8px!important;
+  font-size:17px!important;
+  line-height:1.28!important;
+  overflow-wrap:anywhere!important;
+}
+.rw-profile-price-copy p{
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  margin:0 0 8px!important;
+  max-width:none!important;
+  color:#6f7971!important;
+  font-size:13px!important;
+  line-height:1.4!important;
+}
+.rw-profile-price-copy small{
+  display:block!important;
+  color:#7a837c!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+}
+.rw-profile-price-value{
+  grid-column:2!important;
+  grid-row:3!important;
+  align-self:end!important;
+  justify-self:stretch!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  min-width:0!important;
+  padding-top:10px!important;
+  border-top:1px solid #edf0ec!important;
+  text-align:left!important;
+}
+.rw-profile-price-value span{
+  color:#7b847d!important;
+  font-size:11px!important;
+}
+.rw-profile-price-value strong{
+  margin-left:auto!important;
+  color:#274d37!important;
+  font-size:22px!important;
+  white-space:nowrap!important;
+}
+@media(max-width:1180px){
+  .rw-profile-price-list{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:720px){
+  .rw-profile-prices{padding:14px!important}
+  .rw-profile-price-list{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+  .rw-profile-price-row{
+    grid-template-columns:82px minmax(0,1fr)!important;
+    min-height:170px!important;
+    padding:13px!important;
+  }
+  .rw-profile-price-photo{
+    width:82px!important;
+    height:82px!important;
+    min-width:82px!important;
+    min-height:82px!important;
+  }
+  .rw-profile-price-copy>strong{
+    font-size:16px!important;
+  }
+  .rw-profile-price-copy p{
+    -webkit-line-clamp:2!important;
+    font-size:12px!important;
+  }
+  .rw-profile-price-value{
+    grid-column:1 / -1!important;
+    grid-row:4!important;
+    margin-top:2px!important;
+  }
+}

@@ -936,11 +936,15 @@
           return Array.isArray(list) ? list.find(item => String(item.id) === String(product.id)) : null;
         } catch (_) { return null; }
       })();
-      return String(
+      const value = String(
         managed?.descriptions?.[lang] ||
         managed?.descriptions?.ru ||
         ""
-      );
+      ).trim();
+      const compact = value.replace(/\s+/g, "");
+      // Hide accidental placeholder text like "oooooooo", "aaaaaa", etc.
+      if (compact.length >= 5 && /^([\p{L}\p{N}])\1+$/u.test(compact)) return "";
+      return value;
     };
     return `<section class="rw-prices rw-profile-prices">
       <header class="rw-profile-prices-head">
@@ -951,8 +955,8 @@
           const description = productDescription(product);
           const image = product.image || "icon.svg";
           const weight = Number(product.weight || 0);
-          return `<article class="rw-profile-price-row">
-            <div class="rw-profile-price-photo"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="lazy"></div>
+          return `<article class="rw-profile-price-row" data-rw-price-product="${esc(product.id)}">
+            <div class="rw-profile-price-photo"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="lazy" width="320" height="320"></div>
             <div class="rw-profile-price-copy">
               <strong>${esc(itemName(product.id))}</strong>
               ${description ? `<p>${esc(description)}</p>` : ""}
