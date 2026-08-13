@@ -483,7 +483,7 @@
 
   function homeHtml() {
     const orders = ownOrders();
-    const active = orders.filter(isActiveOrder).sort((a, b) => String(a.deliveryDate || a.date).localeCompare(String(b.deliveryDate || b.date)))[0];
+    const active = orders.filter(order => isActiveOrder(order) && !["delivered","cancelled"].includes(orderLifecycleStatus(order))).sort((a, b) => String(a.deliveryDate || a.date).localeCompare(String(b.deliveryDate || b.date)))[0];
     const last = orders[0];
     const notes = ownNotes();
     const trays = notes.length ? Number(notes[0].trayBalanceAfter || 0) : 0;
@@ -496,7 +496,7 @@
         <button type="button" class="rw-summary-card rw-home-finance-card${finance.advance>0?" has-advance":""}" data-rw-summary="payments"><span>${t("debt")}</span><strong>${portalMoney(finance.debt)}</strong><small>${finance.advance>0?`${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(finance.advance)}`:t("finance")}</small></button>
         <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
       </div>
-      ${active ? `<article class="rw-current-order"><div><span>${t("activeOrder")}</span><strong>${esc(orderNumber(active))}</strong><small>${esc(status(active))} · ${esc(localDate(active.deliveryDate || active.date))}</small></div><b>${portalMoney(orderTotal(active))}</b><button class="button button-ghost" data-rw-tab="orders">${t("orders")}</button></article>` : ""}
+      ${active ? (()=>{const priceSource=active.prices||account.prices||{};const note=notes.find(n=>n.orderId===active.id);return `<article class="rw-current-order"><div class="rw-current-order-main"><span>${t("activeOrder")}</span><div class="rw-current-order-title"><strong>${esc(orderNumber(active))}</strong><em>${esc(status(active))}</em></div><small><b>${t("delivery")}:</b> ${esc(localDate(active.deliveryDate || active.date))}</small>${active.bakeDate?`<small><b>${t("bake")}:</b> ${esc(localDate(active.bakeDate))}</small>`:""}<ul class="rw-current-order-items">${(active.items||[]).map(item=>{const qty=Number(item.quantity||0),unit=Number(priceSource[item.product]||0);return `<li><span>${esc(itemName(item.product))}</span><strong>${qty} ${t("pieces")} × ${portalMoney(unit)} = ${portalMoney(qty*unit)}</strong></li>`}).join("")}</ul>${note?`<small><b>${t("notes")}:</b> ${esc(noteNumber(note))}</small>`:""}</div><div class="rw-current-order-total"><span>${lang==="ru"?"Итого":lang==="es"?"Total":"Total"}</span><b>${portalMoney(orderTotal(active))}</b></div><button class="button button-ghost" data-rw-open-order="${esc(active.id)}">${lang==="ru"?"Открыть заказ":lang==="es"?"Abrir pedido":"Open order"}</button></article>`})() : ""}
       <div class="rw-quick-actions"><button class="button button-primary" data-rw-start>${draftCount ? `${t("continueOrder")} · ${draftCount} ${t("pieces")}` : t("newOrder")}</button>${last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : ""}</div>
     </section>`;
   }

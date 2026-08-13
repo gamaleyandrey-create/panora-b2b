@@ -894,3 +894,17 @@
 }
 /* Panora 5.31 partner profile */
 .rw-profile-grid textarea{box-sizing:border-box;width:100%;min-height:92px;padding:11px 12px;border:1px solid #cfd3cc;border-radius:8px;background:#fff;color:#17231b;font:16px/1.45 Arial;resize:vertical}.rw-profile-grid textarea:focus{outline:3px solid #dcebdd;border-color:#53775d}.rw-notification-settings{margin-top:18px;padding:17px;border:1px solid #dce4da;border-radius:12px;background:#fafcf9}.rw-notification-settings h4{margin:0 0 12px;font:700 17px Arial;color:#26372d}.rw-notification-settings>div{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}.rw-notification-settings label{display:flex;align-items:center;gap:9px;font:600 14px Arial;color:#455049}.rw-notification-settings input{width:18px;height:18px;accent-color:#315f3d}@media(max-width:720px){.rw-notification-settings>div{grid-template-columns:1fr}}
+
+/* Panora 5.34 — richer current-order card */
+.rw-current-order-main{display:grid;gap:7px;min-width:0}
+.rw-current-order-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rw-current-order-title>strong{font-size:22px}
+.rw-current-order-title>em{font-style:normal;font-size:13px;font-weight:700;color:#356447;background:#e7f0e7;border-radius:999px;padding:6px 10px}
+.rw-current-order-items{display:grid;gap:6px;margin:8px 0 2px;padding:10px 0;border-top:1px solid #e0e6df;border-bottom:1px solid #e0e6df;list-style:none}
+.rw-current-order-items li{display:flex;justify-content:space-between;gap:18px;align-items:baseline}
+.rw-current-order-items li span{color:#465248}
+.rw-current-order-items li strong{white-space:nowrap;font-size:14px}
+.rw-current-order-total{display:grid;gap:3px;justify-items:end;white-space:nowrap}
+.rw-current-order-total span{color:#707870;font-size:13px}
+.rw-current-order-total b{font-size:24px}
+@media(max-width:760px){.rw-current-order-items li{display:grid;gap:2px}.rw-current-order-items li strong{white-space:normal}.rw-current-order-total{justify-items:start}.rw-current-order{grid-template-columns:1fr!important}.rw-current-order .button{grid-column:auto!important}}
