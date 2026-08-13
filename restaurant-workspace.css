@@ -1471,3 +1471,55 @@
   .rw-finance{transform:none!important}
   .rw-finance-main-head .rw-finance-debt{transform:none!important}
 }
+
+
+/* Panora 5.49 · compact Orders/Invoices + stable mobile product images */
+@media(min-width:721px){
+  /* Orders and invoices: reduce unused vertical space without shrinking type. */
+  .rw-orders,.rw-invoices{
+    transform:translateY(-18px)!important;
+  }
+  .rw-orders .rw-view-tabs,.rw-invoices .rw-view-tabs{
+    margin-top:8px!important;
+    margin-bottom:10px!important;
+  }
+  .rw-orders .rw-filters,.rw-invoices .rw-filters{
+    margin-top:8px!important;
+    margin-bottom:10px!important;
+  }
+  .rw-orders .rw-archive-note,.rw-invoices .rw-archive-note{
+    margin:8px 0 10px!important;
+    padding-top:8px!important;
+    padding-bottom:8px!important;
+  }
+  .rw-orders article,.rw-invoices article{
+    margin-top:10px!important;
+  }
+  .rw-orders .rw-status-track{
+    margin-top:10px!important;
+    margin-bottom:8px!important;
+  }
+}
+
+/* Mobile new-order product images: isolate image rendering from recurring UI refreshes.
+   Fixed box geometry prevents layout reflow/flicker while quantity/date state updates. */
+@media(max-width:720px){
+  .rw-new-order img,
+  .rw-order-products img,
+  .rw-product-card img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    backface-visibility:hidden!important;
+    transform:translateZ(0);
+    contain:paint;
+  }
+  .rw-new-order .rw-product-image,
+  .rw-order-products .rw-product-image,
+  .rw-product-card .rw-product-image{
+    overflow:hidden!important;
+    contain:layout paint!important;
+    transform:translateZ(0);
+  }
+}
