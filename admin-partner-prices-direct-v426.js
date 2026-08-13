@@ -325,9 +325,18 @@
     }
   };
 
+  const renderCurrent=()=>{
+    if(!active)active=true;
+    if(lastRows.length){
+      render(lastRows);
+      return;
+    }
+    refresh();
+  };
+
   const activate=()=>{
     active=true;
-    refresh();
+    renderCurrent();
     connectRealtime();
   };
   const deactivate=()=>{
@@ -352,5 +361,19 @@
     if(view?.classList.contains('active'))activate();
   },500);
 
-  window.panoraDirectPartnerPrices={refresh,activate,deactivate};
+  const legacyRenderRestaurants=window.renderRestaurants;
+  window.panoraDirectPartnerPrices={refresh,activate,deactivate,renderCurrent};
+
+  // Final ownership guard: this file is loaded last. Any later call from
+  // renderCommerce/cloud-sync/product-admin must keep the direct design visible
+  // while the Partners view is active.
+  if(typeof legacyRenderRestaurants==="function"){
+    window.renderRestaurants=function(){
+      if(screen()?.classList.contains("active")){
+        renderCurrent();
+        return;
+      }
+      return legacyRenderRestaurants.apply(this,arguments);
+    };
+  }
 })();

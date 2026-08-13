@@ -190,6 +190,15 @@ function fillRestaurants() {
   document.querySelector("#paymentRestaurant").innerHTML = options;
 }
 function renderRestaurants() {
+  // Panora 5.32: the Partners screen is owned by the direct Supabase price editor.
+  // Never allow the legacy restaurant-card renderer to overwrite it after it appears.
+  if (
+    document.querySelector("#view-restaurants")?.classList.contains("active") &&
+    window.panoraDirectPartnerPrices?.renderCurrent
+  ) {
+    window.panoraDirectPartnerPrices.renderCurrent();
+    return;
+  }
   reloadRestaurantsFromStorage();
   const root = document.querySelector("#restaurantCards"),
     active = activeRestaurants(),
