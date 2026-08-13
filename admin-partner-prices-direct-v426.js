@@ -92,7 +92,7 @@
           const key=draftKey(restaurantId,productId);
           const saved=Number(prices[productId]??p.basePrice??p.price??0);
           const shown=drafts.has(key)?Number(drafts.get(key)):saved;
-          return `<label class="price-row${drafts.has(key)?' price-row-dirty':''}" data-direct-price-row="${esc(key)}">
+          return `<label class="price-row${drafts.has(key)?' price-row-dirty':''}" data-direct-price-row="${esc(key)}" data-panora-price-owned="direct">
             <span>${esc(productLabel(p.id))}<small>Оптовая цена</small></span>
             <span><input data-direct-price="${esc(key)}" type="text" inputmode="decimal" autocomplete="off" value="${shown.toFixed(2)}"> €</span>
           </label>`;
