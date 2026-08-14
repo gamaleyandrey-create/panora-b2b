@@ -29,7 +29,7 @@
       pending: "Ожидает подтверждения",
       activeOrders: "Рабочие", historyOrders: "Архив", noActiveOrders: "Рабочих заказов нет",
       startOrder: "Выбрать хлеб и дату",
-      orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине.",
+      orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине. Заказы принимаются не позднее чем за 48 часов до выпечки.",
       phone: "Телефон",
       address: "Адрес доставки",
       partnerType: "Тип партнёра", restaurant: "Ресторан", shop: "Магазин", hotel: "Отель", cafe: "Кафе", catering: "Кейтеринг", other: "Другое",
@@ -84,7 +84,7 @@
       close: "Close",
       pending: "Awaiting confirmation",
       startOrder: "Choose bread and date",
-      orderHelp: "Choose bread, then confirm the delivery date in the basket.",
+      orderHelp: "Choose bread, then confirm the delivery date in the basket. Orders close 48 hours before baking.",
       phone: "Phone",
       address: "Delivery address",
       partnerType: "Partner type", restaurant: "Restaurant", shop: "Shop", hotel: "Hotel", cafe: "Cafe", catering: "Catering", other: "Other",
@@ -129,7 +129,7 @@
       pending: "Pendiente de confirmación",
       activeOrders: "En curso", historyOrders: "Archivo", noActiveOrders: "No hay pedidos en curso",
       startOrder: "Elegir pan y fecha",
-      orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta.",
+      orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta. Los pedidos se aceptan hasta 48 horas antes del horneado.",
       phone: "Teléfono",
       address: "Dirección de entrega",
       partnerType: "Tipo de socio", restaurant: "Restaurante", shop: "Tienda", hotel: "Hotel", cafe: "Cafetería", catering: "Catering", other: "Otro",
@@ -848,13 +848,6 @@
     return `<section class="rw-finance">
       <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><div class="rw-finance-debt"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}</div></div></header>
 
-      <button type="button" class="rw-finance-summary-toggle" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Сводка по балансу":lang==="es"?"Resumen del saldo":"Balance summary"}</span><i>${financeSummaryOpen?"⌃":"⌄"}</i></button>
-      <div class="rw-finance-stats rw-finance-stats-4"${financeSummaryOpen?"":" hidden"}>
-        <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
-        <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
-        <article class="rw-finance-advance"><span>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}</span><strong>${portalMoney(advance)}</strong></article>
-        <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
-      </div>
 
       ${(()=>{
         const now=Date.now();
@@ -882,10 +875,16 @@
         </div>
 
         ${financeView==="active"?`
-          <div class="rw-current-debts-head"><div><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
+          <button type="button" class="rw-current-debts-head rw-current-debts-toggle" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><div><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4><small>${lang==="ru"?"Нажмите, чтобы открыть баланс":lang==="es"?"Pulsa para abrir el saldo":"Tap to open balance"}</small></div><strong data-rw-debt-count>${debts.length}</strong><i>${financeSummaryOpen?"⌃":"⌄"}</i></button>
+          <div class="rw-finance-stats rw-finance-stats-4"${financeSummaryOpen?"":" hidden"}>
+            <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
+            <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
+            <article class="rw-finance-advance"><span>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}</span><strong>${portalMoney(advance)}</strong></article>
+            <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
+          </div>
           <button type="button" class="rw-finance-filters-toggle${(debtSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(debtSearch||paymentDateFrom||paymentDateTo)?`<b>${[debtSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search data-panora-no-draft="1" value="${esc(debtSearchDraft||debtSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-debt-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-debt-search data-panora-no-draft="1" value="${esc(debtSearchDraft||debtSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><div class="rw-finance-filter-actions"><button type="button" class="rw-finance-filter-apply" data-rw-debt-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button><button type="button" class="rw-finance-filter-close" data-rw-finance-filter-close>Закрыть</button></div>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(debtSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-debt-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -904,7 +903,7 @@
           <div class="rw-current-debts-head"><div><h4>${lang==="ru"?"Архив закрытых расчётов":lang==="es"?"Archivo de pagos cerrados":"Closed settlements archive"}</h4></div><strong>${fullyPaidNotes.length}</strong></div>
           <button type="button" class="rw-finance-filters-toggle${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?" has-active":""}" data-rw-finance-filters-toggle aria-expanded="${financeFiltersOpen?"true":"false"}"><span>${lang==="ru"?"Фильтры":lang==="es"?"Filtros":"Filters"}</span>${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<b>${[financeArchiveSearch,paymentDateFrom||paymentDateTo].filter(Boolean).length}</b>`:""}<i>${financeFiltersOpen?"⌃":"⌄"}</i></button>
           <div class="rw-debt-filters"${financeFiltersOpen?"":" hidden"}>
-            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search data-panora-no-draft="1" value="${esc(financeArchiveSearchDraft||financeArchiveSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><button type="button" class="rw-finance-filter-apply" data-rw-finance-archive-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button>
+            <label class="rw-debt-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-finance-archive-search data-panora-no-draft="1" value="${esc(financeArchiveSearchDraft||financeArchiveSearch)}" placeholder="${lang==="ru"?"Введите номер накладной":lang==="es"?"Número de albarán":"Enter delivery note number"}" autocomplete="off" spellcheck="false"><small>${lang==="ru"?"Например: DN-0162":lang==="es"?"Por ejemplo: DN-0162":"For example: DN-0162"}</small></label><div class="rw-finance-filter-actions"><button type="button" class="rw-finance-filter-apply" data-rw-finance-archive-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button><button type="button" class="rw-finance-filter-close" data-rw-finance-filter-close>Закрыть</button></div>
             <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="payment-period">${esc(periodLabel(paymentDateFrom,paymentDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="payment-period"${openFilterMenu==="payment-period"?"":" hidden"}>${calendarHtml("payment",paymentDateFrom,paymentDateTo)}</div></div>
             ${(financeArchiveSearch||paymentDateFrom||paymentDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-finance-archive-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
           </div>
@@ -1192,6 +1191,7 @@
     }
     modal.querySelector("[data-rw-finance-archive-apply]")?.addEventListener("click",()=>{
       financeArchiveSearch=financeArchiveSearchDraft.trim();
+      financeFiltersOpen=false;openFilterMenu="";
       renderAccountModal();
     });
     modal.querySelector("[data-rw-finance-archive-reset]")?.addEventListener("click",()=>{
@@ -1211,8 +1211,10 @@
     }
     modal.querySelector("[data-rw-debt-filter-apply]")?.addEventListener("click",()=>{
       debtSearch=debtSearchDraft.trim();
+      financeFiltersOpen=false;openFilterMenu="";
       renderAccountModal();
     });
+    modal.querySelectorAll("[data-rw-finance-filter-close]").forEach(button=>button.addEventListener("click",()=>{financeFiltersOpen=false;openFilterMenu="";renderAccountModal();}));
     modal.querySelector("[data-rw-debt-filter-reset]")?.addEventListener("click",()=>{
       debtSearch="";debtSearchDraft="";paymentDateFrom="";paymentDateTo="";openFilterMenu="";renderAccountModal();
     });
@@ -1397,7 +1399,9 @@
       payments: currentDebtItems().length,
     };
     modal.classList.add("restaurant-workspace");
-    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><button type="button" class="rw-partner-name" data-rw-mobile-profile>${partnerTypeLabel()} · ${esc(account.name)} <span aria-hidden="true">›</span></button></div><button class="close-button" data-portal-close>×</button></div>
+    const currentSectionLabel = ({home:t("home"),new:t("newOrder"),orders:t("orders"),notes:t("notes"),payments:t("payments"),profile:t("profile")})[activeTab] || t("home");
+    document.body.classList.toggle("panora-partner-authenticated",Boolean(account));
+    modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><div class="rw-partner-context"><span class="rw-partner-name">${partnerTypeLabel()} · ${esc(account.name)}</span><span class="rw-section-name">${esc(currentSectionLabel)}</span></div></div><button class="close-button" data-portal-close aria-label="${t("close")}">×</button></div>
       <div class="rw-layout">
         <nav class="rw-nav" aria-label="${t("title")}">
           ${[
@@ -1422,7 +1426,8 @@
         <main class="rw-content">${contentHtml()}</main>
       </div>`;
     bind(modal);
-    modal.querySelector("[data-rw-mobile-profile]")?.addEventListener("click", () => { activeTab = "profile"; renderAccountModal(); });
+    const workspaceClose=modal.querySelector("[data-portal-close]");
+    if(workspaceClose)workspaceClose.onclick=(event)=>{event.preventDefault();event.stopPropagation();closePanels();};
     if (activeTab === "notes" && noteToReveal) {
       const targetId = noteToReveal;
       noteToReveal = "";
@@ -1500,7 +1505,13 @@
       ["INPUT","TEXTAREA","SELECT"].includes(active.tagName)
     );
   };
-  const backgroundWorkspaceRender=()=>{if(account&&!openFilterMenu&&!workspaceInputFocused())renderAccountModal();};
+  let lastBackgroundRender=0;
+  const backgroundWorkspaceRender=()=>{
+    if(!account||openFilterMenu||workspaceInputFocused())return;
+    if(activeTab==="new"||activeTab==="profile")return;
+    const now=Date.now(); if(now-lastBackgroundRender<1200)return; lastBackgroundRender=now;
+    renderAccountModal();
+  };
   window.addEventListener("online", backgroundWorkspaceRender);
   window.addEventListener("offline", backgroundWorkspaceRender);
   window.addEventListener("panora:restaurant-sync", backgroundWorkspaceRender);

@@ -1553,3 +1553,14 @@
     will-change:auto!important;
   }
 }
+
+/* Panora 5.55 */
+.rw-partner-context{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.rw-partner-name{font-weight:700;color:var(--text);cursor:default!important}
+.rw-section-name{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#eef5ef;color:#2f6245;font-size:12px;font-weight:800}
+.rw-current-debts-toggle{width:100%;border:0;background:transparent;text-align:left;cursor:pointer}
+.rw-current-debts-toggle i{margin-left:auto}.rw-current-debts-toggle small{display:block;margin-top:3px;color:var(--muted);font-weight:600}
+.rw-finance-filter-actions{display:flex;gap:10px;margin-top:12px}.rw-finance-filter-actions .rw-finance-filter-apply{flex:1}
+.rw-finance-filter-close{min-height:44px;padding:0 16px;border:1px solid #cfd8d0;border-radius:12px;background:#fff;color:#34443a;font-weight:800}
+@media(max-width:720px){
+.restaurant-workspace .rw-new-product-photo img,.restaurant-workspace .rw-order-card img,.restaurant-workspace img[data-product-main]{animation:none!important;transition:none!important;opacity:1!important;visibility:visible!important;transform:none!important;backface-visibility:hidden!important}}
