@@ -1609,3 +1609,7 @@
 .rw-order-footer-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .rw-current-order-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 @media(max-width:720px){.rw-order footer{align-items:flex-start}.rw-order-footer-actions{width:100%;justify-content:flex-start}.rw-order-message-button{min-height:40px}}
+
+/* Panora 5.69 — stable personal-price photos during cloud UI refresh */
+.rw-profile-price-photo{background-size:cover;background-position:center;background-repeat:no-repeat}
+.rw-profile-price-photo img{display:block;background:transparent;transform:translateZ(0);backface-visibility:hidden}

@@ -138,3 +138,13 @@ body.panora-partner-authenticated .product-card .product-tag{display:none!import
 
 /* Panora 5.56: empty basket must never float */
 .cart-fab:not(.visible){display:none!important}
+
+/* Panora 5.69 storefront gallery slider */
+.product-slider{position:relative;overflow:hidden}
+.product-slider>img{transition:opacity .12s ease}
+.product-slide-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:34px;height:42px;border:0;border-radius:8px;background:rgba(255,255,255,.86);color:#244c32;font-size:28px;line-height:1;cursor:pointer}
+.product-slide-arrow.prev{left:8px}.product-slide-arrow.next{right:8px}
+.product-slide-dots{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);z-index:3;display:flex;gap:5px;padding:5px 7px;border-radius:20px;background:rgba(255,255,255,.78)}
+.product-slide-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#aab3ac;cursor:pointer}
+.product-slide-dots button.active{background:#315e40}
+@media(max-width:700px){.product-slide-arrow{display:none}}
