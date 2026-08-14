@@ -592,10 +592,12 @@
           const unitPrice=newOrderTierPrice(product,qty);
           const warning=newOrderTierWarning(product,qty);
           const isWholesale=qty>=product.wholesaleMinQty;
+          const displayWholesale=qty===0;
+          const displayUnitPrice=displayWholesale?product.wholesalePrice:unitPrice;
           return `<article class="rw-new-product-card" data-rw-new-product="${esc(product.id)}">
             <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" height="320" loading="eager" decoding="async" data-rw-product-image></div>
             <div class="rw-new-product-body"><h4>${esc(product.name)}</h4>
-              <div class="rw-new-product-price"><span data-rw-new-price-kind>${isWholesale?(lang==="ru"?"Оптовая цена":lang==="es"?"Precio mayorista":"Wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price")}</span><strong data-rw-new-unit-price>${portalMoney(unitPrice)}</strong> <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
+              <div class="rw-new-product-price"><span data-rw-new-price-kind>${(displayWholesale||isWholesale)?(lang==="ru"?"Ваша оптовая цена":lang==="es"?"Tu precio mayorista":"Your wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price")}</span><strong data-rw-new-unit-price>${portalMoney(displayUnitPrice)}</strong> <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
               <small class="rw-new-wholesale-rule">${lang==="ru"?`Оптовая цена ${portalMoney(product.wholesalePrice)}/шт. от ${product.wholesaleMinQty} шт.`:lang==="es"?`Mayorista ${portalMoney(product.wholesalePrice)}/ud. desde ${product.wholesaleMinQty} uds.`:`Wholesale ${portalMoney(product.wholesalePrice)}/pc from ${product.wholesaleMinQty} pcs`}</small>
               <div class="rw-new-qty rw-new-qty-select" data-rw-new-qty-wrap="${esc(product.id)}">
                 <label>
@@ -1282,8 +1284,8 @@
           const price=card.querySelector("[data-rw-new-unit-price]");
           const kind=card.querySelector("[data-rw-new-price-kind]");
           if(warning){warning.textContent=warningText;warning.hidden=!warningText}
-          if(price)price.textContent=portalMoney(newOrderTierPrice(product,next));
-          if(kind)kind.textContent=next>=product.wholesaleMinQty?(lang==="ru"?"Оптовая цена":lang==="es"?"Precio mayorista":"Wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price");
+          if(price)price.textContent=portalMoney(next===0?product.wholesalePrice:newOrderTierPrice(product,next));
+          if(kind)kind.textContent=(next===0||next>=product.wholesaleMinQty)?(lang==="ru"?"Ваша оптовая цена":lang==="es"?"Tu precio mayorista":"Your wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price");
         }
         // Keep the native select mounted. Rebuilding the whole modal here caused
         // focus loss and visible jumps on desktop/mobile.
@@ -1496,6 +1498,16 @@
   };
   const mobileProfileButton = document.querySelector("#mobileProfile");
   if (mobileProfileButton) mobileProfileButton.onclick = () => window.panoraOpenPartnerProfile();
+  const desktopCabinetButton = document.querySelector("#profileButton");
+  if(desktopCabinetButton){
+    desktopCabinetButton.disabled=false;
+    desktopCabinetButton.removeAttribute("aria-disabled");
+    desktopCabinetButton.onclick=(event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      window.panoraOpenPartnerCabinet();
+    };
+  }
 
   const workspaceInputFocused=()=>{
     const active=document.activeElement;

@@ -122,3 +122,19 @@
 /* Panora 5.55 */
 .panora-48h-note{margin:8px 0 0;color:var(--muted);font-size:13px;font-weight:700}
 body.panora-partner-authenticated .catalog-partner-note{display:none!important}
+
+/* Panora 5.56 — partner catalog/cabinet fixes */
+body.panora-partner-authenticated .product-card .product-tag{display:none!important}
+#profileButton.account-entry{
+  pointer-events:auto!important;
+  position:relative!important;
+  z-index:50!important;
+  cursor:pointer!important;
+}
+.top-actions{position:relative!important;z-index:50!important;pointer-events:auto!important}
+@media(max-width:760px){
+  body.panora-partner-authenticated .product-card .product-tag{display:none!important}
+}
+
+/* Panora 5.56: empty basket must never float */
+.cart-fab:not(.visible){display:none!important}
