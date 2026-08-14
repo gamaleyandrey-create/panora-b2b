@@ -344,6 +344,12 @@
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{stopPartnerOrderPolling();stopPartnerPricingPolling();try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
   restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
+  window.panoraPartnerOrderMessages={
+    list:orderId=>api('rpc/panora_order_messages_for_order',{method:'POST',body:JSON.stringify({p_order_id:orderId})}),
+    send:(orderId,body)=>api('rpc/panora_send_order_message',{method:'POST',body:JSON.stringify({p_order_id:orderId,p_body:String(body||'').trim()})}),
+    markRead:orderId=>api('rpc/panora_mark_order_messages_read',{method:'POST',body:JSON.stringify({p_order_id:orderId})}),
+    unread:()=>api('rpc/panora_order_message_unread_counts',{method:'POST',body:'{}'})
+  };
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
