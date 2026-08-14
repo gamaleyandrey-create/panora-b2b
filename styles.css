@@ -114,3 +114,7 @@
   }
   .product-card:hover .product-image>img{transform:none!important}
 }
+
+/* Panora 5.53 */
+.catalog-partner-note{max-width:440px}.catalog-account-link{margin-top:8px;padding:0;border:0;background:transparent;color:var(--green);font:700 13px Manrope;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){.catalog-section{padding-top:34px!important}.catalog-partner-note{margin-top:12px}.catalog-partner-note p{margin:0!important}.catalog-account-link{font-size:14px}}
