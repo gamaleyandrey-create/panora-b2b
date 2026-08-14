@@ -50,3 +50,67 @@
     transform:translateZ(0);
   }
 }
+
+/* Panora 5.52 · mobile public-page cleanup */
+@media(max-width:760px){
+  .topbar{
+    position:relative!important;
+    height:64px!important;
+    padding:0 16px!important;
+    background:var(--green-dark)!important;
+    color:#fff!important;
+  }
+  .topbar .brand{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#fff!important;
+    font-size:21px!important;
+  }
+  .topbar .brand-mark{
+    display:grid!important;
+    width:34px!important;
+    height:34px!important;
+    border-color:rgba(255,255,255,.72)!important;
+  }
+  .topbar .brand>span:last-child{display:inline!important}
+  .hero{
+    min-height:auto!important;
+    padding:38px 20px 32px!important;
+  }
+  .hero h1{margin-top:0!important}
+  .hero-meta{margin-top:28px!important}
+  .bake-picker{
+    padding:30px 16px 32px!important;
+  }
+  .bake-dates{margin-top:16px!important}
+  .catalog-section{
+    padding:38px 16px 96px!important;
+  }
+  .section-heading>p{margin-bottom:0!important}
+  .partner-sync-inline{
+    display:none!important;
+  }
+  .cart-fab{
+    bottom:76px!important;
+    width:calc(100% - 28px)!important;
+    max-width:420px!important;
+    height:56px!important;
+    z-index:18!important;
+  }
+  .product-image{
+    height:auto!important;
+    aspect-ratio:4/3!important;
+    contain:layout paint!important;
+    background:var(--product-bg)!important;
+  }
+  .product-image>img,
+  [data-product-main]{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    transition:none!important;
+    transform:none!important;
+  }
+  .product-card:hover .product-image>img{transform:none!important}
+}

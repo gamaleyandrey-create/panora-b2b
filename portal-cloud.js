@@ -187,7 +187,7 @@
       const active=document.activeElement;
       const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
       if(!editingWorkspace)renderAccountModal();
-      renderProducts();renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -275,18 +275,19 @@
         write('panora-restaurants',[account]);
         try{renderAccountModal()}catch{}
       }
+      let productChanged=false;
       if(products?.length){
         const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||12)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
         const before=localStorage.getItem('panora-partner-products')||'[]',after=JSON.stringify(nextProducts);
-        if(before!==after)localStorage.setItem('panora-partner-products',after);
+        productChanged=before!==after;
+        if(productChanged)localStorage.setItem('panora-partner-products',after);
       }
-      if(priceChanged||products?.length){
+      if(priceChanged||productChanged){
         if(typeof refreshRestaurantProducts==='function')refreshRestaurantProducts();
         else applyAccount();
         renderAccountModal();
-        renderProducts();
         renderCart();
-        window.dispatchEvent(new CustomEvent('panora:partner-pricing-updated',{detail:{priceChanged,productCount:products?.length||0}}));
+        window.dispatchEvent(new CustomEvent('panora:partner-pricing-updated',{detail:{priceChanged,productChanged,productCount:products?.length||0}}));
       }
       return {priceChanged,productCount:products?.length||0};
     })().finally(()=>partnerPricingLoading=null);

@@ -1540,3 +1540,16 @@
     transform:translateZ(0);
   }
 }
+
+/* Panora 5.52 · no image flicker inside partner mobile order */
+@media(max-width:720px){
+  .restaurant-workspace .rw-new-product-photo,
+  .restaurant-workspace .rw-new-product-photo img{
+    transition:none!important;
+    animation:none!important;
+  }
+  .restaurant-workspace .rw-new-product-photo img{
+    transform:none!important;
+    will-change:auto!important;
+  }
+}
