@@ -9,13 +9,13 @@
  }
  let lastCatalogSignature='';
  const catalogSignature=list=>JSON.stringify((list||[]).map(p=>({
-  id:String(p.id),active:p.active!==false,price:Number(p.price||0),retailPrice:Number(p.retailPrice||0),
+  id:String(p.id),active:p.active!==false&&p.storefrontVisible!==false,price:Number(p.price||0),retailPrice:Number(p.retailPrice||0),
   wholesalePrice:Number(p.wholesalePrice||0),wholesaleMinQty:Number(p.wholesaleMinQty||0),
   weight:Number(p.weight||0),image:String(p.image||''),names:p.text||p.names||{},descriptions:p.descriptions||{}
  })));
  function refreshRestaurantProducts(){
   try{
-   const managed=readManaged().filter(p=>p&&p.active!==false);
+   const managed=readManaged().filter(p=>p&&p.active!==false&&p.storefrontVisible!==false);
    const accountId=localStorage.getItem('panora-account-id');
    const restaurantKey=localStorage.getItem('panora-portal-restaurants')?'panora-portal-restaurants':'panora-restaurants';
    const restaurants=JSON.parse(localStorage.getItem(restaurantKey)||'[]');
