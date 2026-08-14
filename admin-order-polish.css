@@ -61,3 +61,5 @@
   #view-orders #orderRows tr.order-row td:nth-child(6)::before{content:none!important;display:none!important}
   #view-orders #orderRows tr.order-row td:nth-child(6) .tag{display:inline-flex!important;max-width:135px!important}
 }
+
+.panora-inline-error{display:block;margin-top:6px;color:#a33f35;font-size:12px;font-weight:700}.panora-field-error{border-color:#b65045!important;box-shadow:0 0 0 2px rgba(182,80,69,.10)!important}

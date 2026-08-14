@@ -990,7 +990,11 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
           ),
     )
   ) {
-    alert("Количество должно быть целым и не больше заказанного.");
+    const bad=actualItems.find(i=>!Number.isInteger(i.quantity)||i.quantity<0||i.quantity>Number(orderedItems.find(x=>x.product===i.product)?.quantity||0));
+    const input=bad&&form.querySelector(`[data-shipment-quantity][data-product="${bad.product}"]`);
+    form.querySelectorAll(".panora-inline-error").forEach(n=>n.remove());
+    form.querySelectorAll(".panora-field-error").forEach(n=>n.classList.remove("panora-field-error"));
+    if(input){const max=Number(orderedItems.find(x=>x.product===bad.product)?.quantity||0);input.classList.add("panora-field-error");input.insertAdjacentHTML("afterend",`<small class="panora-inline-error">Можно указать целое количество от 0 до ${max} шт.</small>`);input.focus();}
     return false;
   }
   const changed =
