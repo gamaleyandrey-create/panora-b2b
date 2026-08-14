@@ -1009,6 +1009,50 @@
       renderAccountModal();
     });
     const profileForm = modal.querySelector("[data-rw-profile-form]");
+    const profileLanguage = profileForm?.querySelector('select[name="language"]');
+    if(profileLanguage){
+      profileLanguage.onchange=async()=>{
+        const next=profileLanguage.value;
+        const previous=account?.language||lang;
+        if(account)account.language=next;
+        window.panoraSetLanguage?.(next);
+        profileLanguage.disabled=true;
+        try{
+          if(!window.panoraRestaurantProfile?.save)throw new Error(lang==="ru"?"Облако ещё загружается":lang==="es"?"La nube aún se está cargando":"Cloud is still loading");
+          await window.panoraRestaurantProfile.save({
+            name:account.name,
+            phone:account.phone,
+            address:account.address,
+            whatsapp:account.whatsapp,
+            telegram:account.telegram,
+            extraMessengers:account.extraMessengers||[],
+            legalName:account.legalName,
+            taxId:account.taxId,
+            billingAddress:account.billingAddress,
+            contactPerson:account.contactPerson,
+            deliveryComment:account.deliveryComment,
+            receivingHours:account.receivingHours,
+            receivingDays:account.receivingDays,
+            notifyOrder:account.notifyOrder!==false?"on":"",
+            notifyShipment:account.notifyShipment!==false?"on":"",
+            notifyInvoice:account.notifyInvoice!==false?"on":"",
+            notifyPayment:account.notifyPayment!==false?"on":"",
+            language:next,
+            partnerType:account.partnerType
+          });
+          const result=profileForm.querySelector('[data-rw-profile-result]');
+          if(result){result.textContent=t("profileSaved");result.className="rw-profile-result success";}
+          setTimeout(()=>{activeTab="profile";renderAccountModal();},250);
+        }catch(error){
+          if(account)account.language=previous;
+          window.panoraSetLanguage?.(previous);
+          profileLanguage.value=previous;
+          profileLanguage.disabled=false;
+          const result=profileForm.querySelector('[data-rw-profile-result]');
+          if(result){result.textContent=`${t("saveError")} ${error.message||""}`.trim();result.className="rw-profile-result error";}
+        }
+      };
+    }
     const messengerList = profileForm?.querySelector("[data-rw-messenger-list]");
     const bindMessengerRows = () => messengerList?.querySelectorAll("[data-rw-remove-messenger]").forEach((button) => button.onclick = () => button.closest("[data-rw-messenger-row]")?.remove());
     bindMessengerRows();
