@@ -1568,3 +1568,15 @@
 /* Panora 5.56 */
 .restaurant-workspace .rw-new-product-photo::before,
 .restaurant-workspace .rw-new-product-photo::after{content:none!important;display:none!important}
+
+/* Panora 5.57 — finance debt card is the balance toggle */
+.rw-finance-debt-button{
+  appearance:none;-webkit-appearance:none;width:100%;text-align:left;cursor:pointer;
+  font:inherit;color:inherit;position:relative;
+}
+.rw-finance-debt-button i{
+  position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  font-style:normal;color:#6f7d73;font-weight:800
+}
+.rw-finance-debt-button:active{transform:scale(.995)}
+.rw-finance-debt-button:focus-visible{outline:2px solid #3a7654;outline-offset:2px}

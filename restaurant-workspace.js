@@ -729,6 +729,7 @@
       <div class="rw-note-filters"${noteFiltersOpen?"":" hidden"}>
         <label class="rw-note-search"><span>${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}</span><input data-rw-note-search data-panora-no-draft="1" value="${esc(noteQuery)}" placeholder="${lang==="ru"?"Номер накладной":lang==="es"?"Número de albarán":"Delivery note number"}" autocomplete="off" spellcheck="false"></label>
         <div class="rw-filter-menu rw-period-menu"><span>${lang==="ru"?"Период":lang==="es"?"Período":"Period"}</span><button type="button" class="rw-filter-trigger" data-rw-filter-toggle="note-period">${esc(periodLabel(noteDateFrom,noteDateTo))}<i>▣</i></button><div class="rw-filter-popover rw-calendar-popover" data-rw-filter-panel="note-period"${openFilterMenu==="note-period"?"":" hidden"}>${calendarHtml("note",noteDateFrom,noteDateTo)}</div></div>
+        <div class="rw-finance-filter-actions"><button type="button" class="rw-finance-filter-apply" data-rw-note-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button><button type="button" class="rw-finance-filter-close" data-rw-note-filter-close>${lang==="ru"?"Закрыть":lang==="es"?"Cerrar":"Close"}</button></div>
         ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
       ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и ещё 5 дней после подтверждения получения. Затем она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y 7 días más tras confirmar la recepción. Después pasa al archivo junto con el pedido.":"A delivery note stays in Working until delivery is complete and for 7 days after receipt confirmation, then moves to Archive with the order."}</p>`:""}
@@ -848,7 +849,7 @@
     const filteredHistory=history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
 
     return `<section class="rw-finance">
-      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><div class="rw-finance-debt"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}</div></div></header>
+      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><button type="button" class="rw-finance-debt rw-finance-debt-button" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}<i aria-hidden="true">${financeSummaryOpen?"⌃":"⌄"}</i></button></div></header>
 
 
       ${(()=>{
@@ -877,7 +878,7 @@
         </div>
 
         ${financeView==="active"?`
-          <button type="button" class="rw-current-debts-head rw-current-debts-toggle" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><div><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4><small>${lang==="ru"?"Нажмите, чтобы открыть баланс":lang==="es"?"Pulsa para abrir el saldo":"Tap to open balance"}</small></div><strong data-rw-debt-count>${debts.length}</strong><i>${financeSummaryOpen?"⌃":"⌄"}</i></button>
+          <div class="rw-current-debts-head"><div><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
           <div class="rw-finance-stats rw-finance-stats-4"${financeSummaryOpen?"":" hidden"}>
             <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
             <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
@@ -1162,6 +1163,8 @@
         if(empty)empty.hidden=visible>0;
       };
     }
+    modal.querySelector("[data-rw-note-filter-apply]")?.addEventListener("click",()=>{noteFiltersOpen=false;openFilterMenu="";renderAccountModal();});
+    modal.querySelector("[data-rw-note-filter-close]")?.addEventListener("click",()=>{noteFiltersOpen=false;openFilterMenu="";renderAccountModal();});
     modal.querySelector("[data-rw-note-filter-reset]")?.addEventListener("click",()=>{ noteQuery=""; noteDateFrom=""; noteDateTo=""; openFilterMenu=""; renderAccountModal(); });
     modal.querySelector("[data-rw-finance-summary-toggle]")?.addEventListener("click",()=>{
       financeSummaryOpen=!financeSummaryOpen;
