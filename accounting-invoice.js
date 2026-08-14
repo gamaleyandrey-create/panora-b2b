@@ -15,10 +15,12 @@
       style: "currency",
       currency: "EUR",
     }).format(Number(value || 0));
+  let documentLanguage = "";
   const currentLanguage = () =>
+    documentLanguage ||
     document.querySelector("#adminLanguage")?.value ||
     (typeof lang !== "undefined" ? lang : "") ||
-    localStorage.getItem("panora-language") ||
+    localStorage.getItem("panora-lang") ||
     "ru";
   const words = {
     ru: {
@@ -328,6 +330,7 @@ ${lines}
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
     const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
+    documentLanguage = ["ru","en","es"].includes(client.language) ? client.language : (["ru","en","es"].includes(baseClient.language) ? baseClient.language : currentLanguage());
     const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
     const prefix = variant === "albaran" ? "ALB-" : "F-";
     const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
@@ -382,7 +385,7 @@ ${lines}
     dialog.onclick = (event) => {
       if (event.target === dialog) close();
     };
-    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    dialog.addEventListener("close", () => { documentLanguage=""; dialog.remove(); }, { once: true });
     dialog.showModal();
   };
 })();

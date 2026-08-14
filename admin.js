@@ -11,7 +11,7 @@ const DEFAULT_RECIPES={
  plain:[{name:'Мука пшеничная',qty:450,unit:'g',stock:0,margin:5},{name:'Кефир / пахта',qty:330,unit:'ml',stock:0,margin:5},{name:'Семена льна',qty:45,unit:'g',stock:0,margin:5},{name:'Соль',qty:8,unit:'g',stock:0,margin:5},{name:'Сода пищевая',qty:6,unit:'g',stock:0,margin:5},{name:'Масло растительное',qty:15,unit:'ml',stock:0,margin:5}],
  pumpkin:[{name:'Мука пшеничная',qty:410,unit:'g',stock:0,margin:5},{name:'Пюре тыквенное',qty:190,unit:'g',stock:0,margin:10},{name:'Кефир / пахта',qty:220,unit:'ml',stock:0,margin:5},{name:'Семена тыквы',qty:40,unit:'g',stock:0,margin:5},{name:'Соль',qty:8,unit:'g',stock:0,margin:5},{name:'Сода пищевая',qty:6,unit:'g',stock:0,margin:5},{name:'Масло растительное',qty:18,unit:'ml',stock:0,margin:5}]
 };
-let lang=localStorage.getItem('panora-admin-lang')||'ru';
+let lang=localStorage.getItem('panora-admin-lang')||(['ru','en','es'].includes(navigator.language.slice(0,2).toLowerCase())?navigator.language.slice(0,2).toLowerCase():'en');
 let weekStart=startOfWeek(new Date());
 let plans=read('panora-production-plans',[]);
 let recipes=read('panora-recipes',DEFAULT_RECIPES);

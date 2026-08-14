@@ -51,7 +51,11 @@ try{
 const MIN_PIECES=1,MAX_PIECES_PER_PRODUCT=200,BAKE_WEEKDAYS=[3,6],CUTOFF_HOURS=48;let SHOW_PRICES=true;
 const CONTACTS={email:'gamaley1@gmail.com',whatsapp:'34611187640',telegram:'anastasiiagamalei'};
 const $=s=>document.querySelector(s);
-let lang=localStorage.getItem('panora-lang')||(['ru','en','es'].includes(navigator.language.slice(0,2))?navigator.language.slice(0,2):'en');
+const PANORA_LANGUAGES=['ru','en','es'];
+const panoraNormalizeLanguage=value=>PANORA_LANGUAGES.includes(String(value||'').slice(0,2).toLowerCase())?String(value||'').slice(0,2).toLowerCase():'';
+const panoraBrowserLanguage=()=>panoraNormalizeLanguage(navigator.language)||'en';
+const panoraResolveLanguage=partnerLanguage=>panoraNormalizeLanguage(partnerLanguage)||panoraNormalizeLanguage(localStorage.getItem('panora-lang'))||panoraBrowserLanguage();
+let lang=panoraResolveLanguage();
 let cart=JSON.parse(localStorage.getItem('panora-cart')||'{}');
 let selectedBakeDate=localStorage.getItem('panora-bake-date')||'';
 let activeCategory='all';
@@ -69,6 +73,17 @@ const pText=p=>p.text[lang];
 const unit=()=>lang==='ru'?'за 1 шт.':lang==='es'?'por 1 ud.':'per 1 pc';
 const weight=p=>`${p.weight} g`;
 function applyLanguage(){document.documentElement.lang=lang;document.title=tr('title');if($('#languageSelect'))$('#languageSelect').value=lang;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));document.querySelectorAll('[data-i18n-html]').forEach(el=>el.innerHTML=tr(el.dataset.i18nHtml));document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlaceholder));$('#fulfillmentSelect').innerHTML=`<option value="delivery">${tr('checkout.deliveryOption')}</option><option value="pickup">${tr('checkout.pickupOption')}</option>`;renderBakeDates();renderCategories();renderProducts();renderCart();toggleFulfillment()}
+function panoraSetLanguage(next,{persist=true}={}){
+ const normalized=panoraNormalizeLanguage(next)||panoraBrowserLanguage();
+ if(persist)localStorage.setItem('panora-lang',normalized);
+ if(lang===normalized){document.documentElement.lang=normalized;return normalized}
+ lang=normalized;applyLanguage();
+ window.dispatchEvent(new CustomEvent('panora:language-changed',{detail:{language:normalized}}));
+ return normalized;
+}
+window.panoraSetLanguage=panoraSetLanguage;
+window.panoraResolveLanguage=panoraResolveLanguage;
+
 function productionPlans(){try{return JSON.parse(localStorage.getItem('panora-production-plans')||'[]')}catch{return[]}}
 function getBakeDates(count=4){const plans=productionPlans(),now=new Date(),scheduled=plans.filter(p=>p.open&&new Date(p.cutoff)>now&&new Date(p.bakeDate+'T23:59:59')>now);if(scheduled.length){const grouped=new Map();scheduled.forEach(p=>{if(!grouped.has(p.bakeDate))grouped.set(p.bakeDate,{date:new Date(p.bakeDate+'T09:00:00'),cutoff:new Date(p.cutoff),deliveryDate:p.deliveryDate});else if(new Date(p.cutoff)<grouped.get(p.bakeDate).cutoff)grouped.get(p.bakeDate).cutoff=new Date(p.cutoff)});return [...grouped.values()].sort((a,b)=>a.date-b.date).slice(0,count)}const dates=[],cursor=new Date();cursor.setHours(9,0,0,0);for(let i=1;dates.length<count&&i<35;i++){const date=new Date(cursor);date.setDate(date.getDate()+i);if(BAKE_WEEKDAYS.includes(date.getDay())){const cutoff=new Date(date.getTime()-CUTOFF_HOURS*3600000);if(cutoff>now)dates.push({date,cutoff,deliveryDate:dateValue(date)})}}return dates}
 const dateValue=d=>d.toISOString().split('T')[0];
@@ -153,7 +168,7 @@ function orderText(order){const lines=[tr('order.title'),`${tr('order.number')}:
 function copyText(text){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();return Promise.resolve()}
 function showShare(order){const text=orderText(order),subject=`${tr('order.title')} ${order.id}`,encodedText=encodeURIComponent(text),encodedSubject=encodeURIComponent(subject);$('#successText').textContent=`${order.id} · ${order.dateLabel}`;$('#successMessage').classList.add('show');setTimeout(()=>$('#successMessage').classList.remove('show'),5000);const existing=$('#shareModal');if(existing)existing.remove();const modal=document.createElement('section');modal.id='shareModal';modal.className='modal compact';modal.innerHTML=`<div class="modal-head"><div><span class="kicker">Panora</span><h2>${tr('share.title')}</h2></div><button class="close-button" type="button" data-share-close>×</button></div><div class="share-actions"><a class="button button-primary full" target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${CONTACTS.email}&su=${encodedSubject}&body=${encodedText}">${tr('share.email')}</a><a class="button button-telegram full" target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${encodedText}">${tr('share.telegram')}</a><a class="button button-whatsapp full" target="_blank" rel="noopener" href="https://wa.me/${CONTACTS.whatsapp}?text=${encodedText}">${tr('share.whatsapp')}</a><button class="button button-ghost full" type="button" id="copyOrder">${tr('share.copy')}</button><small class="share-hint">${CONTACTS.email} · +${CONTACTS.whatsapp} · @${CONTACTS.telegram}</small></div>`;document.body.appendChild(modal);modal.querySelector('[data-share-close]').onclick=closePanels;modal.querySelector('#copyOrder').onclick=()=>copyText(text).then(()=>showToast(tr('share.copied')));openPanel(modal)}
 function repeatLast(){const last=JSON.parse(localStorage.getItem('panora-last-order')||'null');if(!last){showToast(tr('messages.noOrders'));return}cart={};last.items.forEach(i=>cart[i.id]=i.quantityPieces||i.boxes||0);localStorage.setItem('panora-cart',JSON.stringify(cart));renderProducts();renderCart();showToast(tr('messages.repeat'));location.hash='catalog'}
-$('#languageSelect').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-lang',lang);applyLanguage()};$('#cartButton').onclick=()=>openPanel($('#cartDrawer'));$('#checkoutButton').onclick=()=>{closePanels();setTimeout(()=>openPanel($('#checkoutModal')),180)};$('#overlay').onclick=closePanels;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closePanels);const openPartnerCabinet=()=>{const modal=$('#profileModal');try{if(typeof window.panoraOpenPartnerCabinet==='function')return window.panoraOpenPartnerCabinet();renderAccountModal?.()}catch{}requestAnimationFrame(()=>openPanel(modal))};
+if($('#languageSelect'))$('#languageSelect').onchange=e=>panoraSetLanguage(e.target.value);$('#cartButton').onclick=()=>openPanel($('#cartDrawer'));$('#checkoutButton').onclick=()=>{closePanels();setTimeout(()=>openPanel($('#checkoutModal')),180)};$('#overlay').onclick=closePanels;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closePanels);const openPartnerCabinet=()=>{const modal=$('#profileModal');try{if(typeof window.panoraOpenPartnerCabinet==='function')return window.panoraOpenPartnerCabinet();renderAccountModal?.()}catch{}requestAnimationFrame(()=>openPanel(modal))};
 $('#profileButton').onclick=openPartnerCabinet;
 const catalogAccountButton=$('#catalogAccountButton');if(catalogAccountButton)catalogAccountButton.onclick=openPartnerCabinet;
 $('#mobileProfile').onclick=openPartnerCabinet;$('#repeatOrderButton').onclick=repeatLast;
