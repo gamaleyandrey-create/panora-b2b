@@ -979,7 +979,7 @@
           const image = product.image || "icon.svg";
           const weight = Number(product.weight || 0);
           return `<article class="rw-profile-price-row" data-rw-price-product="${esc(product.id)}">
-            <div class="rw-profile-price-photo"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="lazy" width="320" height="320"></div>
+            <div class="rw-profile-price-photo" style="background-image:url(&quot;${esc(image)}&quot;)"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="eager" decoding="async" fetchpriority="low" width="320" height="320"></div>
             <div class="rw-profile-price-copy">
               <strong>${esc(itemName(product.id))}</strong>
               ${description ? `<p>${esc(description)}</p>` : ""}
