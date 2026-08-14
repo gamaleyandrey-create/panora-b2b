@@ -1580,3 +1580,14 @@
 }
 .rw-finance-debt-button:active{transform:scale(.995)}
 .rw-finance-debt-button:focus-visible{outline:2px solid #3a7654;outline-offset:2px}
+
+/* Panora 5.62 — partner settings */
+.rw-settings-panel{margin-top:18px;padding:18px;border:1px solid #dbe3dc;border-radius:18px;background:#fbfcfa}
+.rw-settings-panel>header h4{margin:0;font-size:18px}
+.rw-settings-panel>header p{margin:5px 0 14px;color:#738078}
+.rw-setting-language{display:grid;gap:7px;max-width:520px}
+.rw-setting-language>span{font-weight:800}
+.rw-setting-language select{min-height:46px}
+.rw-setting-language small{color:#748078;line-height:1.4}
+.rw-settings-panel .rw-notification-settings{margin-top:18px;padding-top:16px;border-top:1px solid #e1e7e2}
+.rw-settings-panel .rw-notification-settings h5{margin:0 0 10px;font-size:15px}

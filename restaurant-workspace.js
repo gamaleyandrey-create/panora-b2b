@@ -515,7 +515,6 @@
         <label><span>${t("receivingHours")}</span><input name="receivingHours" maxlength="80" value="${esc(account.receivingHours || "")}" placeholder="08:00–11:00"></label>
         <label class="rw-profile-wide"><span>${t("receivingDays")}</span><input name="receivingDays" maxlength="120" value="${esc(account.receivingDays || "")}" placeholder="${lang==="ru"?"Пн–Сб":lang==="es"?"Lun–Sáb":"Mon–Sat"}"></label>
         <label class="rw-profile-wide"><span>${t("deliveryComment")}</span><textarea name="deliveryComment" maxlength="500" rows="3" placeholder="${lang==="ru"?"Например: вход со двора, звонить за 10 минут":lang==="es"?"Por ejemplo: entrada por el patio, llamar 10 min antes":"For example: courtyard entrance, call 10 min before"}">${esc(account.deliveryComment || "")}</textarea></label>
-        <label><span>${t("language")}</span><select name="language"><option value="ru"${account.language === "ru" ? " selected" : ""}>Русский</option><option value="es"${account.language === "es" ? " selected" : ""}>Español</option><option value="en"${account.language === "en" ? " selected" : ""}>English</option></select></label>
       </div>
       <section class="rw-messengers" aria-labelledby="rw-messengers-title">
         <header><span class="rw-messenger-mark" aria-hidden="true">✦</span><div><h4 id="rw-messengers-title">${t("messengers")}</h4><p>${t("messengersHint")}</p></div></header>
@@ -533,9 +532,13 @@
           <label class="rw-profile-wide"><span>${t("billingAddress")}</span><input name="billingAddress" autocomplete="billing street-address" value="${esc(account.billingAddress || "")}" placeholder="${t("billingAddress")}"></label>
         </div>
       </section>
-      <section class="rw-notification-settings"><h4>${t("notifications")}</h4><div>
-        ${[["notifyOrder","notifyOrder"],["notifyShipment","notifyShipment"],["notifyInvoice","notifyInvoice"],["notifyPayment","notifyPayment"]].map(([name,label])=>`<label><input type="checkbox" name="${name}"${account[name]!==false?" checked":""}><span>${t(label)}</span></label>`).join("")}
-      </div></section>
+      <section class="rw-settings-panel">
+        <header><div><h4>${lang==="ru"?"Настройки":lang==="es"?"Ajustes":"Settings"}</h4><p>${lang==="ru"?"Персональные настройки кабинета и сообщений.":lang==="es"?"Preferencias personales del área y los mensajes.":"Personal account and message preferences."}</p></div></header>
+        <label class="rw-setting-language"><span>${t("language")}</span><select name="language"><option value="ru"${account.language === "ru" ? " selected" : ""}>Русский</option><option value="es"${account.language === "es" ? " selected" : ""}>Español</option><option value="en"${account.language === "en" ? " selected" : ""}>English</option></select><small>${lang==="ru"?"Этот язык используется в кабинете, уведомлениях и документах партнёра.":lang==="es"?"Este idioma se usa en el área, avisos y documentos del socio.":"This language is used for the account, notifications and partner documents."}</small></label>
+        <div class="rw-notification-settings"><h5>${t("notifications")}</h5><div>
+          ${[["notifyOrder","notifyOrder"],["notifyShipment","notifyShipment"],["notifyInvoice","notifyInvoice"],["notifyPayment","notifyPayment"]].map(([name,label])=>`<label><input type="checkbox" name="${name}"${account[name]!==false?" checked":""}><span>${t(label)}</span></label>`).join("")}
+        </div></div>
+      </section>
       <div class="rw-profile-access"><span><strong>${t("accountAccess")}</strong><small>${t("emailLocked")}</small></span><b>${esc(account.email)}</b></div>
       <p class="rw-profile-result" data-rw-profile-result role="status"></p>
       <button class="button button-primary rw-profile-save" type="submit">${t("saveProfile")}</button>

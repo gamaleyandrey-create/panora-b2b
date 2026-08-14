@@ -157,6 +157,7 @@ function restoreAccount() {
 }
 function applyAccount() {
   SHOW_PRICES = true;
+  if(account?.language)window.panoraSetLanguage?.(account.language);
   PRODUCTS.find((p) => p.id === "plain").price = Number(account.prices.plain);
   PRODUCTS.find((p) => p.id === "pumpkin").price = Number(
     account.prices.pumpkin,
