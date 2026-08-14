@@ -1591,3 +1591,16 @@
 .rw-setting-language small{color:#748078;line-height:1.4}
 .rw-settings-panel .rw-notification-settings{margin-top:18px;padding-top:16px;border-top:1px solid #e1e7e2}
 .rw-settings-panel .rw-notification-settings h5{margin:0 0 10px;font-size:15px}
+
+/* Panora 5.64 — denser partner desktop workspace */
+@media(min-width:721px){
+  .restaurant-workspace .rw-content .kicker{display:none!important}
+  .restaurant-workspace .rw-content{margin-top:-22px!important}
+  .restaurant-workspace .rw-overview-head,
+  .restaurant-workspace .rw-notes-head,
+  .restaurant-workspace .rw-orders-head,
+  .restaurant-workspace .rw-finance-main-head{margin-top:0!important}
+  .restaurant-workspace .rw-overview-head h3,
+  .restaurant-workspace .rw-notes-head h3,
+  .restaurant-workspace .rw-orders-head h3{margin-top:0!important}
+}
