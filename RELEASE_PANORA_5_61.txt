@@ -1,0 +1,6 @@
+Panora 5.61
+- Исправлена ошибка Supabase PGRST204: отсутствовала колонка products.gallery_urls.
+- SQL добавляет gallery_urls (jsonb) и гарантирует storefront_visible.
+- Добавлен notify pgrst, 'reload schema' для немедленного обновления schema cache.
+- Код приложения не меняет бизнес-логику.
+- Кэш приложения поднят до panora-v5610.
