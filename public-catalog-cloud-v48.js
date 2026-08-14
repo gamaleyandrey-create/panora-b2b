@@ -36,7 +36,7 @@
    const next=rows.map(p=>({
     id:p.id,
     builtIn:['plain','pumpkin'].includes(p.id),
-    active:p.active!==false,
+    active:p.active!==false&&p.storefrontVisible!==false,
     weight:Number(p.weight_g||0),
     basePrice:Number(p.retail_price||0),
     wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||12)),
