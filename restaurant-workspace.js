@@ -1285,6 +1285,8 @@
         }
         // Keep the native select mounted. Rebuilding the whole modal here caused
         // focus loss and visible jumps on desktop/mobile.
+        // Do not rebuild public product cards here: recreating <img> caused
+        // visible mobile flicker. Only cart totals and this card are updated.
         try{renderCart()}catch{}
         refreshNewOrderSummary();
       };

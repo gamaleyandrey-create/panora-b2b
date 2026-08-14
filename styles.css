@@ -32,3 +32,21 @@
 .product-tier-warning,.cart-tier-warning{margin:8px 0 0;padding:8px 10px;border-radius:9px;background:#fff4e5;color:#8b542c;font-size:11px;line-height:1.4}
 .product-tier-warning[hidden]{display:none!important}
 .cart-tier-warning{max-width:420px}
+
+/* Panora 5.51 · stable mobile catalogue images */
+@media(max-width:760px){
+  .product-image{
+    overflow:hidden!important;
+    contain:layout paint!important;
+    aspect-ratio:4/3;
+  }
+  .product-image>img,
+  [data-product-main]{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    backface-visibility:hidden!important;
+    transform:translateZ(0);
+  }
+}
