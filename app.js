@@ -114,7 +114,9 @@ function renderProducts(){
  $('#productGrid').innerHTML=visible.map(p=>{
   const x=pText(p),qty=cart[p.id]||0,min=wholesaleMinQty(p),unitPrice=effectiveUnitPrice(p,qty);
   const isWholesale=Boolean(account&&qty>=min);
-  const priceKind=account?(isWholesale?tr('catalog.wholesalePrice'):tr('catalog.retailPrice')):tr('catalog.retailPrice');
+  const displayPartnerWholesale=Boolean(account&&qty===0);
+  const displayPrice=displayPartnerWholesale?Number(account?.prices?.[p.id] ?? p.wholesalePrice ?? p.price ?? 0):unitPrice;
+  const priceKind=account?(displayPartnerWholesale||isWholesale?tr('catalog.wholesalePrice'):tr('catalog.retailPrice')):tr('catalog.retailPrice');
   const warning=tierWarningText(p,qty);
   const threshold=account?(lang==='ru'?`Оптовая цена от ${min} шт.`:lang==='es'?`Precio mayorista desde ${min} uds.`:`Wholesale from ${min} pcs`):'';
   const gallery=[p.image,...(Array.isArray(p.gallery)?p.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
@@ -124,7 +126,7 @@ function renderProducts(){
    <div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p>
    <div class="product-meta"><span>${weight(p)} / ${tr('catalog.piece')}</span><span>${unit(p)}</span></div>
    ${threshold?`<small class="product-wholesale-threshold">${threshold}</small>`:""}
-   <div class="product-buy"><div class="price private-price"><small class="price-kind" data-tier-kind>${priceKind}</small><strong data-tier-price>${SHOW_PRICES?money(unitPrice):privatePriceText()}</strong></div>${qtyControl(p.id,qty)}</div>
+   <div class="product-buy"><div class="price private-price"><small class="price-kind" data-tier-kind>${priceKind}</small><strong data-tier-price>${SHOW_PRICES?money(displayPrice):privatePriceText()}</strong></div>${qtyControl(p.id,qty)}</div>
    <p class="product-tier-warning" data-tier-warning${warning?"":" hidden"}>${warning}</p>
    </div></article>`;
  }).join('');
