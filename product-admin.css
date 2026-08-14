@@ -76,20 +76,3 @@
   #productAdminGrid.product-admin-grid{grid-template-columns:1fr}
 }
 
-/* Panora 5.64 — product translation */
-.product-translation-head{
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  margin:16px 0 8px;padding:14px 16px;border:1px solid #dce5de;border-radius:14px;background:#f7faf7
-}
-.product-translation-head>div{display:grid;gap:4px}
-.product-translation-head strong{font-size:15px;color:#263a2d}
-.product-translation-head small{max-width:620px;color:#737f77;line-height:1.4}
-.product-translate-button{white-space:nowrap}
-.product-translation-status{min-height:18px;margin:0 0 10px;font-size:13px;color:#6f7972}
-.product-translation-status.success{color:#2f6d49}
-.product-translation-status.error{color:#a0443b}
-.product-translation-status.working{color:#6d6338}
-@media(max-width:760px){
-  .product-translation-head{align-items:stretch;flex-direction:column}
-  .product-translate-button{width:100%}
-}

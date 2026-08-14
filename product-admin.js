@@ -26,7 +26,7 @@ productName=id=>productLabel(id);
 function saveProducts(){cSave('panora-products',productRegistry);window.panoraCloud?.queueProducts();window.dispatchEvent(new CustomEvent('panora:products-changed'))}
 function fileData(file){return new Promise(resolve=>{if(!file)return resolve('');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const size=900,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;const ctx=canvas.getContext('2d'),scale=Math.max(size/img.width,size/img.height),w=img.width*scale,h=img.height*scale;ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);resolve(canvas.toDataURL('image/webp',.84))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
 const productEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-document.body.insertAdjacentHTML('beforeend',`<dialog id="productEditDialog" class="product-edit-dialog"><form method="dialog" id="productEditForm"><button type="button" class="dialog-close" id="closeProductEdit" aria-label="Закрыть">×</button><h3 id="productEditTitle">Карточка продукции</h3><input type="hidden" name="productId"><div class="product-photo-editor"><img id="productPhotoPreview" alt="Предпросмотр фотографии"><div><label><span>Главная фотография хлеба</span><input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="button" class="secondary" id="removeProductPhoto">Удалить главную фотографию</button><small>Рекомендуется квадратное фото JPG или WebP.</small></div></div><div class="product-gallery-editor"><label><span>Дополнительные фотографии</span><input name="galleryPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div id="productGalleryPreview" class="product-gallery-preview"></div><button type="button" class="secondary" id="clearProductGallery">Удалить дополнительные фото</button><small>Можно добавить до 6 фотографий товара.</small></div><div class="product-translation-head"><div><strong>Переводы карточки</strong><small>Основной язык — русский. Перевод заполнит English и Español, после чего текст можно исправить вручную.</small></div><button type="button" class="secondary product-translate-button" id="translateProductText">Перевести RU → EN / ES</button></div><p class="product-translation-status" id="productTranslationStatus" role="status"></p><div class="settings-row"><label><span>Название RU</span><input name="nameRu" required></label><label><span>Название EN</span><input name="nameEn" required></label></div><label><span>Название ES</span><input name="nameEs" required></label><label><span>Описание RU</span><textarea name="descRu" rows="2"></textarea></label><label><span>Описание EN</span><textarea name="descEn" rows="2"></textarea></label><label><span>Описание ES</span><textarea name="descEs" rows="2"></textarea></label><div class="settings-row"><label><span>Вес одной штуки, г</span><input name="weight" type="number" min="1" required></label><label><span>Розничная цена, €</span><input name="basePrice" type="number" min="0" step="0.01" required><small>Цены партнёров настраиваются отдельно.</small></label></div><label><span>Оптовая цена действует от, шт.</span><input name="wholesaleMinQty" type="number" min="1" max="500" step="1" value="12" required><small>Для количества ниже этого порога партнёру применяется розничная цена.</small></label><label class="check"><input name="active" type="checkbox"><span>Товар активен внутри пекарни</span></label><label class="check"><input name="storefrontVisible" type="checkbox"><span>Показывать на витрине партнёров</span></label><div class="dialog-actions"><button type="button" id="cancelProductEdit">Отмена</button><button type="submit" class="primary">Сохранить карточку</button></div></form></dialog>`);
+document.body.insertAdjacentHTML('beforeend',`<dialog id="productEditDialog" class="product-edit-dialog"><form method="dialog" id="productEditForm"><button type="button" class="dialog-close" id="closeProductEdit" aria-label="Закрыть">×</button><h3 id="productEditTitle">Карточка продукции</h3><input type="hidden" name="productId"><div class="product-photo-editor"><img id="productPhotoPreview" alt="Предпросмотр фотографии"><div><label><span>Главная фотография хлеба</span><input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="button" class="secondary" id="removeProductPhoto">Удалить главную фотографию</button><small>Рекомендуется квадратное фото JPG или WebP.</small></div></div><div class="product-gallery-editor"><label><span>Дополнительные фотографии</span><input name="galleryPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div id="productGalleryPreview" class="product-gallery-preview"></div><button type="button" class="secondary" id="clearProductGallery">Удалить дополнительные фото</button><small>Можно добавить до 6 фотографий товара.</small></div><div class="settings-row"><label><span>Название RU</span><input name="nameRu" required></label><label><span>Название EN</span><input name="nameEn" required></label></div><label><span>Название ES</span><input name="nameEs" required></label><label><span>Описание RU</span><textarea name="descRu" rows="2"></textarea></label><label><span>Описание EN</span><textarea name="descEn" rows="2"></textarea></label><label><span>Описание ES</span><textarea name="descEs" rows="2"></textarea></label><div class="settings-row"><label><span>Вес одной штуки, г</span><input name="weight" type="number" min="1" required></label><label><span>Розничная цена, €</span><input name="basePrice" type="number" min="0" step="0.01" required><small>Цены партнёров настраиваются отдельно.</small></label></div><label><span>Оптовая цена действует от, шт.</span><input name="wholesaleMinQty" type="number" min="1" max="500" step="1" value="12" required><small>Для количества ниже этого порога партнёру применяется розничная цена.</small></label><label class="check"><input name="active" type="checkbox"><span>Товар активен внутри пекарни</span></label><label class="check"><input name="storefrontVisible" type="checkbox"><span>Показывать на витрине партнёров</span></label><div class="dialog-actions"><button type="button" id="cancelProductEdit">Отмена</button><button type="submit" class="primary">Сохранить карточку</button></div></form></dialog>`);
 let removeEditedPhoto=false;
 let clearEditedGallery=false;
 const renderGalleryPreview=(images=[])=>{
@@ -39,113 +39,6 @@ async function deleteProduct(productId,button){const p=productRegistry.find(x=>x
 function bindProductDeleteButtons(root=document){root.querySelectorAll('[data-delete-product]').forEach(b=>b.onclick=()=>deleteProduct(b.dataset.deleteProduct,b))}
 function openProductEditor(id=''){const p=productRegistry.find(x=>x.id===id),form=document.querySelector('#productEditForm');form.reset();form.productId.value=p?.id||'';form.nameRu.value=p?.names?.ru||'';form.nameEn.value=p?.names?.en||'';form.nameEs.value=p?.names?.es||'';form.descRu.value=p?.descriptions?.ru||'';form.descEn.value=p?.descriptions?.en||'';form.descEs.value=p?.descriptions?.es||'';form.weight.value=p?.weight||750;form.basePrice.value=p?.basePrice||0;form.wholesaleMinQty.value=Math.max(1,Number(p?.wholesaleMinQty||12));form.active.checked=p?.active!==false;form.storefrontVisible.checked=p?.storefrontVisible!==false;form.photo.value='';form.galleryPhotos.value='';removeEditedPhoto=false;clearEditedGallery=false;document.querySelector('#productEditTitle').textContent=p?'Настроить карточку':'Новый вид хлеба';document.querySelector('#productPhotoPreview').src=p?.image||'icon.svg';renderGalleryPreview(p?.gallery||[]);document.querySelector('#productEditDialog').showModal()}
 function closeProductEditor(){document.querySelector('#productEditDialog').close()}
-
-const productTranslationStatus=document.querySelector('#productTranslationStatus');
-const setProductTranslationStatus=(text,type='')=>{
-  if(!productTranslationStatus)return;
-  productTranslationStatus.textContent=text||'';
-  productTranslationStatus.className=`product-translation-status${type?` ${type}`:''}`;
-};
-async function translateProductFromRussian(){
-  const form=document.querySelector('#productEditForm');
-  const button=document.querySelector('#translateProductText');
-  if(!form||!button)return;
-  const name=String(form.elements.nameRu?.value||'').trim();
-  const description=String(form.elements.descRu?.value||'').trim();
-  if(!name){
-    setProductTranslationStatus('Сначала заполните название на русском.','error');
-    form.elements.nameRu?.focus();
-    return;
-  }
-  const cfg=window.PANORA_SUPABASE;
-  if(!cfg?.url||!cfg?.publishableKey){
-    setProductTranslationStatus('Не настроено подключение Supabase.','error');
-    return;
-  }
-  const session=window.panoraSupabaseSession||null;
-  if(!session?.access_token){
-    setProductTranslationStatus('Для перевода войдите в пекарню.','error');
-    return;
-  }
-  button.disabled=true;
-  button.textContent='Переводим…';
-  setProductTranslationStatus('Переводим название и описание…','working');
-
-  const endpoint=`${String(cfg.url).replace(/\/+$/,'')}/functions/v1/panora-translate-product`;
-  const headers={
-    apikey:cfg.publishableKey,
-    Authorization:`Bearer ${session.access_token}`,
-    'Content-Type':'application/json',
-    Accept:'application/json'
-  };
-  try{
-    let response;
-    try{
-      response=await fetch(endpoint,{
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        credentials:'omit',
-        headers,
-        body:JSON.stringify({name_ru:name,description_ru:description})
-      });
-    }catch(networkError){
-      const reason=String(networkError?.message||networkError);
-      throw new Error(`NETWORK:${reason}`);
-    }
-    const raw=await response.text();
-    let data={};
-    try{data=raw?JSON.parse(raw):{}}catch{data={message:raw}}
-    if(!response.ok){
-      const serverMessage=String(data.error||data.message||'').trim();
-      throw new Error(`HTTP:${response.status}:${serverMessage}`);
-    }
-    const en=data.en||{},es=data.es||{};
-    if(!String(en.name||'').trim()||!String(es.name||'').trim()){
-      throw new Error('INVALID:Перевод вернулся не полностью');
-    }
-
-    // Do not silently destroy manually edited translations.
-    const currentEnName=String(form.elements.nameEn?.value||'').trim();
-    const currentEsName=String(form.elements.nameEs?.value||'').trim();
-    const currentEnDesc=String(form.elements.descEn?.value||'').trim();
-    const currentEsDesc=String(form.elements.descEs?.value||'').trim();
-    const hasManualTranslation=currentEnName||currentEsName||currentEnDesc||currentEsDesc;
-    if(hasManualTranslation&&!confirm('В карточке уже есть перевод EN / ES. Заменить его новым переводом с русского?')){
-      setProductTranslationStatus('Перевод получен, но существующий текст оставлен без изменений.','success');
-      return;
-    }
-
-    form.elements.nameEn.value=String(en.name||'').trim();
-    form.elements.nameEs.value=String(es.name||'').trim();
-    form.elements.descEn.value=typeof en.description==='string'?en.description.trim():'';
-    form.elements.descEs.value=typeof es.description==='string'?es.description.trim():'';
-    setProductTranslationStatus('Перевод готов. Проверьте текст и сохраните карточку.','success');
-  }catch(error){
-    const message=String(error?.message||error);
-    let friendly='Не удалось выполнить перевод.';
-    if(message.startsWith('NETWORK:')){
-      friendly='Сервис перевода недоступен. Проверьте, что функция panora-translate-product опубликована в Supabase и затем повторите.';
-    }else if(/^HTTP:404:/.test(message)){
-      friendly='Функция panora-translate-product ещё не опубликована в Supabase.';
-    }else if(/^HTTP:(401|403):/.test(message)){
-      friendly='Supabase отклонил доступ к переводу. Войдите в пекарню заново и повторите.';
-    }else if(/^HTTP:500:.*OPENAI_API_KEY/i.test(message)){
-      friendly='В Supabase не задан секрет OPENAI_API_KEY.';
-    }else if(/^HTTP:5\d\d:/.test(message)){
-      const detail=message.split(':').slice(2).join(':').trim();
-      friendly=detail?`Сервис перевода: ${detail}`:'Сервис перевода временно недоступен.';
-    }else if(message.startsWith('INVALID:')){
-      friendly=message.slice(8);
-    }
-    setProductTranslationStatus(friendly,'error');
-    console.warn('Panora translation error',error);
-  }finally{
-    button.disabled=false;
-    button.textContent='Перевести RU → EN / ES';
-  }
-}
-document.querySelector('#translateProductText')?.addEventListener('click',translateProductFromRussian);
 
 document.querySelector('#closeProductEdit').onclick=closeProductEditor;
 document.querySelector('#cancelProductEdit').onclick=closeProductEditor;
