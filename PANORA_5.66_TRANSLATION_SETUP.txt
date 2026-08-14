@@ -1,0 +1,21 @@
+Panora 5.66 — включение автоматического перевода
+
+Причина сообщения «Failed to fetch»: браузер не получил ответ от Supabase Edge Function.
+Код 5.66 больше не показывает технический Failed to fetch и различает:
+- функция не опубликована;
+- нет OPENAI_API_KEY;
+- отказ авторизации;
+- временная серверная/сетевая ошибка.
+
+Чтобы перевод реально работал:
+1. В Supabase проекта Panora откройте Edge Functions.
+2. Опубликуйте функцию из папки:
+   supabase/functions/panora-translate-product/index.ts
+3. В Supabase → Edge Functions / Secrets задайте:
+   OPENAI_API_KEY = ваш серверный OpenAI API key
+4. Не добавляйте OPENAI_API_KEY в GitHub, admin.html или JavaScript.
+5. После публикации обновите страницу Panora и снова нажмите
+   «Перевести RU → EN / ES».
+
+Функция переводит название и описание RU одновременно на EN и ES.
+Если EN/ES уже заполнены вручную, Panora спрашивает подтверждение перед заменой.
