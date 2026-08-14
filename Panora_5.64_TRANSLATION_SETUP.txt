@@ -1,0 +1,21 @@
+Panora 5.64 — включение автоматического перевода карточек
+
+В приложении уже добавлена кнопка:
+Карточки продукции → Настроить карточку → «Перевести RU → EN / ES».
+
+Ключ OpenAI НЕ хранится в GitHub Pages. Перевод выполняет Supabase Edge Function:
+supabase/functions/panora-translate-product/index.ts
+
+Нужно один раз:
+1. В Supabase/CLI добавить секрет OPENAI_API_KEY.
+2. Опубликовать Edge Function panora-translate-product с проверкой JWT.
+3. При желании можно задать OPENAI_TRANSLATION_MODEL. По умолчанию используется gpt-5-mini.
+
+Пример команд Supabase CLI:
+supabase secrets set OPENAI_API_KEY=ВАШ_КЛЮЧ
+supabase functions deploy panora-translate-product
+
+После публикации функция вызывается только из авторизованной пекарни.
+Партнёрские страницы API-ключ никогда не получают.
+
+SQL для версии 5.64 не требуется.

@@ -493,7 +493,7 @@ function renderOrders() {
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма"><strong>${euro(orderTotal(o))}</strong></td>
             <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
-            <td class="order-action-cell" data-label="Действие">${orderActions(o)}</td>
+            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="PN-${String(o.number).padStart(4, "0")}">✉ Сообщения</button></td>
           </tr>`;
         })
         .join("")
@@ -515,6 +515,7 @@ function renderOrders() {
   document
     .querySelectorAll("[data-cancel-order]")
     .forEach((b) => (b.onclick = () => cancelOrder(b.dataset.cancelOrder)));
+  setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),0);
 }
 async function confirmOrder(id) {
   const o = orders.find((x) => x.id === id);
