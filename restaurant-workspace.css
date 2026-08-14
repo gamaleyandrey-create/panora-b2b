@@ -1523,3 +1523,35 @@
     transform:translateZ(0);
   }
 }
+
+/* Panora 5.50 — mobile partner visual density pass. Desktop intentionally untouched. */
+@media (max-width:720px){
+  body:not(.admin-page) .restaurant-workspace .rw-head{padding-top:8px!important;padding-bottom:8px!important;margin-bottom:8px!important}
+  body:not(.admin-page) .restaurant-workspace .rw-head h2{font-size:24px!important;line-height:1!important}
+  body:not(.admin-page) .restaurant-workspace .rw-head .close-button{width:40px!important;height:40px!important;flex-basis:40px!important}
+  body:not(.admin-page) .restaurant-workspace .rw-content{padding-top:0!important}
+  body:not(.admin-page) .rw-overview-head h3,body:not(.admin-page) .rw-finance h3{font-size:23px!important;line-height:1.05!important}
+  body:not(.admin-page) .rw-summary-grid{gap:8px!important}
+  body:not(.admin-page) .rw-summary-grid article,body:not(.admin-page) .rw-summary-card{min-height:88px!important;padding:12px 14px!important}
+  body:not(.admin-page) .rw-current-order{padding:13px!important}
+  body:not(.admin-page) .rw-orders-page,body:not(.admin-page) .rw-note-library,body:not(.admin-page) .rw-finance{gap:10px!important}
+  body:not(.admin-page) .rw-order{padding:12px!important}
+  body:not(.admin-page) .rw-order-status{margin:7px 0 2px!important}
+  body:not(.admin-page) .rw-order-progress{margin:7px 2px 5px!important}
+  body:not(.admin-page) .rw-order li{padding:7px 0!important}
+  body:not(.admin-page) .rw-note-library-head h3{font-size:24px!important;margin-bottom:3px!important}
+  body:not(.admin-page) .rw-document,body:not(.admin-page) .rw-payment{padding:12px!important}
+  body:not(.admin-page) .rw-finance-debt{padding:12px 14px!important}
+  body:not(.admin-page) .rw-finance-debt strong{font-size:27px!important}
+  body:not(.admin-page) .rw-finance-history-head{margin:10px 0 7px!important}
+  body:not(.admin-page) .rw-profile-form,body:not(.admin-page) .rw-profile{padding:13px!important}
+  body:not(.admin-page) .rw-profile-grid{gap:12px!important}
+  body:not(.admin-page) .rw-profile-grid input,body:not(.admin-page) .rw-profile-grid select{min-height:46px!important}
+  body:not(.admin-page) .rw-new-product-card{padding:12px!important;gap:12px!important}
+  body:not(.admin-page) .rw-new-product-photo{width:112px!important;min-width:112px!important;height:112px!important}
+  body:not(.admin-page) .rw-new-product-photo img{width:100%!important;height:100%!important;object-fit:cover!important}
+  body:not(.admin-page) .rw-new-product-body h4{font-size:22px!important;line-height:1.08!important;margin-bottom:5px!important}
+  body:not(.admin-page) .rw-new-product-price{margin:3px 0!important}
+  body:not(.admin-page) .rw-new-wholesale-rule{margin-top:2px!important;line-height:1.25!important}
+  body:not(.admin-page) .rw-new-qty{margin-top:7px!important;min-height:48px!important}
+}

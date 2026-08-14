@@ -1285,7 +1285,7 @@
         }
         // Keep the native select mounted. Rebuilding the whole modal here caused
         // focus loss and visible jumps on desktop/mobile.
-        try{renderProducts();renderCart()}catch{}
+        try{renderCart()}catch{}
         refreshNewOrderSummary();
       };
     });
