@@ -87,6 +87,14 @@
         <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
+        <label class="partner-language-setting">
+          <span><strong>Язык партнёра</strong><small>Кабинет, уведомления и документы</small></span>
+          <select data-direct-partner-language="${esc(restaurantId)}">
+            <option value="ru"${(r.language||"ru")==="ru"?" selected":""}>Русский</option>
+            <option value="en"${r.language==="en"?" selected":""}>English</option>
+            <option value="es"${r.language==="es"?" selected":""}>Español</option>
+          </select>
+        </label>
         ${productList.map(p=>{
           const productId=String(p.id);
           const key=draftKey(restaurantId,productId);
@@ -103,6 +111,39 @@
         </div>
       </article>`;
     }).join('')||'<div class="empty-row">Нет партнёров.</div>';
+
+    root.querySelectorAll('select[data-direct-partner-language]').forEach(select=>{
+      select.addEventListener('change',async()=>{
+        const restaurantId=String(select.dataset.directPartnerLanguage||'');
+        const partner=lastRows.find(r=>String(r.id)===restaurantId);
+        if(!partner)return;
+        const previous=partner.language||'ru';
+        const next=['ru','en','es'].includes(select.value)?select.value:'ru';
+        if(next===previous)return;
+        select.disabled=true;
+        try{
+          await rest(`restaurants?id=eq.${encodeURIComponent(restaurantId)}`,{
+            method:'PATCH',
+            headers:{Prefer:'return=representation'},
+            body:JSON.stringify({language:next,updated_at:new Date().toISOString()})
+          });
+          partner.language=next;
+          try{
+            const restaurants=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+            const updated=(Array.isArray(restaurants)?restaurants:[]).map(r=>String(r.id)===restaurantId?{...r,language:next}:r);
+            localStorage.setItem('panora-restaurants',JSON.stringify(updated));
+          }catch{}
+          window.dispatchEvent(new CustomEvent('panora:partner-language-changed',{detail:{restaurantId,language:next,source:'bakery'}}));
+          select.disabled=false;
+          const status=select.closest('.partner-language-setting')?.querySelector('small');
+          if(status){const original=status.textContent;status.textContent='Сохранено ✓';setTimeout(()=>{if(status)status.textContent=original},1200);}
+        }catch(error){
+          select.value=previous;
+          select.disabled=false;
+          alert(`Не удалось сохранить язык партнёра: ${error.message||error}`);
+        }
+      });
+    });
 
     root.querySelectorAll('input[data-direct-price]').forEach(input=>{
       const key=String(input.dataset.directPrice||'');
@@ -272,7 +313,7 @@
     if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
-      const rows=await rest('restaurants?select=id,name,email,address,partner_type,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
+      const rows=await rest('restaurants?select=id,name,email,address,partner_type,language,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
       if(active)render(rows||[]);
     }catch(error){
       console.error('Panora direct partners refresh',error);

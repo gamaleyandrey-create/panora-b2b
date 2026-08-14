@@ -22,3 +22,19 @@
   .account-detail-debt-list article>div:last-child{align-items:flex-start}
   .account-row-hint{display:none}
 }
+
+/* Panora 5.63 — partner language control in bakery */
+.partner-language-setting{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin:12px 0 14px;padding:12px 14px;border:1px solid #dce4de;border-radius:14px;background:#f8faf8
+}
+.partner-language-setting>span{display:grid;gap:3px;min-width:0}
+.partner-language-setting strong{font-size:14px;color:#263a2d}
+.partner-language-setting small{font-size:12px;color:#758079}
+.partner-language-setting select{
+  min-width:132px;min-height:42px;border:1px solid #cfd9d1;border-radius:11px;background:#fff;padding:0 10px;font:inherit
+}
+@media(max-width:640px){
+  .partner-language-setting{align-items:stretch;flex-direction:column}
+  .partner-language-setting select{width:100%}
+}
