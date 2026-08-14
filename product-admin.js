@@ -58,7 +58,7 @@ async function translateProductFromRussian(){
     return;
   }
   const cfg=window.PANORA_SUPABASE;
-  if(!cfg?.url){
+  if(!cfg?.url||!cfg?.publishableKey){
     setProductTranslationStatus('Не настроено подключение Supabase.','error');
     return;
   }
@@ -70,34 +70,76 @@ async function translateProductFromRussian(){
   button.disabled=true;
   button.textContent='Переводим…';
   setProductTranslationStatus('Переводим название и описание…','working');
+
+  const endpoint=`${String(cfg.url).replace(/\/+$/,'')}/functions/v1/panora-translate-product`;
+  const headers={
+    apikey:cfg.publishableKey,
+    Authorization:`Bearer ${session.access_token}`,
+    'Content-Type':'application/json',
+    Accept:'application/json'
+  };
   try{
-    const response=await fetch(`${cfg.url}/functions/v1/panora-translate-product`,{
-      method:'POST',
-      headers:{
-        apikey:cfg.publishableKey,
-        Authorization:`Bearer ${session.access_token}`,
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify({name_ru:name,description_ru:description})
-    });
+    let response;
+    try{
+      response=await fetch(endpoint,{
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        credentials:'omit',
+        headers,
+        body:JSON.stringify({name_ru:name,description_ru:description})
+      });
+    }catch(networkError){
+      const reason=String(networkError?.message||networkError);
+      throw new Error(`NETWORK:${reason}`);
+    }
     const raw=await response.text();
     let data={};
     try{data=raw?JSON.parse(raw):{}}catch{data={message:raw}}
-    if(!response.ok)throw new Error(data.error||data.message||`HTTP ${response.status}`);
+    if(!response.ok){
+      const serverMessage=String(data.error||data.message||'').trim();
+      throw new Error(`HTTP:${response.status}:${serverMessage}`);
+    }
     const en=data.en||{},es=data.es||{};
-    if(en.name)form.elements.nameEn.value=en.name;
-    if(es.name)form.elements.nameEs.value=es.name;
-    if(typeof en.description==='string')form.elements.descEn.value=en.description;
-    if(typeof es.description==='string')form.elements.descEs.value=es.description;
+    if(!String(en.name||'').trim()||!String(es.name||'').trim()){
+      throw new Error('INVALID:Перевод вернулся не полностью');
+    }
+
+    // Do not silently destroy manually edited translations.
+    const currentEnName=String(form.elements.nameEn?.value||'').trim();
+    const currentEsName=String(form.elements.nameEs?.value||'').trim();
+    const currentEnDesc=String(form.elements.descEn?.value||'').trim();
+    const currentEsDesc=String(form.elements.descEs?.value||'').trim();
+    const hasManualTranslation=currentEnName||currentEsName||currentEnDesc||currentEsDesc;
+    if(hasManualTranslation&&!confirm('В карточке уже есть перевод EN / ES. Заменить его новым переводом с русского?')){
+      setProductTranslationStatus('Перевод получен, но существующий текст оставлен без изменений.','success');
+      return;
+    }
+
+    form.elements.nameEn.value=String(en.name||'').trim();
+    form.elements.nameEs.value=String(es.name||'').trim();
+    form.elements.descEn.value=typeof en.description==='string'?en.description.trim():'';
+    form.elements.descEs.value=typeof es.description==='string'?es.description.trim():'';
     setProductTranslationStatus('Перевод готов. Проверьте текст и сохраните карточку.','success');
   }catch(error){
     const message=String(error?.message||error);
-    setProductTranslationStatus(
-      message.includes('404')
-        ? 'Функция перевода ещё не опубликована в Supabase.'
-        : `Не удалось перевести: ${message}`,
-      'error'
-    );
+    let friendly='Не удалось выполнить перевод.';
+    if(message.startsWith('NETWORK:')){
+      friendly='Сервис перевода недоступен. Проверьте, что функция panora-translate-product опубликована в Supabase и затем повторите.';
+    }else if(/^HTTP:404:/.test(message)){
+      friendly='Функция panora-translate-product ещё не опубликована в Supabase.';
+    }else if(/^HTTP:(401|403):/.test(message)){
+      friendly='Supabase отклонил доступ к переводу. Войдите в пекарню заново и повторите.';
+    }else if(/^HTTP:500:.*OPENAI_API_KEY/i.test(message)){
+      friendly='В Supabase не задан секрет OPENAI_API_KEY.';
+    }else if(/^HTTP:5\d\d:/.test(message)){
+      const detail=message.split(':').slice(2).join(':').trim();
+      friendly=detail?`Сервис перевода: ${detail}`:'Сервис перевода временно недоступен.';
+    }else if(message.startsWith('INVALID:')){
+      friendly=message.slice(8);
+    }
+    setProductTranslationStatus(friendly,'error');
+    console.warn('Panora translation error',error);
   }finally{
     button.disabled=false;
     button.textContent='Перевести RU → EN / ES';
