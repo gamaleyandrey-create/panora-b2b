@@ -1465,14 +1465,29 @@
     renderAccountModal();
     openPanel(document.querySelector("#profileModal"));
   };
+  window.panoraOpenPartnerCabinet = () => {
+    const modal=document.querySelector("#profileModal");
+    if(!modal)return;
+    if(!account){
+      renderAccountModal();
+      requestAnimationFrame(()=>openPanel(modal));
+      return;
+    }
+    activeTab = "home";
+    renderAccountModal();
+    requestAnimationFrame(()=>openPanel(modal));
+  };
   window.panoraOpenPartnerProfile = () => {
+    const modal=document.querySelector("#profileModal");
+    if(!modal)return;
     if (!account) {
-      openPanel(document.querySelector("#profileModal"));
+      renderAccountModal();
+      requestAnimationFrame(()=>openPanel(modal));
       return;
     }
     activeTab = "profile";
     renderAccountModal();
-    openPanel(document.querySelector("#profileModal"));
+    requestAnimationFrame(()=>openPanel(modal));
   };
   const mobileProfileButton = document.querySelector("#mobileProfile");
   if (mobileProfileButton) mobileProfileButton.onclick = () => window.panoraOpenPartnerProfile();
