@@ -222,17 +222,25 @@ $('#addMovement').onclick=()=>{
  fillMovementProducts();
  const form=$('#movementForm');form.reset();form.type.value='inventory_set';updateStockAdjustPreview();$('#movementDialog').showModal()
 };
+const closeMovementDialog=()=>{
+ const dialog=$('#movementDialog'),form=$('#movementForm');
+ if(dialog?.open)dialog.close();
+ form?.reset();
+};
+$('#cancelMovementDialog').onclick=closeMovementDialog;
+$('#closeMovementDialog').onclick=closeMovementDialog;
+$('#movementDialog').onclick=e=>{if(e.target===$('#movementDialog'))closeMovementDialog()};
 $('#movementProduct').onchange=updateStockAdjustPreview;
 $('#movementType').onchange=updateStockAdjustPreview;
 $('#movementForm').quantity.oninput=updateStockAdjustPreview;
-$('#saveMovement').onclick=e=>{
+$('#movementForm').onsubmit=e=>{
  e.preventDefault();
  const form=$('#movementForm');if(!form.reportValidity())return;
  const f=new FormData(form),product=String(f.get('product')||''),requested=Math.max(0,Number(f.get('quantity')||0)),requestedType=String(f.get('type')||''),note=String(f.get('note')||'').trim();
  let type=requestedType,quantity=requested;
  if(requestedType==='inventory_set'){
   const current=stockRawBalance(product),delta=requested-current;
-  if(Math.abs(delta)<0.0001){$('#movementDialog').close();form.reset();return}
+  if(Math.abs(delta)<0.0001){closeMovementDialog();return}
   type=delta>0?'correction_plus':'correction_minus';quantity=Math.abs(delta);
  }
  if(quantity<=0)return alert('Количество должно быть больше нуля.');
@@ -242,7 +250,7 @@ $('#saveMovement').onclick=e=>{
  });
  store('panora-stock-movements',movements);
  window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));
- $('#movementDialog').close();form.reset();renderStock()
+ closeMovementDialog();renderStock()
 };
 window.addEventListener('panora:order-cycle-updated',()=>renderStock());
 window.addEventListener('panora:products-changed',()=>renderStock());
