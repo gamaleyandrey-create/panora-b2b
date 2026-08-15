@@ -76,7 +76,7 @@
 <link rel="stylesheet" href="mobile-partner-prices-v49.css?v=4910">
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=5890">
+<link rel="stylesheet" href="finance-dashboard.css?v=6050">
 <link rel="stylesheet" href="admin-partner-theme.css?v=6040">
 </head>
 <body class="auth-pending admin-page">
@@ -227,7 +227,7 @@
           <article class="finance-profit-card">
             <span>Операционная прибыль</span>
             <strong id="financeOperatingProfit">0,00 €</strong>
-            <small>После сырья и прочих расходов</small>
+            <small>После себестоимости сырья и операционных расходов</small>
           </article>
           <article class="finance-margin-card">
             <span>Операционная маржа</span>
@@ -243,10 +243,15 @@
             <small id="financeGrossMargin">Маржа: 0%</small>
           </article>
           <button type="button" class="finance-secondary-card finance-expense-jump" id="financeExpenseJump">
-            <span>Прочие расходы</span>
+            <span>Операционные расходы</span>
             <strong id="financeExpensesNet">0,00 €</strong>
-            <small>Перейти к расходам ↓</small>
+            <small>Без закупки сырья · перейти ↓</small>
           </button>
+          <article class="finance-inventory-kpi">
+            <span>Закуплено сырья</span>
+            <strong id="financeRawPurchasesNet">0,00 €</strong>
+            <small id="financeRawPurchasesGross">С НДС: 0,00 €</small>
+          </article>
           <article>
             <span>Отгружено хлеба</span>
             <strong id="financePieces">0 шт.</strong>
@@ -265,7 +270,7 @@
           </div>
           <div class="finance-vat-grid">
             <article><span>НДС с продаж</span><strong id="financeSalesVat">0,00 €</strong><small>Начислен покупателям</small></article>
-            <article><span>Входящий НДС</span><strong id="financeInputVat">0,00 €</strong><small>По расходам, отмеченным к вычету</small></article>
+            <article><span>Входящий НДС</span><strong id="financeInputVat">0,00 €</strong><small>Включая закупки сырья, отмеченные к вычету</small></article>
             <article><span>Ориентировочный НДС к уплате</span><strong id="financeVatPayable">0,00 €</strong><small>НДС с продаж − входящий НДС</small></article>
           </div>
         </section>
@@ -296,15 +301,15 @@
 
         <section class="finance-panel" id="financeExpensesPanel">
           <div class="finance-panel-head">
-            <div><h3>Прочие расходы</h3><p>Указывайте сумму с НДС. Panora отделит расход без НДС и входящий НДС.</p></div>
+            <div><h3>Расходы и закупки</h3><p>Операционные расходы уменьшают прибыль. Закупка сырья учитывается как запас и денежный отток, а не списывается второй раз поверх себестоимости хлеба.</p></div>
             <button type="button" class="primary" id="financeAddExpense">+ Добавить расход</button>
           </div>
           <div class="table-wrap finance-table-wrap">
-            <table><thead><tr><th>Дата</th><th>Категория</th><th>Описание</th><th>Тип</th><th>Сумма с НДС</th><th>НДС</th><th>Без НДС</th><th></th></tr></thead><tbody id="financeExpenseRows"></tbody></table>
+            <table><thead><tr><th>Дата</th><th>Категория</th><th>Описание</th><th>Тип</th><th>Сумма с НДС</th><th>НДС</th><th>Без НДС</th><th>Учёт</th><th></th></tr></thead><tbody id="financeExpenseRows"></tbody></table>
           </div>
         </section>
 
-        <p class="finance-note">Себестоимость сырья рассчитывается по текущим рецептурам и текущим ценам ингредиентов. Показатель НДС является управленческой оценкой и не заменяет налоговую декларацию.</p>
+        <p class="finance-note"><strong>Правило учёта Panora:</strong> закупка сырья не уменьшает операционную прибыль второй раз — сырьё уже попадает в себестоимость отгруженного хлеба. Входящий НДС по закупке при этом учитывается отдельно. Себестоимость пока рассчитывается по текущим рецептурам и текущим ценам ингредиентов; НДС является управленческой оценкой.</p>
       </div>
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
@@ -380,7 +385,7 @@
       <h3>Расход</h3>
       <input type="hidden" name="id">
       <label><span>Дата</span><input name="date" type="date" required></label>
-      <label><span>Категория</span><select name="category"><option>Упаковка</option><option>Доставка</option><option>Электричество</option><option>Аренда</option><option>Зарплата</option><option>Эквайринг / комиссия</option><option>Бухгалтерия</option><option>Связь</option><option>Оборудование</option><option>Другое</option></select></label>
+      <label><span>Категория</span><select name="category"><option value="Сырьё">Сырьё (запас)</option><option>Упаковка</option><option>Доставка</option><option>Электричество</option><option>Аренда</option><option>Зарплата</option><option>Эквайринг / комиссия</option><option>Бухгалтерия</option><option>Связь</option><option>Оборудование</option><option>Другое</option></select></label>
       <label><span>Описание</span><input name="description" placeholder="Например: коробки для хлеба"></label>
       <label><span>Тип расхода</span><select name="expenseType"><option value="variable">Переменный</option><option value="fixed">Постоянный</option></select></label>
       <div class="finance-expense-row">
@@ -393,7 +398,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=5890"></script>
+<script src="finance-dashboard.js?v=6050"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>
