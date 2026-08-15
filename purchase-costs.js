@@ -137,9 +137,15 @@
   try{const value=JSON.parse(localStorage.getItem(RAW_STOCK_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return[]}
  };
  const saveRawMovements=value=>{
-  localStorage.setItem(RAW_STOCK_KEY,JSON.stringify(value));
+  const rows=Array.isArray(value)?value:[],payload=JSON.stringify(rows);
+  try{localStorage.setItem(RAW_STOCK_KEY,payload)}
+  catch(error){
+   console.error('Panora raw stock local save',error);
+   throw new Error('Не удалось сохранить движение на устройстве. Освободите место в браузере и повторите.');
+  }
   window.dispatchEvent(new CustomEvent('panora:raw-stock-changed'));
-  window.dispatchEvent(new CustomEvent('panora:raw-stock-local-change',{detail:{count:Array.isArray(value)?value.length:0}}));
+  window.dispatchEvent(new CustomEvent('panora:raw-stock-local-change',{detail:{count:rows.length}}));
+  return true;
  };
  const rawUnitLabel=unit=>unit==='g'?'г':unit==='ml'?'мл':'шт.';
  const rawSignedType=type=>['correction_minus','written_off','bake_out_auto','semi_source_auto'].includes(type)?-1:1;
@@ -300,7 +306,11 @@
    const after=stock-required;
    const status=row.semi
     ? (shortage>0.0005?`<span class="raw-stock-status prepare">Приготовить ${niceQty(shortage,row.unit)}</span>`:`<span class="raw-stock-status ok">Хватает</span>`)
-    : (stock<0?'<span class="raw-stock-status danger">Отрицательный остаток</span>':shortage>0.0005?`<span class="raw-stock-status warning">Не хватает ${niceQty(shortage,row.unit)}</span>`:'<span class="raw-stock-status ok">Хватает</span>');
+    : (stock<0
+      ?`<button type="button" class="raw-stock-status danger action" data-raw-fix="${row.key}" title="Установить фактический остаток">Отрицательный остаток · исправить</button>`
+      :shortage>0.0005
+        ?`<button type="button" class="raw-stock-status warning action" data-raw-receive="${row.key}" title="Добавить приход этого сырья">Не хватает ${niceQty(shortage,row.unit)} · приход</button>`
+        :'<span class="raw-stock-status ok">Хватает</span>');
    const priceText=row.semi?'по сырью':price>0?`${price.toFixed(2)} € / ${row.unit==='g'?'кг':row.unit==='ml'?'л':'шт.'}`:'—';
    const needText=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
    const afterText=row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
@@ -336,47 +346,90 @@
    if(!confirm('Удалить это движение сырья?'))return;
    const now=new Date().toISOString(),id=String(button.dataset.rawDelete);
    const next=readRawMovements().map(item=>String(item.id)===id?{...item,deletedAt:now,updatedAt:now,deviceId:item.deviceId||rawStockDeviceId}:item);
-   saveRawMovements(next);renderRawStock();renderPurchase();
+   try{saveRawMovements(next);rawStockFeedback('Движение удалено на устройстве.')}
+   catch(error){rawStockFeedback(error.message||String(error),'error')}
+   renderRawStock();renderPurchase();
   });
+  root.querySelectorAll('[data-raw-fix]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawFix,type:'inventory_set',reason:'negative'}));
+  root.querySelectorAll('[data-raw-receive]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawReceive,type:'purchase_in',reason:'shortage'}));
  }
 
- function openRawStockMovement(){
+ function rawStockFeedback(text,state='success'){
+  let el=document.querySelector('#panoraRawStockFeedback');
+  if(!el){
+   el=document.createElement('div');el.id='panoraRawStockFeedback';el.className='raw-stock-feedback';el.hidden=true;document.body.append(el);
+  }
+  el.dataset.state=state;el.textContent=String(text||'');el.hidden=false;
+  clearTimeout(rawStockFeedback.timer);rawStockFeedback.timer=setTimeout(()=>{el.hidden=true},2800);
+ }
+
+ function openRawStockMovement(options={}){
   const dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
-  if(!dialog||!form)return;
+  if(!dialog||!form){rawStockFeedback('Форма движения склада не загрузилась. Обновите Panora.','error');return false}
   const ledger=rawLedger(),rows=[...ledger.catalog.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   form.reset();form.date.value=localToday();form.date.max=localToday();
   form.ingredient.innerHTML=rows.map(row=>`<option value="${row.key}">${row.name} · ${rawUnitLabel(row.unit)}</option>`).join('');
-  updateRawMovementPreview();dialog.showModal();
+  if(options.key&&rows.some(row=>row.key===options.key))form.ingredient.value=options.key;
+  form.type.value=options.type||'purchase_in';form.quantity.value='';
+  if(options.reason==='negative')form.note.value='Исправление отрицательного остатка';
+  else if(options.reason==='shortage')form.note.value='Приход для покрытия дефицита';
+  updateRawMovementPreview();dialog.showModal();setTimeout(()=>form.quantity?.focus(),30);return true;
  }
-
  function updateRawMovementPreview(){
   const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel');
   if(!form||!preview)return;
   const ledger=rawLedger(),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,qty=Math.max(0,Number(form.quantity.value||0)),type=form.type.value;
   if(label)label.textContent=type==='inventory_set'?'Фактический остаток':'Количество';
   let after=current;if(form.quantity.value!=='')after=type==='inventory_set'?qty:current+rawSignedType(type)*qty;
-  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}`;
+  const guidance=row&&current<0&&type==='inventory_set'
+   ?'<small>Отрицательный расчёт будет заменён указанным фактическим остатком.</small>'
+   :row&&current<0&&type==='purchase_in'
+    ?'<small>Приход прибавится к отрицательному расчёту. Чтобы начать с реального остатка, выберите «Инвентаризация».</small>'
+    :'';
+  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}${guidance}`;
  }
 
  function bindRawStock(){
   const add=document.querySelector('#rawStockAddMovement'),dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
-  if(!add||!dialog||!form)return;
-  add.onclick=openRawStockMovement;
-  document.querySelector('#rawStockOpenPurchase').onclick=()=>document.querySelector('.admin-nav button[data-view="purchase"]')?.click();
-  document.querySelector('#rawStockMovementClose').onclick=document.querySelector('#rawStockMovementCancel').onclick=()=>dialog.close();
-  dialog.onclick=event=>{if(event.target===dialog)dialog.close()};
-  form.ingredient.onchange=form.type.onchange=form.quantity.oninput=updateRawMovementPreview;
-  form.onsubmit=event=>{
+  if(!add||!dialog||!form)return false;
+  if(form.dataset.rawStockBound==='1')return true;
+  form.dataset.rawStockBound='1';
+
+  add.addEventListener('click',event=>{event.preventDefault();openRawStockMovement({type:'purchase_in'})});
+  document.querySelector('#rawStockOpenPurchase')?.addEventListener('click',()=>document.querySelector('.admin-nav button[data-view="purchase"]')?.click());
+  document.querySelector('#rawStockMovementClose')?.addEventListener('click',()=>dialog.close());
+  document.querySelector('#rawStockMovementCancel')?.addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});
+  form.ingredient.addEventListener('change',updateRawMovementPreview);
+  form.type.addEventListener('change',updateRawMovementPreview);
+  form.quantity.addEventListener('input',updateRawMovementPreview);
+
+  form.addEventListener('submit',event=>{
    event.preventDefault();if(!form.reportValidity())return;
    const data=Object.fromEntries(new FormData(form)),ledger=rawLedger(),row=ledger.catalog.get(data.ingredient);
-   if(!row)return alert('Ингредиент не найден в рецептурах.');
+   if(!row){rawStockFeedback('Ингредиент не найден в рецептурах.','error');return}
    const movements=readRawMovements(),now=new Date().toISOString();
    movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity:Math.max(0,Number(data.quantity||0)),note:String(data.note||'').trim(),createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
-   saveRawMovements(movements);dialog.close();renderRawStock();renderPurchase();
-  };
-  document.querySelector('.admin-nav button[data-view="rawstock"]')?.addEventListener('click',()=>setTimeout(renderRawStock,0));
- }
+   try{saveRawMovements(movements)}
+   catch(error){rawStockFeedback(error.message||String(error),'error');return}
+   dialog.close();renderRawStock();renderPurchase();
+   const state=document.querySelector('#rawStockCloudState')?.dataset.state;
+   rawStockFeedback(state==='error'?'Сохранено на устройстве. Облако повторит синхронизацию.':'Остаток сохранён.');
+  });
 
+  document.querySelector('.admin-nav button[data-view="rawstock"]')?.addEventListener('click',()=>setTimeout(renderRawStock,0));
+  const cloud=document.querySelector('#rawStockCloudState');
+  cloud?.addEventListener('click',async()=>{
+   cloud.disabled=true;
+   try{
+    if(!window.panoraCloud?.syncRawStock)throw new Error('Облачная синхронизация ещё загружается.');
+    const ok=await window.panoraCloud.syncRawStock();
+    rawStockFeedback(ok?'Склад сырья синхронизирован.':'Движения сохранены на устройстве.');
+   }catch(error){rawStockFeedback('Облако пока недоступно. Локальные изменения сохранены.','error')}
+   finally{cloud.disabled=false}
+  });
+  return true;
+ }
  window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
  function periodDemand(){
@@ -738,7 +791,7 @@
  window.addEventListener('panora:raw-stock-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:bake-completions-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:bake-completions-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
- window.addEventListener('panora:raw-stock-cloud-state',event=>{const el=document.querySelector('#rawStockCloudState');if(!el)return;const detail=event.detail||{};el.textContent=detail.text||'Облако';el.dataset.state=detail.state||'synced';el.title=detail.detail||''});
+ window.addEventListener('panora:raw-stock-cloud-state',event=>{const el=document.querySelector('#rawStockCloudState');if(!el)return;const detail=event.detail||{},state=detail.state||'synced';el.textContent=state==='error'?'Ошибка облака · сохранено':detail.text||'Облако ✓';el.dataset.state=state;el.title=detail.detail||'Нажмите, чтобы повторить синхронизацию'});
  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindRawStock,{once:true}):bindRawStock();
  renderPurchase();
  renderRawStock();

@@ -319,3 +319,19 @@
 .raw-stock-cloud-state[data-state="error"]{background:#f8e6e4;color:#a1443d}
 .raw-stock-cloud-state[data-state="synced"]{background:#e8f2e8;color:#326044}
 @media(max-width:720px){.raw-stock-cloud-state{grid-column:1/-1;justify-self:start;min-height:28px;padding:0 9px}}
+
+
+/* Panora 6.10 — actionable raw-stock corrections */
+.raw-stock-status.action{border:0;cursor:pointer;font:inherit}
+.raw-stock-status.action:hover{filter:brightness(.97);text-decoration:underline}
+.raw-stock-status.action:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.raw-stock-movement-preview small{display:block;margin-top:6px;line-height:1.4;color:#6f786f}
+.raw-stock-feedback{position:fixed;z-index:12000;left:50%;bottom:84px;transform:translateX(-50%);max-width:min(520px,calc(100% - 24px));padding:11px 15px;border-radius:999px;background:#284a37;color:#fff;font-size:12px;font-weight:800;box-shadow:0 12px 35px #0003;text-align:center}
+.raw-stock-feedback[data-state="error"]{background:#a84940}
+.raw-stock-feedback[hidden]{display:none}
+.raw-stock-cloud-state{appearance:none;cursor:pointer}
+.raw-stock-cloud-state:disabled{opacity:.6;cursor:wait}
+@media(max-width:720px){
+ .raw-stock-feedback{bottom:94px;border-radius:14px;width:calc(100% - 24px)}
+ .raw-stock-status.action{white-space:normal;text-align:left}
+}
