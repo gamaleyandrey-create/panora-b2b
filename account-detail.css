@@ -86,3 +86,25 @@
 .account-open-button:focus-visible,.account-balance-button:focus-visible{
   outline:2px solid rgba(49,84,62,.32);outline-offset:4px;border-radius:4px
 }
+
+
+/* Panora 5.78 — unified partner finance drill-down */
+#accountRows tr[data-account-restaurant]{
+  cursor:pointer;
+}
+#accountRows tr[data-account-restaurant]:hover td{
+  background:#f2f6f0;
+}
+#accountRows tr[data-account-restaurant]:active td{
+  background:#e8efe7;
+}
+.account-note-card{cursor:pointer;transition:border-color .14s ease,background .14s ease}
+.account-note-card:hover{border-color:#b9cbbb!important;background:#f7faf7!important}
+.account-note-link,.account-allocation-note-link{
+  margin:0;padding:0;border:0;background:transparent;color:#315e40;
+  font:inherit;font-weight:800;cursor:pointer;text-decoration:none
+}
+.account-note-link:hover,.account-allocation-note-link:hover{text-decoration:underline}
+.account-note-link:focus-visible,.account-allocation-note-link:focus-visible{
+  outline:2px solid rgba(49,84,62,.3);outline-offset:2px;border-radius:3px
+}

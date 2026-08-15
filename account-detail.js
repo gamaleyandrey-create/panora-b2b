@@ -205,7 +205,7 @@
     if (!distribution) return "";
 
     const rows = (distribution.rows || []).map(({note, amount}) =>
-      `<div><span>${prettyDate(date)} · DN-${String(note.number).padStart(4,"0")}</span><strong>${euro(amount)}</strong></div>`
+      `<div><span>${prettyDate(date)} · <button type="button" class="account-allocation-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button></span><strong>${euro(amount)}</strong></div>`
     );
     if (Number(distribution.credit || 0) > 0.005) {
       rows.push(`<div class="payment-allocation-credit"><span>Осталось в авансе</span><strong>${euro(distribution.credit)}</strong></div>`);
@@ -255,7 +255,7 @@
 
     const listHtml=rows.length
       ? `<div class="account-detail-debt-list ${debtTab==="archive"?"is-archive":""}">${rows.map(({note,total,paid,due}) =>
-          `<article><div><strong>DN-${String(note.number).padStart(4,"0")}</strong><span>Поставка: ${prettyDate(note.date)}</span>${note.paymentDueDate?`<small>Оплатить до: ${prettyDate(note.paymentDueDate)}</small>`:""}</div><div><span>Сумма ${euro(total)}</span><span>Зачтено ${euro(paid)}</span>${due>0.005?`<b>К оплате ${euro(due)}</b>`:`<b class="paid-full">Оплачено полностью</b>`}</div></article>`
+          `<article class="account-note-card" data-account-note="${String(note.id)}" tabindex="0" role="button"><div><button type="button" class="account-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button><span>Поставка: ${prettyDate(note.date)}</span>${note.paymentDueDate?`<small>Оплатить до: ${prettyDate(note.paymentDueDate)}</small>`:""}</div><div><span>Сумма ${euro(total)}</span><span>Зачтено ${euro(paid)}</span>${due>0.005?`<b>К оплате ${euro(due)}</b>`:`<b class="paid-full">Оплачено полностью</b>`}</div></article>`
         ).join("")}</div>`
       : debtTab==="archive"
         ? `<p class="account-detail-no-debt">В архиве пока нет полностью оплаченных накладных.</p>`
@@ -275,6 +275,26 @@
         renderDebtBlock(id);
       };
     });
+  }
+
+  function openAccountNote(noteId) {
+    const note = deliveryNotes.find((item) => String(item.id) === String(noteId));
+    if (!note) return;
+    // Prefer the existing Panora document opener. Fall back to the delivery-note print action.
+    if (typeof window.panoraOpenDeliveryNote === "function") {
+      window.panoraOpenDeliveryNote(note.id);
+      return;
+    }
+    const trigger = document.querySelector(`[data-print-note="${CSS.escape(String(note.id))}"],[data-note-id="${CSS.escape(String(note.id))}"],[data-delivery-note="${CSS.escape(String(note.id))}"]`);
+    if (trigger) {
+      trigger.click();
+      return;
+    }
+    if (typeof window.printDeliveryNote === "function") {
+      window.printDeliveryNote(note.id);
+      return;
+    }
+    alert(`Накладная DN-${String(note.number).padStart(4,"0")} найдена. Откройте её в разделе «Заказы и отгрузки».`);
   }
 
   function open(id) {
@@ -327,6 +347,21 @@
           .join("")
       : '<p class="empty-row">Операций пока нет.</p>';
 
+    dialog.querySelectorAll("[data-account-note]").forEach((node) => {
+      const openNote = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openAccountNote(node.dataset.accountNote);
+      };
+      if (node.tagName === "BUTTON") node.onclick = openNote;
+      else {
+        node.onclick = openNote;
+        node.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") openNote(event);
+        };
+      }
+    });
+
     $("#accountDetailHistory")
       .querySelectorAll("[data-confirm-payment]")
       .forEach(
@@ -371,8 +406,11 @@
       return;
     }
     const row = event.target.closest("[data-account-restaurant]");
-    if (row) open(row.dataset.accountRestaurant);
-  });
+    if (row) {
+      event.preventDefault();
+      open(row.dataset.accountRestaurant);
+    }
+  }, true);
   body.addEventListener("keydown", (event) => {
     const row = event.target.closest("[data-account-restaurant]");
     if (row && (event.key === "Enter" || event.key === " ")) {
