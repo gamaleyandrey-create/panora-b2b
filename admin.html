@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=6100">
+  <link rel="stylesheet" href="purchase-costs.css?v=6110">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5860">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -77,7 +77,7 @@
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
 <link rel="stylesheet" href="finance-dashboard.css?v=6050">
-<link rel="stylesheet" href="admin-partner-theme.css?v=6100">
+<link rel="stylesheet" href="admin-partner-theme.css?v=6110">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -166,7 +166,7 @@
 
         <section class="raw-stock-panel">
           <div class="raw-stock-panel-head">
-            <div><h3>Остатки</h3><p>«Нужно» — потребность по активным датам выпечки. Полуфабрикаты рассчитываются через исходное сырьё и процент выхода.</p></div>
+            <div><h3>Остатки</h3><p>«Нужно» — потребность по активным датам выпечки. Нажмите на количество, чтобы увидеть даты, виды хлеба и источник: заказ или план.</p></div>
           </div>
           <div class="table-wrap raw-stock-table-wrap">
             <table>
@@ -427,6 +427,22 @@
   </dialog>
 
 
+  <dialog id="rawStockNeedDialog" class="raw-stock-need-dialog">
+    <div class="raw-stock-need-shell">
+      <button type="button" class="dialog-close" id="rawStockNeedClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA</span>
+      <h3 id="rawStockNeedTitle">Потребность в сырье</h3>
+      <p id="rawStockNeedSubtitle" class="raw-stock-need-subtitle"></p>
+      <section class="raw-stock-need-summary" id="rawStockNeedSummary"></section>
+      <div class="raw-stock-need-source-note" id="rawStockNeedSourceNote"></div>
+      <div class="raw-stock-need-list" id="rawStockNeedList"></div>
+      <div class="dialog-actions">
+        <button type="button" id="rawStockNeedOpenPurchase">Открыть закупку</button>
+        <button type="button" class="primary" id="rawStockNeedAddReceipt">Добавить приход</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
@@ -450,7 +466,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=6100"></script>
+<script src="purchase-costs.js?v=6110"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
@@ -465,7 +481,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6100"></script>
+<script src="pwa-stable.js?v=6110"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
