@@ -758,6 +758,69 @@
     status('Облако ✓');
     return cachePayment(row);
   }
+function financeAllocation(restaurantId){
+  if(typeof deliveryNotes==='undefined'||typeof payments==='undefined'){
+    return{notes:[],debt:0,credit:0,net:0,totalShipped:0,totalPaid:0};
+  }
+  const notes=deliveryNotes
+    .filter(note=>note.restaurantId===restaurantId)
+    .slice()
+    .sort((a,b)=>
+      String(a.date||'').localeCompare(String(b.date||''))||
+      Number(a.number||0)-Number(b.number||0)||
+      String(a.id||'').localeCompare(String(b.id||''))
+    );
+  const confirmed=payments
+    .filter(payment=>
+      payment.restaurantId===restaurantId&&
+      payment.confirmed!==false&&
+      payment.status!=='cancelled'&&
+      Number(payment.amount||0)>0
+    )
+    .slice()
+    .sort((a,b)=>
+      String(a.receivedAt||a.date||'').localeCompare(String(b.receivedAt||b.date||''))||
+      String(a.id||'').localeCompare(String(b.id||''))
+    );
+  const noteById=new Map(notes.map(note=>[String(note.id),note]));
+  const paidByNote=new Map(notes.map(note=>[String(note.id),0]));
+  let fifoPool=0;
+
+  confirmed.forEach(payment=>{
+    const amount=Math.max(0,Number(payment.amount||0));
+    const linked=payment.deliveryNoteId?noteById.get(String(payment.deliveryNoteId)):null;
+    if(!linked){fifoPool+=amount;return;}
+    const id=String(linked.id),already=Number(paidByNote.get(id)||0),total=Math.max(0,Number(linked.total||0));
+    const applied=Math.min(Math.max(0,total-already),amount);
+    paidByNote.set(id,already+applied);
+    fifoPool+=Math.max(0,amount-applied);
+  });
+
+  notes.forEach(note=>{
+    if(fifoPool<=0)return;
+    const id=String(note.id),already=Number(paidByNote.get(id)||0),total=Math.max(0,Number(note.total||0));
+    const due=Math.max(0,total-already),applied=Math.min(due,fifoPool);
+    if(applied>0){
+      paidByNote.set(id,already+applied);
+      fifoPool-=applied;
+    }
+  });
+
+  const rows=notes.map(note=>{
+    const total=Math.max(0,Number(note.total||0));
+    const paid=Math.min(total,Math.max(0,Number(paidByNote.get(String(note.id))||0)));
+    const due=Math.max(0,total-paid);
+    note.paid=paid;
+    note.financeDue=due;
+    return{note,total,paid,due,closed:due<=0.005};
+  });
+  const debt=rows.reduce((sum,row)=>sum+row.due,0);
+  const credit=Math.max(0,fifoPool);
+  const totalShipped=rows.reduce((sum,row)=>sum+row.total,0);
+  const totalPaid=confirmed.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+  return{notes:rows,debt,credit,net:debt-credit,totalShipped,totalPaid};
+}
+
 function financeTimeline(restaurantId){
   if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return[];
   const notes=deliveryNotes.filter(note=>note.restaurantId===restaurantId);
@@ -791,27 +854,17 @@ function financeTimeline(restaurantId){
     if(event.kind==='delivery'){
       event.note.balanceBefore=running;
       running+=event.amount;
-      event.note.balanceAfter=running;
+      event.note.balanceAfter=Math.max(0,running);
     }else if(event.payment.confirmed!==false){
-      running=Math.max(0,running-event.amount);
+      running-=event.amount;
       if(event.linkedNote&&event.date===String(event.linkedNote.date||'')){
-        event.linkedNote.balanceAfter=running;
+        event.linkedNote.balanceAfter=Math.max(0,running);
       }
     }
     event.balanceAfter=running;
   });
 
-  notes.forEach(note=>{
-    const linked=payments.filter(payment=>
-      payment.deliveryNoteId===note.id&&
-      payment.confirmed!==false&&
-      payment.status!=='cancelled'
-    );
-    note.paid=linked.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    note.paidAtShipment=linked
-      .filter(payment=>String(payment.date||'')===String(note.date||''))
-      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-  });
+  financeAllocation(restaurantId);
   return events;
 }
 function recalculateBalances(){
@@ -822,6 +875,7 @@ function recalculateBalances(){
   ].filter(Boolean)).forEach(financeTimeline);
   localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
 }
+window.panoraFinanceAllocation=financeAllocation;
 window.panoraFinanceTimeline=financeTimeline;
 window.panoraRecalculateBalances=recalculateBalances;
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});

@@ -38,3 +38,19 @@
   .partner-language-setting{align-items:stretch;flex-direction:column}
   .partner-language-setting select{width:100%}
 }
+
+/* Panora 5.73 — FIFO payments, overpayment and debt archive */
+.account-detail-summary #accountDetailBalanceCard.is-credit{background:#eaf4ea}
+.account-detail-summary #accountDetailBalanceCard.is-credit strong{color:#2f6b43}
+.account-detail-summary #accountDetailBalanceCard.is-zero strong{color:#50645a}
+.account-credit-notice{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:center;margin-bottom:12px;padding:14px 16px;border:1px solid #cfe1d0;border-radius:14px;background:#edf6ed;color:#355d43}
+.account-credit-notice span{font-weight:700}.account-credit-notice strong{font-size:20px}.account-credit-notice small{grid-column:1/-1;color:#63806a}
+.account-debt-tabs{display:flex;gap:8px;margin:10px 0 12px}
+.account-debt-tabs button{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #d9e1d8;border-radius:999px;background:#fff;color:#536058;font:inherit;font-weight:700;cursor:pointer}
+.account-debt-tabs button strong{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#edf1ec;font-size:12px}
+.account-debt-tabs button.active{background:#31543e;color:#fff;border-color:#31543e}
+.account-debt-tabs button.active strong{background:rgba(255,255,255,.18)}
+.account-detail-debt-list.is-archive article{background:#fafbf9}
+.account-detail-debt-list .paid-full{color:#2f6b43!important}
+.account-credit-text{color:#2f6b43!important;font-weight:700}
+@media(max-width:600px){.account-debt-tabs{overflow:auto}.account-debt-tabs button{white-space:nowrap}}

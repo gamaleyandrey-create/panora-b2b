@@ -577,12 +577,17 @@ function accountingDate(value) {
 }
 function renderAccounting() {
   let shipped = 0,
-    paid = 0;
+    paid = 0,
+    debtTotal = 0,
+    creditTotal = 0;
   document.querySelector("#accountRows").innerHTML = restaurants.length
     ? restaurants
         .map((r) => {
           const s = shippedFor(r.id),
             p = paidFor(r.id),
+            allocation = window.panoraFinanceAllocation?.(r.id),
+            debt = Number(allocation?.debt ?? Math.max(0, s - p)),
+            credit = Number(allocation?.credit ?? Math.max(0, p - s)),
             last =
               [
                 ...deliveryNotes
@@ -596,13 +601,22 @@ function renderAccounting() {
                 .pop() || "—";
           shipped += s;
           paid += p;
-          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></td><td class="${s - p > 0 ? "negative" : ""}"><strong>${euro(s - p)}</strong></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
+          debtTotal += debt;
+          creditTotal += credit;
+          const balanceHtml = debt > 0.005
+            ? `<span class="account-balance-debt">К оплате <strong>${euro(debt)}</strong></span>`
+            : credit > 0.005
+              ? `<span class="account-balance-credit">Переплата <strong>${euro(credit)}</strong></span>`
+              : `<span class="account-balance-zero"><strong>${euro(0)}</strong></span>`;
+          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></td><td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}">${balanceHtml}</td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';
   document.querySelector("#totalShipped").textContent = euro(shipped);
   document.querySelector("#totalPaid").textContent = euro(paid);
-  document.querySelector("#totalDebt").textContent = euro(shipped - paid);
+  document.querySelector("#totalDebt").textContent = euro(debtTotal);
+  const creditNode=document.querySelector("#totalCredit");
+  if(creditNode)creditNode.textContent=euro(creditTotal);
 }
 const reminderCopy = {
   ru: (r, p) =>
@@ -658,21 +672,19 @@ const paymentReminderCopy = {
 };
 function paymentReminderRows() {
   const today = iso(new Date());
+  const allocationByRestaurant = new Map();
   return deliveryNotes
     .filter((note) => note.paymentDueDate)
     .map((note) => {
       const r = restaurant(note.restaurantId);
       if (!r) return null;
-      const paid = payments
-        .filter(
-          (payment) =>
-            payment.deliveryNoteId === note.id &&
-            payment.confirmed !== false &&
-            payment.status !== "cancelled",
-        )
-        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-      const balance = Math.max(0, Number(note.total || 0) - paid);
-      if (balance <= 0) return null;
+      if(!allocationByRestaurant.has(r.id)){
+        allocationByRestaurant.set(r.id,window.panoraFinanceAllocation?.(r.id));
+      }
+      const allocation=allocationByRestaurant.get(r.id);
+      const row=allocation?.notes?.find(item=>String(item.note.id)===String(note.id));
+      const balance=row?Number(row.due||0):Math.max(0,Number(note.total||0)-Number(note.paid||0));
+      if (balance <= 0.005) return null;
       const days = Math.round(
         (new Date(`${note.paymentDueDate}T12:00:00`) -
           new Date(`${today}T12:00:00`)) /
@@ -1149,11 +1161,35 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     button.textContent = "Отгрузить и создать накладную";
   }
 };
+const paymentAllocationMode=document.querySelector("#paymentAllocationMode");
+const paymentDeliveryNoteLabel=document.querySelector("#paymentDeliveryNoteLabel");
+const paymentDeliveryNote=document.querySelector("#paymentDeliveryNote");
+const paymentRestaurantSelect=document.querySelector("#paymentRestaurant");
+function refreshPaymentAllocationOptions(){
+  if(!paymentAllocationMode||!paymentDeliveryNoteLabel||!paymentDeliveryNote||!paymentRestaurantSelect)return;
+  const specific=paymentAllocationMode.value==="note";
+  paymentDeliveryNoteLabel.hidden=!specific;
+  if(!specific)return;
+  const restaurantId=paymentRestaurantSelect.value;
+  const allocation=window.panoraFinanceAllocation?.(restaurantId);
+  const rows=(allocation?.notes||[])
+    .filter(row=>Number(row.due||0)>0.005)
+    .sort((a,b)=>String(a.note.date||"").localeCompare(String(b.note.date||""))||Number(a.note.number||0)-Number(b.note.number||0));
+  paymentDeliveryNote.innerHTML=rows.length
+    ? rows.map(row=>`<option value="${commerceEscape(row.note.id)}">DN-${String(row.note.number).padStart(4,"0")} · ${accountingDate(row.note.date)} · к оплате ${euro(row.due)}</option>`).join("")
+    : `<option value="">Нет неоплаченных накладных</option>`;
+  paymentDeliveryNote.disabled=!rows.length;
+}
+paymentAllocationMode?.addEventListener("change",refreshPaymentAllocationOptions);
+paymentRestaurantSelect?.addEventListener("change",refreshPaymentAllocationOptions);
+
 document.querySelector("#addPayment").onclick = () => {
   if (!restaurants.length) {
     alert("Сначала добавьте партнёра.");
     return;
   }
+  if(paymentAllocationMode)paymentAllocationMode.value="fifo";
+  refreshPaymentAllocationOptions();
   document.querySelector("#paymentDialog").showModal();
 };
 document.querySelector("#savePayment").onclick = async (e) => {
@@ -1174,18 +1210,24 @@ document.querySelector("#savePayment").onclick = async (e) => {
   button.disabled = true;
   button.textContent = "Сохраняем…";
   try {
+    const allocationMode=String(f.get("allocationMode")||"fifo");
+    const deliveryNoteId=allocationMode==="note"?String(f.get("deliveryNoteId")||""):null;
+    if(allocationMode==="note"&&!deliveryNoteId)throw new Error("Выберите накладную для оплаты.");
     await window.panoraCloud.recordPaymentAtomic({
       restaurantId: f.get("restaurant"),
       amount,
       method: f.get("method") || "Наличные",
       note: f.get("note") || "",
+      deliveryNoteId:deliveryNoteId||null,
       receivedAt: new Date().toISOString(),
     });
     document.querySelector("#paymentDialog").close();
     form.reset();
     renderCommerce();
     alert(
-      "Оплата принята. Задолженность партнёра уменьшена сразу; партнёр может оспорить операцию в течение 3 дней.",
+      allocationMode==="note"
+        ? "Оплата принята и привязана к выбранной накладной."
+        : "Общая оплата принята. Panora автоматически зачтёт её по самым старым неоплаченным накладным; остаток станет авансом / переплатой.",
     );
   } catch (error) {
     alert(`Оплата не сохранена: ${error.message}`);
