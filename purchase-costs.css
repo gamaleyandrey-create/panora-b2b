@@ -162,3 +162,119 @@
   .purchase-head-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
   .purchase-head-actions button{width:100%}
 }
+
+
+/* Panora 6.00 — multi-date purchase selector */
+.purchase-date-selector-label{
+  margin-bottom:9px;
+  color:#69756d;
+  font-size:11px;
+  font-weight:800;
+}
+.purchase-date-selector{
+  display:grid;
+  gap:10px;
+}
+.purchase-date-selector-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+.purchase-date-selector-head>strong{
+  color:#304b39;
+  font-size:12px;
+}
+.purchase-date-all{
+  display:inline-flex!important;
+  align-items:center;
+  gap:7px;
+  margin:0!important;
+  padding:7px 10px;
+  border:1px solid #d9e0d9;
+  border-radius:999px;
+  background:#fff;
+  color:#536159;
+  cursor:pointer;
+  font-size:11px;
+  font-weight:750;
+}
+.purchase-date-all input,
+.purchase-date-option input{
+  width:16px!important;
+  height:16px!important;
+  min-height:0!important;
+  margin:0!important;
+  accent-color:#365e45;
+}
+.purchase-date-options{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:2px 2px 5px;
+  scrollbar-width:thin;
+}
+.purchase-date-option{
+  flex:0 0 auto;
+  display:flex!important;
+  align-items:center;
+  gap:9px;
+  min-width:132px;
+  margin:0!important;
+  padding:10px 12px;
+  border:1px solid #d9e0d9;
+  border-radius:13px;
+  background:#fff;
+  color:#435148;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.purchase-date-option:hover{
+  border-color:#bfcbbf;
+  transform:translateY(-1px);
+}
+.purchase-date-option.selected{
+  border-color:#c9dbc9;
+  background:#eaf1e8;
+  box-shadow:inset 0 -2px 0 #365e45;
+}
+.purchase-date-option>span{
+  display:grid;
+  gap:1px;
+}
+.purchase-date-option b{
+  color:#304b39;
+  font-size:12px;
+}
+.purchase-date-option small{
+  color:#7a857d;
+  font-size:9px;
+  text-transform:capitalize;
+}
+.purchase-selection-summary{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+  min-height:22px;
+  margin-top:8px;
+  color:#6d776f;
+  font-size:10px;
+}
+.purchase-selection-summary strong{
+  color:#315b42;
+  font-size:11px;
+}
+.purchase-date-empty{
+  padding:12px 14px;
+  border:1px dashed #d7ded7;
+  border-radius:12px;
+  color:#7b857e;
+  background:#fafbf9;
+  font-size:11px;
+}
+@media(max-width:700px){
+  .purchase-date-selector-head{align-items:flex-start;flex-direction:column}
+  .purchase-date-option{min-width:122px}
+  .purchase-selection-summary{line-height:1.4}
+}
