@@ -18,6 +18,9 @@
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
  };
 
+ const readBakeCompletions=()=>{try{const value=JSON.parse(localStorage.getItem('panora-bake-completions')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+ const completedBakeDates=()=>new Set(readBakeCompletions().filter(item=>item&&!item.deletedAt).map(item=>String(item.date||'')));
+
  function allAvailableDates(){
   const fromOrders=activeOrders().map(dateOfOrder).filter(Boolean);
   const fromPlans=(Array.isArray(plans)?plans:[]).map(plan=>plan?.bakeDate).filter(Boolean);
@@ -25,8 +28,8 @@
  }
 
  function availableDates(view=purchaseView){
-  const today=localToday();
-  return allAvailableDates().filter(date=>view==='archive'?date<today:date>=today);
+  const today=localToday(),completed=completedBakeDates();
+  return allAvailableDates().filter(date=>view==='archive'?(date<today||completed.has(date)):(date>=today&&!completed.has(date)));
  }
 
  function renderModeTabs(){
@@ -211,37 +214,11 @@
   return after-before;
  }
 
- function rawAutoConsumptionFor(date,balance,catalog){
-  const productDemand=demandForDates(new Set([date])),latest=currentRecipes(),events=[];
-  const push=(row,type,quantity,note,product='')=>{
-   const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;
-   const before=Number(balance.get(row.key)||0),delta=-qty;
-   balance.set(row.key,before+delta);
-   events.push({
-    id:`auto:${date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,
-    type,quantity:qty,delta,note,product,virtual:true,system:true
-   });
-  };
-  [...productDemand.entries()].forEach(([product,pieces])=>{
-   const recipe=Array.isArray(latest?.[product])?latest[product]:[];
-   recipe.forEach(item=>{
-    const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;
-    const row=catalog.get(ingredientKey(item));if(!row)return;
-    const required=perBread*pieces;
-    if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){
-     const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);
-     if(fromStock>0)push(row,'bake_out_auto',fromStock,`Выпечка · ${productName(product)} · ${pieces} шт.`,product);
-     const short=Math.max(0,required-fromStock);
-     if(short>0){
-      const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`;
-      const source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);
-      push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · ${productName(product)} ${pieces} шт.`,product);
-     }
-    }else{
-     push(row,'bake_out_auto',required,`Выпечка · ${productName(product)} · ${pieces} шт.`,product);
-    }
-   });
-  });
+ function rawAutoConsumptionFor(completion,balance,catalog){
+  const date=String(completion?.date||''),latest=currentRecipes(),events=[],productDemand=new Map();
+  (completion?.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.rawQuantity ?? item?.produced ?? 0));if(product&&qty)productDemand.set(product,(productDemand.get(product)||0)+qty)});
+  const push=(row,type,quantity,note,product='')=>{const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;const before=Number(balance.get(row.key)||0),delta=-qty;balance.set(row.key,before+delta);events.push({id:`auto:${completion?.id||date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,type,quantity:qty,delta,note,product,virtual:true,system:true,bakeCompletionId:completion?.id||''})};
+  [...productDemand.entries()].forEach(([product,pieces])=>{const recipe=Array.isArray(latest?.[product])?latest[product]:[];recipe.forEach(item=>{const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;const row=catalog.get(ingredientKey(item));if(!row)return;const required=perBread*pieces;if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);if(fromStock>0)push(row,'bake_out_auto',fromStock,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product);const short=Math.max(0,required-fromStock);if(short>0){const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`,source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · факт ${productName(product)} ${pieces} шт.`,product)}}else push(row,'bake_out_auto',required,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product)})});
   return events;
  }
 
@@ -254,14 +231,11 @@
    manualByDate.get(date).push(m);
   });
   manualByDate.forEach(list=>list.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id||'').localeCompare(String(b.id||''))));
-  const bakeDates=allAvailableDates().filter(date=>date<today),dates=[...new Set([...manualByDate.keys(),...bakeDates])].sort();
-  const balances=new Map(),events=[],bakeSet=new Set(bakeDates);
+  const completions=readBakeCompletions().filter(item=>item&&!item.deletedAt&&String(item.date||'')<=today),completionByDate=new Map(completions.map(item=>[String(item.date||''),item]));
+  const dates=[...new Set([...manualByDate.keys(),...completionByDate.keys()])].sort(),balances=new Map(),events=[];
   dates.forEach(date=>{
-   (manualByDate.get(date)||[]).forEach(movement=>{
-    const delta=rawManualApply(balances,movement);
-    events.push({...movement,delta,virtual:false});
-   });
-   if(bakeSet.has(date))events.push(...rawAutoConsumptionFor(date,balances,catalog));
+   (manualByDate.get(date)||[]).forEach(movement=>{const delta=rawManualApply(balances,movement);events.push({...movement,delta,virtual:false})});
+   const completion=completionByDate.get(date);if(completion)events.push(...rawAutoConsumptionFor(completion,balances,catalog));
   });
   manual.filter(m=>String(m?.date||'')>today).forEach(m=>events.push({...m,delta:0,virtual:false,future:true}));
   return {catalog,balances,events};
@@ -306,7 +280,7 @@
  const rawMovementLabel=type=>({
   opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
   correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
-  bake_out_auto:'Выпечка',semi_source_auto:'Приготовление полуфабриката'
+  bake_out_auto:'Фактическая выпечка',semi_source_auto:'Приготовление полуфабриката'
  })[type]||type;
 
  function renderRawStock(){
@@ -759,11 +733,10 @@
  window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
- window.addEventListener('panora:raw-stock-cloud-state',event=>{
-  const el=document.querySelector('#rawStockCloudState');if(!el)return;
-  const detail=event.detail||{};el.textContent=detail.text||'Облако';el.dataset.state=detail.state||'synced';el.title=detail.detail||'';
- });
- bindRawStock();
+ window.addEventListener('panora:bake-completions-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:bake-completions-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:raw-stock-cloud-state',event=>{const el=document.querySelector('#rawStockCloudState');if(!el)return;const detail=event.detail||{};el.textContent=detail.text||'Облако';el.dataset.state=detail.state||'synced';el.title=detail.detail||''});
+ document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindRawStock,{once:true}):bindRawStock();
  renderPurchase();
  renderRawStock();
 })();
