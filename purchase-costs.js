@@ -195,21 +195,33 @@
   }catch(error){console.warn('Panora raw stock migration',error)}
  }
 
- function demandForDates(dateSet){
-  const demand=new Map(),ordersForDates=activeOrders().filter(order=>dateSet.has(dateOfOrder(order)));
-  ordersForDates.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
-   const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
-   if(product&&qty)demand.set(product,(demand.get(product)||0)+qty);
-  }));
-  if(!demand.size){
-   (Array.isArray(plans)?plans:[]).filter(plan=>dateSet.has(String(plan?.bakeDate||''))).forEach(plan=>{
-    const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
-    if(product&&qty)demand.set(product,(demand.get(product)||0)+qty);
-   });
-  }
-  return demand;
+ function rawDemandByDate(dateSet){
+  const rows=[];
+  [...dateSet].sort().forEach(date=>{
+   const ordersForDate=activeOrders().filter(order=>dateOfOrder(order)===date);
+   const products=new Map();
+   ordersForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
+    const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
+    if(product&&qty)products.set(product,(products.get(product)||0)+qty);
+   }));
+   let source='orders';
+   if(!products.size){
+    source='plan';
+    (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{
+     const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
+     if(product&&qty)products.set(product,(products.get(product)||0)+qty);
+    });
+   }
+   if(products.size)rows.push({date,source,products});
+  });
+  return rows;
  }
 
+ function demandForDates(dateSet){
+  const demand=new Map();
+  rawDemandByDate(dateSet).forEach(day=>day.products.forEach((qty,product)=>demand.set(product,(demand.get(product)||0)+qty)));
+  return demand;
+ }
  function rawManualApply(balance,movement){
   const key=String(movement?.key||'');if(!key)return 0;
   const before=Number(balance.get(key)||0),qty=Math.max(0,Number(movement?.quantity||0));
@@ -264,28 +276,55 @@
  }
 
  function rawForwardNeeds(ledger){
-  const dates=new Set(availableDates('active')),productDemand=demandForDates(dates),latest=currentRecipes();
-  const needs=new Map(),semiNeeds=new Map();
-  [...productDemand.entries()].forEach(([product,pieces])=>{
+  const dates=new Set(availableDates('active')),days=rawDemandByDate(dates),latest=currentRecipes();
+  const needs=new Map(),semiNeeds=new Map(),details=new Map();
+
+  const addDetail=(key,entry)=>{
+   if(!details.has(key))details.set(key,[]);
+   details.get(key).push(entry);
+  };
+
+  days.forEach(day=>day.products.forEach((pieces,product)=>{
    (Array.isArray(latest?.[product])?latest[product]:[]).forEach(item=>{
-    const qty=Math.max(0,Number(item?.qty||0))*pieces;if(!qty)return;
+    const perBread=Math.max(0,Number(item?.qty||0)),qty=perBread*pieces;if(!qty)return;
     const key=ingredientKey(item);
-    if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0)semiNeeds.set(key,(semiNeeds.get(key)||0)+qty);
-    else needs.set(key,(needs.get(key)||0)+qty);
+    const base={date:day.date,source:day.source,product,pieces,perBread,qty,kind:'direct'};
+    if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){
+     semiNeeds.set(key,(semiNeeds.get(key)||0)+qty);
+     needs.set(key,(needs.get(key)||0)+qty);
+     addDetail(key,{...base,kind:'semi',yieldPct:Number(item.sourceYieldPct),sourceIngredientName:String(item.sourceIngredientName||''),sourceUnit:normalizeUnit(item.sourceUnit||item.unit||'g')});
+    }else{
+     needs.set(key,(needs.get(key)||0)+qty);
+     addDetail(key,base);
+    }
    });
-  });
+  }));
+
+  // Allocate physical semi-finished stock chronologically. Only the uncovered
+  // part becomes demand for its source ingredient, so the breakdown exactly
+  // matches the number shown in the warehouse.
   semiNeeds.forEach((required,key)=>{
    const row=ledger.catalog.get(key);if(!row)return;
-   const stock=Math.max(0,Number(ledger.balances.get(key)||0)),short=Math.max(0,required-stock);
-   if(short>0&&row.sourceName&&row.yieldPct>0){
-    const sourceKey=`${normalizeName(row.sourceName)}|${normalizeUnit(row.sourceUnit)}`;
-    needs.set(sourceKey,(needs.get(sourceKey)||0)+short/(row.yieldPct/100));
-   }
-   needs.set(key,required);
+   let available=Math.max(0,Number(ledger.balances.get(key)||0));
+   const entries=(details.get(key)||[]).filter(entry=>entry.kind==='semi').slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.product).localeCompare(String(b.product)));
+   entries.forEach(entry=>{
+    const fromStock=Math.min(available,entry.qty);available-=fromStock;
+    const toMake=Math.max(0,entry.qty-fromStock);
+    entry.fromSemiStock=fromStock;entry.toMake=toMake;
+    if(toMake<=0||!row.sourceName||row.yieldPct<=0)return;
+    const sourceKey=`${normalizeName(row.sourceName)}|${normalizeUnit(row.sourceUnit)}`,sourceQty=toMake/(row.yieldPct/100);
+    needs.set(sourceKey,(needs.get(sourceKey)||0)+sourceQty);
+    addDetail(sourceKey,{
+     date:entry.date,source:entry.source,product:entry.product,pieces:entry.pieces,
+     perBread:entry.perBread,qty:sourceQty,kind:'semi_source',
+     via:row.name,semiQty:toMake,yieldPct:row.yieldPct
+    });
+   });
   });
-  return {needs,semiNeeds};
- }
 
+  details.forEach(list=>list.sort((a,b)=>a.date.localeCompare(b.date)||String(productName(a.product)).localeCompare(String(productName(b.product)),'ru')));
+  return {needs,semiNeeds,details,days};
+ }
  const rawMovementLabel=type=>({
   opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
   correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
@@ -294,7 +333,7 @@
 
  function renderRawStock(){
   const root=document.querySelector('#view-rawstock');if(!root)return;
-  const ledger=rawLedger(),{needs}=rawForwardNeeds(ledger),priceMap=costs();
+  const ledger=rawLedger(),forward=rawForwardNeeds(ledger),{needs}=forward,priceMap=costs();
   let stockValue=0,shortages=0;
   const rows=[...ledger.catalog.values()].sort((a,b)=>a.semi!==b.semi?(a.semi?1:-1):a.name.localeCompare(b.name,'ru'));
   document.querySelector('#rawStockRows').innerHTML=rows.length?rows.map(row=>{
@@ -312,7 +351,8 @@
         ?`<button type="button" class="raw-stock-status warning action" data-raw-receive="${row.key}" title="Добавить приход этого сырья">Не хватает ${niceQty(shortage,row.unit)} · приход</button>`
         :'<span class="raw-stock-status ok">Хватает</span>');
    const priceText=row.semi?'по сырью':price>0?`${price.toFixed(2)} € / ${row.unit==='g'?'кг':row.unit==='ml'?'л':'шт.'}`:'—';
-   const needText=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
+   const needLabel=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
+   const needText=required>0.0005?`<button type="button" class="raw-stock-need-link" data-raw-need="${row.key}" title="Показать, откуда взялась потребность">${needLabel}<small>Расшифровка</small></button>`:'—';
    const afterText=row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
    return `<tr class="${stock<0?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''}">
     <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}</small></td>
@@ -352,6 +392,62 @@
   });
   root.querySelectorAll('[data-raw-fix]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawFix,type:'inventory_set',reason:'negative'}));
   root.querySelectorAll('[data-raw-receive]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawReceive,type:'purchase_in',reason:'shortage'}));
+  root.querySelectorAll('[data-raw-need]').forEach(button=>button.onclick=()=>openRawNeedBreakdown(button.dataset.rawNeed));
+ }
+
+ function rawNeedSourceLabel(source){
+  return source==='orders'?'Заказы партнёров':'План выпечки · заказов на эту дату нет';
+ }
+
+ function rawNeedEntryQty(entry,row){
+  if(entry.kind==='semi_source')return `${niceQty(entry.qty,row.unit)} <small>из-за приготовления ${niceQty(entry.semiQty,normalizeUnit(row.unit))} «${entry.via}»</small>`;
+  return niceQty(entry.qty,row.unit);
+ }
+
+ function openRawNeedBreakdown(key){
+  const dialog=document.querySelector('#rawStockNeedDialog');if(!dialog)return;
+  const ledger=rawLedger(),forward=rawForwardNeeds(ledger),row=ledger.catalog.get(String(key));
+  if(!row)return rawStockFeedback('Ингредиент не найден.','error');
+  const required=Math.max(0,Number(forward.needs.get(row.key)||0)),stock=Number(ledger.balances.get(row.key)||0),shortage=Math.max(0,required-Math.max(0,stock));
+  const entries=(forward.details.get(row.key)||[]).slice();
+  document.querySelector('#rawStockNeedTitle').textContent=`Откуда нужно: ${row.name}`;
+  document.querySelector('#rawStockNeedSubtitle').textContent=`Активные даты выпечки: ${forward.days.length}. Потребность считается отдельно по каждой дате.`;
+  document.querySelector('#rawStockNeedSummary').innerHTML=`
+   <article><span>Нужно всего</span><strong>${niceQty(required,row.unit)}</strong></article>
+   <article><span>Сейчас на складе</span><strong>${niceQty(stock,row.unit)}</strong></article>
+   <article class="${shortage>0.0005?'warning':''}"><span>Не хватает</span><strong>${niceQty(shortage,row.unit)}</strong></article>`;
+  const planUsed=entries.some(entry=>entry.source==='plan');
+  document.querySelector('#rawStockNeedSourceNote').innerHTML=planUsed
+   ?'<strong>Важно:</strong> для дат без заказов партнёров Panora использовала количество из Календаря выпечки. Такие строки отмечены «План».'
+   :'<strong>Источник:</strong> вся показанная потребность сформирована реальными заказами партнёров на активные даты.';
+
+  const grouped=new Map();
+  entries.forEach(entry=>{
+   if(!grouped.has(entry.date))grouped.set(entry.date,[]);
+   grouped.get(entry.date).push(entry);
+  });
+  document.querySelector('#rawStockNeedList').innerHTML=entries.length?[...grouped.entries()].map(([date,list])=>{
+   const source=list.some(entry=>entry.source==='orders')?'orders':'plan';
+   const total=list.reduce((sum,entry)=>sum+Number(entry.qty||0),0);
+   return `<section class="raw-stock-need-day">
+    <div class="raw-stock-need-day-head">
+     <div><strong>${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</strong><span class="raw-need-source ${source}">${rawNeedSourceLabel(source)}</span></div>
+     <b>${niceQty(total,row.unit)}</b>
+    </div>
+    <div class="raw-stock-need-lines">${list.map(entry=>{
+     const product=productName(entry.product),via=entry.kind==='semi_source'?`<small>через «${entry.via}», выход ${entry.yieldPct}%</small>`:entry.kind==='semi'?`<small>полуфабрикат · выход ${entry.yieldPct}%</small>`:'';
+     return `<div class="raw-stock-need-line">
+      <div><strong>${product}</strong><span>${entry.pieces} шт. хлеба</span>${via}</div>
+      <b>${rawNeedEntryQty(entry,row)}</b>
+     </div>`;
+    }).join('')}</div>
+   </section>`;
+  }).join(''):'<div class="raw-stock-need-empty">Для активных дат потребность по этому ингредиенту не найдена.</div>';
+
+  const receipt=document.querySelector('#rawStockNeedAddReceipt');
+  receipt.onclick=()=>{dialog.close();openRawStockMovement({key:row.key,type:'purchase_in',reason:'shortage'})};
+  document.querySelector('#rawStockNeedOpenPurchase').onclick=()=>{dialog.close();document.querySelector('.admin-nav button[data-view="purchase"]')?.click()};
+  dialog.showModal();
  }
 
  function rawStockFeedback(text,state='success'){
@@ -400,6 +496,9 @@
   document.querySelector('#rawStockMovementClose')?.addEventListener('click',()=>dialog.close());
   document.querySelector('#rawStockMovementCancel')?.addEventListener('click',()=>dialog.close());
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});
+  const needDialog=document.querySelector('#rawStockNeedDialog');
+  document.querySelector('#rawStockNeedClose')?.addEventListener('click',()=>needDialog?.close());
+  needDialog?.addEventListener('click',event=>{if(event.target===needDialog)needDialog.close()});
   form.ingredient.addEventListener('change',updateRawMovementPreview);
   form.type.addEventListener('change',updateRawMovementPreview);
   form.quantity.addEventListener('input',updateRawMovementPreview);
@@ -430,7 +529,7 @@
   });
   return true;
  }
- window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
+ window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
  function periodDemand(){
   const dates=selectedDates();
