@@ -108,3 +108,48 @@
 .account-note-link:focus-visible,.account-allocation-note-link:focus-visible{
   outline:2px solid rgba(49,84,62,.3);outline-offset:2px;border-radius:3px
 }
+
+
+/* Panora 5.88 — recent operations / operation archive */
+.account-history-controls{margin:12px 0 4px}
+.account-history-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.account-history-tabs button{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 13px;
+  border:1px solid #d9e1d8;
+  border-radius:999px;
+  background:#fff;
+  color:#536058;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+.account-history-tabs button strong{
+  display:grid;
+  place-items:center;
+  min-width:22px;
+  height:22px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#edf1ec;
+  font-size:12px;
+}
+.account-history-tabs button.active{
+  border-color:#31543e;
+  background:#31543e;
+  color:#fff;
+}
+.account-history-tabs button.active strong{
+  background:rgba(255,255,255,.18);
+}
+.account-history-hint{
+  margin:8px 2px 0!important;
+  color:#758078!important;
+  font-size:12px!important;
+}
+@media(max-width:600px){
+  .account-history-tabs{display:grid;grid-template-columns:1fr}
+  .account-history-tabs button{justify-content:space-between;width:100%}
+}

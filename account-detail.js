@@ -4,6 +4,8 @@
   if (!dialog || !body) return;
   let selectedId = null;
   let debtTab = "active";
+  let historyTab = "recent";
+  const HISTORY_RECENT_LIMIT = 20;
 
   const prettyDate = (value) => {
     if (!value) return "—";
@@ -297,6 +299,99 @@
     alert(`Накладная DN-${String(note.number).padStart(4,"0")} найдена. Откройте её в разделе «Заказы и отгрузки».`);
   }
 
+
+  function bindAccountNoteLinks() {
+    dialog.querySelectorAll("[data-account-note]").forEach((node) => {
+      const openNote = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openAccountNote(node.dataset.accountNote);
+      };
+      if (node.tagName === "BUTTON") node.onclick = openNote;
+      else {
+        node.onclick = openNote;
+        node.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") openNote(event);
+        };
+      }
+    });
+  }
+
+  function renderHistoryBlock(id, history) {
+    let controls = dialog.querySelector("#accountHistoryControls");
+    const historyRoot = $("#accountDetailHistory");
+    if (!controls) {
+      controls = document.createElement("div");
+      controls.id = "accountHistoryControls";
+      controls.className = "account-history-controls";
+      historyRoot.before(controls);
+    }
+
+    const recent = history.slice(0, HISTORY_RECENT_LIMIT);
+    const archived = history.slice(HISTORY_RECENT_LIMIT);
+    if (historyTab === "archive" && !archived.length) historyTab = "recent";
+    const visible = historyTab === "archive" ? archived : recent;
+
+    controls.innerHTML = `
+      <div class="account-history-tabs" role="tablist" aria-label="История операций">
+        <button type="button" class="${historyTab==="recent"?"active":""}" data-history-tab="recent">
+          Последние операции <strong>${recent.length}</strong>
+        </button>
+        <button type="button" class="${historyTab==="archive"?"active":""}" data-history-tab="archive">
+          Архив операций <strong>${archived.length}</strong>
+        </button>
+      </div>
+      ${historyTab==="archive" && archived.length
+        ? `<p class="account-history-hint">Старые операции остаются в финансовых расчётах и не удаляются.</p>`
+        : ""}`;
+
+    historyRoot.innerHTML = visible.length
+      ? visible.map((item) =>
+          `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`
+        ).join("")
+      : `<p class="empty-row">${historyTab==="archive"?"Архивных операций пока нет.":"Операций пока нет."}</p>`;
+
+    controls.querySelectorAll("[data-history-tab]").forEach((button) => {
+      button.onclick = () => {
+        historyTab = button.dataset.historyTab;
+        renderHistoryBlock(id, history);
+      };
+    });
+
+    bindAccountNoteLinks();
+
+    historyRoot.querySelectorAll("[data-confirm-payment]").forEach(
+      (button) =>
+        (button.onclick = async () => {
+          const payment = payments.find(
+            (item) => item.id === button.dataset.confirmPayment,
+          );
+          if (
+            !payment ||
+            !confirm(`Подтвердить получение ${euro(payment.amount)}?`)
+          )
+            return;
+          if (
+            !window.panoraCloud?.ready ||
+            typeof window.panoraCloud.confirmPaymentAtomic !== "function"
+          )
+            return alert(
+              "Облако ещё загружается. Подождите несколько секунд и повторите.",
+            );
+          button.disabled = true;
+          button.textContent = "Сохраняем…";
+          try {
+            await window.panoraCloud.confirmPaymentAtomic(payment.id);
+            renderCommerce();
+            open(id);
+          } catch (error) {
+            alert(`Подтверждение не сохранено: ${error.message}`);
+            open(id);
+          }
+        }),
+    );
+  }
+
   function open(id) {
     const normalizedId = String(id ?? "");
     const client = restaurants.find((item) => String(item.id) === normalizedId) || restaurant(id);
@@ -304,6 +399,7 @@
     id = client.id;
     selectedId = id;
     debtTab = "active";
+    historyTab = "recent";
     const shipped = shippedFor(id);
     const paid = paidFor(id);
     const allocation=allocationFor(id);
@@ -338,62 +434,8 @@
 
     renderDebtBlock(id);
 
-    $("#accountDetailHistory").innerHTML = history.length
-      ? history
-          .map(
-            (item) =>
-              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
-          )
-          .join("")
-      : '<p class="empty-row">Операций пока нет.</p>';
+    renderHistoryBlock(id, history);
 
-    dialog.querySelectorAll("[data-account-note]").forEach((node) => {
-      const openNote = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openAccountNote(node.dataset.accountNote);
-      };
-      if (node.tagName === "BUTTON") node.onclick = openNote;
-      else {
-        node.onclick = openNote;
-        node.onkeydown = (event) => {
-          if (event.key === "Enter" || event.key === " ") openNote(event);
-        };
-      }
-    });
-
-    $("#accountDetailHistory")
-      .querySelectorAll("[data-confirm-payment]")
-      .forEach(
-        (button) =>
-          (button.onclick = async () => {
-            const payment = payments.find(
-              (item) => item.id === button.dataset.confirmPayment,
-            );
-            if (
-              !payment ||
-              !confirm(`Подтвердить получение ${euro(payment.amount)}?`)
-            )
-              return;
-            if (
-              !window.panoraCloud?.ready ||
-              typeof window.panoraCloud.confirmPaymentAtomic !== "function"
-            )
-              return alert(
-                "Облако ещё загружается. Подождите несколько секунд и повторите.",
-              );
-            button.disabled = true;
-            button.textContent = "Сохраняем…";
-            try {
-              await window.panoraCloud.confirmPaymentAtomic(payment.id);
-              renderCommerce();
-              open(id);
-            } catch (error) {
-              alert(`Подтверждение не сохранено: ${error.message}`);
-              open(id);
-            }
-          }),
-      );
     dialog.showModal();
   }
 
