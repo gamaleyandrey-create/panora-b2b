@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=3390">
+  <link rel="stylesheet" href="purchase-costs.css?v=5820">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5680">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -122,8 +122,8 @@
         <div id="recipeList" class="recipe-grid"></div>
       </div>
       <div class="view" id="view-purchase">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по плану выпечки с учётом остатков и страхового запаса.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
-        <section class="cost-period"><div class="cost-bake-select"><label><span>Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div class="cost-summary"><article><span>Хлеба в плане</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Выберите отдельную дату выпечки или общий расчёт по всем датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по выбранным датам: хлеб по видам → рецептуры → общий список ингредиентов → остаток и страховой запас.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
+        <section class="cost-period"><div class="cost-bake-select"><label><span>Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span>Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Выберите отдельную дату выпечки или общий расчёт по всем датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
@@ -210,7 +210,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=3390"></script>
+<script src="purchase-costs.js?v=5820"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5790"></script>
 <script src="order-notifications.js?v=2510"></script>
