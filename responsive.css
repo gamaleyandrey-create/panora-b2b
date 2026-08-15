@@ -124,3 +124,20 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
   }
   .mobile-nav button,.mobile-nav a{font-size:10px!important}
 }
+
+
+/* Panora 5.80 — mobile order archive tabs */
+@media(max-width:720px){
+  #view-orders .order-archive-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin:0 0 12px!important;
+  }
+  #view-orders .order-archive-tabs button{
+    width:100%;
+    min-height:44px;
+    padding:0 12px;
+    font-size:13px;
+  }
+}
