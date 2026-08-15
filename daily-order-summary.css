@@ -105,3 +105,29 @@
   .daily-main-tabs{display:grid!important;grid-template-columns:1fr 1fr}
   .daily-main-tabs button{width:100%!important;padding:0 12px!important}
 }
+
+
+/* Panora 5.86 — completed orders leave the active production workload */
+.daily-completed-summary{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:2px 0 12px;
+  padding:9px 11px;
+  border:1px solid #dfe6df;
+  border-radius:10px;
+  background:#f7faf7;
+  color:#5f6e64;
+  font-size:12px;
+}
+.daily-completed-summary strong{color:#315b42}
+.daily-completed-summary small{
+  padding:3px 7px;
+  border-radius:999px;
+  background:#e9f0e8;
+  color:#5c6a61;
+}
+.daily-summary-card.is-archive .daily-product-grid{
+  opacity:.92;
+}
