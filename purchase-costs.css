@@ -71,3 +71,16 @@
   .purchase-bread-breakdown-head{align-items:flex-start;flex-direction:column}
   .purchase-ingredient-sources>div{min-width:0}
 }
+
+/* Panora 5.83 — cost by bread + semi-finished raw material */
+.purchase-bread-cost-list{display:grid;gap:8px}
+.purchase-bread-cost-list article{display:grid;grid-template-columns:minmax(240px,1fr) 150px 150px;gap:14px;align-items:center;padding:10px 0;border-top:1px solid #e4eae4}
+.purchase-bread-cost-list article:first-child{border-top:0}
+.purchase-bread-cost-list article>div:first-child strong,.purchase-bread-cost-list article>div:first-child span{display:block}
+.purchase-bread-cost-list article span,.purchase-bread-cost-list article small{color:#748078}
+.purchase-bread-cost-list article>div:not(:first-child){text-align:right}
+.purchase-bread-cost-list article>div:not(:first-child) strong{display:block;margin-top:3px;color:#284a35}
+.purchase-semi-row{background:#fbfdfb}
+.purchase-semi-row>td:first-child>small{color:#356146!important}
+.purchase-auto-mark{display:inline-block;padding:4px 7px;border-radius:999px;background:#e8f0e7;color:#356146;font-size:11px;font-weight:750}
+@media(max-width:720px){.purchase-bread-cost-list article{grid-template-columns:1fr 1fr}.purchase-bread-cost-list article>div:first-child{grid-column:1/-1}.purchase-bread-cost-list article>div:not(:first-child){text-align:left}}

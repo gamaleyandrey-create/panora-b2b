@@ -34,3 +34,13 @@
 .recipe-lock-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px 12px;border:1px solid #d8dfda;border-radius:8px;background:#f8faf8}
 .recipe-lock-bar [data-tech-lock-state]{flex:1;min-width:220px;font-weight:700}
 .recipe-card[data-tech-edit="false"] input:disabled,.recipe-card[data-tech-edit="false"] select:disabled,.recipe-card[data-tech-edit="false"] textarea:disabled{opacity:.72;cursor:not-allowed}
+
+/* Panora 5.83 — semi-finished ingredients */
+.recipe-semi-settings{grid-column:1/-1;margin-top:2px;padding:8px 10px;border:1px solid #e1e7e1;border-radius:9px;background:#fafcfa}
+.recipe-semi-settings>summary{cursor:pointer;color:#356146;font-size:12px;font-weight:800}
+.recipe-semi-toggle{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px}
+.recipe-semi-toggle input{width:auto!important;min-height:auto!important}
+.recipe-semi-fields{display:grid;grid-template-columns:minmax(180px,1fr) 90px 140px;gap:9px;margin-top:9px}
+.recipe-semi-fields label span{display:block;margin-bottom:4px;color:#6f7b72;font-size:11px}
+.recipe-semi-fields>small{grid-column:1/-1;color:#748078}
+@media(max-width:700px){.recipe-semi-fields{grid-template-columns:1fr 1fr}.recipe-semi-fields label:first-child{grid-column:1/-1}}
