@@ -5,34 +5,70 @@
  const factor=unit=>unit==='g'||unit==='ml'?1000:1;
  const filter=$('#costBakeFilter');if(!filter)return;
  const selectionKey='panora-purchase-selected-dates';
- let selected='all';
+ let selected='all',purchaseView='active';
 
  const sharedDates=()=>{try{return (window.panoraPurchaseSelection||JSON.parse(localStorage.getItem(selectionKey)||'[]')).filter(Boolean)}catch{return[]}};
  const activeOrders=()=>Array.isArray(window.orders||orders)?(window.orders||orders).filter(order=>order&&order.status!=='cancelled'):[];
  const dateOfOrder=order=>String(order?.date||'').slice(0,10);
 
- function availableDates(){
+ const localToday=()=>{
+  const d=new Date(),pad=value=>String(value).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+ };
+
+ function allAvailableDates(){
   const fromOrders=activeOrders().map(dateOfOrder).filter(Boolean);
   const fromPlans=(Array.isArray(plans)?plans:[]).map(plan=>plan?.bakeDate).filter(Boolean);
   return [...new Set([...fromOrders,...fromPlans])].sort();
  }
 
+ function availableDates(view=purchaseView){
+  const today=localToday();
+  return allAvailableDates().filter(date=>view==='archive'?date<today:date>=today);
+ }
+
+ function renderModeTabs(){
+  const root=document.querySelector('#purchaseModeTabs');if(!root)return;
+  const activeCount=availableDates('active').length,archiveCount=availableDates('archive').length;
+  root.innerHTML=`
+    <button type="button" class="${purchaseView==='active'?'active':''}" data-purchase-view="active"><span>Активные</span><b>${activeCount}</b></button>
+    <button type="button" class="${purchaseView==='archive'?'active':''}" data-purchase-view="archive"><span>Архив</span><b>${archiveCount}</b></button>`;
+  root.querySelectorAll('[data-purchase-view]').forEach(button=>button.onclick=()=>{
+    const next=button.dataset.purchaseView;if(next===purchaseView)return;
+    purchaseView=next;
+    const dates=availableDates();
+    selected=next==='archive'&&dates.length?dates[dates.length-1]:'all';
+    renderPurchase();
+  });
+ }
+
  function fillFilter(){
-  const dates=availableDates(),chosen=sharedDates().filter(date=>dates.includes(date));
-  if(chosen.length&&selected==='all')selected='selected';
-  if(selected!=='all'&&selected!=='selected'&&!dates.includes(selected))selected='all';
+  const dates=availableDates();
+  const chosen=purchaseView==='active'
+    ? sharedDates().filter(date=>dates.includes(date))
+    : [];
+  if(purchaseView==='active'&&chosen.length&&selected==='all')selected='selected';
+  if(selected!=='all'&&selected!=='selected'&&!dates.includes(selected))selected=purchaseView==='archive'&&dates.length?dates[dates.length-1]:'all';
   if(selected==='selected'&&!chosen.length)selected='all';
+
+  const allLabel=purchaseView==='archive'?'Все архивные даты вместе':'Все активные даты вместе';
   filter.innerHTML=
-    `<option value="all">Все даты вместе</option>`+
+    `<option value="all">${allLabel}</option>`+
     (chosen.length?`<option value="selected">Выбранные даты (${chosen.length}) — ${chosen.map(date=>fmt(date,{day:'numeric',month:'short'})).join(', ')}</option>`:'')+
-    dates.map((date,index)=>`<option value="${date}">${index===0?'Ближайшая выпечка':`Выпечка ${index+1}`} — ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('');
+    dates.map((date,index)=>{
+      const label=purchaseView==='archive'
+        ? `Архив · ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`
+        : `${index===0?'Ближайшая выпечка':`Выпечка ${index+1}`} — ${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`;
+      return `<option value="${date}">${label}</option>`;
+    }).join('');
   filter.value=selected;
  }
 
  function selectedDates(){
-  if(selected==='all')return new Set(availableDates());
-  if(selected==='selected')return new Set(sharedDates());
-  return new Set([selected]);
+  const dates=availableDates();
+  if(selected==='all')return new Set(dates);
+  if(selected==='selected'&&purchaseView==='active')return new Set(sharedDates().filter(date=>dates.includes(date)));
+  return new Set(dates.includes(selected)?[selected]:[]);
  }
 
  function currentRecipes(){
@@ -182,10 +218,21 @@
  }
 
  renderPurchase=function(){
-  if(window.panoraMoneyEditing?.active){
+  if(window.panoraMoneyEditing?.active&&purchaseView==='active'){
    const active=window.panoraMoneyEditing.element;if(active&&active.matches('[data-ingredient-price]'))return;
   }
+  renderModeTabs();
   fillFilter();
+  const isArchive=purchaseView==='archive';
+  document.querySelector('#purchaseArchiveNote').hidden=!isArchive;
+  document.querySelector('#costBakeFilterLabel').textContent=isArchive?'Архив закупки за':'Рассчитать закупку для';
+  document.querySelector('#costPiecesLabel').textContent=isArchive?'Хлеба было в выпечке':'Хлеба к выпечке';
+  document.querySelector('#costConsumptionLabel').textContent=isArchive?'Расчётная стоимость сырья':'Стоимость сырья';
+  document.querySelector('#costPurchaseLabel').textContent=isArchive?'Расчётная закупка':'Нужно закупить';
+  document.querySelector('#purchaseBuyHeader').textContent=isArchive?'Требовалось':'Купить';
+  document.querySelector('#purchaseModeHint').textContent=isArchive
+    ? 'Архив предназначен только для просмотра прошлых дат. Расчёт показывается по сохранённым заказам и текущим рецептурам/ценам; данные закупки здесь не редактируются.'
+    : 'Выберите отдельную дату выпечки или общий расчёт по активным датам. Введите цену за 1 кг, 1 литр или 1 штуку.';
   const {demand,rows,breadCosts}=buildTotals(),priceMap=costs();
   const pieces=demand.reduce((sum,row)=>sum+Number(row.quantity||0),0);
   const consumption=breadCosts.reduce((sum,row)=>sum+row.totalCost,0);
@@ -202,14 +249,14 @@
       : row.required/factor(row.unit)*row.price;
    const buyCost=isSemi?0:buy/factor(row.unit)*row.price;
    purchaseTotal+=buyCost;
-   return `<tr class="${isSemi?'purchase-semi-row':''}">
+   return `<tr class="${isSemi?'purchase-semi-row':''} ${isArchive?'purchase-archive-row':''}">
     <td><strong>${row.name}</strong><small>${isSemi?`Полуфабрикат · производится из «${row.sourceName}» · выход ${row.yieldPct}%`:`Цена за ${row.unit==='g'?'1 кг':row.unit==='ml'?'1 л':'1 шт.'}`}</small>${ingredientSourcesHtml(row)}</td>
     <td>${niceQty(row.required,row.unit)}</td>
-    <td><input data-cost-stock="${index}" type="number" min="0" step="0.01" value="${row.stock}"> ${row.unit}</td>
-    <td>${isSemi?'<span class="purchase-auto-mark">по сырью</span>':`<input data-cost-margin="${index}" type="number" min="0" step="0.1" value="${row.margin}">%`}</td>
-    <td><strong>${isSemi?`Приготовить ${niceQty(needToMake,row.unit)}`:niceQty(buy,row.unit)}</strong></td>
-    <td>${isSemi?`<span class="purchase-auto-mark">авто</span>`:`<input class="ingredient-price" data-ingredient-price="${row.key}" type="text" inputmode="decimal" autocomplete="off" value="${row.price.toFixed(2)}">`}</td>
-    <td><strong>${isSemi?euroCost(usedCost):euroCost(buyCost)}</strong><small>${isSemi?'себестоимость полуфабриката':`использовано ${euroCost(usedCost)}`}</small></td>
+    <td>${isArchive?`<span class="purchase-readonly-value">${niceQty(row.stock,row.unit)}</span>`:`<input data-cost-stock="${index}" type="number" min="0" step="0.01" value="${row.stock}"> ${row.unit}`}</td>
+    <td>${isArchive?`<span class="purchase-readonly-value">${isSemi?'по сырью':`${row.margin}%`}</span>`:isSemi?'<span class="purchase-auto-mark">по сырью</span>':`<input data-cost-margin="${index}" type="number" min="0" step="0.1" value="${row.margin}">%`}</td>
+    <td><strong>${isSemi?`${isArchive?'Нужно было приготовить':'Приготовить'} ${niceQty(needToMake,row.unit)}`:niceQty(buy,row.unit)}</strong></td>
+    <td>${isSemi?`<span class="purchase-auto-mark">авто</span>`:isArchive?`<span class="purchase-readonly-value">${row.price.toFixed(2)} €</span>`:`<input class="ingredient-price" data-ingredient-price="${row.key}" type="text" inputmode="decimal" autocomplete="off" value="${row.price.toFixed(2)}">`}</td>
+    <td><strong>${isSemi?euroCost(usedCost):euroCost(buyCost)}</strong><small>${isSemi?'себестоимость полуфабриката':isArchive?'расчётная сумма':`использовано ${euroCost(usedCost)}`}</small></td>
    </tr>`;
   }).join(''):'<tr><td colspan="7">В выбранном периоде нет хлеба к выпечке.</td></tr>';
 
@@ -218,7 +265,7 @@
   $('#costPurchaseTotal').textContent=euroCost(purchaseTotal);
   $('#costPerBread').textContent=`${euroCost(pieces?consumption/pieces:0)} / шт.`;
 
-  $$('[data-ingredient-price]').forEach(input=>{
+  if(!isArchive)$$('[data-ingredient-price]').forEach(input=>{
    const commit=()=>{
     const value=window.panoraParseDecimal?.(input.value);
     if(value===null){input.value=Number(priceMap[input.dataset.ingredientPrice]||0).toFixed(2);return}
@@ -229,7 +276,7 @@
    input.onblur=commit;input.onchange=null;input.onfocus=()=>requestAnimationFrame(()=>input.select());
   });
 
-  $$('[data-cost-stock],[data-cost-margin]').forEach(input=>input.onchange=()=>{
+  if(!isArchive)$$('[data-cost-stock],[data-cost-margin]').forEach(input=>input.onchange=()=>{
    const row=rows[Number(input.dataset.costStock??input.dataset.costMargin)];if(!row)return;
    const latest=currentRecipes();
    Object.values(latest).flat().forEach(item=>{
@@ -245,6 +292,7 @@
  window.panoraSetPurchaseDates=dates=>{
   window.panoraPurchaseSelection=dates;
   localStorage.setItem(selectionKey,JSON.stringify(dates));
+  purchaseView='active';
   selected='selected';
   renderPurchase();
  };

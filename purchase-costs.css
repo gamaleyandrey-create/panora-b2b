@@ -84,3 +84,68 @@
 .purchase-semi-row>td:first-child>small{color:#356146!important}
 .purchase-auto-mark{display:inline-block;padding:4px 7px;border-radius:999px;background:#e8f0e7;color:#356146;font-size:11px;font-weight:750}
 @media(max-width:720px){.purchase-bread-cost-list article{grid-template-columns:1fr 1fr}.purchase-bread-cost-list article>div:first-child{grid-column:1/-1}.purchase-bread-cost-list article>div:not(:first-child){text-align:left}}
+
+
+/* Panora 5.93 — Active / Archive purchase dates */
+.purchase-mode-tabs{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+}
+.purchase-mode-tabs button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-height:44px;
+  padding:0 18px;
+  border:1px solid #d4ddd5;
+  border-radius:999px;
+  background:#fff;
+  color:#465249;
+  font:700 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  cursor:pointer;
+}
+.purchase-mode-tabs button b{
+  display:inline-grid;
+  place-items:center;
+  min-width:25px;
+  height:25px;
+  padding:0 7px;
+  border-radius:999px;
+  background:#eaf0ea;
+  color:#68736b;
+  font-size:12px;
+}
+.purchase-mode-tabs button.active{
+  border-color:#315b42;
+  background:#315b42;
+  color:#fff;
+}
+.purchase-mode-tabs button.active b{
+  background:rgba(255,255,255,.18);
+  color:#fff;
+}
+.purchase-archive-note{
+  margin:0 0 14px;
+  padding:11px 13px;
+  border:1px solid #dce3db;
+  border-radius:11px;
+  background:#f5f7f3;
+  color:#67736b;
+  font-size:12px;
+  line-height:1.4;
+}
+.purchase-archive-row{
+  background:#fbfcfa;
+}
+.purchase-readonly-value{
+  display:inline-block;
+  color:#5f6b63;
+  font-weight:650;
+}
+@media(max-width:720px){
+  .purchase-mode-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .purchase-mode-tabs button{width:100%;padding:0 12px}
+}
