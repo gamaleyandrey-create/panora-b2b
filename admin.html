@@ -74,6 +74,8 @@
 <link rel="stylesheet" href="price-inputs-v42.css?v=4210">
 <link rel="stylesheet" href="mobile-partner-prices-v49.css?v=4910">
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
+
+<link rel="stylesheet" href="finance-dashboard.css?v=5870">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -96,6 +98,7 @@
       <h1 data-t="bakery">Пекарня</h1>
       <button class="active" data-view="orders">Заказы и отгрузки <span class="order-alert-badge" data-new-order-count hidden>0</span></button>
       <button data-view="accounting">Оплаты и долги</button>
+      <button data-view="finance">Финансы</button>
       <button data-view="plan" data-t="plan">Календарь выпечки</button>
       <button data-view="reminders">Напоминания клиентам</button>
       <button data-view="restaurants">Партнёры и цены</button>
@@ -123,7 +126,7 @@
       </div>
       <div class="view" id="view-purchase">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по выбранным датам: хлеб по видам → рецептуры → общий список ингредиентов → остаток и страховой запас.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
-        <section class="cost-period"><div class="cost-bake-select"><label><span>Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span>Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Себестоимость сырья</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Выберите отдельную дату выпечки или общий расчёт по всем датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
+        <section class="cost-period"><div class="cost-bake-select"><label><span>Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span>Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span>Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span>Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Средняя себестоимость сырья / 1 хлеб</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p>Выберите отдельную дату выпечки или общий расчёт по всем датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
@@ -162,6 +165,58 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Оплаты и задолженность</h2><p>Отгрузка увеличивает долг, оплата уменьшает его.</p></div><button class="primary" id="addPayment">+ Принять оплату</button></div>
         <div class="summary-grid finance-summary"><article><span>Общая задолженность</span><strong id="totalDebt">0 €</strong></article><article class="credit-card"><span>Авансы / переплаты</span><strong id="totalCredit">0 €</strong></article><article><span>Отгружено</span><strong id="totalShipped">0 €</strong></article><article><span>Оплачено</span><strong id="totalPaid">0 €</strong></article></div>
         <div class="table-wrap"><table><thead><tr><th>Партнёр</th><th>Баланс</th><th>Отгрузки</th><th>Оплаты</th><th>Последняя операция</th></tr></thead><tbody id="accountRows"></tbody></table></div>
+      </div>
+
+      <div class="view" id="view-finance">
+        <div class="page-head">
+          <div><span class="kicker">PANORA</span><h2>Финансы</h2><p>Выручка, НДС, себестоимость сырья, расходы и операционная прибыль.</p></div>
+        </div>
+        <section class="finance-dashboard-period">
+          <label><span>Период с</span><input id="financeDateFrom" type="date" data-panora-no-draft="1"></label>
+          <label><span>по</span><input id="financeDateTo" type="date" data-panora-no-draft="1"></label>
+          <button type="button" class="secondary" id="financeThisMonth">Этот месяц</button>
+          <button type="button" class="secondary" id="financeThisYear">Этот год</button>
+        </section>
+
+        <section class="finance-kpi-grid">
+          <article><span>Выручка без НДС</span><strong id="financeRevenueNet">0,00 €</strong><small id="financeRevenueGross">С НДС: 0,00 €</small></article>
+          <article><span>НДС с продаж</span><strong id="financeSalesVat">0,00 €</strong><small>Не считается доходом</small></article>
+          <article><span>Себестоимость сырья</span><strong id="financeCogs">0,00 €</strong><small>По фактически отгруженному хлебу</small></article>
+          <article><span>Валовая прибыль</span><strong id="financeGrossProfit">0,00 €</strong><small id="financeGrossMargin">Маржа: 0%</small></article>
+          <article><span>Операционные расходы</span><strong id="financeExpensesNet">0,00 €</strong><small id="financeInputVat">Входящий НДС: 0,00 €</small></article>
+          <article class="finance-profit-card"><span>Операционная прибыль</span><strong id="financeOperatingProfit">0,00 €</strong><small id="financeOperatingMargin">Маржа: 0%</small></article>
+          <article><span>НДС к расчёту</span><strong id="financeVatPayable">0,00 €</strong><small>НДС с продаж − входящий НДС</small></article>
+          <article><span>Отгружено хлеба</span><strong id="financePieces">0 шт.</strong><small id="financeAvgProfit">Прибыль / хлеб: 0,00 €</small></article>
+        </section>
+
+        <section class="finance-panel">
+          <div class="finance-panel-head">
+            <div><h3>По видам хлеба</h3><p>Продажи и себестоимость сырья по каждому продукту.</p></div>
+          </div>
+          <div class="table-wrap finance-table-wrap">
+            <table><thead><tr><th>Хлеб</th><th>Штук</th><th>Выручка без НДС</th><th>Сырьё</th><th>Валовая прибыль</th><th>Прибыль / шт.</th><th>Маржа</th></tr></thead><tbody id="financeProductRows"></tbody></table>
+          </div>
+        </section>
+
+        <section class="finance-panel">
+          <div class="finance-panel-head">
+            <div><h3>По партнёрам</h3><p>Какие партнёры формируют выручку и валовую прибыль.</p></div>
+          </div>
+          <div class="table-wrap finance-table-wrap">
+            <table><thead><tr><th>Партнёр</th><th>Выручка без НДС</th><th>Сырьё</th><th>Валовая прибыль</th><th>Маржа</th></tr></thead><tbody id="financePartnerRows"></tbody></table>
+          </div>
+        </section>
+
+        <section class="finance-panel">
+          <div class="finance-panel-head">
+            <div><h3>Расходы</h3><p>Указывайте сумму с НДС. Panora отделит расход без НДС и входящий НДС.</p></div>
+            <button type="button" class="primary" id="financeAddExpense">+ Добавить расход</button>
+          </div>
+          <div class="table-wrap finance-table-wrap">
+            <table><thead><tr><th>Дата</th><th>Категория</th><th>Описание</th><th>Тип</th><th>Сумма с НДС</th><th>НДС</th><th>Без НДС</th><th></th></tr></thead><tbody id="financeExpenseRows"></tbody></table>
+          </div>
+        </section>
+        <p class="finance-note">Себестоимость сырья рассчитывается по текущим рецептурам и текущим ценам ингредиентов. НДС к расчёту является управленческой оценкой, а не налоговой декларацией.</p>
       </div>
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
@@ -229,5 +284,27 @@
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5630"></script>
 <script src="order-messages-v565.js?v=5650"></script>
+
+  <dialog id="financeExpenseDialog" class="finance-expense-dialog">
+    <form method="dialog" id="financeExpenseForm">
+      <button type="button" class="dialog-close" id="financeExpenseClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA</span>
+      <h3>Расход</h3>
+      <input type="hidden" name="id">
+      <label><span>Дата</span><input name="date" type="date" required></label>
+      <label><span>Категория</span><select name="category"><option>Упаковка</option><option>Доставка</option><option>Электричество</option><option>Аренда</option><option>Зарплата</option><option>Эквайринг / комиссия</option><option>Бухгалтерия</option><option>Связь</option><option>Оборудование</option><option>Другое</option></select></label>
+      <label><span>Описание</span><input name="description" placeholder="Например: коробки для хлеба"></label>
+      <label><span>Тип расхода</span><select name="expenseType"><option value="variable">Переменный</option><option value="fixed">Постоянный</option></select></label>
+      <div class="finance-expense-row">
+        <label><span>Сумма с НДС, €</span><input name="grossAmount" type="text" inputmode="decimal" required placeholder="100,00"></label>
+        <label><span>НДС, %</span><input name="vatRate" type="text" inputmode="decimal" value="21"></label>
+      </div>
+      <label class="finance-vat-check"><input name="vatDeductible" type="checkbox" checked><span>Входящий НДС принимается к вычету</span></label>
+      <p class="finance-expense-preview" id="financeExpensePreview"></p>
+      <div class="dialog-actions"><button type="button" id="financeExpenseCancel">Отмена</button><button type="submit" class="primary">Сохранить</button></div>
+    </form>
+  </dialog>
+
+<script src="finance-dashboard.js?v=5870"></script>
 </body>
 </html>
