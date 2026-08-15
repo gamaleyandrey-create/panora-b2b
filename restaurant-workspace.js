@@ -784,6 +784,111 @@
       });
   };
 
+
+  const partnerPaymentDistribution=(notes,payments)=>{
+    const allocations=new Map();
+    const noteState=new Map();
+    const generalCredits=[];
+    const linkedCredits=[];
+
+    const paymentEntry=payment=>{
+      const key=String(payment.id||"");
+      if(!allocations.has(key))allocations.set(key,{rows:[],credit:0});
+      return allocations.get(key);
+    };
+    const addAllocation=(payment,note,amount,date)=>{
+      const used=Math.max(0,Number(amount||0));
+      if(used<=0.005)return;
+      paymentEntry(payment).rows.push({note,amount:used,date});
+    };
+    const openNotes=()=>[...noteState.values()]
+      .filter(row=>row.remaining>0.005)
+      .sort((a,b)=>String(a.note.date||"").localeCompare(String(b.note.date||""))||Number(a.note.number||0)-Number(b.note.number||0));
+
+    const applyGeneralCreditToNote=(noteRow,eventDate)=>{
+      for(const credit of generalCredits){
+        if(noteRow.remaining<=0.005)break;
+        if(credit.remaining<=0.005)continue;
+        const used=Math.min(noteRow.remaining,credit.remaining);
+        noteRow.remaining-=used;credit.remaining-=used;
+        addAllocation(credit.payment,noteRow.note,used,eventDate);
+      }
+    };
+    const applyLinkedCreditsToNote=(noteRow,eventDate)=>{
+      linkedCredits.forEach(credit=>{
+        if(credit.remaining<=0.005)return;
+        if(String(credit.payment.deliveryNoteId||"")!==String(noteRow.note.id||""))return;
+        const used=Math.min(noteRow.remaining,credit.remaining);
+        noteRow.remaining-=used;credit.remaining-=used;
+        addAllocation(credit.payment,noteRow.note,used,eventDate);
+      });
+    };
+
+    const events=[
+      ...notes.map(note=>({date:String(note.date||""),sort:0,kind:"delivery",note})),
+      ...payments.filter(payment=>payment.status!=="cancelled"&&payment.confirmed!==false)
+        .map(payment=>({date:String(payment.receivedAt||payment.date||""),sort:1,kind:"payment",payment}))
+    ].sort((a,b)=>a.date.localeCompare(b.date)||a.sort-b.sort);
+
+    events.forEach(event=>{
+      if(event.kind==="delivery"){
+        const noteRow={note:event.note,remaining:Math.max(0,Number(event.note.total||0))};
+        noteState.set(String(event.note.id||event.note.number),noteRow);
+        applyLinkedCreditsToNote(noteRow,event.date);
+        applyGeneralCreditToNote(noteRow,event.date);
+        return;
+      }
+
+      const payment=event.payment;
+      let remaining=Math.max(0,Number(payment.amount||0));
+      paymentEntry(payment);
+
+      if(payment.deliveryNoteId){
+        const noteRow=noteState.get(String(payment.deliveryNoteId));
+        if(noteRow){
+          const used=Math.min(noteRow.remaining,remaining);
+          noteRow.remaining-=used;remaining-=used;
+          addAllocation(payment,noteRow.note,used,event.date);
+        }
+        if(remaining>0.005)linkedCredits.push({payment,remaining});
+      }else{
+        for(const noteRow of openNotes()){
+          if(remaining<=0.005)break;
+          const used=Math.min(noteRow.remaining,remaining);
+          noteRow.remaining-=used;remaining-=used;
+          addAllocation(payment,noteRow.note,used,event.date);
+        }
+        if(remaining>0.005)generalCredits.push({payment,remaining});
+      }
+    });
+
+    generalCredits.forEach(credit=>{
+      const entry=paymentEntry(credit.payment);
+      entry.credit=Math.max(0,Number(credit.remaining||0));
+    });
+    linkedCredits.forEach(credit=>{
+      const entry=paymentEntry(credit.payment);
+      entry.credit=(entry.credit||0)+Math.max(0,Number(credit.remaining||0));
+    });
+
+    return allocations;
+  };
+
+  const partnerPaymentAllocationHtml=(payment,distribution)=>{
+    if(!payment||payment.status==="cancelled"||payment.confirmed===false)return "";
+    const entry=distribution.get(String(payment.id||""));
+    if(!entry)return "";
+    const rows=(entry.rows||[]).map(row=>`<div class="rw-payment-allocation-row">
+      <span><b>${esc(localDate(row.date))}</b> · ${esc(noteNumber(row.note))}</span>
+      <strong>${portalMoney(row.amount)}</strong>
+    </div>`);
+    if(Number(entry.credit||0)>0.005){
+      rows.push(`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Осталось в авансе":lang==="es"?"Queda como anticipo":"Remaining as advance"}</span><strong>${portalMoney(entry.credit)}</strong></div>`);
+    }
+    if(!rows.length)return "";
+    return `<details class="rw-payment-allocation"><summary>${lang==="ru"?"Куда зачтено":lang==="es"?"Dónde se aplicó":"Applied to"}</summary><div class="rw-payment-allocation-list">${rows.join("")}</div></details>`;
+  };
+
   function paymentsHtml() {
     window.panoraRecalculateBalances?.();
     const payments = ownPayments(),
@@ -791,6 +896,7 @@
 
     const confirmedPayments=payments.filter(payment=>payment.status!=="cancelled");
     const disputedPayments=payments.filter(payment=>payment.status!=="cancelled"&&payment.disputeStatus==="open");
+    const paymentDistribution=partnerPaymentDistribution(notes,confirmedPayments);
 
     const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid = confirmedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
@@ -937,8 +1043,8 @@
             const searchText=`${operation.label||""} ${operation.payment?.method||""} ${operation.payment?.note||""} ${operation.kind==="payment"?t("payment"):t("delivery")}`.toLowerCase();
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
             return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
-              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(operation.date)}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(operation.note.paymentDueDate)}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small></div>
-              <div class="rw-operation-amount"><b>${operation.amount<0?"−":"+"}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small>${operation.kind==="payment"?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
+              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}

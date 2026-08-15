@@ -1613,3 +1613,21 @@
 /* Panora 5.69 — stable personal-price photos during cloud UI refresh */
 .rw-profile-price-photo{background-size:cover;background-position:center;background-repeat:no-repeat}
 .rw-profile-price-photo img{display:block;background:transparent;transform:translateZ(0);backface-visibility:hidden}
+
+/* Panora 5.75 — partner payment allocation transparency */
+.rw-payment-allocation{margin-top:9px;max-width:430px}
+.rw-payment-allocation summary{cursor:pointer;width:max-content;color:#315e40;font-weight:750;font-size:13px;list-style:none}
+.rw-payment-allocation summary::-webkit-details-marker{display:none}
+.rw-payment-allocation summary::before{content:"▸";display:inline-block;margin-right:6px;transition:transform .15s ease}
+.rw-payment-allocation[open] summary::before{transform:rotate(90deg)}
+.rw-payment-allocation-list{display:grid;gap:6px;margin-top:8px;padding:10px 12px;border:1px solid #dce4dc;border-radius:11px;background:#f6f9f6}
+.rw-payment-allocation-row{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:12px}
+.rw-payment-allocation-row span{color:#657168!important}
+.rw-payment-allocation-row strong{white-space:nowrap;color:#315e40}
+.rw-payment-allocation-credit{padding-top:6px;border-top:1px solid #dce4dc}
+.rw-operation.payment .rw-operation-amount>b{color:#2f6543}
+.rw-operation.delivery .rw-operation-amount>b{color:#a8463e}
+@media(max-width:700px){
+ .rw-payment-allocation{max-width:none}
+ .rw-payment-allocation-row{align-items:flex-start}
+}
