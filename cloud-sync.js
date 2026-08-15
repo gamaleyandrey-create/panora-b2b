@@ -249,14 +249,32 @@
 
   // Ordinary product saves deliberately omit tech_card. A stale device must
   // never overwrite a newer card as a side effect of changing a name/price.
-  const productRow=(p,{includeTechCard=false}={})=>({id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),wholesale_min_qty:Math.max(1,Number(p.wholesaleMinQty||12)),image_url:p.image||null,gallery_urls:Array.isArray(p.gallery)?p.gallery.filter(Boolean).slice(0,6):[],active:p.active!==false,storefront_visible:p.storefrontVisible!==false,category:String(p.category||'bread'),...(includeTechCard?{tech_card:p.techCard||{}}:{}),updated_at:new Date().toISOString()});
+  const productRow=(p,{includeTechCard=false}={})=>({
+    id:p.id,name_ru:p.names?.ru||p.id,name_en:p.names?.en||p.names?.ru||p.id,name_es:p.names?.es||p.names?.ru||p.id,
+    description_ru:p.descriptions?.ru||'',description_en:p.descriptions?.en||'',description_es:p.descriptions?.es||'',
+    weight_g:Number(p.weight||750),base_price:Number(p.basePrice||0),wholesale_min_qty:Math.max(1,Number(p.wholesaleMinQty||12)),
+    ...(!p._imageCloudOnly?{image_url:p.image||null}:{}),
+    ...(!p._galleryCloudOnly?{gallery_urls:Array.isArray(p.gallery)?p.gallery.filter(Boolean).slice(0,6):[]}:{}),
+    active:p.active!==false,storefront_visible:p.storefrontVisible!==false,category:String(p.category||'bread'),
+    ...(includeTechCard?{tech_card:p.techCard||{}}:{}),updated_at:new Date().toISOString()
+  });
   const rowProduct=(row,local)=>({id:row.id,builtIn:['plain','pumpkin'].includes(row.id),active:row.active,storefrontVisible:row.storefront_visible!==false,category:String(row.category||local?.category||'bread'),weight:Number(row.weight_g),basePrice:Number(row.base_price),wholesaleMinQty:Math.max(1,Number(row.wholesale_min_qty||local?.wholesaleMinQty||12)),image:row.image_url||local?.image||'icon.svg',gallery:Array.isArray(row.gallery_urls)?row.gallery_urls:(Array.isArray(local?.gallery)?local.gallery:[]),techCard:row.tech_card||{},techCardRevision:Number(row.tech_card_revision||0),names:{ru:row.name_ru,en:row.name_en,es:row.name_es},descriptions:{ru:row.description_ru||'',en:row.description_en||'',es:row.description_es||''}});
   const canonicalValue=value=>{
     if(Array.isArray(value))return value.map(canonicalValue);
     if(value&&typeof value==='object')return Object.keys(value).sort().reduce((result,key)=>{result[key]=canonicalValue(value[key]);return result},{});
     return value;
   };
-  const comparableProduct=p=>canonicalValue({id:String(p.id),active:p.active!==false,storefrontVisible:p.storefrontVisible!==false,category:String(p.category||'bread'),weight:Number(p.weight),basePrice:Number(p.basePrice),wholesaleMinQty:Math.max(1,Number(p.wholesaleMinQty||12)),image:p.image||'icon.svg',gallery:Array.isArray(p.gallery)?p.gallery:[],techCard:p.techCard||{},techCardRevision:Number(p.techCardRevision||0),names:p.names||{},descriptions:p.descriptions||{}});
+  const productMediaFingerprint=value=>{
+    const text=String(value||'');
+    if(!text)return'';
+    if(!/^data:image\//i.test(text))return text;
+    let hash=2166136261;
+    for(let i=0;i<text.length;i+=Math.max(1,Math.floor(text.length/2048))){
+      hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0;
+    }
+    return `inline:${text.length}:${hash.toString(16)}`;
+  };
+  const comparableProduct=p=>canonicalValue({id:String(p.id),active:p.active!==false,storefrontVisible:p.storefrontVisible!==false,category:String(p.category||'bread'),weight:Number(p.weight),basePrice:Number(p.basePrice),wholesaleMinQty:Math.max(1,Number(p.wholesaleMinQty||12)),image:p._imageCloudOnly?'cloud-image':productMediaFingerprint(p.image||'icon.svg'),gallery:p._galleryCloudOnly?['cloud-gallery']:(Array.isArray(p.gallery)?p.gallery.map(productMediaFingerprint):[]),techCard:p.techCard||{},techCardRevision:Number(p.techCardRevision||0),names:p.names||{},descriptions:p.descriptions||{}});
   const normalizedProducts=list=>(list||[]).map(comparableProduct).sort((a,b)=>a.id.localeCompare(b.id));
   const productSignature=list=>JSON.stringify(normalizedProducts(list));
   const localProducts=()=>typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]');
@@ -277,7 +295,7 @@
       // the verified tech_card. acceptCommittedWithin keeps a timestamped
       // local backup before clearing those drafts.
       await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
-      localStorage.setItem('panora-products',JSON.stringify(mapped));
+      if(window.panoraPersistProductsCache)window.panoraPersistProductsCache(mapped);else localStorage.setItem('panora-products',JSON.stringify(mapped));
       if(typeof productRegistry!=='undefined')productRegistry=mapped;
       if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();
       if(typeof renderProductCards==='function')renderProductCards();
