@@ -750,16 +750,36 @@
     </section>`;
   }
   const currentDebtItems=()=>{
+    const shared = typeof window.panoraFinanceAllocation === "function"
+      ? window.panoraFinanceAllocation(account.id)
+      : null;
+    if (shared?.notes) {
+      return shared.notes
+        .map(row => {
+          const note = row.note;
+          const due = Math.max(0, Number(row.due || 0));
+          const paidAmount = Math.max(0, Number(row.paid || 0));
+          const dueDate = note.paymentDueDate || "";
+          const overdue = Boolean(dueDate && dueDate < isoToday());
+          return {note, paidAmount, due, dueDate, overdue};
+        })
+        .filter(item => item.due > 0.009)
+        .sort((a,b)=>{
+          if(a.overdue!==b.overdue)return a.overdue?-1:1;
+          const ad=a.dueDate||a.note.date||"9999-12-31";
+          const bd=b.dueDate||b.note.date||"9999-12-31";
+          return String(ad).localeCompare(String(bd))||Number(a.note.number||0)-Number(b.note.number||0);
+        });
+    }
+
     const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
     const payments=ownPayments().filter(payment=>payment.status!=="cancelled");
 
     const allocated=new Map(notes.map(note=>[String(note.id),0]));
-    // Explicitly linked payments are applied to their delivery note first.
     payments.filter(payment=>payment.deliveryNoteId).forEach(payment=>{
       const key=String(payment.deliveryNoteId);
       if(allocated.has(key))allocated.set(key,allocated.get(key)+Number(payment.amount||0));
     });
-    // Unlinked bakery receipts reduce the oldest outstanding invoices first.
     let pool=payments.filter(payment=>!payment.deliveryNoteId).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     for(const note of notes){
       if(pool<=0)break;
@@ -782,114 +802,6 @@
         const bd=b.dueDate||b.note.date||"9999-12-31";
         return String(ad).localeCompare(String(bd))||Number(a.note.number||0)-Number(b.note.number||0);
       });
-  };
-
-
-  const openPaymentAllocations = new Set();
-
-  const partnerPaymentDistribution=(notes,payments)=>{
-    const allocations=new Map();
-    const noteState=new Map();
-    const generalCredits=[];
-    const linkedCredits=[];
-
-    const paymentEntry=payment=>{
-      const key=String(payment.id||"");
-      if(!allocations.has(key))allocations.set(key,{rows:[],credit:0});
-      return allocations.get(key);
-    };
-    const addAllocation=(payment,note,amount,date)=>{
-      const used=Math.max(0,Number(amount||0));
-      if(used<=0.005)return;
-      paymentEntry(payment).rows.push({note,amount:used,date});
-    };
-    const openNotes=()=>[...noteState.values()]
-      .filter(row=>row.remaining>0.005)
-      .sort((a,b)=>String(a.note.date||"").localeCompare(String(b.note.date||""))||Number(a.note.number||0)-Number(b.note.number||0));
-
-    const applyGeneralCreditToNote=(noteRow,eventDate)=>{
-      for(const credit of generalCredits){
-        if(noteRow.remaining<=0.005)break;
-        if(credit.remaining<=0.005)continue;
-        const used=Math.min(noteRow.remaining,credit.remaining);
-        noteRow.remaining-=used;credit.remaining-=used;
-        addAllocation(credit.payment,noteRow.note,used,eventDate);
-      }
-    };
-    const applyLinkedCreditsToNote=(noteRow,eventDate)=>{
-      linkedCredits.forEach(credit=>{
-        if(credit.remaining<=0.005)return;
-        if(String(credit.payment.deliveryNoteId||"")!==String(noteRow.note.id||""))return;
-        const used=Math.min(noteRow.remaining,credit.remaining);
-        noteRow.remaining-=used;credit.remaining-=used;
-        addAllocation(credit.payment,noteRow.note,used,eventDate);
-      });
-    };
-
-    const events=[
-      ...notes.map(note=>({date:String(note.date||""),sort:0,kind:"delivery",note})),
-      ...payments.filter(payment=>payment.status!=="cancelled"&&payment.confirmed!==false)
-        .map(payment=>({date:String(payment.receivedAt||payment.date||""),sort:1,kind:"payment",payment}))
-    ].sort((a,b)=>a.date.localeCompare(b.date)||a.sort-b.sort);
-
-    events.forEach(event=>{
-      if(event.kind==="delivery"){
-        const noteRow={note:event.note,remaining:Math.max(0,Number(event.note.total||0))};
-        noteState.set(String(event.note.id||event.note.number),noteRow);
-        applyLinkedCreditsToNote(noteRow,event.date);
-        applyGeneralCreditToNote(noteRow,event.date);
-        return;
-      }
-
-      const payment=event.payment;
-      let remaining=Math.max(0,Number(payment.amount||0));
-      paymentEntry(payment);
-
-      if(payment.deliveryNoteId){
-        const noteRow=noteState.get(String(payment.deliveryNoteId));
-        if(noteRow){
-          const used=Math.min(noteRow.remaining,remaining);
-          noteRow.remaining-=used;remaining-=used;
-          addAllocation(payment,noteRow.note,used,event.date);
-        }
-        if(remaining>0.005)linkedCredits.push({payment,remaining});
-      }else{
-        for(const noteRow of openNotes()){
-          if(remaining<=0.005)break;
-          const used=Math.min(noteRow.remaining,remaining);
-          noteRow.remaining-=used;remaining-=used;
-          addAllocation(payment,noteRow.note,used,event.date);
-        }
-        if(remaining>0.005)generalCredits.push({payment,remaining});
-      }
-    });
-
-    generalCredits.forEach(credit=>{
-      const entry=paymentEntry(credit.payment);
-      entry.credit=Math.max(0,Number(credit.remaining||0));
-    });
-    linkedCredits.forEach(credit=>{
-      const entry=paymentEntry(credit.payment);
-      entry.credit=(entry.credit||0)+Math.max(0,Number(credit.remaining||0));
-    });
-
-    return allocations;
-  };
-
-  const partnerPaymentAllocationHtml=(payment,distribution)=>{
-    if(!payment||payment.status==="cancelled"||payment.confirmed===false)return "";
-    const entry=distribution.get(String(payment.id||""));
-    if(!entry)return "";
-    const rows=(entry.rows||[]).map(row=>`<div class="rw-payment-allocation-row">
-      <span><b>${esc(localDate(row.date))}</b> · <button type="button" class="rw-payment-note-link" data-rw-allocation-note="${esc(row.note.id)}">${esc(noteNumber(row.note))}</button></span>
-      <strong>${portalMoney(row.amount)}</strong>
-    </div>`);
-    if(Number(entry.credit||0)>0.005){
-      rows.push(`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Осталось в авансе":lang==="es"?"Queda como anticipo":"Remaining as advance"}</span><strong>${portalMoney(entry.credit)}</strong></div>`);
-    }
-    if(!rows.length)return "";
-    const paymentKey=String(payment.id||"");
-    return `<details class="rw-payment-allocation" data-rw-payment-allocation="${esc(paymentKey)}"${openPaymentAllocations.has(paymentKey)?" open":""}><summary>${lang==="ru"?"Куда зачтено":lang==="es"?"Dónde se aplicó":"Applied to"}</summary><div class="rw-payment-allocation-list">${rows.join("")}</div></details>`;
   };
 
   function paymentsHtml() {
