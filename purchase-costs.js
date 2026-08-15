@@ -126,7 +126,9 @@
 
  const RAW_STOCK_KEY='panora-raw-stock-movements';
  const RAW_STOCK_MIGRATION='panora-raw-stock-migration-v606';
+ const RAW_STOCK_DEVICE_KEY='panora-raw-stock-device-v607';
  let rawHistoryView='active';
+ const rawStockDeviceId=(()=>{let id=localStorage.getItem(RAW_STOCK_DEVICE_KEY);if(id)return id;id=crypto.randomUUID();localStorage.setItem(RAW_STOCK_DEVICE_KEY,id);return id})();
 
  const readRawMovements=()=>{
   try{const value=JSON.parse(localStorage.getItem(RAW_STOCK_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return[]}
@@ -134,6 +136,7 @@
  const saveRawMovements=value=>{
   localStorage.setItem(RAW_STOCK_KEY,JSON.stringify(value));
   window.dispatchEvent(new CustomEvent('panora:raw-stock-changed'));
+  window.dispatchEvent(new CustomEvent('panora:raw-stock-local-change',{detail:{count:Array.isArray(value)?value.length:0}}));
  };
  const rawUnitLabel=unit=>unit==='g'?'г':unit==='ml'?'мл':'шт.';
  const rawSignedType=type=>['correction_minus','written_off','bake_out_auto','semi_source_auto'].includes(type)?-1:1;
@@ -173,7 +176,7 @@
     existing.push({
      id:`opening:${row.key}`,date:'2000-01-01',key:row.key,name:row.name,unit:row.unit,
      type:'opening',quantity:row.legacyStock,note:'Начальный остаток из Закупки',
-     createdAt:'2000-01-01T00:00:00.000Z',system:true
+     createdAt:'2000-01-01T00:00:00.000Z',updatedAt:'2000-01-01T00:00:00.000Z',deviceId:rawStockDeviceId,system:true
     });
    });
   }
@@ -244,7 +247,7 @@
 
  function rawLedger(){
   migrateRawStock();
-  const catalog=rawIngredientCatalog(),manual=readRawMovements().slice(),today=localToday(),manualByDate=new Map();
+  const catalog=rawIngredientCatalog(),manual=readRawMovements().filter(item=>!item?.deletedAt),today=localToday(),manualByDate=new Map();
   manual.filter(m=>String(m?.date||'')<=today).forEach(m=>{
    const date=String(m.date||today).slice(0,10);
    if(!manualByDate.has(date))manualByDate.set(date,[]);
@@ -269,9 +272,10 @@
  function setRawInventory(row,quantity,note='Инвентаризация'){
   if(!row)return;
   const movements=readRawMovements();
+  const now=new Date().toISOString();
   movements.push({
    id:crypto.randomUUID(),date:localToday(),key:row.key,name:row.name,unit:row.unit,type:'inventory_set',
-   quantity:Math.max(0,Number(quantity||0)),note,createdAt:new Date().toISOString()
+   quantity:Math.max(0,Number(quantity||0)),note,createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''
   });
   saveRawMovements(movements);
  }
@@ -353,8 +357,9 @@
 
   root.querySelectorAll('[data-raw-delete]').forEach(button=>button.onclick=()=>{
    if(!confirm('Удалить это движение сырья?'))return;
-   saveRawMovements(readRawMovements().filter(item=>String(item.id)!==String(button.dataset.rawDelete)));
-   renderRawStock();renderPurchase();
+   const now=new Date().toISOString(),id=String(button.dataset.rawDelete);
+   const next=readRawMovements().map(item=>String(item.id)===id?{...item,deletedAt:now,updatedAt:now,deviceId:item.deviceId||rawStockDeviceId}:item);
+   saveRawMovements(next);renderRawStock();renderPurchase();
   });
  }
 
@@ -388,14 +393,14 @@
    event.preventDefault();if(!form.reportValidity())return;
    const data=Object.fromEntries(new FormData(form)),ledger=rawLedger(),row=ledger.catalog.get(data.ingredient);
    if(!row)return alert('Ингредиент не найден в рецептурах.');
-   const movements=readRawMovements();
-   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity:Math.max(0,Number(data.quantity||0)),note:String(data.note||'').trim(),createdAt:new Date().toISOString()});
+   const movements=readRawMovements(),now=new Date().toISOString();
+   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity:Math.max(0,Number(data.quantity||0)),note:String(data.note||'').trim(),createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
    saveRawMovements(movements);dialog.close();renderRawStock();renderPurchase();
   };
   document.querySelector('.admin-nav button[data-view="rawstock"]')?.addEventListener('click',()=>setTimeout(renderRawStock,0));
  }
 
- window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement};
+ window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
  function periodDemand(){
   const dates=selectedDates();
@@ -753,6 +758,11 @@
  window.addEventListener('panora:recipes-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:raw-stock-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:raw-stock-cloud-state',event=>{
+  const el=document.querySelector('#rawStockCloudState');if(!el)return;
+  const detail=event.detail||{};el.textContent=detail.text||'Облако';el.dataset.state=detail.state||'synced';el.title=detail.detail||'';
+ });
  bindRawStock();
  renderPurchase();
  renderRawStock();

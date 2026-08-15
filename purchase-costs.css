@@ -310,3 +310,12 @@
  .raw-stock-panel{padding:12px!important;border-radius:14px!important}.raw-stock-panel-head{align-items:stretch;flex-direction:column}.raw-stock-panel-head h3{font-size:20px!important}
  .raw-stock-history-head .stock-movement-tabs{width:100%}.raw-stock-table-wrap{overflow-x:auto!important}.raw-stock-table-wrap table{min-width:820px!important}.raw-stock-movement-dialog{width:calc(100% - 14px)!important}
 }
+
+
+/* Panora 6.07 — cloud state for raw material warehouse */
+.raw-stock-cloud-state{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 10px;border-radius:999px;background:#eef3ed;color:#42604d;font-size:10px;font-weight:800;white-space:nowrap}
+.raw-stock-cloud-state[data-state="syncing"]{background:#f4f1e7;color:#7b6834}
+.raw-stock-cloud-state[data-state="local"]{background:#fff0dc;color:#955a2d}
+.raw-stock-cloud-state[data-state="error"]{background:#f8e6e4;color:#a1443d}
+.raw-stock-cloud-state[data-state="synced"]{background:#e8f2e8;color:#326044}
+@media(max-width:720px){.raw-stock-cloud-state{grid-column:1/-1;justify-self:start;min-height:28px;padding:0 9px}}
