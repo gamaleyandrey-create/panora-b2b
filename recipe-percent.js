@@ -89,7 +89,7 @@
     const product=typeof recipeProduct==='function'?recipeProduct(pid):null;if(!product)return;
     product.weight=Math.max(1,Math.round(Number(value)||1));
     if(typeof saveProducts==='function')saveProducts();
-    else{const all=JSON.parse(localStorage.getItem('panora-products')||'[]'),saved=all.find(p=>p.id===product.id);if(saved){saved.weight=product.weight;localStorage.setItem('panora-products',JSON.stringify(all));window.panoraCloud?.queueProducts?.()}}
+    else{const all=JSON.parse(localStorage.getItem('panora-products')||'[]'),saved=all.find(p=>p.id===product.id);if(saved){saved.weight=product.weight;if(window.panoraPersistProductsCache)window.panoraPersistProductsCache(all);else localStorage.setItem('panora-products',JSON.stringify(all));window.panoraCloud?.queueProducts?.()}}
   }
   function setCardEditMode(card,enabled,message=''){
     // v325.1: do not freeze the whole recipe card while waiting for a server lock.
@@ -144,7 +144,7 @@
       if(navigator.onLine&&window.panoraCloud?.ready&&window.panoraCloud?.flushRecipes&&window.panoraCloud?.saveProductTechCardConfirmed){
         await Promise.all([window.panoraCloud.flushRecipes(),window.panoraCloud.saveProductTechCardConfirmed(pid,product?.techCard||{})]);
         await window.panoraFormDrafts?.confirmSaved?.(card);
-        localStorage.setItem('panora-products',JSON.stringify(typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]')));
+        window.panoraPersistProductsCache?.(typeof productRegistry!=='undefined'?productRegistry:JSON.parse(localStorage.getItem('panora-products')||'[]'));
         status.textContent='✓ '+L().saved;setCardEditMode(card,false,L().lockNeed)
       }
       else status.textContent=L().saveError;
