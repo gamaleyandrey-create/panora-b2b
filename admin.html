@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#39764d">
   <title>Panora — управление пекарней</title>
-<link rel="stylesheet" href="admin.css?v=5900">
+<link rel="stylesheet" href="admin.css?v=5910">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=3390">
     <link rel="stylesheet" href="date-jump.css?v=3390">
   <link rel="stylesheet" href="easy-plan.css?v=3390">
-  <link rel="stylesheet" href="product-admin.css?v=5900">
+  <link rel="stylesheet" href="product-admin.css?v=5910">
   <link rel="stylesheet" href="product-close.css?v=3390">
   <link rel="stylesheet" href="calendar-plan.css?v=3390">
   <link rel="stylesheet" href="calendar-weekend.css?v=3390">
@@ -170,9 +170,9 @@
         <div id="reminderList" class="reminder-list"></div>
       </div>
       <div class="view" id="view-accounting">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Оплаты и задолженность</h2><p>Отгрузка увеличивает долг, оплата уменьшает его.</p></div><button class="primary" id="addPayment">+ Принять оплату</button></div>
-        <div class="summary-grid finance-summary"><article><span>Общая задолженность</span><strong id="totalDebt">0 €</strong></article><article class="credit-card"><span>Авансы / переплаты</span><strong id="totalCredit">0 €</strong></article><article><span>Отгружено</span><strong id="totalShipped">0 €</strong></article><article><span>Оплачено</span><strong id="totalPaid">0 €</strong></article></div>
-        <div class="table-wrap"><table><thead><tr><th>Партнёр</th><th>Баланс</th><th>Отгрузки</th><th>Оплаты</th><th>Последняя операция</th></tr></thead><tbody id="accountRows"></tbody></table></div>
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2>Оплаты и задолженность</h2><p>Здесь показано, сколько партнёры должны пекарне и какие авансы пекарня держит за партнёрами.</p></div><button class="primary" id="addPayment">+ Принять оплату</button></div>
+        <div class="summary-grid finance-summary"><article class="partner-debt-total"><span>Партнёры должны пекарне</span><strong id="totalDebt">0 €</strong><small>Сумма всех неоплаченных накладных</small></article><article class="credit-card"><span>Авансы / переплаты партнёров</span><strong id="totalCredit">0 €</strong><small>Деньги партнёров, ещё не зачтённые в поставки</small></article><article><span>Отгружено</span><strong id="totalShipped">0 €</strong></article><article><span>Оплачено</span><strong id="totalPaid">0 €</strong></article></div>
+        <div class="table-wrap"><table><thead><tr><th>Партнёр</th><th>Расчёты с пекарней</th><th>Отгрузки</th><th>Оплаты</th><th>Последняя операция</th></tr></thead><tbody id="accountRows"></tbody></table></div>
       </div>
 
       <div class="view" id="view-finance">
@@ -317,7 +317,7 @@
 <script src="admin.js?v=5620"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
-<script src="commerce.js?v=5810"></script>
+<script src="commerce.js?v=5910"></script>
 <script src="desktop-order-date-filter-v28.js?v=2810"></script>
 <script src="invoice-settings.js?v=3390"></script>
 <script src="invoice-tax-display.js?v=3390"></script>

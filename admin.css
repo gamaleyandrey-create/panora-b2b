@@ -41,3 +41,33 @@
 @media(max-width:720px){
   .admin-nav .admin-nav-group-label{display:none!important}
 }
+
+
+/* Panora 5.91 — explicit debt direction in partner accounting */
+.finance-summary article small{
+  display:block;
+  margin-top:5px;
+  color:#7b857e;
+  font-size:10px;
+  line-height:1.35;
+}
+.finance-summary .partner-debt-total strong{color:#a8463e}
+#accountRows .account-balance-debt,
+#accountRows .account-balance-credit,
+#accountRows .account-balance-zero{
+  display:grid;
+  gap:2px;
+  align-items:start;
+}
+#accountRows .account-balance-debt small,
+#accountRows .account-balance-credit small,
+#accountRows .account-balance-zero small{
+  color:#7b857e;
+  font-size:10px;
+  font-weight:600;
+  line-height:1.2;
+}
+#accountRows .account-balance-zero strong{
+  color:#5e6c63;
+  font-weight:750;
+}
