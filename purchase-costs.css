@@ -382,3 +382,12 @@
  .raw-stock-need-line{gap:8px;padding:9px}
  .raw-stock-need-line>b{max-width:42%}
 }
+
+
+/* Panora 6.12 — purchase-selection scope + warehouse business units */
+.raw-stock-selection-scope{display:inline-flex;margin-top:7px;min-height:25px;align-items:center;padding:0 9px;border-radius:999px;background:#edf3eb;color:#3e614a;font-size:9px;font-weight:800}
+.raw-stock-entry-unit-hint{display:block;margin-top:5px;color:#77827a;font-size:9.5px;line-height:1.4}
+.raw-stock-movement-dialog label .raw-stock-entry-unit-hint{font-weight:500}
+@media(max-width:720px){
+ .raw-stock-selection-scope{white-space:normal;line-height:1.35;padding:5px 9px}
+}

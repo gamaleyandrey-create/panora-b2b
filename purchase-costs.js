@@ -68,6 +68,7 @@
   const dates=[...pickedDates.active].sort();
   window.panoraPurchaseSelection=dates;
   localStorage.setItem(selectionKey,JSON.stringify(dates));
+  window.dispatchEvent(new CustomEvent('panora:purchase-selection-changed',{detail:{dates}}));
  }
 
  function fillFilter(){
@@ -111,6 +112,18 @@
   return new Set(pickedDates[purchaseView]);
  }
 
+ function selectedPurchaseActiveDates(){
+  const valid=availableDates('active'),validSet=new Set(valid);
+  if(selectionReady.active){
+   pickedDates.active=new Set([...pickedDates.active].filter(date=>validSet.has(date)));
+   return new Set(pickedDates.active);
+  }
+  const shared=sharedDates().filter(date=>validSet.has(date));
+  pickedDates.active=new Set(shared.length?shared:valid);
+  selectionReady.active=true;
+  return new Set(pickedDates.active);
+ }
+
  function currentRecipes(){
   try{
    const latest=JSON.parse(localStorage.getItem('panora-recipes')||'null');
@@ -148,6 +161,10 @@
   return true;
  };
  const rawUnitLabel=unit=>unit==='g'?'г':unit==='ml'?'мл':'шт.';
+ const rawEntryUnitLabel=unit=>unit==='g'?'кг':unit==='ml'?'л':'шт.';
+ const rawEntryScale=unit=>unit==='g'||unit==='ml'?1000:1;
+ const rawEntryToBase=(value,unit)=>Math.max(0,Number(value||0))*rawEntryScale(unit);
+ const rawBaseToEntry=(value,unit)=>Number(value||0)/rawEntryScale(unit);
  const rawSignedType=type=>['correction_minus','written_off','bake_out_auto','semi_source_auto'].includes(type)?-1:1;
 
  function rawIngredientCatalog(){
@@ -196,27 +213,26 @@
  }
 
  function rawDemandByDate(dateSet){
+  const dates=[...dateSet].sort(),ordersInSelection=activeOrders().filter(order=>dateSet.has(dateOfOrder(order)));
+  const hasOrderDemand=ordersInSelection.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
   const rows=[];
-  [...dateSet].sort().forEach(date=>{
-   const ordersForDate=activeOrders().filter(order=>dateOfOrder(order)===date);
+  dates.forEach(date=>{
    const products=new Map();
-   ordersForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
-    const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
-    if(product&&qty)products.set(product,(products.get(product)||0)+qty);
-   }));
-   let source='orders';
-   if(!products.size){
-    source='plan';
+   if(hasOrderDemand){
+    ordersInSelection.filter(order=>dateOfOrder(order)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
+     const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
+     if(product&&qty)products.set(product,(products.get(product)||0)+qty);
+    }));
+   }else{
     (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{
      const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
      if(product&&qty)products.set(product,(products.get(product)||0)+qty);
     });
    }
-   if(products.size)rows.push({date,source,products});
+   if(products.size)rows.push({date,source:hasOrderDemand?'orders':'plan',products});
   });
   return rows;
  }
-
  function demandForDates(dateSet){
   const demand=new Map();
   rawDemandByDate(dateSet).forEach(day=>day.products.forEach((qty,product)=>demand.set(product,(demand.get(product)||0)+qty)));
@@ -276,7 +292,7 @@
  }
 
  function rawForwardNeeds(ledger){
-  const dates=new Set(availableDates('active')),days=rawDemandByDate(dates),latest=currentRecipes();
+  const dates=selectedPurchaseActiveDates(),days=rawDemandByDate(dates),latest=currentRecipes();
   const needs=new Map(),semiNeeds=new Map(),details=new Map();
 
   const addDetail=(key,entry)=>{
@@ -364,6 +380,10 @@
   document.querySelector('#rawStockIngredientCount').textContent=String(rows.length);
   document.querySelector('#rawStockValue').textContent=euroCost(stockValue);
   document.querySelector('#rawStockShortages').textContent=String(shortages);
+  const selected=[...selectedPurchaseActiveDates()].sort(),scope=document.querySelector('#rawStockSelectionScope'),summary=document.querySelector('#rawStockSelectionSummary');
+  const selectedDays=rawDemandByDate(new Set(selected)),usesPlan=selectedDays.some(day=>day.source==='plan');
+  if(scope)scope.textContent=selected.length?`Выборка закупки: ${selected.length} ${selected.length===1?'дата':'дат'} · ${usesPlan?'план (заказов в выборке нет)':'заказы партнёров'}`:'Выборка закупки: даты не выбраны';
+  if(summary)summary.textContent=selected.length?`${selected.length} ${selected.length===1?'выбранная дата':'выбранных дат'} · ${usesPlan?'план':'заказы'}`:'В Закупке даты не выбраны';
   const autoEvents=ledger.events.filter(event=>event.virtual);
   document.querySelector('#rawStockAutoCount').textContent=String(autoEvents.length);
 
@@ -391,7 +411,10 @@
    renderRawStock();renderPurchase();
   });
   root.querySelectorAll('[data-raw-fix]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawFix,type:'inventory_set',reason:'negative'}));
-  root.querySelectorAll('[data-raw-receive]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawReceive,type:'purchase_in',reason:'shortage'}));
+  root.querySelectorAll('[data-raw-receive]').forEach(button=>button.onclick=()=>{
+   const key=button.dataset.rawReceive,ledgerNow=rawLedger(),forwardNow=rawForwardNeeds(ledgerNow),stockNow=Number(ledgerNow.balances.get(key)||0),needNow=Number(forwardNow.needs.get(key)||0),shortageNow=Math.max(0,needNow-Math.max(0,stockNow));
+   openRawStockMovement({key,type:'purchase_in',reason:'shortage',quantityBase:shortageNow});
+  });
   root.querySelectorAll('[data-raw-need]').forEach(button=>button.onclick=()=>openRawNeedBreakdown(button.dataset.rawNeed));
  }
 
@@ -411,7 +434,7 @@
   const required=Math.max(0,Number(forward.needs.get(row.key)||0)),stock=Number(ledger.balances.get(row.key)||0),shortage=Math.max(0,required-Math.max(0,stock));
   const entries=(forward.details.get(row.key)||[]).slice();
   document.querySelector('#rawStockNeedTitle').textContent=`Откуда нужно: ${row.name}`;
-  document.querySelector('#rawStockNeedSubtitle').textContent=`Активные даты выпечки: ${forward.days.length}. Потребность считается отдельно по каждой дате.`;
+  const selectedDatesList=[...selectedPurchaseActiveDates()].sort();document.querySelector('#rawStockNeedSubtitle').textContent=`Выборка «Закупки»: ${selectedDatesList.length} ${selectedDatesList.length===1?'дата':'дат'}. Расчёт полностью совпадает с выбранной закупкой.`;
   document.querySelector('#rawStockNeedSummary').innerHTML=`
    <article><span>Нужно всего</span><strong>${niceQty(required,row.unit)}</strong></article>
    <article><span>Сейчас на складе</span><strong>${niceQty(stock,row.unit)}</strong></article>
@@ -464,27 +487,41 @@
   if(!dialog||!form){rawStockFeedback('Форма движения склада не загрузилась. Обновите Panora.','error');return false}
   const ledger=rawLedger(),rows=[...ledger.catalog.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   form.reset();form.date.value=localToday();form.date.max=localToday();
-  form.ingredient.innerHTML=rows.map(row=>`<option value="${row.key}">${row.name} · ${rawUnitLabel(row.unit)}</option>`).join('');
+  form.ingredient.innerHTML=rows.map(row=>`<option value="${row.key}">${row.name} · склад в ${rawEntryUnitLabel(row.unit)}</option>`).join('');
   if(options.key&&rows.some(row=>row.key===options.key))form.ingredient.value=options.key;
-  form.type.value=options.type||'purchase_in';form.quantity.value='';
+  form.type.value=options.type||'purchase_in';
+  const row=ledger.catalog.get(form.ingredient.value);
+  form.quantity.value=options.quantityBase!==undefined&&row?String(Math.round(rawBaseToEntry(options.quantityBase,row.unit)*1000)/1000):'';
   if(options.reason==='negative')form.note.value='Исправление отрицательного остатка';
-  else if(options.reason==='shortage')form.note.value='Приход для покрытия дефицита';
+  else if(options.reason==='shortage')form.note.value='Приход для покрытия дефицита по выборке закупки';
   updateRawMovementPreview();dialog.showModal();setTimeout(()=>form.quantity?.focus(),30);return true;
  }
  function updateRawMovementPreview(){
-  const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel');
+  const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel'),hint=document.querySelector('#rawStockEntryUnitHint');
   if(!form||!preview)return;
-  const ledger=rawLedger(),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,qty=Math.max(0,Number(form.quantity.value||0)),type=form.type.value;
-  if(label)label.textContent=type==='inventory_set'?'Фактический остаток':'Количество';
-  let after=current;if(form.quantity.value!=='')after=type==='inventory_set'?qty:current+rawSignedType(type)*qty;
+  const ledger=rawLedger(),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,type=form.type.value;
+  const entryUnit=row?rawEntryUnitLabel(row.unit):'',entryValue=Math.max(0,Number(form.quantity.value||0)),qty=row?rawEntryToBase(entryValue,row.unit):0;
+  if(label)label.textContent=`${type==='inventory_set'?'Фактический остаток':'Количество'}, ${entryUnit}`;
+  if(form.quantity){
+   form.quantity.step=row?.unit==='pcs'?'1':'0.001';
+   form.quantity.min='0';
+  }
+  if(hint)hint.textContent=row?.unit==='g'
+   ?'Ввод в килограммах: 1 кг = 1000 г. Например, 2,5 кг = 2500 г.'
+   :row?.unit==='ml'
+    ?'Ввод в литрах: 1 л = 1000 мл. Например, 2,5 л = 2500 мл.'
+    :'Ввод в штуках.';
+  let after=current;if(form.quantity.value!==''&&row)after=type==='inventory_set'?qty:current+rawSignedType(type)*qty;
   const guidance=row&&current<0&&type==='inventory_set'
-   ?'<small>Отрицательный расчёт будет заменён указанным фактическим остатком.</small>'
+   ?'<small>Инвентаризация заменит отрицательный расчёт указанным фактическим остатком.</small>'
    :row&&current<0&&type==='purchase_in'
-    ?'<small>Приход прибавится к отрицательному расчёту. Чтобы начать с реального остатка, выберите «Инвентаризация».</small>'
+    ?'<small>Приход прибавится к текущему расчёту. Если хотите установить реальный остаток с нуля, выберите «Инвентаризация».</small>'
     :'';
-  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}${guidance}`;
+  const conversion=row&&form.quantity.value!==''&&row.unit!=='pcs'
+   ?`<small>${entryValue} ${entryUnit} = ${niceQty(qty,row.unit)} (${Math.round(qty*1000)/1000} ${rawUnitLabel(row.unit)})</small>`
+   :'';
+  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}${conversion}${guidance}`;
  }
-
  function bindRawStock(){
   const add=document.querySelector('#rawStockAddMovement'),dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
   if(!add||!dialog||!form)return false;
@@ -507,8 +544,8 @@
    event.preventDefault();if(!form.reportValidity())return;
    const data=Object.fromEntries(new FormData(form)),ledger=rawLedger(),row=ledger.catalog.get(data.ingredient);
    if(!row){rawStockFeedback('Ингредиент не найден в рецептурах.','error');return}
-   const movements=readRawMovements(),now=new Date().toISOString();
-   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity:Math.max(0,Number(data.quantity||0)),note:String(data.note||'').trim(),createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+   const movements=readRawMovements(),now=new Date().toISOString(),quantity=rawEntryToBase(data.quantity,row.unit);
+   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity,note:String(data.note||'').trim(),createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
    try{saveRawMovements(movements)}
    catch(error){rawStockFeedback(error.message||String(error),'error');return}
    dialog.close();renderRawStock();renderPurchase();
@@ -531,41 +568,17 @@
  }
  window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
- function periodDemand(){
-  const dates=selectedDates();
-  const demand=new Map();
-  const ordersForDates=activeOrders().filter(order=>dates.has(dateOfOrder(order)));
-
-  // The consolidated production screen is based on real partner orders.
-  // Purchase calculation uses the same source, so its total must match exactly.
-  ordersForDates.forEach(order=>{
-   (Array.isArray(order.items)?order.items:[]).forEach(item=>{
-    const qty=Math.max(0,Number(item?.quantity||0));
-    if(!qty)return;
-    const product=String(item.product||'');
-    if(!product)return;
-    demand.set(product,(demand.get(product)||0)+qty);
-   });
-  });
-
-  // Fallback only when the selected period has no partner orders at all.
-  // This keeps manually planned bake days useful without allowing stale plan
-  // quantities to inflate a date that already has actual orders.
-  if(!demand.size){
-   (Array.isArray(plans)?plans:[])
-    .filter(plan=>dates.has(String(plan?.bakeDate||'')))
-    .forEach(plan=>{
-     const product=String(plan?.product||'');
-     const qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
-     if(product&&qty)demand.set(product,(demand.get(product)||0)+qty);
-    });
-  }
-
+ function periodDemandForDates(dates){
+  const demand=new Map(),days=rawDemandByDate(dates);
+  days.forEach(day=>day.products.forEach((quantity,product)=>demand.set(product,(demand.get(product)||0)+Number(quantity||0))));
   return [...demand.entries()]
    .map(([product,quantity])=>({product,quantity}))
    .sort((a,b)=>String(productName(a.product)).localeCompare(String(productName(b.product)),'ru'));
  }
 
+ function periodDemand(){
+  return periodDemandForDates(selectedDates());
+ }
  function ingredientPrice(priceMap,name,unit){
   const normalized=`${normalizeName(name)}|${normalizeUnit(unit)}`;
   return Number(priceMap[normalized] ?? priceMap[`${name}|${unit}`] ?? 0);
@@ -888,6 +901,7 @@
  window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:purchase-selection-changed',()=>{if(!window.panoraMoneyEditing?.active)renderRawStock()});
  window.addEventListener('panora:bake-completions-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:bake-completions-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-cloud-state',event=>{const el=document.querySelector('#rawStockCloudState');if(!el)return;const detail=event.detail||{},state=detail.state||'synced';el.textContent=state==='error'?'Ошибка облака · сохранено':detail.text||'Облако ✓';el.dataset.state=state;el.title=detail.detail||'Нажмите, чтобы повторить синхронизацию'});
