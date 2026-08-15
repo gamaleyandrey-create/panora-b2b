@@ -140,3 +140,47 @@
   #orderRows .order-contact-icon{display:none!important}
   #orderRows .order-contact-button{gap:0!important;border-color:#8aaa94!important;background:#fff!important;color:#2f6845!important}
 }
+
+
+/* Panora 5.80 — Active / Archive for bakery orders */
+.order-archive-tabs{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+}
+.order-archive-tabs button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-height:44px;
+  padding:0 18px;
+  border:1px solid #d4ddd5;
+  border-radius:999px;
+  background:#fff;
+  color:#465249;
+  font:700 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  cursor:pointer;
+}
+.order-archive-tabs button b{
+  display:inline-grid;
+  place-items:center;
+  min-width:25px;
+  height:25px;
+  padding:0 7px;
+  border-radius:999px;
+  background:#eaf0ea;
+  color:#68736b;
+  font-size:12px;
+}
+.order-archive-tabs button.active{
+  border-color:#315b42;
+  background:#315b42;
+  color:#fff;
+}
+.order-archive-tabs button.active b{
+  background:rgba(255,255,255,.18);
+  color:#fff;
+}
+.order-archive-tabs button:hover:not(.active){background:#f4f7f3}

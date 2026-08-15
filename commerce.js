@@ -174,7 +174,7 @@ const orderCompactDate=value=>{
     return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(`${String(value).slice(0,10)}T12:00:00`)).replace(' г.','');
   }catch{return orderDateLabel(value)}
 };
-let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false,orderStatusFilter='all';
+let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false,orderStatusFilter='all',orderArchiveView='active';
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong class="order-partner-name">${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -372,6 +372,10 @@ function orderActions(o) {
     return `<div class="order-flow">${step(1,'Подтвердить','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
   return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small ship primary-flow" data-ship="${o.id}" title="После отгрузки будет создана накладная">Отгрузить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
 }
+
+const orderIsArchived=o=>['shipped','cancelled'].includes(String(o?.status||''));
+const orderArchiveMatches=o=>orderArchiveView==='archive'?orderIsArchived(o):!orderIsArchived(o);
+
 function renderOrders() {
   const body = document.querySelector("#orderRows");
   if(!body)return;
@@ -383,10 +387,33 @@ function renderOrders() {
     table.before(filter);
   }
   const ordersView=document.querySelector('#view-orders');
+  const tableWrap=body.closest('.table-wrap');
+  let archiveTabs=document.querySelector('#orderArchiveTabs');
+  if(ordersView&&!archiveTabs){
+    archiveTabs=document.createElement('div');
+    archiveTabs.id='orderArchiveTabs';
+    archiveTabs.className='order-archive-tabs';
+    if(tableWrap)tableWrap.before(archiveTabs);
+  }
+  if(archiveTabs){
+    const activeCount=orders.filter(order=>!orderIsArchived(order)).length;
+    const archiveCount=orders.filter(order=>orderIsArchived(order)).length;
+    archiveTabs.innerHTML=`
+      <button type="button" class="${orderArchiveView==='active'?'active':''}" data-order-archive-view="active"><span>Активные</span><b>${activeCount}</b></button>
+      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архив</span><b>${archiveCount}</b></button>`;
+    archiveTabs.querySelectorAll('[data-order-archive-view]').forEach(button=>button.onclick=()=>{
+      const next=button.dataset.orderArchiveView;
+      if(next===orderArchiveView)return;
+      orderArchiveView=next;
+      orderStatusFilter='all';
+      orderFilterOpen=false;
+      renderOrders();
+    });
+  }
   let statusBar=document.querySelector('#orderStatusBar');
   if(ordersView&&!statusBar){
     statusBar=document.createElement('div');statusBar.id='orderStatusBar';statusBar.className='order-status-bar';
-    const tableWrap=body.closest('.table-wrap');if(tableWrap)tableWrap.before(statusBar);
+    if(tableWrap)tableWrap.before(statusBar);
   }
   const statusGroups={
     all:()=>true,
@@ -397,7 +424,8 @@ function renderOrders() {
   };
   if(statusBar){
     const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
-    statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${orders.filter(statusGroups[key]).length}</b></button>`).join('');
+    const scopedOrders=orders.filter(orderArchiveMatches);
+    statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${scopedOrders.filter(statusGroups[key]).length}</b></button>`).join('');
     statusBar.querySelectorAll('[data-order-status]').forEach(button=>button.onclick=()=>{orderStatusFilter=button.dataset.orderStatus;renderOrders()});
   }
   const filterPanel=document.querySelector('#orderFilterPanel');
@@ -455,6 +483,7 @@ function renderOrders() {
   if(reset)reset.onclick=()=>{orderStatusFilter='all';orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
 
   const visibleOrders=orders.filter(order=>{
+    if(!orderArchiveMatches(order))return false;
     const partner=restaurant(order.restaurantId);
     const typeMatches=orderPartnerTypeFilter==='all'||normalizePartnerType(partner?.partnerType||order.partnerType)===orderPartnerTypeFilter;
     const partnerMatches=orderPartnerNameFilter==='all'||order.restaurantId===orderPartnerNameFilter;
@@ -497,7 +526,7 @@ function renderOrders() {
           </tr>`;
         })
         .join("")
-    : `<tr><td class="empty-row" colspan="7">${orders.length?'По выбранному типу заказов нет.':'Заказов пока нет.'}</td></tr>`;
+    : `<tr><td class="empty-row" colspan="7">${orders.length?(orderArchiveView==='archive'?'В архиве по выбранным фильтрам заказов нет.':'Активных заказов по выбранным фильтрам нет.'):'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
