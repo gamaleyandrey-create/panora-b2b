@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#39764d">
-  <title>Panora — управление пекарней</title>
+  <title>Panora — Пекарня</title>
 <link rel="stylesheet" href="admin.css?v=5980">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=5950">
+  <link rel="stylesheet" href="purchase-costs.css?v=6000">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5860">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -137,7 +137,7 @@
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по выбранным датам: хлеб по видам → рецептуры → общий список ингредиентов → остаток и страховой запас.</p></div><div class="purchase-head-actions"><button class="secondary" id="copyPurchaseList" type="button">Скопировать список</button><button class="secondary" id="printPurchase" data-t="print">Печать</button></div></div>
         <nav class="purchase-mode-tabs" id="purchaseModeTabs" aria-label="Активные и архивные закупки"></nav>
         <div class="purchase-archive-note" id="purchaseArchiveNote" hidden>Архив — только просмотр прошлых дат. Он не влияет на текущую закупку и не изменяет цены, остатки или страховой запас.</div>
-        <section class="cost-period"><div class="cost-bake-select"><label><span id="costBakeFilterLabel">Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span id="costPiecesLabel">Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span id="costConsumptionLabel">Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span id="costPurchaseLabel">Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Средняя себестоимость сырья / 1 хлеб</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p id="purchaseModeHint">Выберите отдельную дату выпечки или общий расчёт по активным датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
+        <section class="cost-period"><div class="cost-bake-select"><div class="purchase-date-selector-label" id="costBakeFilterLabel">Рассчитать закупку для</div><div id="costBakeFilter" class="purchase-date-selector" aria-label="Выбор дат выпечки"></div><div id="purchaseSelectionSummary" class="purchase-selection-summary"></div></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span id="costPiecesLabel">Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span id="costConsumptionLabel">Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span id="costPurchaseLabel">Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Средняя себестоимость сырья / 1 хлеб</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p id="purchaseModeHint">Выберите отдельную дату выпечки или общий расчёт по активным датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th id="purchaseBuyHeader" data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
@@ -352,7 +352,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=5950"></script>
+<script src="purchase-costs.js?v=6000"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
