@@ -84,6 +84,22 @@
   const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
   if(!from.value)from.value=iso(monthStart);if(!to.value)to.value=iso(today);
   const inPeriod=date=>{const d=String(date||'').slice(0,10);return (!from.value||d>=from.value)&&(!to.value||d<=to.value)};
+  const periodLabel=()=>{
+    const parseDate=value=>value?new Date(`${value}T12:00:00`):null;
+    const a=parseDate(from.value),b=parseDate(to.value);
+    if(!a&&!b)return 'Все даты';
+    const fmt=(date,options)=>new Intl.DateTimeFormat('ru-RU',options).format(date).replace(' г.','');
+    if(a&&b){
+      if(a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()){
+        return `${a.getDate()}–${fmt(b,{day:'numeric',month:'long',year:'numeric'})}`;
+      }
+      if(a.getFullYear()===b.getFullYear()){
+        return `${fmt(a,{day:'numeric',month:'long'})} – ${fmt(b,{day:'numeric',month:'long',year:'numeric'})}`;
+      }
+      return `${fmt(a,{day:'numeric',month:'long',year:'numeric'})} – ${fmt(b,{day:'numeric',month:'long',year:'numeric'})}`;
+    }
+    return a?`С ${fmt(a,{day:'numeric',month:'long',year:'numeric'})}`:`По ${fmt(b,{day:'numeric',month:'long',year:'numeric'})}`;
+  };
 
   const expenseParts=row=>{
     const gross=Math.max(0,Number(row.grossAmount||0)),rate=Math.max(0,Number(row.vatRate||0));
@@ -110,8 +126,8 @@
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0};
         p.pieces+=qty;p.revenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
         const k=String(note.restaurantId||'');
-        const partner=partnerMap.get(k)||{id:k,revenue:0,cogs:0};
-        partner.revenue+=itemNet;partner.cogs+=itemCogs;partnerMap.set(k,partner);
+        const partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};
+        partner.pieces+=qty;partner.revenue+=itemNet;partner.cogs+=itemCogs;partnerMap.set(k,partner);
       });
     });
 
@@ -123,33 +139,75 @@
       vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses};
   }
 
+  function setSignedState(element,value){
+    if(!element)return;
+    element.classList.remove('is-positive','is-negative','is-zero');
+    element.classList.add(value>0.005?'is-positive':value<-0.005?'is-negative':'is-zero');
+  }
+
   function render(){
     const x=calculate();
+    const operatingMargin=x.revenueNet?x.operatingProfit/x.revenueNet*100:0;
+    const grossMargin=x.revenueNet?x.grossProfit/x.revenueNet*100:0;
+    document.querySelector('#financePeriodLabel').textContent=periodLabel();
+
     document.querySelector('#financeRevenueNet').textContent=money(x.revenueNet);
     document.querySelector('#financeRevenueGross').textContent=`С НДС: ${money(x.grossRevenue)}`;
-    document.querySelector('#financeSalesVat').textContent=money(x.salesVat);
     document.querySelector('#financeCogs').textContent=money(x.cogs);
-    document.querySelector('#financeGrossProfit').textContent=money(x.grossProfit);
-    document.querySelector('#financeGrossMargin').textContent=`Маржа: ${pct(x.revenueNet?x.grossProfit/x.revenueNet*100:0)}`;
+
+    const profit=document.querySelector('#financeOperatingProfit');
+    profit.textContent=money(x.operatingProfit);
+    setSignedState(profit,x.operatingProfit);
+
+    const marginValue=document.querySelector('#financeOperatingMarginValue');
+    marginValue.textContent=pct(operatingMargin);
+    setSignedState(marginValue,operatingMargin);
+
+    const grossProfit=document.querySelector('#financeGrossProfit');
+    grossProfit.textContent=money(x.grossProfit);
+    setSignedState(grossProfit,x.grossProfit);
+    document.querySelector('#financeGrossMargin').textContent=`Маржа: ${pct(grossMargin)}`;
+
     document.querySelector('#financeExpensesNet').textContent=money(x.expensesNet);
-    document.querySelector('#financeInputVat').textContent=`Входящий НДС: ${money(x.inputVat)}`;
-    const profit=document.querySelector('#financeOperatingProfit');profit.textContent=money(x.operatingProfit);profit.classList.toggle('is-negative',x.operatingProfit<0);
-    document.querySelector('#financeOperatingMargin').textContent=`Маржа: ${pct(x.revenueNet?x.operatingProfit/x.revenueNet*100:0)}`;
-    document.querySelector('#financeVatPayable').textContent=money(x.vatPayable);
     document.querySelector('#financePieces').textContent=`${x.pieces} шт.`;
-    document.querySelector('#financeAvgProfit').textContent=`Прибыль / хлеб: ${money(x.pieces?x.operatingProfit/x.pieces:0)}`;
+    const avgProfit=x.pieces?x.operatingProfit/x.pieces:0;
+    const avgProfitValue=document.querySelector('#financeAvgProfitValue');
+    avgProfitValue.textContent=money(avgProfit);
+    setSignedState(avgProfitValue,avgProfit);
+
+    document.querySelector('#financeSalesVat').textContent=money(x.salesVat);
+    document.querySelector('#financeInputVat').textContent=money(x.inputVat);
+    document.querySelector('#financeVatPayable').textContent=money(x.vatPayable);
 
     const productRows=document.querySelector('#financeProductRows');
     productRows.innerHTML=x.products.length?x.products.sort((a,b)=>b.revenue-a.revenue).map(row=>{
       const profit=row.revenue-row.cogs,margin=row.revenue?profit/row.revenue*100:0;
-      return `<tr><td><strong>${esc(productLabel(row.product))}</strong></td><td>${row.pieces}</td><td>${money(row.revenue)}</td><td>${money(row.cogs)}</td><td><strong>${money(profit)}</strong></td><td>${money(row.pieces?profit/row.pieces:0)}</td><td>${pct(margin)}</td></tr>`
-    }).join(''):'<tr><td colspan="7">В выбранном периоде нет отгрузок.</td></tr>';
+      const salePerPiece=row.pieces?row.revenue/row.pieces:0;
+      return `<tr>
+        <td><strong>${esc(productLabel(row.product))}</strong></td>
+        <td>${row.pieces}</td>
+        <td><strong>${money(salePerPiece)}</strong></td>
+        <td>${money(row.revenue)}</td>
+        <td>${money(row.cogs)}</td>
+        <td><strong class="${profit<0?'finance-negative':'finance-positive'}">${money(profit)}</strong></td>
+        <td>${money(row.pieces?profit/row.pieces:0)}</td>
+        <td>${pct(margin)}</td>
+      </tr>`
+    }).join(''):'<tr><td colspan="8">В выбранном периоде нет отгрузок.</td></tr>';
 
     const partnerRows=document.querySelector('#financePartnerRows');
     partnerRows.innerHTML=x.partners.length?x.partners.sort((a,b)=>b.revenue-a.revenue).map(row=>{
       const profit=row.revenue-row.cogs,margin=row.revenue?profit/row.revenue*100:0;
-      return `<tr><td><strong>${esc(partnerLabel(row.id))}</strong></td><td>${money(row.revenue)}</td><td>${money(row.cogs)}</td><td><strong>${money(profit)}</strong></td><td>${pct(margin)}</td></tr>`
-    }).join(''):'<tr><td colspan="5">В выбранном периоде нет отгрузок.</td></tr>';
+      return `<tr>
+        <td><strong>${esc(partnerLabel(row.id))}</strong></td>
+        <td>${row.pieces}</td>
+        <td>${money(row.revenue)}</td>
+        <td>${money(row.pieces?row.revenue/row.pieces:0)}</td>
+        <td>${money(row.cogs)}</td>
+        <td><strong class="${profit<0?'finance-negative':'finance-positive'}">${money(profit)}</strong></td>
+        <td>${pct(margin)}</td>
+      </tr>`
+    }).join(''):'<tr><td colspan="7">В выбранном периоде нет отгрузок.</td></tr>';
 
     const expenseRows=document.querySelector('#financeExpenseRows');
     const rows=x.periodExpenses.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
@@ -175,6 +233,11 @@
     previewExpense();dialog.showModal();
   }
   document.querySelector('#financeAddExpense').onclick=()=>openExpense();
+  document.querySelector('#financeExpenseJump').onclick=()=>{
+    const panel=document.querySelector('#financeExpensesPanel');
+    panel?.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>document.querySelector('#financeAddExpense')?.focus({preventScroll:true}),450);
+  };
   document.querySelector('#financeExpenseClose').onclick=document.querySelector('#financeExpenseCancel').onclick=()=>dialog.close();
   form.grossAmount.oninput=form.vatRate.oninput=previewExpense;
   form.onsubmit=event=>{
