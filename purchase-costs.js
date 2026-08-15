@@ -124,6 +124,279 @@
    .replace(/\s+/g,' ');
  const ingredientKey=item=>`${normalizeName(item?.name)}|${normalizeUnit(item?.unit)}`;
 
+ const RAW_STOCK_KEY='panora-raw-stock-movements';
+ const RAW_STOCK_MIGRATION='panora-raw-stock-migration-v606';
+ let rawHistoryView='active';
+
+ const readRawMovements=()=>{
+  try{const value=JSON.parse(localStorage.getItem(RAW_STOCK_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return[]}
+ };
+ const saveRawMovements=value=>{
+  localStorage.setItem(RAW_STOCK_KEY,JSON.stringify(value));
+  window.dispatchEvent(new CustomEvent('panora:raw-stock-changed'));
+ };
+ const rawUnitLabel=unit=>unit==='g'?'г':unit==='ml'?'мл':'шт.';
+ const rawSignedType=type=>['correction_minus','written_off','bake_out_auto','semi_source_auto'].includes(type)?-1:1;
+
+ function rawIngredientCatalog(){
+  const map=new Map(),latest=currentRecipes();
+  const ensure=(name,unit,seed={})=>{
+   const normalizedUnit=normalizeUnit(unit)||'g',key=`${normalizeName(name)}|${normalizedUnit}`;
+   if(!normalizeName(name))return null;
+   if(!map.has(key))map.set(key,{
+    key,name:String(name||'').trim(),unit:normalizedUnit,margin:Number(seed.margin??5)||0,
+    semi:false,sourceName:'',sourceUnit:'g',yieldPct:0,legacyStock:Math.max(0,Number(seed.stock||0))
+   });
+   const row=map.get(key);
+   row.margin=Math.max(Number(row.margin||0),Number(seed.margin??5)||0);
+   row.legacyStock=Math.max(Number(row.legacyStock||0),Math.max(0,Number(seed.stock||0)));
+   return row;
+  };
+  Object.values(latest||{}).flat().forEach(item=>{
+   const row=ensure(item?.name,item?.unit,item);
+   if(!row)return;
+   const source=String(item?.sourceIngredientName||'').trim(),yieldPct=Number(item?.sourceYieldPct||0);
+   if(source&&yieldPct>0){
+    row.semi=true;row.sourceName=source;row.sourceUnit=normalizeUnit(item?.sourceUnit||item?.unit)||'g';row.yieldPct=yieldPct;
+    ensure(source,row.sourceUnit,{margin:item?.margin??5,stock:0});
+   }
+  });
+  return map;
+ }
+
+ function migrateRawStock(){
+  if(localStorage.getItem(RAW_STOCK_MIGRATION)==='1')return;
+  const existing=readRawMovements(),catalog=rawIngredientCatalog();
+  if(!existing.length){
+   catalog.forEach(row=>{
+    if(row.legacyStock<=0)return;
+    existing.push({
+     id:`opening:${row.key}`,date:'2000-01-01',key:row.key,name:row.name,unit:row.unit,
+     type:'opening',quantity:row.legacyStock,note:'Начальный остаток из Закупки',
+     createdAt:'2000-01-01T00:00:00.000Z',system:true
+    });
+   });
+  }
+  try{
+   localStorage.setItem(RAW_STOCK_KEY,JSON.stringify(existing));
+   localStorage.setItem(RAW_STOCK_MIGRATION,'1');
+  }catch(error){console.warn('Panora raw stock migration',error)}
+ }
+
+ function demandForDates(dateSet){
+  const demand=new Map(),ordersForDates=activeOrders().filter(order=>dateSet.has(dateOfOrder(order)));
+  ordersForDates.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
+   const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
+   if(product&&qty)demand.set(product,(demand.get(product)||0)+qty);
+  }));
+  if(!demand.size){
+   (Array.isArray(plans)?plans:[]).filter(plan=>dateSet.has(String(plan?.bakeDate||''))).forEach(plan=>{
+    const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
+    if(product&&qty)demand.set(product,(demand.get(product)||0)+qty);
+   });
+  }
+  return demand;
+ }
+
+ function rawManualApply(balance,movement){
+  const key=String(movement?.key||'');if(!key)return 0;
+  const before=Number(balance.get(key)||0),qty=Math.max(0,Number(movement?.quantity||0));
+  let after=before;
+  if(movement.type==='inventory_set')after=qty;
+  else after=before+rawSignedType(movement.type)*qty;
+  balance.set(key,after);
+  return after-before;
+ }
+
+ function rawAutoConsumptionFor(date,balance,catalog){
+  const productDemand=demandForDates(new Set([date])),latest=currentRecipes(),events=[];
+  const push=(row,type,quantity,note,product='')=>{
+   const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;
+   const before=Number(balance.get(row.key)||0),delta=-qty;
+   balance.set(row.key,before+delta);
+   events.push({
+    id:`auto:${date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,
+    type,quantity:qty,delta,note,product,virtual:true,system:true
+   });
+  };
+  [...productDemand.entries()].forEach(([product,pieces])=>{
+   const recipe=Array.isArray(latest?.[product])?latest[product]:[];
+   recipe.forEach(item=>{
+    const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;
+    const row=catalog.get(ingredientKey(item));if(!row)return;
+    const required=perBread*pieces;
+    if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){
+     const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);
+     if(fromStock>0)push(row,'bake_out_auto',fromStock,`Выпечка · ${productName(product)} · ${pieces} шт.`,product);
+     const short=Math.max(0,required-fromStock);
+     if(short>0){
+      const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`;
+      const source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);
+      push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · ${productName(product)} ${pieces} шт.`,product);
+     }
+    }else{
+     push(row,'bake_out_auto',required,`Выпечка · ${productName(product)} · ${pieces} шт.`,product);
+    }
+   });
+  });
+  return events;
+ }
+
+ function rawLedger(){
+  migrateRawStock();
+  const catalog=rawIngredientCatalog(),manual=readRawMovements().slice(),today=localToday(),manualByDate=new Map();
+  manual.filter(m=>String(m?.date||'')<=today).forEach(m=>{
+   const date=String(m.date||today).slice(0,10);
+   if(!manualByDate.has(date))manualByDate.set(date,[]);
+   manualByDate.get(date).push(m);
+  });
+  manualByDate.forEach(list=>list.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id||'').localeCompare(String(b.id||''))));
+  const bakeDates=allAvailableDates().filter(date=>date<today),dates=[...new Set([...manualByDate.keys(),...bakeDates])].sort();
+  const balances=new Map(),events=[],bakeSet=new Set(bakeDates);
+  dates.forEach(date=>{
+   (manualByDate.get(date)||[]).forEach(movement=>{
+    const delta=rawManualApply(balances,movement);
+    events.push({...movement,delta,virtual:false});
+   });
+   if(bakeSet.has(date))events.push(...rawAutoConsumptionFor(date,balances,catalog));
+  });
+  manual.filter(m=>String(m?.date||'')>today).forEach(m=>events.push({...m,delta:0,virtual:false,future:true}));
+  return {catalog,balances,events};
+ }
+
+ const rawBalance=key=>Number(rawLedger().balances.get(key)||0);
+
+ function setRawInventory(row,quantity,note='Инвентаризация'){
+  if(!row)return;
+  const movements=readRawMovements();
+  movements.push({
+   id:crypto.randomUUID(),date:localToday(),key:row.key,name:row.name,unit:row.unit,type:'inventory_set',
+   quantity:Math.max(0,Number(quantity||0)),note,createdAt:new Date().toISOString()
+  });
+  saveRawMovements(movements);
+ }
+
+ function rawForwardNeeds(ledger){
+  const dates=new Set(availableDates('active')),productDemand=demandForDates(dates),latest=currentRecipes();
+  const needs=new Map(),semiNeeds=new Map();
+  [...productDemand.entries()].forEach(([product,pieces])=>{
+   (Array.isArray(latest?.[product])?latest[product]:[]).forEach(item=>{
+    const qty=Math.max(0,Number(item?.qty||0))*pieces;if(!qty)return;
+    const key=ingredientKey(item);
+    if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0)semiNeeds.set(key,(semiNeeds.get(key)||0)+qty);
+    else needs.set(key,(needs.get(key)||0)+qty);
+   });
+  });
+  semiNeeds.forEach((required,key)=>{
+   const row=ledger.catalog.get(key);if(!row)return;
+   const stock=Math.max(0,Number(ledger.balances.get(key)||0)),short=Math.max(0,required-stock);
+   if(short>0&&row.sourceName&&row.yieldPct>0){
+    const sourceKey=`${normalizeName(row.sourceName)}|${normalizeUnit(row.sourceUnit)}`;
+    needs.set(sourceKey,(needs.get(sourceKey)||0)+short/(row.yieldPct/100));
+   }
+   needs.set(key,required);
+  });
+  return {needs,semiNeeds};
+ }
+
+ const rawMovementLabel=type=>({
+  opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
+  correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
+  bake_out_auto:'Выпечка',semi_source_auto:'Приготовление полуфабриката'
+ })[type]||type;
+
+ function renderRawStock(){
+  const root=document.querySelector('#view-rawstock');if(!root)return;
+  const ledger=rawLedger(),{needs}=rawForwardNeeds(ledger),priceMap=costs();
+  let stockValue=0,shortages=0;
+  const rows=[...ledger.catalog.values()].sort((a,b)=>a.semi!==b.semi?(a.semi?1:-1):a.name.localeCompare(b.name,'ru'));
+  document.querySelector('#rawStockRows').innerHTML=rows.length?rows.map(row=>{
+   const stock=Number(ledger.balances.get(row.key)||0),required=Math.max(0,Number(needs.get(row.key)||0));
+   const price=ingredientPrice(priceMap,row.name,row.unit);
+   const unitValue=row.semi&&row.sourceName&&row.yieldPct>0?ingredientPrice(priceMap,row.sourceName,row.sourceUnit)/(row.yieldPct/100):price;
+   const value=Math.max(0,stock)/factor(row.unit)*unitValue;stockValue+=value;
+   const shortage=Math.max(0,required-Math.max(0,stock));if(!row.semi&&shortage>0.0005)shortages++;
+   const after=stock-required;
+   const status=row.semi
+    ? (shortage>0.0005?`<span class="raw-stock-status prepare">Приготовить ${niceQty(shortage,row.unit)}</span>`:`<span class="raw-stock-status ok">Хватает</span>`)
+    : (stock<0?'<span class="raw-stock-status danger">Отрицательный остаток</span>':shortage>0.0005?`<span class="raw-stock-status warning">Не хватает ${niceQty(shortage,row.unit)}</span>`:'<span class="raw-stock-status ok">Хватает</span>');
+   const priceText=row.semi?'по сырью':price>0?`${price.toFixed(2)} € / ${row.unit==='g'?'кг':row.unit==='ml'?'л':'шт.'}`:'—';
+   const needText=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
+   const afterText=row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
+   return `<tr class="${stock<0?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''}">
+    <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}</small></td>
+    <td><strong>${niceQty(stock,row.unit)}</strong></td><td>${needText}</td>
+    <td class="${after<0&&!row.semi?'raw-stock-negative':''}">${afterText}</td><td>${priceText}</td>
+    <td>${euroCost(value)}</td><td>${status}</td></tr>`;
+  }).join(''):'<tr><td colspan="7">В рецептурах пока нет ингредиентов.</td></tr>';
+
+  document.querySelector('#rawStockIngredientCount').textContent=String(rows.length);
+  document.querySelector('#rawStockValue').textContent=euroCost(stockValue);
+  document.querySelector('#rawStockShortages').textContent=String(shortages);
+  const autoEvents=ledger.events.filter(event=>event.virtual);
+  document.querySelector('#rawStockAutoCount').textContent=String(autoEvents.length);
+
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
+  const cutoffDate=`${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+  const activeEvents=ledger.events.filter(event=>String(event.date||'')>=cutoffDate),archiveEvents=ledger.events.filter(event=>String(event.date||'')<cutoffDate);
+  const tabs=document.querySelector('#rawStockHistoryTabs');
+  tabs.innerHTML=`<button type="button" class="${rawHistoryView==='active'?'active':''}" data-raw-history="active"><span>Последние 30 дней</span><b>${activeEvents.length}</b></button><button type="button" class="${rawHistoryView==='archive'?'active':''}" data-raw-history="archive"><span>Архив</span><b>${archiveEvents.length}</b></button>`;
+  tabs.querySelectorAll('[data-raw-history]').forEach(button=>button.onclick=()=>{rawHistoryView=button.dataset.rawHistory;renderRawStock()});
+
+  const shown=(rawHistoryView==='active'?activeEvents:archiveEvents).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  document.querySelector('#rawStockMovementRows').innerHTML=shown.length?shown.map(event=>{
+   const delta=Number(event.delta??(event.type==='inventory_set'?0:rawSignedType(event.type)*Number(event.quantity||0)));
+   const quantity=event.type==='inventory_set'?`= ${niceQty(event.quantity,event.unit)}`:`${delta>0?'+':''}${niceQty(delta,event.unit)}`;
+   const action=event.virtual||event.system?'':`<button type="button" class="finance-row-action danger" data-raw-delete="${event.id}">Удалить</button>`;
+   return `<tr class="${event.virtual?'raw-stock-auto-row':''}"><td>${fmt(event.date,{day:'numeric',month:'short',year:'numeric'})}${event.future?' <small>будущее</small>':''}</td><td><strong>${event.name}</strong></td><td><span class="raw-stock-operation ${event.virtual?'auto':''}">${rawMovementLabel(event.type)}</span></td><td class="${delta<0?'raw-stock-negative':'raw-stock-positive'}"><strong>${quantity}</strong></td><td>${event.note||'—'}</td><td>${action}</td></tr>`;
+  }).join(''):'<tr><td colspan="6">Движений в этом разделе пока нет.</td></tr>';
+
+  root.querySelectorAll('[data-raw-delete]').forEach(button=>button.onclick=()=>{
+   if(!confirm('Удалить это движение сырья?'))return;
+   saveRawMovements(readRawMovements().filter(item=>String(item.id)!==String(button.dataset.rawDelete)));
+   renderRawStock();renderPurchase();
+  });
+ }
+
+ function openRawStockMovement(){
+  const dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
+  if(!dialog||!form)return;
+  const ledger=rawLedger(),rows=[...ledger.catalog.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+  form.reset();form.date.value=localToday();form.date.max=localToday();
+  form.ingredient.innerHTML=rows.map(row=>`<option value="${row.key}">${row.name} · ${rawUnitLabel(row.unit)}</option>`).join('');
+  updateRawMovementPreview();dialog.showModal();
+ }
+
+ function updateRawMovementPreview(){
+  const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel');
+  if(!form||!preview)return;
+  const ledger=rawLedger(),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,qty=Math.max(0,Number(form.quantity.value||0)),type=form.type.value;
+  if(label)label.textContent=type==='inventory_set'?'Фактический остаток':'Количество';
+  let after=current;if(form.quantity.value!=='')after=type==='inventory_set'?qty:current+rawSignedType(type)*qty;
+  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}`;
+ }
+
+ function bindRawStock(){
+  const add=document.querySelector('#rawStockAddMovement'),dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
+  if(!add||!dialog||!form)return;
+  add.onclick=openRawStockMovement;
+  document.querySelector('#rawStockOpenPurchase').onclick=()=>document.querySelector('.admin-nav button[data-view="purchase"]')?.click();
+  document.querySelector('#rawStockMovementClose').onclick=document.querySelector('#rawStockMovementCancel').onclick=()=>dialog.close();
+  dialog.onclick=event=>{if(event.target===dialog)dialog.close()};
+  form.ingredient.onchange=form.type.onchange=form.quantity.oninput=updateRawMovementPreview;
+  form.onsubmit=event=>{
+   event.preventDefault();if(!form.reportValidity())return;
+   const data=Object.fromEntries(new FormData(form)),ledger=rawLedger(),row=ledger.catalog.get(data.ingredient);
+   if(!row)return alert('Ингредиент не найден в рецептурах.');
+   const movements=readRawMovements();
+   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity:Math.max(0,Number(data.quantity||0)),note:String(data.note||'').trim(),createdAt:new Date().toISOString()});
+   saveRawMovements(movements);dialog.close();renderRawStock();renderPurchase();
+  };
+  document.querySelector('.admin-nav button[data-view="rawstock"]')?.addEventListener('click',()=>setTimeout(renderRawStock,0));
+ }
+
+ window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement};
+
  function periodDemand(){
   const dates=selectedDates();
   const demand=new Map();
@@ -165,13 +438,13 @@
  }
 
  function buildTotals(){
-  const demand=periodDemand(),latest=currentRecipes(),priceMap=costs();
+  const demand=periodDemand(),latest=currentRecipes(),priceMap=costs(),rawBalances=rawLedger().balances;
   const baseRows=new Map();
 
   const ensureRow=(name,unit,seed={})=>{
     const key=`${normalizeName(name)}|${normalizeUnit(unit)}`;
     if(!baseRows.has(key))baseRows.set(key,{
-      key,name:String(name||'').trim(),unit:normalizeUnit(unit)||'g',required:0,stock:Number(seed.stock||0),
+      key,name:String(name||'').trim(),unit:normalizeUnit(unit)||'g',required:0,stock:Number(rawBalances.get(key)||0),
       margin:Number(seed.margin??5),price:ingredientPrice(priceMap,name,unit),sources:new Map(),semi:false,
       sourceName:'',sourceUnit:'g',yieldPct:0,derivedFrom:[]
     });
@@ -186,7 +459,6 @@
       const row=ensureRow(item.name,item.unit,item);
       const contribution=quantity*perBread;
       row.required+=contribution;
-      row.stock=Math.max(row.stock,Number(item.stock||0));
       row.margin=Math.max(row.margin,Number(item.margin??5));
       const source=row.sources.get(product)||{product,pieces:quantity,required:0};
       source.required+=contribution;row.sources.set(product,source);
@@ -322,12 +594,12 @@
 
   if(!isArchive)$$('[data-cost-stock],[data-cost-margin]').forEach(input=>input.onchange=()=>{
    const row=rows[Number(input.dataset.costStock??input.dataset.costMargin)];if(!row)return;
+   if(input.dataset.costStock!==undefined){
+    setRawInventory(row,Math.max(0,Number(input.value||0)),'Инвентаризация из раздела «Закупка»');
+    renderRawStock();renderPurchase();return;
+   }
    const latest=currentRecipes();
-   Object.values(latest).flat().forEach(item=>{
-    if(ingredientKey(item)!==row.key)return;
-    if(input.dataset.costStock!==undefined)item.stock=Math.max(0,Number(input.value||0));
-    else item.margin=Math.max(0,Number(input.value||0));
-   });
+   Object.values(latest).flat().forEach(item=>{if(ingredientKey(item)===row.key)item.margin=Math.max(0,Number(input.value||0))});
    if(typeof recipes!=='undefined')recipes=latest;store('panora-recipes',latest);renderPurchase();
   });
  };
@@ -478,7 +750,10 @@
   purchaseView='active';
   renderPurchase();
  };
- window.addEventListener('panora:recipes-changed',()=>{if(!window.panoraMoneyEditing?.active)renderPurchase()});
- window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active)renderPurchase()});
+ window.addEventListener('panora:recipes-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:raw-stock-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ bindRawStock();
  renderPurchase();
+ renderRawStock();
 })();

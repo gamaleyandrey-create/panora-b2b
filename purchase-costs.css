@@ -278,3 +278,35 @@
   .purchase-date-option{min-width:122px}
   .purchase-selection-summary{line-height:1.4}
 }
+
+
+/* Panora 6.06 — raw material warehouse */
+.raw-stock-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.raw-stock-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
+.raw-stock-summary article{min-height:104px;padding:16px 17px;border:1px solid #dfe4dc;border-radius:16px;background:#fff}
+.raw-stock-summary span,.raw-stock-summary strong,.raw-stock-summary small{display:block}
+.raw-stock-summary span{color:#6b776f;font-size:11px;font-weight:700}
+.raw-stock-summary strong{margin-top:7px;color:#2e513c;font:25px/1.08 Prata,Georgia,serif}
+.raw-stock-summary small{margin-top:6px;color:#7c857f;font-size:10px;line-height:1.35}
+.raw-stock-shortage-card{border-color:#ead6bd!important;background:#fffaf2!important}.raw-stock-shortage-card strong{color:#9a5d32!important}
+.raw-stock-panel{margin:0 0 16px;padding:17px;border:1px solid #dfe4dc;border-radius:16px;background:#fff}
+.raw-stock-panel-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:12px}
+.raw-stock-panel-head h3{margin:0;color:#26392e;font-size:22px}.raw-stock-panel-head p{margin:4px 0 0;color:#758078;font-size:12px;line-height:1.45}
+.raw-stock-table-wrap{margin:0!important;border-radius:12px!important}.raw-stock-table-wrap table{width:100%;min-width:940px}
+.raw-stock-table-wrap td>strong{display:block}.raw-stock-table-wrap td>small{display:block;margin-top:3px;color:#7a847d;font-size:10px}
+.raw-stock-status{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}
+.raw-stock-status.ok{background:#e9f2e8;color:#326044}.raw-stock-status.warning{background:#fff0dc;color:#9a5a29}.raw-stock-status.danger{background:#f8e6e4;color:#a1443d}.raw-stock-status.prepare{background:#edf1e8;color:#53683e}
+.raw-stock-operation{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:#eef2ed;color:#4f6155;font-size:10px;font-weight:800;white-space:nowrap}.raw-stock-operation.auto{background:#e9f0e7;color:#315b42}
+.raw-stock-positive{color:#356849!important}.raw-stock-negative{color:#ad483f!important}.raw-stock-negative-row td{background:#fff8f7!important}.raw-stock-auto-row td{background:#fbfcfa}.raw-stock-semi-row td{background:#fafbf7}
+.raw-stock-note{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#f3f5f1;color:#707b72;font-size:10.5px;line-height:1.45}
+.raw-stock-movement-dialog{width:min(560px,calc(100% - 24px))}.raw-stock-movement-dialog form{display:grid;gap:11px}
+.raw-stock-movement-dialog label>span{display:block;margin-bottom:5px;color:#657168;font-size:12px;font-weight:700}
+.raw-stock-movement-dialog input,.raw-stock-movement-dialog select{width:100%;min-height:44px;padding:0 11px}
+.raw-stock-movement-preview{padding:10px 12px;border-radius:10px;background:#eef4ed;color:#315b42;font-size:12px}.raw-stock-movement-preview strong{font-weight:800}
+@media(max-width:1100px){.raw-stock-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){
+ .raw-stock-head-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.raw-stock-head-actions button{width:100%!important;min-width:0!important;padding:0 9px!important}
+ .raw-stock-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.raw-stock-summary article{min-height:92px;padding:12px!important;border-radius:14px!important}.raw-stock-summary strong{font-size:21px}
+ .raw-stock-panel{padding:12px!important;border-radius:14px!important}.raw-stock-panel-head{align-items:stretch;flex-direction:column}.raw-stock-panel-head h3{font-size:20px!important}
+ .raw-stock-history-head .stock-movement-tabs{width:100%}.raw-stock-table-wrap{overflow-x:auto!important}.raw-stock-table-wrap table{min-width:820px!important}.raw-stock-movement-dialog{width:calc(100% - 14px)!important}
+}
