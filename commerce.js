@@ -209,8 +209,18 @@ let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilte
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong class="order-partner-name">${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
+const partnerExtraMessengers=r=>Array.isArray(r?.extraMessengers)?r.extraMessengers:[];
+const partnerMessengerValue=(r,name)=>{
+  const target=String(name||'').toLowerCase();
+  return String(partnerExtraMessengers(r).find(item=>String(item?.name||'').toLowerCase()===target)?.contact||'').trim();
+};
+const partnerPreferredChannel=r=>{
+  const stored=partnerMessengerValue(r,'__preferred__').toLowerCase();
+  return ['whatsapp','email','telegram','signal','viber','messenger','copy'].includes(stored)?stored:'';
+};
 const partnerContactHtml=r=>{
-  const rows=[r.phone&&['Телефон',r.phone],r.whatsapp&&['WhatsApp',r.whatsapp],r.telegram&&['Telegram',r.telegram],...(Array.isArray(r.extraMessengers)?r.extraMessengers:[]).map(item=>[item.name,item.contact])].filter(Boolean);
+  const extras=partnerExtraMessengers(r).filter(item=>item&&item.name&&item.contact&&String(item.name)!=='__preferred__');
+  const rows=[r.phone&&['Телефон',r.phone],r.whatsapp&&['WhatsApp',r.whatsapp],r.telegram&&['Telegram',r.telegram],...extras.map(item=>[item.name,item.contact])].filter(Boolean);
   return rows.length?`<div class="partner-contacts">${rows.map(([name,value])=>`<span><b>${commerceEscape(name)}</b><small>${commerceEscape(value)}</small></span>`).join('')}</div>`:'<p class="partner-empty">Контакты не указаны</p>';
 };
 function fillRestaurants() {
@@ -769,13 +779,90 @@ function renderAccounting() {
   const creditNode = document.querySelector("#totalCredit");
   if (creditNode) creditNode.textContent = euro(creditTotal);
 }
+const reminderLocale=language=>language==='es'?'es-ES':language==='en'?'en-GB':'ru-RU';
+const reminderPrettyDate=(value,language='ru',withYear=true)=>{
+  if(!value)return '—';
+  const raw=String(value).slice(0,10),date=new Date(`${raw}T12:00:00`);
+  return new Intl.DateTimeFormat(reminderLocale(language),{day:'numeric',month:'long',year:withYear?'numeric':undefined}).format(date).replace(' г.','');
+};
+const reminderPrettyCutoff=(value,language='ru')=>{
+  if(!value)return '—';
+  const date=new Date(value);
+  return new Intl.DateTimeFormat(reminderLocale(language),{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(date).replace(' г.','');
+};
+const reminderChannelLabel=channel=>({whatsapp:'WhatsApp',email:'Email',telegram:'Telegram',signal:'Signal',viber:'Viber',messenger:'Messenger',copy:'Копировать'}[channel]||channel);
+const reminderContact=(r,channel)=>{
+  if(channel==='email')return String(r?.email||'').trim();
+  if(channel==='whatsapp')return String(r?.whatsapp||r?.phone||'').trim();
+  if(channel==='telegram')return String(r?.telegram||'').trim();
+  if(channel==='signal')return partnerMessengerValue(r,'signal');
+  if(channel==='viber')return partnerMessengerValue(r,'viber');
+  if(channel==='messenger')return partnerMessengerValue(r,'messenger');
+  if(channel==='copy')return 'copy';
+  return '';
+};
+const reminderChannels=r=>{
+  const base=['whatsapp','email','telegram','signal','viber','messenger','copy'].filter(channel=>channel==='copy'||Boolean(reminderContact(r,channel)));
+  const preferred=partnerPreferredChannel(r);
+  if(preferred&&base.includes(preferred))return [preferred,...base.filter(x=>x!==preferred)];
+  return base;
+};
+const reminderUrl=(r,channel,message,subject='Panora')=>{
+  const body=encodeURIComponent(message),contact=reminderContact(r,channel);
+  if(channel==='whatsapp')return `https://wa.me/${cleanPhone(contact)}?text=${body}`;
+  if(channel==='email')return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact)}&su=${encodeURIComponent(subject)}&body=${body}`;
+  if(channel==='telegram'){
+    const username=String(contact).replace(/^https?:\/\/t\.me\//i,'').replace(/^@/,'').split(/[/?#]/)[0];
+    return username?`https://t.me/${encodeURIComponent(username)}`:'';
+  }
+  if(channel==='signal'){
+    const phone=cleanPhone(contact);return phone?`https://signal.me/#p/+${phone}`:'';
+  }
+  if(channel==='viber'){
+    const phone=cleanPhone(contact);return phone?`viber://chat?number=%2B${phone}`:'';
+  }
+  if(channel==='messenger'){
+    if(/^https?:\/\//i.test(contact))return contact;
+    const username=contact.replace(/^@/,'').replace(/^m\.me\//i,'').trim();
+    return username?`https://m.me/${encodeURIComponent(username)}`:'';
+  }
+  return '';
+};
+const reminderNeedsClipboard=channel=>['telegram','signal','viber','messenger'].includes(channel);
+const reminderOpenChannel=(row,channel,message,subject,card)=>{
+  if(channel==='copy'){
+    copyText(message).then(()=>showReminderConfirm(card,row.key,channel));
+    return;
+  }
+  const url=reminderUrl(row.r,channel,message,subject);
+  if(!url)return;
+  window.open(url,'_blank','noopener');
+  if(reminderNeedsClipboard(channel))copyText(message).catch(()=>{});
+  showReminderConfirm(card,row.key,channel);
+};
+const showReminderConfirm=(card,key,channel)=>{
+  if(!card)return;
+  const confirmButton=card.querySelector('[data-confirm-reminder-sent]');
+  const hint=card.querySelector('[data-reminder-opened-hint]');
+  if(confirmButton){
+    confirmButton.hidden=false;
+    confirmButton.dataset.confirmReminderSent=key;
+    confirmButton.dataset.channel=channel;
+    confirmButton.textContent=`Отметить как отправленное · ${reminderChannelLabel(channel)}`;
+  }
+  if(hint){
+    hint.hidden=false;
+    hint.textContent=channel==='copy'
+      ? 'Текст скопирован. После отправки отметьте сообщение.'
+      : reminderNeedsClipboard(channel)
+        ? `Открыт ${reminderChannelLabel(channel)} · текст сообщения скопирован.`
+        : `Открыт ${reminderChannelLabel(channel)}. После фактической отправки подтвердите ниже.`;
+  }
+};
 const reminderCopy = {
-  ru: (r, p) =>
-    `Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${p.bakeDate} можно оформить до ${new Date(p.cutoff).toLocaleString("ru-RU")}. Минимальный заказ — 12 шт.`,
-  en: (r, p) =>
-    `Hello, ${r.name}! A reminder that your Panora order for the ${p.bakeDate} bake must be placed by ${new Date(p.cutoff).toLocaleString("en-GB")}. Minimum order: 12 pcs.`,
-  es: (r, p) =>
-    `¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${p.bakeDate} debe realizarse antes del ${new Date(p.cutoff).toLocaleString("es-ES")}. Pedido mínimo: 12 uds.`,
+  ru: (r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${reminderPrettyDate(p.bakeDate,'ru',false)} можно оформить до ${reminderPrettyCutoff(p.cutoff,'ru')}. Минимальный заказ — 12 шт.`,
+  en: (r,p)=>`Hello, ${r.name}! A reminder that your Panora order for the ${reminderPrettyDate(p.bakeDate,'en',false)} bake must be placed by ${reminderPrettyCutoff(p.cutoff,'en')}. Minimum order: 12 pcs.`,
+  es: (r,p)=>`¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${reminderPrettyDate(p.bakeDate,'es',false)} debe realizarse antes del ${reminderPrettyCutoff(p.cutoff,'es')}. Pedido mínimo: 12 uds.`,
 };
 const cleanPhone = (value) => String(value || "").replace(/\D/g, "");
 const reminderSendWindow = () => {
@@ -814,12 +901,9 @@ function reminderRows() {
   });
 }
 const paymentReminderCopy = {
-  ru: (row) =>
-    `Здравствуйте, ${row.r.name}! Напоминаем об оплате ${euro(row.balance)} по накладной DN-${String(row.note.number).padStart(4, "0")}. Плановая дата оплаты: ${row.note.paymentDueDate}.`,
-  en: (row) =>
-    `Hello, ${row.r.name}! This is a reminder to pay ${euro(row.balance)} for delivery note DN-${String(row.note.number).padStart(4, "0")}. Expected payment date: ${row.note.paymentDueDate}.`,
-  es: (row) =>
-    `¡Hola, ${row.r.name}! Te recordamos el pago de ${euro(row.balance)} del albarán DN-${String(row.note.number).padStart(4, "0")}. Fecha prevista de pago: ${row.note.paymentDueDate}.`,
+  ru:(row)=>`Здравствуйте, ${row.r.name}! Напоминаем об оплате ${euro(row.balance)} по накладной DN-${String(row.note.number).padStart(4,"0")}. Плановая дата оплаты: ${reminderPrettyDate(row.note.paymentDueDate,'ru',false)}.`,
+  en:(row)=>`Hello, ${row.r.name}! This is a reminder to pay ${euro(row.balance)} for delivery note DN-${String(row.note.number).padStart(4,"0")}. Expected payment date: ${reminderPrettyDate(row.note.paymentDueDate,'en',false)}.`,
+  es:(row)=>`¡Hola, ${row.r.name}! Te recordamos el pago de ${euro(row.balance)} del albarán DN-${String(row.note.number).padStart(4,"0")}. Fecha prevista de pago: ${reminderPrettyDate(row.note.paymentDueDate,'es',false)}.`,
 };
 function paymentReminderRows() {
   const today = iso(new Date());
@@ -856,114 +940,101 @@ function markReminder(key, channel) {
   cSave("panora-reminder-log", reminderLog);
   renderReminders();
 }
+function reminderOverdue(row){
+  if(row.ordered||row.sent)return false;
+  const trigger=row.stage==='repeat'?54:72;
+  return Number(row.hours)<trigger-1;
+}
+function reminderCardActions(row,message,subject,waiting){
+  if(row.sent||row.ordered)return '';
+  const channels=reminderChannels(row.r);
+  return `<div class="reminder-channel-line">
+    <div class="reminder-actions">${channels.map((channel,index)=>{
+      const label=reminderChannelLabel(channel),disabled=waiting?' disabled':'';
+      return `<button type="button" class="${index===0?'preferred-channel ':''}${waiting?'reminder-disabled':''}" data-open-reminder-channel="${channel}"${disabled}>${label}</button>`;
+    }).join('')}</div>
+    <small data-reminder-opened-hint hidden></small>
+    <button type="button" class="reminder-confirm-sent" data-confirm-reminder-sent hidden>Отметить как отправленное</button>
+  </div>`;
+}
+function reminderOrderCard(x,windowState){
+  const language=x.r.language||'ru',message=reminderCopy[language](x.r,x.plan),
+    waiting=!windowState.allowed&&!x.ordered&&!x.sent,
+    overdue=reminderOverdue(x),
+    stageLabel=x.stage==='repeat'?'Повторное напоминание':'Первое напоминание',
+    status=x.ordered?'Заказ получен':x.sent?`Отправлено ${new Date(x.sent.sentAt).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
+      waiting?(windowState.hour<12?'Доступно после 12:00':'Отложено до завтра, 12:00'):
+      overdue?`Просрочено · до закрытия ${x.hours} ч.`:`До закрытия ${x.hours} ч.`,
+    subject=`Panora · выпечка ${reminderPrettyDate(x.plan.bakeDate,language,false)}`;
+  return `<article class="reminder-card ${x.ordered?'complete ':''}${x.sent?'sent ':''}${overdue?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}">
+    <div class="reminder-card-top"><div><span class="tag">${stageLabel} · ${status}</span><h3>${commerceEscape(x.r.name)}</h3><p>Выпечка: <strong>${reminderPrettyDate(x.plan.bakeDate,'ru')}</strong> · заказ до <strong>${reminderPrettyCutoff(x.plan.cutoff,'ru')}</strong></p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
+    <p class="reminder-message">${commerceEscape(message)}</p>
+    ${reminderCardActions(x,message,subject,waiting)}
+  </article>`;
+}
+function paymentReminderCard(x,windowState){
+  const language=x.r.language||'ru',message=paymentReminderCopy[language](x),
+    waiting=!windowState.allowed&&!x.sent,
+    status=x.sent?`Отправлено ${new Date(x.sent.sentAt).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
+      x.days<0?`Просрочено на ${Math.abs(x.days)} дн.`:x.days===0?'Оплата сегодня':`До оплаты ${x.days} дн.`,
+    subject=`Panora · оплата DN-${String(x.note.number).padStart(4,'0')}`;
+  return `<article class="reminder-card payment-reminder ${x.sent?'sent ':''}${x.days<0?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}">
+    <div class="reminder-card-top"><div><span class="tag">Оплата · ${status}</span><h3>${commerceEscape(x.r.name)}</h3><p>Накладная <strong>DN-${String(x.note.number).padStart(4,'0')}</strong> · оплатить до <strong>${reminderPrettyDate(x.note.paymentDueDate,'ru')}</strong> · ${euro(x.balance)}</p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
+    <p class="reminder-message">${commerceEscape(message)}</p>
+    ${reminderCardActions(x,message,subject,waiting)}
+  </article>`;
+}
+function bindReminderCards(rows,paymentRows){
+  const all=[...rows,...paymentRows];
+  document.querySelectorAll('[data-reminder-card]').forEach(card=>{
+    const key=card.dataset.reminderCard,row=all.find(item=>item.key===key);if(!row)return;
+    const isPayment=Boolean(row.note),language=row.r.language||'ru',
+      message=isPayment?paymentReminderCopy[language](row):reminderCopy[language](row.r,row.plan),
+      subject=isPayment?`Panora · оплата DN-${String(row.note.number).padStart(4,'0')}`:`Panora · выпечка ${reminderPrettyDate(row.plan.bakeDate,language,false)}`;
+    card.querySelectorAll('[data-open-reminder-channel]').forEach(button=>button.onclick=()=>{
+      if(button.disabled)return;
+      reminderOpenChannel(row,button.dataset.openReminderChannel,message,subject,card);
+    });
+  });
+  document.querySelectorAll('[data-confirm-reminder-sent]').forEach(button=>button.onclick=()=>{
+    const key=button.dataset.confirmReminderSent,channel=button.dataset.channel;
+    if(!key||!channel)return;
+    if(confirm(`Отметить сообщение как отправленное через ${reminderChannelLabel(channel)}?`))markReminder(key,channel);
+  });
+}
 function renderReminders() {
-  const root = document.querySelector("#reminderList");
-  if (!root) return;
-  const rows = reminderRows(),
-    paymentRows = paymentReminderRows(),
-    windowState = reminderSendWindow(),
-    due = rows.filter((x) => !x.ordered && !x.sent),
-    ordered = rows.filter((x) => x.ordered),
-    sent = rows.filter((x) => x.sent);
-  document.querySelector("#reminderDue").textContent =
-    due.length + paymentRows.filter((x) => !x.sent).length;
-  document.querySelector("#reminderOrdered").textContent = ordered.length;
-  document.querySelector("#reminderSent").textContent =
-    sent.length + paymentRows.filter((x) => x.sent).length;
-  const paymentCards = paymentRows
-    .map((x) => {
-      const message = paymentReminderCopy[x.r.language || "ru"](x),
-        subject = encodeURIComponent(
-          `Panora · оплата DN-${String(x.note.number).padStart(4, "0")}`,
-        ),
-        body = encodeURIComponent(message),
-        phone = cleanPhone(x.r.whatsapp || x.r.phone),
-        waiting = !windowState.allowed && !x.sent,
-        status = x.sent
-          ? `Отправлено ${new Date(x.sent.sentAt).toLocaleString("ru-RU")}`
-          : x.days < 0
-            ? `Просрочено на ${Math.abs(x.days)} дн.`
-            : x.days === 0
-              ? "Оплата сегодня"
-              : `До оплаты ${x.days} дн.`,
-        disabled = waiting
-          ? ' reminder-disabled aria-disabled="true" tabindex="-1"'
-          : "";
-      return `<article class="reminder-card payment-reminder ${x.days < 0 ? "overdue" : ""} ${waiting ? "waiting" : ""}"><div><span class="tag">${status}</span><h3>${x.r.name}</h3><p>Накладная: <strong>DN-${String(x.note.number).padStart(4, "0")}</strong> · оплатить до <strong>${x.note.paymentDueDate}</strong> · ${euro(x.balance)}</p></div><p class="reminder-message">${message}</p><div class="reminder-actions">${x.r.email ? `<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:email" ${disabled} target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(x.r.email)}&su=${subject}&body=${body}">Email</a>` : ""}${phone ? `<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:whatsapp" ${disabled} target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${body}">WhatsApp</a>` : ""}<a class="${waiting ? "reminder-disabled" : ""}" data-payment-reminder="${x.key}:telegram" ${disabled} target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${body}">Telegram</a><button class="${waiting ? "reminder-disabled" : ""}" data-copy-payment-reminder="${x.key}" ${waiting ? "disabled" : ""}>Копировать</button></div></article>`;
-    })
-    .join("");
-  root.innerHTML = paymentCards + (rows.length
-    ? rows
-        .map((x) => {
-          const message = reminderCopy[x.r.language || "ru"](x.r, x.plan),
-            subject = encodeURIComponent(`Panora · ${x.plan.bakeDate}`),
-            body = encodeURIComponent(message),
-            phone = cleanPhone(x.r.whatsapp || x.r.phone),
-            waiting = !windowState.allowed && !x.ordered && !x.sent,
-            status = x.ordered
-              ? "Заказ получен"
-              : x.sent
-                ? `Отправлено ${new Date(x.sent.sentAt).toLocaleString("ru-RU")}`
-                : waiting
-                  ? windowState.hour < 12
-                    ? "Отправка доступна после 12:00"
-                    : "Отложено до завтра, 12:00"
-                  : x.hours <= 6
-                    ? "Срочно"
-                    : `До закрытия ${x.hours} ч.`,
-            disabled = waiting
-              ? ' reminder-disabled aria-disabled="true" tabindex="-1"'
-              : "";
-          return `<article class="reminder-card ${x.ordered ? "complete" : ""} ${waiting ? "waiting" : ""}"><div><span class="tag">${x.stage === "repeat" ? "Повторное · " : ""}${status}</span><h3>${x.r.name}</h3><p>Выпечка: <strong>${x.plan.bakeDate}</strong> · заказ до ${new Date(x.plan.cutoff).toLocaleString("ru-RU")}</p></div><p class="reminder-message">${message}</p><div class="reminder-actions">${x.r.email ? `<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:email" ${disabled} target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(x.r.email)}&su=${subject}&body=${body}">Email</a>` : ""}${phone ? `<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:whatsapp" ${disabled} target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${body}">WhatsApp</a>` : ""}<a class="${waiting ? "reminder-disabled" : ""}" data-reminder="${x.key}:telegram" ${disabled} target="_blank" rel="noopener" href="https://t.me/share/url?url=&text=${body}">Telegram</a><button class="${waiting ? "reminder-disabled" : ""}" data-copy-reminder="${x.key}" ${waiting ? "disabled" : ""}>Копировать</button></div></article>`;
-        })
-        .join("")
-    : paymentRows.length
-      ? ""
-      : '<div class="empty-row">Нет напоминаний: они появятся перед закрытием заказов или при наступлении срока оплаты.</div>');
-  document.querySelectorAll("[data-reminder]").forEach(
-    (a) =>
-      (a.onclick = (event) => {
-        if (a.classList.contains("reminder-disabled")) {
-          event.preventDefault();
-          return;
-        }
-        const parts = a.dataset.reminder.split(":");
-        markReminder(parts.slice(0, -1).join(":"), parts.at(-1));
-      }),
-  );
-  document.querySelectorAll("[data-copy-reminder]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        if (b.disabled) return;
-        const x = rows.find((row) => row.key === b.dataset.copyReminder);
-        copyText(reminderCopy[x.r.language || "ru"](x.r, x.plan)).then(() =>
-          markReminder(x.key, "copy"),
-        );
-      }),
-  );
-  document.querySelectorAll("[data-payment-reminder]").forEach(
-    (link) =>
-      (link.onclick = (event) => {
-        if (link.classList.contains("reminder-disabled")) {
-          event.preventDefault();
-          return;
-        }
-        const parts = link.dataset.paymentReminder.split(":");
-        markReminder(parts.slice(0, -1).join(":"), parts.at(-1));
-      }),
-  );
-  document.querySelectorAll("[data-copy-payment-reminder]").forEach(
-    (button) =>
-      (button.onclick = () => {
-        const row = paymentRows.find(
-          (item) => item.key === button.dataset.copyPaymentReminder,
-        );
-        if (!row || button.disabled) return;
-        copyText(paymentReminderCopy[row.r.language || "ru"](row)).then(() =>
-          markReminder(row.key, "copy"),
-        );
-      }),
-  );
+  const root=document.querySelector('#reminderList');if(!root)return;
+  reloadRestaurantsFromStorage();
+  const rows=reminderRows(),paymentRows=paymentReminderRows(),windowState=reminderSendWindow();
+  const orderDue=rows.filter(x=>!x.ordered&&!x.sent),paymentDue=paymentRows.filter(x=>!x.sent);
+  const overdue=orderDue.filter(reminderOverdue).length+paymentDue.filter(x=>x.days<0).length;
+  const sent=rows.filter(x=>x.sent),paymentSent=paymentRows.filter(x=>x.sent),ordered=rows.filter(x=>x.ordered);
+
+  document.querySelector('#reminderDue').textContent=orderDue.length+paymentDue.length;
+  document.querySelector('#reminderOverdue').textContent=overdue;
+  document.querySelector('#reminderSent').textContent=sent.length+paymentSent.length;
+  document.querySelector('#reminderOrdered').textContent=ordered.length;
+
+  const activeOrderRows=orderDue.slice().sort((a,b)=>Number(a.hours)-Number(b.hours));
+  const activePaymentRows=paymentDue.slice().sort((a,b)=>Number(a.days)-Number(b.days));
+  const sentRows=[...sent,...paymentSent].sort((a,b)=>String(b.sent?.sentAt||'').localeCompare(String(a.sent?.sentAt||'')));
+  const orderedUnique=[...new Map(ordered.map(x=>[`${x.r.id}:${x.plan.bakeDate}`,x])).values()];
+
+  const section=(title,count,content,className='')=>content?`<section class="reminder-work-section ${className}"><div class="reminder-section-head"><h3>${title}</h3><span>${count}</span></div>${content}</section>`:'';
+  const activeHtml=[
+    ...activeOrderRows.map(x=>reminderOrderCard(x,windowState)),
+    ...activePaymentRows.map(x=>paymentReminderCard(x,windowState))
+  ].join('');
+  const sentHtml=sentRows.slice(0,20).map(x=>x.note?paymentReminderCard(x,windowState):reminderOrderCard(x,windowState)).join('');
+  const orderedHtml=orderedUnique.map(x=>`<article class="reminder-ordered-compact"><div><strong>${commerceEscape(x.r.name)}</strong><span>Выпечка ${reminderPrettyDate(x.plan.bakeDate,'ru',false)}</span></div><b>Заказ получен ✓</b></article>`).join('');
+
+  root.innerHTML=
+    section('Нужно отправить',activeOrderRows.length+activePaymentRows.length,activeHtml,'reminder-working')+
+    section('Отправлено',sentRows.length,sentHtml,'reminder-sent-section')+
+    section('Уже заказали',orderedUnique.length,orderedHtml,'reminder-ordered-section')+
+    (!activeHtml&&!sentHtml&&!orderedHtml?'<div class="empty-row">Сейчас напоминаний нет.</div>':'');
+
+  bindReminderCards(rows,paymentRows);
 }
 function renderCommerce() {
   if(window.panoraMoneyEditing?.active){
@@ -990,7 +1061,12 @@ document.querySelector("#saveRestaurant").onclick = (e) => {
     phone: f.get("phone"),
     whatsapp: String(f.get("whatsapp") || "").trim(),
     telegram: String(f.get("telegram") || "").trim(),
-    extraMessengers: [],
+    extraMessengers: [
+      ["Signal",String(f.get("signal")||"").trim()],
+      ["Viber",String(f.get("viber")||"").trim()],
+      ["Messenger",String(f.get("messenger")||"").trim()],
+      ["__preferred__",String(f.get("preferredChannel")||"whatsapp").trim()]
+    ].filter(([,contact])=>contact).map(([name,contact])=>({name,contact})),
     partnerType: f.get("partnerType") || "other",
     language: f.get("language") || "ru",
     address: f.get("address"),

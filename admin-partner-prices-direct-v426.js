@@ -51,6 +51,24 @@
     catering:'Кейтеринг',other:'Другое'
   }[String(value||'').toLowerCase()]||'Партнёр');
 
+  const messengerRows=value=>Array.isArray(value)?value.filter(Boolean):[];
+  const messengerValue=(r,name)=>String(messengerRows(r?.extra_messengers).find(x=>String(x?.name||'').toLowerCase()===String(name).toLowerCase())?.contact||'');
+  const preferredChannel=r=>{
+    const value=messengerValue(r,'__preferred__').toLowerCase();
+    return ['whatsapp','email','telegram','signal','viber','messenger','copy'].includes(value)?value:'whatsapp';
+  };
+  const contactPayload=card=>{
+    const get=name=>String(card.querySelector(`[data-partner-contact="${name}"]`)?.value||'').trim();
+    const preferred=get('preferred')||'whatsapp';
+    return {
+      whatsapp:get('whatsapp')||null,
+      telegram:get('telegram')||null,
+      extra_messengers:[
+        ['Signal',get('signal')],['Viber',get('viber')],['Messenger',get('messenger')],['__preferred__',preferred]
+      ].filter(([,contact])=>contact).map(([name,contact])=>({name,contact}))
+    };
+  };
+
   const screen=()=>document.querySelector('#view-restaurants');
   const cards=()=>document.querySelector('#restaurantCards');
   const draftKey=(restaurantId,productId)=>`${restaurantId}:${productId}`;
@@ -87,6 +105,20 @@
         <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
+        <details class="partner-contact-settings">
+          <summary>Контакты и мессенджеры</summary>
+          <div class="partner-contact-grid">
+            <label><span>WhatsApp</span><input data-partner-contact="whatsapp" value="${esc(r.whatsapp||'')}" placeholder="+34 600 000 000"></label>
+            <label><span>Telegram</span><input data-partner-contact="telegram" value="${esc(r.telegram||'')}" placeholder="@username"></label>
+            <label><span>Signal</span><input data-partner-contact="signal" value="${esc(messengerValue(r,'signal'))}" placeholder="+34 600 000 000"></label>
+            <label><span>Viber</span><input data-partner-contact="viber" value="${esc(messengerValue(r,'viber'))}" placeholder="+34 600 000 000"></label>
+            <label><span>Messenger</span><input data-partner-contact="messenger" value="${esc(messengerValue(r,'messenger'))}" placeholder="username или m.me"></label>
+            <label><span>Главный способ</span><select data-partner-contact="preferred">
+              ${[['whatsapp','WhatsApp'],['email','Email'],['telegram','Telegram'],['signal','Signal'],['viber','Viber'],['messenger','Messenger'],['copy','Копировать']].map(([value,label])=>`<option value="${value}"${preferredChannel(r)===value?' selected':''}>${label}</option>`).join('')}
+            </select></label>
+          </div>
+          <div class="partner-contact-save-row"><span data-partner-contact-status></span><button type="button" class="secondary" data-save-partner-contacts="${esc(restaurantId)}">Сохранить контакты</button></div>
+        </details>
         <label class="partner-language-setting">
           <span><strong>Язык партнёра</strong><small>Кабинет, уведомления и документы</small></span>
           <select data-direct-partner-language="${esc(restaurantId)}">
@@ -142,6 +174,38 @@
           select.disabled=false;
           alert(`Не удалось сохранить язык партнёра: ${error.message||error}`);
         }
+      });
+    });
+
+    root.querySelectorAll('[data-save-partner-contacts]').forEach(button=>{
+      button.addEventListener('click',async()=>{
+        const restaurantId=String(button.dataset.savePartnerContacts||''),card=button.closest('[data-direct-restaurant]');
+        const partner=lastRows.find(r=>String(r.id)===restaurantId);if(!partner||!card)return;
+        const status=card.querySelector('[data-partner-contact-status]'),payload=contactPayload(card);
+        button.disabled=true;if(status)status.textContent='Сохраняем…';
+        try{
+          const rows=await rest(`restaurants?id=eq.${encodeURIComponent(restaurantId)}`,{
+            method:'PATCH',headers:{Prefer:'return=representation'},
+            body:JSON.stringify({...payload,updated_at:new Date().toISOString()})
+          });
+          const saved=Array.isArray(rows)?rows[0]:null;
+          partner.whatsapp=saved?.whatsapp??payload.whatsapp??'';
+          partner.telegram=saved?.telegram??payload.telegram??'';
+          partner.extra_messengers=saved?.extra_messengers??payload.extra_messengers;
+          try{
+            const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+            const next=(Array.isArray(local)?local:[]).map(r=>String(r.id)===restaurantId?{
+              ...r,whatsapp:partner.whatsapp||'',telegram:partner.telegram||'',
+              extraMessengers:(partner.extra_messengers||[]).map(x=>({name:x.name,contact:x.contact}))
+            }:r);
+            localStorage.setItem('panora-restaurants',JSON.stringify(next));
+          }catch{}
+          if(status){status.textContent='Сохранено ✓';setTimeout(()=>{if(status)status.textContent=''},1400)}
+          window.dispatchEvent(new CustomEvent('panora:partner-contacts-changed',{detail:{restaurantId}}));
+        }catch(error){
+          if(status)status.textContent='Ошибка сохранения';
+          alert(`Не удалось сохранить контакты: ${error.message||error}`);
+        }finally{button.disabled=false}
       });
     });
 
@@ -313,7 +377,7 @@
     if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
-      const rows=await rest('restaurants?select=id,name,email,address,partner_type,language,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
+      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
       if(active)render(rows||[]);
     }catch(error){
       console.error('Panora direct partners refresh',error);
