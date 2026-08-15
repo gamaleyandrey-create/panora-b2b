@@ -188,9 +188,10 @@
 .purchase-date-all{
   display:inline-flex!important;
   align-items:center;
-  gap:7px;
+  justify-content:center;
+  min-height:34px;
   margin:0!important;
-  padding:7px 10px;
+  padding:0 12px;
   border:1px solid #d9e0d9;
   border-radius:999px;
   background:#fff;
@@ -198,8 +199,10 @@
   cursor:pointer;
   font-size:11px;
   font-weight:750;
+  white-space:nowrap;
 }
-.purchase-date-all input,
+.purchase-date-all:hover{border-color:#bfcbbf;background:#f8faf7}
+.purchase-date-all:focus-visible{outline:2px solid #4f735c;outline-offset:2px}
 .purchase-date-option input{
   width:16px!important;
   height:16px!important;
@@ -208,22 +211,23 @@
   accent-color:#365e45;
 }
 .purchase-date-options{
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(128px,1fr));
   gap:8px;
-  overflow-x:auto;
-  padding:2px 2px 5px;
-  scrollbar-width:thin;
+  width:100%;
+  max-width:1040px;
+  padding:2px;
 }
 .purchase-date-option{
-  flex:0 0 auto;
   display:flex!important;
   align-items:center;
   gap:9px;
-  min-width:132px;
+  min-width:0;
+  min-height:54px;
   margin:0!important;
-  padding:10px 12px;
+  padding:9px 11px;
   border:1px solid #d9e0d9;
-  border-radius:13px;
+  border-radius:12px;
   background:#fff;
   color:#435148;
   cursor:pointer;
@@ -244,7 +248,7 @@
 }
 .purchase-date-option b{
   color:#304b39;
-  font-size:12px;
+  font-size:13px;
 }
 .purchase-date-option small{
   color:#7a857d;
@@ -275,11 +279,13 @@
 }
 @media(max-width:700px){
   .purchase-date-selector-head{align-items:flex-start;flex-direction:column}
-  .purchase-date-option{min-width:122px}
+  .purchase-date-options{display:flex;max-width:none;overflow-x:auto;padding:2px 2px 5px;scrollbar-width:thin}
+  .purchase-date-option{flex:0 0 auto;min-width:122px}
   .purchase-selection-summary{line-height:1.4}
 }
 
 
+/* Panora 6.13 — compact desktop purchase-date grid + select-all action */
 /* Panora 6.06 — raw material warehouse */
 .raw-stock-head-actions{display:flex;gap:8px;flex-wrap:wrap}
 .raw-stock-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}

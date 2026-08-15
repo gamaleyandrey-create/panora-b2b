@@ -79,10 +79,7 @@
   filter.innerHTML=dates.length?`
    <div class="purchase-date-selector-head">
     <strong>Выбрано ${chosen.size} из ${dates.length}</strong>
-    <label class="purchase-date-all">
-     <input type="checkbox" data-purchase-all ${allSelected?'checked':''}>
-     <span>Все даты</span>
-    </label>
+    <button type="button" class="purchase-date-all" data-purchase-all aria-pressed="${allSelected?'true':'false'}">${allSelected?'Снять все':'Выбрать все'}</button>
    </div>
    <div class="purchase-date-options">
     ${dates.map(date=>`
@@ -92,8 +89,8 @@
      </label>`).join('')}
    </div>`:`<div class="purchase-date-empty">${purchaseView==='archive'?'Архивных дат пока нет.':'Активных дат выпечки пока нет.'}</div>`;
 
-  filter.querySelector('[data-purchase-all]')?.addEventListener('change',event=>{
-   pickedDates[purchaseView]=event.currentTarget.checked?new Set(dates):new Set();
+  filter.querySelector('[data-purchase-all]')?.addEventListener('click',()=>{
+   pickedDates[purchaseView]=allSelected?new Set():new Set(dates);
    persistActiveSelection();
    renderPurchase();
   });
