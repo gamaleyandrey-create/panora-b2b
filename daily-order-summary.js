@@ -3,12 +3,12 @@
   const root=document.querySelector('#dailyOrderSummary');if(!root)return;
   const openDays=new Set(),selectionKey='panora-purchase-selected-dates';
   const readSelected=()=>{try{return new Set(JSON.parse(localStorage.getItem(selectionKey)||'[]'))}catch{return new Set()}};
-  let selectedDates=readSelected(),filter='upcoming';
+  let selectedDates=readSelected(),filter='active';
   const today=()=>new Date().toISOString().slice(0,10);
   const text=()=>({
-    ru:{title:'Сводный план производства',subtitle:'Общее количество по всем партнёрам. Отметьте даты для общего расчёта ингредиентов.',restaurants:'партнёров',new:'Новые',confirmed:'Подтверждено',total:'Всего к выпечке',details:'Партнёры и заказы',empty:'Нет дат в этом разделе',ingredients:'Ингредиенты за этот день',calculateSelected:'Рассчитать выбранные даты',selected:'Выбрано',days:'дн.',pcs:'шт.',cancelled:'Отменён',shipped:'Отгружен',upcoming:'Ближайшие',all:'Все даты',past:'Прошедшие',today:'Сегодня'},
-    en:{title:'Consolidated bake plan',subtitle:'Total demand from all partners. Select dates for a combined ingredient calculation.',restaurants:'partners',new:'New',confirmed:'Confirmed',total:'Total to bake',details:'Partners and orders',empty:'No dates in this section',ingredients:'Ingredients for this day',calculateSelected:'Calculate selected dates',selected:'Selected',days:'days',pcs:'pcs',cancelled:'Cancelled',shipped:'Shipped',upcoming:'Upcoming',all:'All dates',past:'Past',today:'Today'},
-    es:{title:'Plan consolidado de horneado',subtitle:'Demanda total de todos los socios. Seleccione fechas para calcular juntos los ingredientes.',restaurants:'socios',new:'Nuevos',confirmed:'Confirmados',total:'Total a hornear',details:'Socios y pedidos',empty:'No hay fechas en esta sección',ingredients:'Ingredientes de este día',calculateSelected:'Calcular fechas seleccionadas',selected:'Seleccionado',days:'días',pcs:'uds.',cancelled:'Cancelado',shipped:'Enviado',upcoming:'Próximas',all:'Todas',past:'Pasadas',today:'Hoy'}
+    ru:{title:'Сводный план производства',subtitle:'Общее количество по всем партнёрам. Отметьте даты для общего расчёта ингредиентов.',restaurants:'партнёров',new:'Новые',confirmed:'Подтверждено',total:'Всего к выпечке',details:'Партнёры и заказы',empty:'Нет дат в этом разделе',ingredients:'Ингредиенты за этот день',calculateSelected:'Рассчитать выбранные даты',selected:'Выбрано',days:'дн.',pcs:'шт.',cancelled:'Отменён',shipped:'Отгружен',active:'Активные',archive:'Архив',today:'Сегодня'},
+    en:{title:'Consolidated bake plan',subtitle:'Total demand from all partners. Select dates for a combined ingredient calculation.',restaurants:'partners',new:'New',confirmed:'Confirmed',total:'Total to bake',details:'Partners and orders',empty:'No dates in this section',ingredients:'Ingredients for this day',calculateSelected:'Calculate selected dates',selected:'Selected',days:'days',pcs:'pcs',cancelled:'Cancelled',shipped:'Shipped',active:'Active',archive:'Archive',today:'Today'},
+    es:{title:'Plan consolidado de horneado',subtitle:'Demanda total de todos los socios. Seleccione fechas para calcular juntos los ingredientes.',restaurants:'socios',new:'Nuevos',confirmed:'Confirmados',total:'Total a hornear',details:'Socios y pedidos',empty:'No hay fechas en esta sección',ingredients:'Ingredientes de este día',calculateSelected:'Calcular fechas seleccionadas',selected:'Seleccionado',days:'días',pcs:'uds.',cancelled:'Cancelado',shipped:'Enviado',active:'Activas',archive:'Archivo',today:'Hoy'}
   })[typeof lang==='string'?lang:'ru'];
   const name=id=>typeof productName==='function'?productName(id):id;
   const client=id=>typeof restaurant==='function'?(restaurant(id)?.name||'—'):'—';
@@ -26,13 +26,16 @@
   }
   function render(){
     root.querySelectorAll('details[data-summary-date][open]').forEach(d=>openDays.add(d.dataset.summaryDate));
-    const tx=text(),allDays=groups(),now=today(),available=new Set(allDays.map(d=>d.date));
-    selectedDates=new Set([...selectedDates].filter(d=>available.has(d)));
-    const days=allDays.filter(d=>filter==='all'||(filter==='upcoming'?d.date>=now:d.date<now));
-    const selectedTotal=allDays.filter(d=>selectedDates.has(d.date)).reduce((s,d)=>s+d.total,0);
-    const cards=days.map(day=>`<article class="daily-summary-card ${selectedDates.has(day.date)?'selected':''} ${day.date===now?'is-today':''}">
+    const tx=text(),allDays=groups(),now=today();
+    const activeDays=allDays.filter(d=>d.date>=now),archiveDays=allDays.filter(d=>d.date<now);
+    const availableActive=new Set(activeDays.map(d=>d.date));
+    selectedDates=new Set([...selectedDates].filter(d=>availableActive.has(d)));
+    const days=filter==='archive'?archiveDays:activeDays;
+    const selectedTotal=activeDays.filter(d=>selectedDates.has(d.date)).reduce((s,d)=>s+d.total,0);
+    const isArchive=filter==='archive';
+    const cards=days.map(day=>`<article class="daily-summary-card ${selectedDates.has(day.date)?'selected':''} ${day.date===now?'is-today':''} ${isArchive?'is-archive':''}">
       <div class="daily-summary-head">
-        <label class="daily-date-select"><input type="checkbox" data-daily-select="${day.date}" ${selectedDates.has(day.date)?'checked':''}><span></span></label>
+        ${isArchive?'<span class="daily-archive-mark" aria-hidden="true">✓</span>':`<label class="daily-date-select"><input type="checkbox" data-daily-select="${day.date}" ${selectedDates.has(day.date)?'checked':''}><span></span></label>`}
         <div><strong>${new Intl.DateTimeFormat(typeof lang==='string'?lang:'ru',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(day.date+'T12:00:00'))}${day.date===now?` <i>${tx.today}</i>`:''}</strong><span>${day.restaurants} ${tx.restaurants}</span></div>
         <b>${day.total} ${tx.pcs}</b>
       </div>
@@ -44,9 +47,9 @@
         <summary>${tx.details}</summary>
         <div class="daily-restaurant-list">${day.orders.map(o=>`<div><span><strong>${client(o.restaurantId)}</strong><small>PN-${String(o.number).padStart(4,'0')}</small></span><span>${(o.items||[]).map(i=>`${name(i.product)} — ${i.quantity} ${tx.pcs}`).join('<br>')}</span><em class="${o.status}">${o.status==='submitted'?tx.new:o.status==='shipped'?tx.shipped:tx.confirmed}</em></div>`).join('')}</div>
       </details>
-      <button type="button" class="daily-ingredients" data-daily-purchase="${day.date}">${tx.ingredients}</button>
+      ${isArchive?'':`<button type="button" class="daily-ingredients" data-daily-purchase="${day.date}">${tx.ingredients}</button>`}
     </article>`).join('');
-    root.innerHTML=`<header><div><h3>${tx.title}</h3><p>${tx.subtitle}</p><nav class="daily-summary-tabs"><button data-summary-filter="upcoming" class="${filter==='upcoming'?'active':''}">${tx.upcoming}</button><button data-summary-filter="all" class="${filter==='all'?'active':''}">${tx.all}</button><button data-summary-filter="past" class="${filter==='past'?'active':''}">${tx.past}</button></nav></div>${allDays.length?`<div class="daily-summary-selection"><strong>${tx.selected}: <span>${selectedDates.size}</span> ${tx.days}${selectedDates.size?` · ${selectedTotal} ${tx.pcs}`:''}</strong><button type="button" data-calculate-selected ${selectedDates.size?'':'disabled'}>${tx.calculateSelected}</button></div>`:''}</header>${days.length?`<div class="daily-summary-list">${cards}</div>`:`<p class="daily-summary-empty">${tx.empty}</p>`}`;
+    root.innerHTML=`<header><div><h3>${tx.title}</h3><p>${tx.subtitle}</p><nav class="daily-summary-tabs daily-main-tabs"><button data-summary-filter="active" class="${filter==='active'?'active':''}"><span>${tx.active}</span><b>${activeDays.length}</b></button><button data-summary-filter="archive" class="${filter==='archive'?'active':''}"><span>${tx.archive}</span><b>${archiveDays.length}</b></button></nav></div>${allDays.length&&filter==='active'?`<div class="daily-summary-selection"><strong>${tx.selected}: <span>${selectedDates.size}</span> ${tx.days}${selectedDates.size?` · ${selectedTotal} ${tx.pcs}`:''}</strong><button type="button" data-calculate-selected ${selectedDates.size?'':'disabled'}>${tx.calculateSelected}</button></div>`:''}</header>${days.length?`<div class="daily-summary-list">${cards}</div>`:`<p class="daily-summary-empty">${tx.empty}</p>`}`;
     root.querySelectorAll('[data-summary-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.summaryFilter;render()});
     root.querySelectorAll('details[data-summary-date]').forEach(d=>d.addEventListener('toggle',()=>{d.open?openDays.add(d.dataset.summaryDate):openDays.delete(d.dataset.summaryDate)}));
     const openPurchase=dates=>{localStorage.setItem(selectionKey,JSON.stringify(dates));window.panoraPurchaseSelection=dates;document.querySelector('[data-view="purchase"]')?.click();if(typeof window.panoraSetPurchaseDates==='function')window.panoraSetPurchaseDates(dates);else if(typeof renderPurchase==='function')renderPurchase()};
