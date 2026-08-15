@@ -148,3 +148,19 @@ body.panora-partner-authenticated .product-card .product-tag{display:none!import
 .product-slide-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#aab3ac;cursor:pointer}
 .product-slide-dots button.active{background:#315e40}
 @media(max-width:700px){.product-slide-arrow{display:none}}
+
+/* Panora 5.71 — visible storefront gallery + product sections */
+.product-slider{position:relative!important;overflow:hidden!important}
+.product-slider>[data-product-main]{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}
+.product-slide-arrow{display:grid!important;place-items:center!important;position:absolute!important;top:50%!important;transform:translateY(-50%)!important;z-index:6!important;width:42px!important;height:52px!important;border:1px solid rgba(49,94,64,.18)!important;border-radius:12px!important;background:rgba(255,255,255,.92)!important;color:#315e40!important;font-size:30px!important;font-weight:700!important;box-shadow:0 3px 14px rgba(0,0,0,.12)!important}
+.product-slide-arrow.prev{left:12px!important}.product-slide-arrow.next{right:12px!important}
+.product-slide-dots{display:flex!important;position:absolute!important;left:50%!important;bottom:12px!important;transform:translateX(-50%)!important;z-index:7!important;gap:6px!important;padding:6px 9px!important;border-radius:999px!important;background:rgba(255,255,255,.9)!important}
+.product-slide-dots button{display:block!important;width:8px!important;height:8px!important;min-width:8px!important;padding:0!important;border:0!important;border-radius:50%!important;background:#a7afa9!important}
+.product-slide-dots button.active{background:#315e40!important;transform:scale(1.18)}
+#categoryChips{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+#categoryChips::-webkit-scrollbar{display:none}
+#categoryChips .chip{flex:0 0 auto;white-space:nowrap}
+@media(max-width:700px){
+ .product-slide-arrow{display:none!important}
+ .product-slide-dots{bottom:9px!important}
+}

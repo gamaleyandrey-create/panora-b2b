@@ -33,11 +33,21 @@
     if(ruleResponse.ok)rules=await ruleResponse.json();
    }catch{}
    const ruleMap=new Map((Array.isArray(rules)?rules:[]).map(row=>[String(row.id),row]));
+   let media=[];
+   try{
+    const mediaResponse=await fetch(`${cfg.url}/rest/v1/rpc/panora_public_product_media`,{
+     method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json',Accept:'application/json'},body:'{}',cache:'no-store'
+    });
+    if(mediaResponse.ok)media=await mediaResponse.json();
+   }catch{}
+   const mediaMap=new Map((Array.isArray(media)?media:[]).map(row=>[String(row.id),row]));
    const next=rows.map(p=>({
     id:p.id,
     builtIn:['plain','pumpkin'].includes(p.id),
     active:p.active!==false&&p.storefront_visible!==false,
     storefrontVisible:p.storefront_visible!==false,
+    category:String(mediaMap.get(String(p.id))?.category||'Хлеб'),
+    gallery:Array.isArray(mediaMap.get(String(p.id))?.gallery_urls)?mediaMap.get(String(p.id)).gallery_urls.filter(Boolean).slice(0,6):[],
     weight:Number(p.weight_g||0),
     basePrice:Number(p.retail_price||0),
     wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||12)),
