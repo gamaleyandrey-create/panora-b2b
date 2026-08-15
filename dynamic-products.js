@@ -5,13 +5,13 @@
   const fallback=builtInFallbacks.get(p.id)||{};
   const ru=p.names?.ru||fallback.text?.ru?.[0]||p.id;
   const en=p.names?.en||ru,es=p.names?.es||ru;
-  const retailPrice=Number(p.basePrice??fallback.retailPrice??fallback.price??0),wholesalePrice=Number(account&&account.prices?.[p.id]!=null?account.prices[p.id]:retailPrice),wholesaleMinQty=Math.max(1,Number(p.wholesaleMinQty||fallback.wholesaleMinQty||12));return{id:p.id,category:fallback.category||'yeastfree',price:wholesalePrice,retailPrice,wholesalePrice,wholesaleMinQty,pieces:wholesaleMinQty,weight:Number(p.weight||fallback.weight||600),image:p.image||fallback.image||'icon.svg',bg:fallback.bg||'#e9dfca',text:{ru:[ru,p.descriptions?.ru||fallback.text?.ru?.[1]||'',ru],en:[en,p.descriptions?.en||fallback.text?.en?.[1]||'',en],es:[es,p.descriptions?.es||fallback.text?.es?.[1]||'',es]}};
+  const retailPrice=Number(p.basePrice??fallback.retailPrice??fallback.price??0),wholesalePrice=Number(account&&account.prices?.[p.id]!=null?account.prices[p.id]:retailPrice),wholesaleMinQty=Math.max(1,Number(p.wholesaleMinQty||fallback.wholesaleMinQty||12));return{id:p.id,category:String(p.category||fallback.category||'Хлеб'),gallery:Array.isArray(p.gallery)?p.gallery.filter(Boolean).slice(0,6):[],price:wholesalePrice,retailPrice,wholesalePrice,wholesaleMinQty,pieces:wholesaleMinQty,weight:Number(p.weight||fallback.weight||600),image:p.image||fallback.image||'icon.svg',bg:fallback.bg||'#e9dfca',text:{ru:[ru,p.descriptions?.ru||fallback.text?.ru?.[1]||'',ru],en:[en,p.descriptions?.en||fallback.text?.en?.[1]||'',en],es:[es,p.descriptions?.es||fallback.text?.es?.[1]||'',es]}};
  }
  let lastCatalogSignature='';
  const catalogSignature=list=>JSON.stringify((list||[]).map(p=>({
   id:String(p.id),active:p.active!==false&&p.storefrontVisible!==false,price:Number(p.price||0),retailPrice:Number(p.retailPrice||0),
   wholesalePrice:Number(p.wholesalePrice||0),wholesaleMinQty:Number(p.wholesaleMinQty||0),
-  weight:Number(p.weight||0),image:String(p.image||''),names:p.text||p.names||{},descriptions:p.descriptions||{}
+  weight:Number(p.weight||0),image:String(p.image||''),category:String(p.category||''),gallery:Array.isArray(p.gallery)?p.gallery:[],names:p.text||p.names||{},descriptions:p.descriptions||{}
  })));
  function refreshRestaurantProducts(){
   try{
@@ -36,6 +36,7 @@
    const nextSignature=catalogSignature(PRODUCTS);
    if(nextSignature!==lastCatalogSignature){
     lastCatalogSignature=nextSignature;
+    renderCategories?.();
     renderProducts?.();
    }
    renderCart?.();
