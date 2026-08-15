@@ -184,3 +184,28 @@
   color:#fff;
 }
 .order-archive-tabs button:hover:not(.active){background:#f4f7f3}
+
+
+/* Panora 5.81 — never disguise missing order data as €0.00 */
+#orderRows .order-total-error{
+  display:block;
+  color:#a8463e!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+#orderRows .order-total-error-hint{
+  display:block;
+  margin-top:4px;
+  color:#7d5b57;
+  font-size:11px;
+  line-height:1.25;
+}
+#orderRows .order-ship-disabled,
+#orderRows .order-ship-disabled:hover{
+  border-color:#cfd7d0!important;
+  background:#e7ece8!important;
+  color:#78827b!important;
+  cursor:not-allowed!important;
+  opacity:1!important;
+}

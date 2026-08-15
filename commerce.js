@@ -86,21 +86,52 @@ const commerceProductLabel = (id) => {
     (id === "plain" ? "Льняной бездрожжевой хлеб с семенами" :
       id === "pumpkin" ? "Тыквенный бездрожжевой хлеб с семенами" : id);
 };
-const orderSubtotal = (o) =>
-  o.items.reduce(
-    (sum, i) =>
-      sum +
-      i.quantity *
-        Number((o.prices || restaurant(o.restaurantId).prices)[i.product]),
-    0,
-  );
+const orderPricingState = (o) => {
+  const items = Array.isArray(o?.items) ? o.items : [];
+  if (!items.length) {
+    return {valid:false, reason:"empty", subtotal:null, total:null, invalidItems:[]};
+  }
+  const restaurantPrices = restaurant(o.restaurantId)?.prices || {};
+  const snapshotPrices = o.prices && typeof o.prices === "object" ? o.prices : null;
+  const priceSource = snapshotPrices || restaurantPrices;
+  const invalidItems = [];
+  let subtotal = 0;
+
+  items.forEach((item) => {
+    const qty = Number(item?.quantity);
+    const hasPrice = Object.prototype.hasOwnProperty.call(priceSource, item?.product);
+    const price = hasPrice ? Number(priceSource[item.product]) : NaN;
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
+      invalidItems.push({
+        product:item?.product,
+        quantity:qty,
+        price,
+        reason:!Number.isFinite(qty)||qty<=0?"quantity":"price"
+      });
+      return;
+    }
+    subtotal += qty * price;
+  });
+
+  if (invalidItems.length) {
+    return {valid:false, reason:"pricing", subtotal:null, total:null, invalidItems};
+  }
+  const taxRate = taxEnabled(o) ? Number(o.taxRate ?? bakerySettings.taxRate) : 0;
+  const total = subtotal * (1 + taxRate / 100);
+  return {valid:Number.isFinite(total) && total > 0, reason:"ok", subtotal, total, invalidItems:[]};
+};
+const orderSubtotal = (o) => orderPricingState(o).subtotal ?? 0;
 const taxEnabled = (o) =>
   o.taxEnabled !== undefined
     ? Boolean(o.taxEnabled)
     : Number(o.taxRate ?? bakerySettings.taxRate) > 0;
-const orderTotal = (o) =>
-  orderSubtotal(o) *
-  (1 + (taxEnabled(o) ? Number(o.taxRate ?? bakerySettings.taxRate) : 0) / 100);
+const orderTotal = (o) => orderPricingState(o).total ?? 0;
+const orderTotalHtml = (o) => {
+  const pricing = orderPricingState(o);
+  if (pricing.valid) return `<strong>${euro(pricing.total)}</strong>`;
+  if (pricing.reason === "empty") return `<strong class="order-total-error">Нет позиций</strong><small class="order-total-error-hint">Отгрузка заблокирована</small>`;
+  return `<strong class="order-total-error">Цена не рассчитана</strong><small class="order-total-error-hint">Проверьте состав и цены</small>`;
+};
 const shippedFor = (id) =>
   deliveryNotes
     .filter((n) => n.restaurantId === id)
@@ -364,13 +395,16 @@ function customerConfirmationHtml(order) {
 }
 function orderActions(o) {
   const step=(n,label,state)=>`<span class="order-flow-step ${state}" aria-label="Этап ${n}: ${label}"><b>${state==='done'?'✓':n}</b><span>${label}</span></span>`;
+  const pricing=orderPricingState(o);
   if (o.status === "cancelled")
     return `<div class="order-flow order-flow-cancelled"><span>Заказ отменён</span></div>`;
   if (o.status === "shipped")
     return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
     return `<div class="order-flow">${step(1,'Подтвердить','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
-  return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small ship primary-flow" data-ship="${o.id}" title="После отгрузки будет создана накладная">Отгрузить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
+  return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions">${pricing.valid
+    ? `<button class="action-small ship primary-flow" data-ship="${o.id}" title="После отгрузки будет создана накладная">Отгрузить заказ</button>`
+    : `<button class="action-small ship primary-flow order-ship-disabled" type="button" disabled title="${pricing.reason==='empty'?'В заказе нет позиций':'Не рассчитана цена одной или нескольких позиций'}">Отгрузка недоступна</button>`}<button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
 }
 
 const orderIsArchived=o=>['shipped','cancelled'].includes(String(o?.status||''));
@@ -520,7 +554,7 @@ function renderOrders() {
             </div></td>
             <td class="order-mobile-partner" data-label="Партнёр">${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td>
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
-            <td class="order-mobile-total" data-label="Сумма"><strong>${euro(orderTotal(o))}</strong></td>
+            <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
             <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
             <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="PN-${String(o.number).padStart(4, "0")}">✉ Сообщения</button></td>
           </tr>`;
@@ -952,8 +986,17 @@ function traysAtRestaurant(restaurantId) {
     );
 }
 function openShipment(id) {
-  const o = orders.find((x) => x.id === id),
-    r = restaurant(o.restaurantId),
+  const o = orders.find((x) => x.id === id);
+  if (!o) return;
+  const pricing = orderPricingState(o);
+  if (!pricing.valid) {
+    alert(pricing.reason === "empty"
+      ? "Отгрузка невозможна: в заказе нет позиций. Добавьте состав заказа или отмените его."
+      : "Отгрузка невозможна: цена одной или нескольких позиций не рассчитана. Проверьте персональные цены партнёра и состав заказа.");
+    return;
+  }
+  const r = restaurant(o.restaurantId),
+    
     prices = o.prices || r.prices,
     form = document.querySelector("#shipmentForm"),
     summary = document.querySelector("#shipmentSummary"),
@@ -1007,6 +1050,13 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     f = new FormData(form),
     o = orders.find((x) => x.id === f.get("orderId"));
   if (!o) return false;
+  const pricingState = orderPricingState(o);
+  if (!pricingState.valid) {
+    alert(pricingState.reason === "empty"
+      ? "Нельзя создать накладную: в заказе нет позиций."
+      : "Нельзя создать накладную: цена одной или нескольких позиций не рассчитана.");
+    return false;
+  }
   const orderedItems = structuredClone(o.items),
     actualItems = orderedItems
       .map((i) => ({
