@@ -113,7 +113,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
   const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
@@ -215,6 +215,52 @@
     if(response.status===204)return null;
     const text=await response.text();return text?JSON.parse(text):null;
   };
+
+  /* Panora 6.07 — raw material movement sync.
+     Automatic bake consumption remains deterministic/virtual, so it can never
+     be duplicated by two devices. Only manual/opening movements are persisted. */
+  const rawStockKey='panora-raw-stock-movements';
+  const readRawStockLocal=()=>{try{const value=JSON.parse(localStorage.getItem(rawStockKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+  const rawStockTime=item=>String(item?.updatedAt||item?.createdAt||`${item?.date||''}T00:00:00.000Z`||'');
+  const rawStockToCloud=item=>({
+    id:String(item.id),movement_date:String(item.date||'').slice(0,10),ingredient_key:String(item.key||''),ingredient_name:String(item.name||''),
+    unit:String(item.unit||'g'),movement_type:String(item.type||'correction_plus'),quantity:Math.max(0,Number(item.quantity||0)),
+    note:item.note||null,device_id:item.deviceId||null,created_at:item.createdAt||new Date().toISOString(),updated_at:item.updatedAt||item.createdAt||new Date().toISOString(),deleted_at:item.deletedAt||null
+  });
+  const rawStockFromCloud=row=>({
+    id:String(row.id),date:row.movement_date,key:row.ingredient_key,name:row.ingredient_name,unit:row.unit||'g',type:row.movement_type,
+    quantity:Number(row.quantity||0),note:row.note||'',deviceId:row.device_id||'',createdAt:row.created_at||'',updatedAt:row.updated_at||row.created_at||'',deletedAt:row.deleted_at||'',system:String(row.id||'').startsWith('opening:')
+  });
+  const rawStockState=(text,state='synced',detail='')=>window.dispatchEvent(new CustomEvent('panora:raw-stock-cloud-state',{detail:{text,state,detail}}));
+  function mergeRawStock(remoteRows,localRows){
+    const remote=new Map((remoteRows||[]).map(row=>[String(row.id),rawStockFromCloud(row)])),merged=new Map(remote),outgoing=[];
+    (localRows||[]).forEach(local=>{
+      if(!local?.id)return;
+      const id=String(local.id),cloud=merged.get(id),localAt=rawStockTime(local),cloudAt=rawStockTime(cloud);
+      if(!cloud){merged.set(id,local);outgoing.push(local);return}
+      if(localAt>cloudAt){merged.set(id,local);outgoing.push(local)}
+      // Cloud wins equal timestamps. This is important for deterministic opening rows on a second device.
+    });
+    return {merged:[...merged.values()],outgoing};
+  }
+  async function syncRawStockNow({quiet=false}={}){
+    if(!ready)return false;
+    if(!navigator.onLine){markPending('rawStock');rawStockState('Офлайн · сохранено','local');return false}
+    if(!quiet)rawStockState('Синхронизация…','syncing');
+    const remoteRows=await request('raw_material_movements?select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at&order=movement_date.asc,created_at.asc');
+    const localRows=readRawStockLocal(),{merged,outgoing}=mergeRawStock(remoteRows,localRows);
+    if(outgoing.length){
+      await request('raw_material_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(rawStockToCloud))});
+    }
+    const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+    const current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+    if(JSON.stringify(canonical)!==JSON.stringify(current)){
+      localStorage.setItem(rawStockKey,JSON.stringify(canonical));
+      window.dispatchEvent(new CustomEvent('panora:raw-stock-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}));
+    }
+    clearPending('rawStock');rawStockState('Облако ✓','synced');return true;
+  }
+
   async function acquireTechCardLock(productId){
     if(!productId)throw new Error('Не удалось определить технологическую карту');
     if(!ready||!navigator.onLine)throw new Error('Для безопасного редактирования технологической карты требуется подключение к облаку.');
@@ -1237,7 +1283,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(pending.plans)await savePlansNow();
       if(pending.orders){await saveOrdersNow();clearPending('orders')}
       if(pending.finance){await syncFinanceNow();clearPending('finance')}
-      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();await loadOperationEvents();
+      if(pending.rawStock)await syncRawStockNow();
+      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();await syncRawStockNow({quiet:true});await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){
@@ -1252,7 +1299,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['журнал',loadOperationEvents]],errors=[];
+    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
@@ -1270,6 +1317,11 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
     }),2000);
+    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>syncRawStockNow({quiet:true}).catch(error=>{
+      if(window.panoraHandleSessionError?.(error))return;
+      rawStockState('Ошибка облака','error',error?.message||String(error));
+      console.warn('Panora raw stock refresh',error);
+    }),3000);
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
@@ -1280,9 +1332,13 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
+  window.addEventListener('panora:raw-stock-local-change',()=>{
+    markPending('rawStock');rawStockState(navigator.onLine?'Отправляем…':'Офлайн · сохранено',navigator.onLine?'syncing':'local');
+    if(ready&&navigator.onLine)syncRawStockNow().catch(error=>{rawStockState('Ошибка облака','error',error?.message||String(error));console.warn('Panora raw stock save',error)});
+  });
   window.addEventListener('online',()=>{pending=readPending();if(ready)retrySync()});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
   const startPendingWatchdog=()=>{
@@ -1296,9 +1352,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready)refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));
+    if(!document.hidden&&ready){refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error))}
   });
   window.addEventListener('focus',()=>{
-    if(ready)refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));
+    if(ready){refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error))}
   });
 })();
