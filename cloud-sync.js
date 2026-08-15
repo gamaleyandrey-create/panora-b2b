@@ -417,7 +417,7 @@
     if(rows?.length){
       await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       const remote={};
-      rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0)})});
+      rows.forEach(row=>{const pos=Number(row.position||0),localItem=local?.[row.product_id]?.[pos]||{};(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0),sourceIngredientName:row.source_ingredient_name??localItem.sourceIngredientName??'',sourceUnit:row.source_unit??localItem.sourceUnit??'g',sourceYieldPct:Number(row.source_yield_pct??localItem.sourceYieldPct??0)})});
       recipes=remote;if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-2');window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
       if(typeof renderAll==='function')renderAll();
     }else if(Object.keys(local).length){recipes=local;ready=true;recipeDirty=true;recipeRevision++;await flushRecipes()}
@@ -430,8 +430,16 @@
       status('Синхронизация рецептур…');
       await guardSection('recipes','recipe_items');
       await request('recipe_items?id=not.is.null',{method:'DELETE'});
-      const payload=Object.entries(snapshot).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),updated_at:new Date().toISOString()})));
-      if(payload.length)await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+      const payload=Object.entries(snapshot).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),source_ingredient_name:item.sourceIngredientName||null,source_unit:item.sourceUnit||null,source_yield_pct:Number(item.sourceYieldPct||0)||null,updated_at:new Date().toISOString()})));
+      if(payload.length){
+        try{await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)})}
+        catch(error){
+          if(!/source_ingredient_name|source_unit|source_yield_pct|PGRST204/i.test(String(error?.message||error)))throw error;
+          const legacy=payload.map(({source_ingredient_name,source_unit,source_yield_pct,...row})=>row);
+          await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(legacy)});
+          status('Облако ✓ · для полуфабрикатов выполните SQL Panora 5.83');
+        }
+      }
       revisions.recipes=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('recipes');delete conflicts.recipes;saveConflicts();
       if(recipeRevision===revision){recipeDirty=false;clearPending('recipes')}
       status('Облако ✓');return true;
