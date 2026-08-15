@@ -50,3 +50,41 @@
   .finance-expense-row{grid-template-columns:1fr}.finance-dashboard-period{align-items:stretch;flex-direction:column}.finance-dashboard-period>*{width:100%}
   .finance-title-row{align-items:flex-start;flex-direction:column;gap:5px}
 }
+
+
+/* Panora 6.05 — procurement is inventory, not a second P&L expense */
+@media(min-width:1101px){
+  .finance-secondary-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+.finance-inventory-kpi{
+  border-color:#d8dfce!important;
+  background:#f7f7ee!important;
+}
+.finance-inventory-kpi strong{color:#6a6038!important}
+.finance-inventory-row td{background:#fffdf6!important}
+.finance-accounting-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:0 8px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.finance-accounting-badge.inventory{
+  background:#f3efd8;
+  color:#6e6031;
+}
+.finance-accounting-badge.operating{
+  background:#eaf2ea;
+  color:#356047;
+}
+.finance-inventory-row td small{
+  margin-top:4px;
+  max-width:150px;
+  line-height:1.25;
+}
+@media(max-width:1280px) and (min-width:1101px){
+  .finance-secondary-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

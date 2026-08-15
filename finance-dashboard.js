@@ -107,6 +107,17 @@
     return {gross,net,vat,deductibleVat:row.vatDeductible!==false?vat:0};
   };
 
+  // Raw-material purchases create inventory/cash outflow, not a second P&L expense.
+  // COGS is already recognised above through the shipped bread recipes.
+  const isRawMaterialPurchase=row=>{
+    const category=normalize(row?.category);
+    const description=normalize(row?.description);
+    return category==='сырье'||
+      category==='сырье (запас)'||
+      category==='закупка сырья'||
+      description.startsWith('закупка сырья');
+  };
+
   function calculate(){
     const notes=read('panora-delivery-notes',[]).filter(note=>inPeriod(note.date));
     const productMap=new Map(),partnerMap=new Map();
@@ -132,10 +143,20 @@
     });
 
     const periodExpenses=expenses.filter(row=>inPeriod(row.date));
-    let expensesNet=0,inputVat=0;
-    periodExpenses.forEach(row=>{const x=expenseParts(row);expensesNet+=x.net;inputVat+=x.deductibleVat});
+    let expensesNet=0,inputVat=0,rawPurchasesNet=0,rawPurchasesGross=0,rawPurchasesVat=0;
+    periodExpenses.forEach(row=>{
+      const x=expenseParts(row);
+      inputVat+=x.deductibleVat;
+      if(isRawMaterialPurchase(row)){
+        rawPurchasesNet+=x.net;
+        rawPurchasesGross+=x.gross;
+        rawPurchasesVat+=x.vat;
+      }else{
+        expensesNet+=x.net;
+      }
+    });
     const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-expensesNet;
-    return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,inputVat,grossProfit,operatingProfit,
+    return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
       vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses};
   }
 
@@ -169,6 +190,10 @@
     document.querySelector('#financeGrossMargin').textContent=`Маржа: ${pct(grossMargin)}`;
 
     document.querySelector('#financeExpensesNet').textContent=money(x.expensesNet);
+    const rawPurchases=document.querySelector('#financeRawPurchasesNet');
+    if(rawPurchases)rawPurchases.textContent=money(x.rawPurchasesNet);
+    const rawPurchasesGross=document.querySelector('#financeRawPurchasesGross');
+    if(rawPurchasesGross)rawPurchasesGross.textContent=`С НДС: ${money(x.rawPurchasesGross)}`;
     document.querySelector('#financePieces').textContent=`${x.pieces} шт.`;
     const avgProfit=x.pieces?x.operatingProfit/x.pieces:0;
     const avgProfitValue=document.querySelector('#financeAvgProfitValue');
@@ -212,9 +237,12 @@
     const expenseRows=document.querySelector('#financeExpenseRows');
     const rows=x.periodExpenses.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     expenseRows.innerHTML=rows.length?rows.map(row=>{
-      const part=expenseParts(row);
-      return `<tr><td>${esc(row.date)}</td><td>${esc(row.category)}</td><td>${esc(row.description||'—')}</td><td>${row.expenseType==='fixed'?'Постоянный':'Переменный'}</td><td>${money(part.gross)}</td><td>${money(part.vat)}${row.vatDeductible===false?' <small>без вычета</small>':''}</td><td>${money(part.net)}</td><td><button type="button" class="finance-row-action" data-finance-edit="${row.id}">Изменить</button><button type="button" class="finance-row-action danger" data-finance-delete="${row.id}">Удалить</button></td></tr>`
-    }).join(''):'<tr><td colspan="8">Расходов за выбранный период нет.</td></tr>';
+      const part=expenseParts(row),inventory=isRawMaterialPurchase(row);
+      const accounting=inventory
+        ? '<span class="finance-accounting-badge inventory">Запас сырья</span><small>не уменьшает прибыль повторно</small>'
+        : '<span class="finance-accounting-badge operating">Операционный</span><small>уменьшает операционную прибыль</small>';
+      return `<tr class="${inventory?'finance-inventory-row':''}"><td>${esc(row.date)}</td><td>${esc(row.category)}</td><td>${esc(row.description||'—')}</td><td>${row.expenseType==='fixed'?'Постоянный':'Переменный'}</td><td>${money(part.gross)}</td><td>${money(part.vat)}${row.vatDeductible===false?' <small>без вычета</small>':''}</td><td>${money(part.net)}</td><td>${accounting}</td><td><button type="button" class="finance-row-action" data-finance-edit="${row.id}">Изменить</button><button type="button" class="finance-row-action danger" data-finance-delete="${row.id}">Удалить</button></td></tr>`
+    }).join(''):'<tr><td colspan="9">Расходов и закупок за выбранный период нет.</td></tr>';
 
     root.querySelectorAll('[data-finance-edit]').forEach(button=>button.onclick=()=>openExpense(expenses.find(row=>row.id===button.dataset.financeEdit)));
     root.querySelectorAll('[data-finance-delete]').forEach(button=>button.onclick=()=>{if(confirm('Удалить этот расход?'))remove(button.dataset.financeDelete)});
@@ -227,7 +255,11 @@
   }
   function openExpense(row=null){
     form.reset();form.id.value=row?.id||'';form.date.value=row?.date||iso(new Date());
-    form.category.value=row?.category||'Упаковка';form.description.value=row?.description||'';
+    const category=row?.category||'Упаковка';
+    if(category&&![...form.category.options].some(option=>option.value===category)){
+      form.category.add(new Option(category,category));
+    }
+    form.category.value=category;form.description.value=row?.description||'';
     form.expenseType.value=row?.expenseType||'variable';form.grossAmount.value=row?String(row.grossAmount).replace('.',','):'';
     form.vatRate.value=row?String(row.vatRate).replace('.',','):'21';form.vatDeductible.checked=row?.vatDeductible!==false;
     previewExpense();dialog.showModal();
