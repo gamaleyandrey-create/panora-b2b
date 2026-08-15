@@ -77,7 +77,7 @@
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
 <link rel="stylesheet" href="finance-dashboard.css?v=6050">
-<link rel="stylesheet" href="admin-partner-theme.css?v=6040">
+<link rel="stylesheet" href="admin-partner-theme.css?v=6080">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -129,6 +129,7 @@
           <div class="date-jump"><label><span id="planDateJumpLabel">Выбрать дату</span><input id="planDateJump" data-panora-no-draft="1" type="date"></label><button id="goToPlanDate">Показать неделю</button></div>
         </div>
         <div class="summary-grid"><article><span data-t="planned">Запланировано</span><strong id="plannedPieces">0 шт.</strong></article><article><span data-t="ordered">Заказано</span><strong id="orderedPieces">0 шт.</strong></article><article><span data-t="reserve">Свободно</span><strong id="freePieces">0 шт.</strong></article></div>
+        <section class="bake-completion-board" id="bakeCompletionBoard" aria-label="Фактическая выпечка"></section>
         <div id="planList" class="plan-list"></div>
       </div>
       <div class="view" id="view-recipes">
@@ -147,7 +148,7 @@
           <div>
             <span class="kicker">PANORA</span>
             <h2>Склад сырья</h2>
-            <p>Фактические остатки ингредиентов. Прошедшие дни выпечки автоматически списывают сырьё по заказам и рецептурам.</p>
+            <p>Фактические остатки ингредиентов. Сырьё списывается после подтверждения «Выпечка завершена» по фактически выпеченному количеству.</p>
           </div>
           <div class="raw-stock-head-actions">
             <span class="raw-stock-cloud-state" id="rawStockCloudState" data-state="syncing">Облако…</span>
@@ -186,11 +187,11 @@
               <tbody id="rawStockMovementRows"></tbody>
             </table>
           </div>
-          <p class="raw-stock-note">Автосписание выполняется только для завершившихся календарных дней и рассчитывается одинаково на обоих устройствах. Ручные движения синхронизируются через Supabase; офлайн-изменения отправляются после восстановления связи.</p>
+          <p class="raw-stock-note">Сырьё списывается по подтверждённому факту выпечки и рассчитывается одинаково на обоих устройствах. Ручные движения и завершённые выпечки синхронизируются через Supabase; офлайн-изменения отправляются после восстановления связи.</p>
         </section>
       </div>
       <div class="view" id="view-stock">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Выпечка приходуется автоматически в день производства, отгрузка списывается по накладной.</p></div><button class="primary" id="addMovement" data-t="movement">+ Корректировка</button></div>
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Готовый хлеб приходуется после подтверждения фактической выпечки, отгрузка списывается по накладной.</p></div><button class="primary" id="addMovement" data-t="movement">+ Корректировка</button></div>
 
         <div id="stockWarnings" class="stock-warning-list" hidden></div>
 
@@ -204,7 +205,7 @@
         <div id="stockCards" class="stock-product-grid"></div>
 
         <div class="stock-history-head">
-          <div><h3>Движения склада</h3><p>Автоматическая выпечка, отгрузки и ручные корректировки.</p></div>
+          <div><h3>Движения склада</h3><p>Фактическая выпечка, отгрузки и ручные корректировки.</p></div>
           <nav class="stock-movement-tabs" id="stockMovementTabs" aria-label="Движения склада"></nav>
         </div>
         <div class="table-wrap stock-movement-table"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
@@ -383,10 +384,31 @@
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><div class="shipment-trays"><label><span>Передано возвратных лотков, шт.</span><input name="traysDelivered" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label><label><span>Возвращено лотков партнёром, шт.</span><input name="traysReturned" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label></div><div class="shipment-trays-preview"><span>Лотков останется у партнёра</span><strong id="shipmentTrayBalance">0 шт.</strong></div><label><span>Плановая дата оплаты</span><input name="paymentDueDate" type="date"><small>Необязательно. Дата будет видна партнёру и появится в напоминаниях.</small></label><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" placeholder="Введите сумму или оставьте пустым"></label><label><span>Способ оплаты</span><select name="method"><option selected>Наличные</option><option>Банковский перевод</option><option>Карта</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
   <dialog id="paymentDialog"><form method="dialog" id="paymentForm"><h3>Принять оплату</h3><p class="form-hint">Общую оплату Panora автоматически распределит по самым старым неоплаченным накладным. Если останется сумма после погашения долгов, она станет авансом / переплатой.</p><label><span>Партнёр</span><select name="restaurant" id="paymentRestaurant" required></select></label><label><span>Как учесть оплату</span><select name="allocationMode" id="paymentAllocationMode"><option value="fifo" selected>Общая оплата — по старым накладным автоматически</option><option value="note">По конкретной накладной</option></select></label><label id="paymentDeliveryNoteLabel" hidden><span>Накладная</span><select name="deliveryNoteId" id="paymentDeliveryNote"></select><small>Если сумма больше остатка по накладной, лишняя часть будет зачтена в другие долги или станет авансом.</small></label><label><span>Сумма, €</span><input name="amount" type="number" min="0.01" step="0.01" placeholder="Введите сумму" required></label><label><span>Способ</span><select name="method"><option selected>Наличные</option><option>Банковский перевод</option><option>Карта</option></select></label><label><span>Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="savePayment">Принять оплату</button></div></form></dialog>
   <dialog id="accountDetailDialog" class="account-detail-dialog"><div class="account-detail-shell"><button type="button" class="dialog-close" id="closeAccountDetail" aria-label="Закрыть">×</button><span class="kicker">PANORA</span><h2 id="accountDetailName">Партнёр</h2><p id="accountDetailContact"></p><div class="account-detail-summary"><article id="accountDetailBalanceCard"><span id="accountDetailBalanceLabel">Задолженность</span><strong id="accountDetailDebt">0 €</strong></article><article><span>Отгружено</span><strong id="accountDetailShipped">0 €</strong></article><article><span>Оплачено</span><strong id="accountDetailPaid">0 €</strong></article></div><div class="account-detail-head"><h3>История операций</h3><button type="button" class="primary" id="accountDetailPayment">+ Принять оплату</button></div><div id="accountDetailHistory" class="account-detail-history"></div></div></dialog>
+  <dialog id="bakeCompletionDialog" class="bake-completion-dialog">
+    <form method="dialog" id="bakeCompletionForm">
+      <button type="button" class="dialog-close" id="bakeCompletionClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA</span>
+      <h3>Выпечка завершена</h3>
+      <input type="hidden" name="bakeDate">
+      <p class="bake-completion-date" id="bakeCompletionDateLabel"></p>
+      <p class="form-hint">Укажите фактически выпеченное количество. Брак тоже расходует сырьё, но не поступает на склад готового хлеба.</p>
+      <div class="bake-completion-table-wrap">
+        <table class="bake-completion-table">
+          <thead><tr><th>Хлеб</th><th>Заказано</th><th>Выпечено всего</th><th>Брак</th><th>На склад</th></tr></thead>
+          <tbody id="bakeCompletionRows"></tbody>
+        </table>
+      </div>
+      <div class="bake-completion-summary" id="bakeCompletionSummary"></div>
+      <label><span>Примечание</span><input name="note" maxlength="240" placeholder="Например: 2 шт. брак — трещина корки"></label>
+      <p class="plan-error" id="bakeCompletionError" role="alert"></p>
+      <div class="dialog-actions"><button type="button" id="bakeCompletionCancel">Отмена</button><button type="submit" class="primary">Сохранить факт выпечки</button></div>
+    </form>
+  </dialog>
+
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6020"></script>
+<script src="admin.js?v=6080"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -398,7 +420,7 @@
 <script src="document-library.js?v=3390"></script>
 <script src="invoice-preview.js?v=3390"></script>
 <script src="admin-localization.js?v=3390"></script>
-<script src="product-admin.js?v=6020"></script>
+<script src="product-admin.js?v=6080"></script>
 <script src="calendar-plan.js?v=3390"></script>
 <script src="qrcode-browser.js?v=3390"></script>
 <script src="delivery-qr.js?v=3390"></script>
@@ -406,14 +428,14 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=6070"></script>
+<script src="purchase-costs.js?v=6080"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
 <script src="order-communication.js?v=3398"></script>
 <script src="audit-log.js?v=3390"></script>
 <script src="input-stability.js?v=5430"></script>
-<script src="cloud-sync.js?v=6070"></script>
+<script src="cloud-sync.js?v=6080"></script>
 <script src="recipe-percent.js?v=6020"></script>
 <script src="daily-order-summary.js?v=5860"></script>
 <script src="recovery-guard.js?v=3390"></script>
@@ -421,7 +443,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6070"></script>
+<script src="pwa-stable.js?v=6080"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
