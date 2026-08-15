@@ -1348,7 +1348,11 @@ window.panoraRecalculateBalances=recalculateBalances;
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
     markPending('rawStock');rawStockState(navigator.onLine?'Отправляем…':'Офлайн · сохранено',navigator.onLine?'syncing':'local');
-    if(ready&&navigator.onLine)syncRawStockNow().catch(error=>{rawStockState('Ошибка облака','error',error?.message||String(error));console.warn('Panora raw stock save',error)});
+    if(ready&&navigator.onLine)syncRawStockNow().catch(error=>{
+      const message=error?.message||String(error);
+      rawStockState('Ошибка облака · сохранено','error',`Движение сохранено на устройстве. Повторите синхронизацию. ${message}`);
+      console.warn('Panora raw stock save',error);
+    });
   });
   window.addEventListener('panora:bake-completion-local-change',()=>{markPending('bakeCompletions');if(ready&&navigator.onLine)syncBakeCompletionsNow().catch(error=>console.warn('Panora bake completion save',error))});
   window.addEventListener('online',()=>{pending=readPending();if(ready)retrySync()});

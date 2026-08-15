@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=6070">
+  <link rel="stylesheet" href="purchase-costs.css?v=6100">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5860">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -77,7 +77,7 @@
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
 <link rel="stylesheet" href="finance-dashboard.css?v=6050">
-<link rel="stylesheet" href="admin-partner-theme.css?v=6090">
+<link rel="stylesheet" href="admin-partner-theme.css?v=6100">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -151,7 +151,7 @@
             <p>Фактические остатки ингредиентов. Сырьё списывается после подтверждения «Выпечка завершена» по фактически выпеченному количеству.</p>
           </div>
           <div class="raw-stock-head-actions">
-            <span class="raw-stock-cloud-state" id="rawStockCloudState" data-state="syncing">Облако…</span>
+            <button type="button" class="raw-stock-cloud-state" id="rawStockCloudState" data-state="syncing" title="Нажмите, чтобы повторить синхронизацию">Облако…</button>
             <button class="secondary" type="button" id="rawStockOpenPurchase">Открыть закупку</button>
             <button class="primary" type="button" id="rawStockAddMovement">+ Приход / корректировка</button>
           </div>
@@ -187,7 +187,7 @@
               <tbody id="rawStockMovementRows"></tbody>
             </table>
           </div>
-          <p class="raw-stock-note">Сырьё списывается по подтверждённому факту и по рецептуре, сохранённой в момент завершения выпечки. Последующие изменения рецептуры не переписывают старые остатки. Движения и факты синхронизируются через Supabase.</p>
+          <p class="raw-stock-note">Сырьё списывается по подтверждённому факту и по рецептуре, сохранённой в момент завершения выпечки. Приход и корректировка сначала сохраняются на этом устройстве, затем синхронизируются через Supabase. Ошибка облака не блокирует исправление остатка.</p>
         </section>
       </div>
       <div class="view" id="view-stock">
@@ -405,6 +405,28 @@
     </form>
   </dialog>
 
+  <dialog id="rawStockMovementDialog" class="raw-stock-movement-dialog">
+    <form method="dialog" id="rawStockMovementForm">
+      <button type="button" class="dialog-close" id="rawStockMovementClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA</span>
+      <h3>Движение сырья</h3>
+      <label><span>Дата</span><input name="date" type="date" required></label>
+      <label><span>Ингредиент</span><select name="ingredient" required></select></label>
+      <label><span>Операция</span><select name="type">
+        <option value="purchase_in">Приход закупки</option>
+        <option value="inventory_set">Инвентаризация — установить остаток</option>
+        <option value="correction_plus">Корректировка +</option>
+        <option value="written_off">Списание / брак</option>
+        <option value="correction_minus">Корректировка −</option>
+      </select></label>
+      <label><span id="rawStockQuantityLabel">Количество</span><input name="quantity" type="number" min="0" step="0.01" required></label>
+      <label><span>Примечание</span><input name="note" maxlength="180" placeholder="Например: поставка муки"></label>
+      <div class="raw-stock-movement-preview" id="rawStockMovementPreview"></div>
+      <div class="dialog-actions"><button type="button" id="rawStockMovementCancel">Отмена</button><button type="submit" class="primary">Сохранить</button></div>
+    </form>
+  </dialog>
+
+
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
@@ -428,14 +450,14 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=6090"></script>
+<script src="purchase-costs.js?v=6100"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
 <script src="order-communication.js?v=3398"></script>
 <script src="audit-log.js?v=3390"></script>
 <script src="input-stability.js?v=5430"></script>
-<script src="cloud-sync.js?v=6080"></script>
+<script src="cloud-sync.js?v=6100"></script>
 <script src="recipe-percent.js?v=6020"></script>
 <script src="daily-order-summary.js?v=5860"></script>
 <script src="recovery-guard.js?v=3390"></script>
@@ -443,31 +465,10 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6090"></script>
+<script src="pwa-stable.js?v=6100"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
-
-  <dialog id="rawStockMovementDialog" class="raw-stock-movement-dialog">
-    <form method="dialog" id="rawStockMovementForm">
-      <button type="button" class="dialog-close" id="rawStockMovementClose" aria-label="Закрыть">×</button>
-      <span class="kicker">PANORA</span>
-      <h3>Движение сырья</h3>
-      <label><span>Дата</span><input name="date" type="date" required></label>
-      <label><span>Ингредиент</span><select name="ingredient" required></select></label>
-      <label><span>Операция</span><select name="type">
-        <option value="purchase_in">Приход закупки</option>
-        <option value="inventory_set">Инвентаризация — установить остаток</option>
-        <option value="correction_plus">Корректировка +</option>
-        <option value="written_off">Списание / брак</option>
-        <option value="correction_minus">Корректировка −</option>
-      </select></label>
-      <label><span id="rawStockQuantityLabel">Количество</span><input name="quantity" type="number" min="0" step="0.01" required></label>
-      <label><span>Примечание</span><input name="note" maxlength="180" placeholder="Например: поставка муки"></label>
-      <div class="raw-stock-movement-preview" id="rawStockMovementPreview"></div>
-      <div class="dialog-actions"><button type="button" id="rawStockMovementCancel">Отмена</button><button type="submit" class="primary">Сохранить</button></div>
-    </form>
-  </dialog>
 
   <dialog id="financeExpenseDialog" class="finance-expense-dialog">
     <form method="dialog" id="financeExpenseForm">
