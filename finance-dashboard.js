@@ -119,7 +119,16 @@
   };
 
   function calculate(){
-    const notes=read('panora-delivery-notes',[]).filter(note=>inPeriod(note.date));
+    const seenNotes=new Set();
+    const notes=read('panora-delivery-notes',[])
+      .filter(note=>inPeriod(note.date))
+      .slice()
+      .sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||'')))
+      .filter(note=>{
+        const key=note.orderId?`order:${String(note.orderId)}`:`note:${String(note.id||'')}`;
+        if(seenNotes.has(key))return false;
+        seenNotes.add(key);return true;
+      });
     const productMap=new Map(),partnerMap=new Map();
     let grossRevenue=0,revenueNet=0,salesVat=0,cogs=0,pieces=0;
 

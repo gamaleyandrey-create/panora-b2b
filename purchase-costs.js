@@ -218,29 +218,32 @@
   const date=String(completion?.date||''),latest=currentRecipes(),events=[],productDemand=new Map();
   (completion?.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.rawQuantity ?? item?.produced ?? 0));if(product&&qty)productDemand.set(product,(productDemand.get(product)||0)+qty)});
   const push=(row,type,quantity,note,product='')=>{const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;const before=Number(balance.get(row.key)||0),delta=-qty;balance.set(row.key,before+delta);events.push({id:`auto:${completion?.id||date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,type,quantity:qty,delta,note,product,virtual:true,system:true,bakeCompletionId:completion?.id||''})};
-  [...productDemand.entries()].forEach(([product,pieces])=>{const recipe=Array.isArray(latest?.[product])?latest[product]:[];recipe.forEach(item=>{const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;const row=catalog.get(ingredientKey(item));if(!row)return;const required=perBread*pieces;if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);if(fromStock>0)push(row,'bake_out_auto',fromStock,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product);const short=Math.max(0,required-fromStock);if(short>0){const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`,source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · факт ${productName(product)} ${pieces} шт.`,product)}}else push(row,'bake_out_auto',required,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product)})});
+  [...productDemand.entries()].forEach(([product,pieces])=>{const completionItem=(completion?.items||[]).find(item=>String(item?.product||'')===String(product)),recipe=Array.isArray(completionItem?.recipeSnapshot)&&completionItem.recipeSnapshot.length?completionItem.recipeSnapshot:(Array.isArray(latest?.[product])?latest[product]:[]);recipe.forEach(item=>{const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;const row=catalog.get(ingredientKey(item));if(!row)return;const required=perBread*pieces;if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);if(fromStock>0)push(row,'bake_out_auto',fromStock,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product);const short=Math.max(0,required-fromStock);if(short>0){const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`,source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · факт ${productName(product)} ${pieces} шт.`,product)}}else push(row,'bake_out_auto',required,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product)})});
   return events;
  }
 
  function rawLedger(){
   migrateRawStock();
-  const catalog=rawIngredientCatalog(),manual=readRawMovements().filter(item=>!item?.deletedAt),today=localToday(),manualByDate=new Map();
+  const catalog=rawIngredientCatalog(),manual=readRawMovements().filter(item=>!item?.deletedAt),today=localToday(),timeline=[];
   manual.filter(m=>String(m?.date||'')<=today).forEach(m=>{
    const date=String(m.date||today).slice(0,10);
-   if(!manualByDate.has(date))manualByDate.set(date,[]);
-   manualByDate.get(date).push(m);
+   timeline.push({date,time:String(m.createdAt||m.updatedAt||`${date}T08:00:00`),kind:'manual',value:m});
   });
-  manualByDate.forEach(list=>list.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id||'').localeCompare(String(b.id||''))));
-  const completions=readBakeCompletions().filter(item=>item&&!item.deletedAt&&String(item.date||'')<=today),completionByDate=new Map(completions.map(item=>[String(item.date||''),item]));
-  const dates=[...new Set([...manualByDate.keys(),...completionByDate.keys()])].sort(),balances=new Map(),events=[];
-  dates.forEach(date=>{
-   (manualByDate.get(date)||[]).forEach(movement=>{const delta=rawManualApply(balances,movement);events.push({...movement,delta,virtual:false})});
-   const completion=completionByDate.get(date);if(completion)events.push(...rawAutoConsumptionFor(completion,balances,catalog));
+  readBakeCompletions().filter(item=>item&&!item.deletedAt&&String(item.date||'')<=today).forEach(completion=>{
+   const date=String(completion.date||today).slice(0,10);
+   timeline.push({date,time:String(completion.createdAt||`${date}T18:00:00`),kind:'bake',value:completion});
+  });
+  timeline.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||(a.kind==='manual'?-1:1));
+  const balances=new Map(),events=[];
+  timeline.forEach(entry=>{
+   if(entry.kind==='manual'){
+    const movement=entry.value,delta=rawManualApply(balances,movement);
+    events.push({...movement,delta,virtual:false});
+   }else events.push(...rawAutoConsumptionFor(entry.value,balances,catalog));
   });
   manual.filter(m=>String(m?.date||'')>today).forEach(m=>events.push({...m,delta:0,virtual:false,future:true}));
   return {catalog,balances,events};
  }
-
  const rawBalance=key=>Number(rawLedger().balances.get(key)||0);
 
  function setRawInventory(row,quantity,note='Инвентаризация'){
