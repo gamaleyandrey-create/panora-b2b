@@ -16,3 +16,28 @@
 #paymentDeliveryNoteLabel[hidden]{display:none!important}
 @media(max-width:1100px){.finance-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.finance-summary{grid-template-columns:1fr}}
+
+
+/* Panora 5.90 — bakery navigation grouped by workflow */
+.admin-nav .admin-nav-group-label{
+  margin:18px 14px 6px;
+  padding-top:12px;
+  border-top:1px solid rgba(73,94,79,.14);
+  color:#7a857d;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.admin-nav h1 + .admin-nav-group-label{
+  margin-top:0;
+  padding-top:0;
+  border-top:0;
+}
+.admin-nav .admin-nav-group-label + button{
+  margin-top:0;
+}
+@media(max-width:720px){
+  .admin-nav .admin-nav-group-label{display:none!important}
+}

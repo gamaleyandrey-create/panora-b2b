@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#39764d">
   <title>Panora — управление пекарней</title>
-<link rel="stylesheet" href="admin.css?v=5730">
+<link rel="stylesheet" href="admin.css?v=5900">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=3390">
     <link rel="stylesheet" href="date-jump.css?v=3390">
   <link rel="stylesheet" href="easy-plan.css?v=3390">
-  <link rel="stylesheet" href="product-admin.css?v=5730">
+  <link rel="stylesheet" href="product-admin.css?v=5900">
   <link rel="stylesheet" href="product-close.css?v=3390">
   <link rel="stylesheet" href="calendar-plan.css?v=3390">
   <link rel="stylesheet" href="calendar-weekend.css?v=3390">
@@ -96,16 +96,24 @@
   <main class="admin-shell">
     <aside class="admin-nav" id="adminNavigation">
       <h1 data-t="bakery">Пекарня</h1>
+
+      <div class="admin-nav-group-label">Работа</div>
       <button class="active" data-view="orders">Заказы и отгрузки <span class="order-alert-badge" data-new-order-count hidden>0</span></button>
+      <button data-view="plan" data-t="plan">Календарь выпечки</button>
+      <button data-view="purchase" data-t="purchase">Закупка</button>
+      <button data-view="stock" data-t="stock">Склад хлеба</button>
+
+      <div class="admin-nav-group-label">Финансы</div>
       <button data-view="accounting">Оплаты и долги</button>
       <button data-view="finance">Финансы</button>
-      <button data-view="plan" data-t="plan">Календарь выпечки</button>
+
+      <div class="admin-nav-group-label">Партнёры и продукция</div>
       <button data-view="reminders">Напоминания клиентам</button>
       <button data-view="restaurants">Партнёры и цены</button>
       <button data-view="products">Карточки продукции</button>
       <button data-view="recipes" data-t="recipes">Рецептуры</button>
-      <button data-view="purchase" data-t="purchase">Закупка</button>
-      <button data-view="stock" data-t="stock">Склад хлеба</button>
+
+      <div class="admin-nav-group-label">Настройки</div>
       <button data-view="settings">Настройки Panora</button>
     </aside>
     <section class="admin-content">
