@@ -40,20 +40,50 @@ function readBakeCompletions(){try{const value=JSON.parse(localStorage.getItem(B
 function bakeCompletionFor(date){return readBakeCompletions().find(item=>String(item?.date||'')===String(date)&&!item?.deletedAt)||null}
 function saveBakeCompletions(list,{localChange=true}={}){localStorage.setItem(BAKE_COMPLETION_KEY,JSON.stringify(Array.isArray(list)?list:[]));window.dispatchEvent(new CustomEvent('panora:bake-completions-changed'));if(localChange)window.dispatchEvent(new CustomEvent('panora:bake-completion-local-change'))}
 function bakeOrdersForDate(date){return stockRead('panora-orders',[]).filter(order=>order&&order.status!=='cancelled'&&String(order.date||'').slice(0,10)===String(date))}
+function bakeRecipeSnapshot(product){
+ const source=Array.isArray(recipes?.[product])?recipes[product]:[];
+ return source.map(item=>({
+  name:String(item?.name||'').trim(),
+  qty:Math.max(0,Number(item?.qty||0)),
+  unit:String(item?.unit||'g'),
+  sourceIngredientName:String(item?.sourceIngredientName||'').trim(),
+  sourceUnit:String(item?.sourceUnit||item?.unit||'g'),
+  sourceYieldPct:Math.max(0,Number(item?.sourceYieldPct||0))
+ })).filter(item=>item.name&&item.qty>0);
+}
 function bakeSnapshot(date,existing=bakeCompletionFor(date)){
  const orderMap=new Map(),planMap=new Map();
  bakeOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(product&&qty)orderMap.set(product,(orderMap.get(product)||0)+qty)}));
  plans.filter(plan=>String(plan?.bakeDate||'')===String(date)).forEach(plan=>{const product=String(plan?.product||'');if(!product)return;const current=planMap.get(product)||{planned:0,planOrdered:0};current.planned+=Math.max(0,Number(plan?.planned||0));current.planOrdered+=Math.max(0,Number(plan?.ordered||0));planMap.set(product,current)});
  const existingMap=new Map((existing?.items||[]).map(item=>[String(item.product),item])),ids=new Set([...orderMap.keys(),...planMap.keys(),...existingMap.keys()]);
- return [...ids].map(product=>{const orderQty=Math.max(0,Number(orderMap.get(product)||0)),plan=planMap.get(product)||{planned:0,planOrdered:0},prior=existingMap.get(product),suggested=Math.max(0,orderQty||Number(plan.planOrdered||0)||Number(plan.planned||0)),produced=prior?Math.max(0,Number(prior.produced||0)):suggested,waste=prior?Math.max(0,Math.min(produced,Number(prior.waste||0))):0;return{product,ordered:orderQty,planned:Math.max(0,Number(plan.planned||0)),produced,waste,good:Math.max(0,produced-waste),rawQuantity:prior?.rawQuantity===undefined?undefined:Math.max(0,Number(prior.rawQuantity||0))}}).sort((a,b)=>stockProductName(a.product).localeCompare(stockProductName(b.product),'ru'));
+ return [...ids].map(product=>{const orderQty=Math.max(0,Number(orderMap.get(product)||0)),plan=planMap.get(product)||{planned:0,planOrdered:0},prior=existingMap.get(product),suggested=Math.max(0,orderQty||Number(plan.planOrdered||0)||Number(plan.planned||0)),produced=prior?Math.max(0,Number(prior.produced||0)):suggested,waste=prior?Math.max(0,Math.min(produced,Number(prior.waste||0))):0;return{product,ordered:orderQty,planned:Math.max(0,Number(plan.planned||0)),produced,waste,good:Math.max(0,produced-waste),rawQuantity:prior?.rawQuantity===undefined?undefined:Math.max(0,Number(prior.rawQuantity||0)),recipeSnapshot:Array.isArray(prior?.recipeSnapshot)&&prior.recipeSnapshot.length?prior.recipeSnapshot:bakeRecipeSnapshot(product)}}).sort((a,b)=>stockProductName(a.product).localeCompare(stockProductName(b.product),'ru'));
 }
 function migrateLegacyBakeCompletions(){
  if(localStorage.getItem(BAKE_COMPLETION_MIGRATION)==='1')return;
  const today=stockLocalDate(),existing=readBakeCompletions(),byDate=new Map(existing.map(item=>[String(item.date||''),item])),dates=new Set();
  stockRead('panora-orders',[]).filter(order=>order&&order.status!=='cancelled'&&String(order.date||'')<today).forEach(order=>dates.add(String(order.date).slice(0,10)));
  plans.filter(plan=>String(plan?.bakeDate||'')<today).forEach(plan=>dates.add(String(plan.bakeDate)));
- [...dates].sort().forEach(date=>{if(byDate.has(date))return;const orderMap=new Map(),planMap=new Map();bakeOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(product&&qty)orderMap.set(product,(orderMap.get(product)||0)+qty)}));plans.filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||'');if(product)planMap.set(product,(planMap.get(product)||0)+Math.max(0,Number(plan?.ordered||plan?.planned||0)))});const hasOrders=[...orderMap.values()].reduce((sum,value)=>sum+Number(value||0),0)>0,ids=new Set([...orderMap.keys(),...planMap.keys()]);const items=[...ids].map(product=>{const ordered=Math.max(0,Number(orderMap.get(product)||0)),rawQuantity=hasOrders?ordered:Math.max(0,Number(planMap.get(product)||0));return{product,ordered,planned:Math.max(0,Number(planMap.get(product)||0)),produced:ordered,waste:0,good:ordered,rawQuantity}}).filter(item=>item.produced>0||item.rawQuantity>0);if(!items.length)return;const deterministicTime=`${date}T23:59:59.000Z`;existing.push({id:`bake:${date}`,date,items,note:'Перенесено из учёта Panora до 6.08',source:'legacy_inferred',createdAt:deterministicTime,updatedAt:deterministicTime,deviceId:'migration-v608',deletedAt:''})});
+ [...dates].sort().forEach(date=>{if(byDate.has(date))return;const orderMap=new Map(),planMap=new Map();bakeOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(product&&qty)orderMap.set(product,(orderMap.get(product)||0)+qty)}));plans.filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||'');if(product)planMap.set(product,(planMap.get(product)||0)+Math.max(0,Number(plan?.ordered||plan?.planned||0)))});const hasOrders=[...orderMap.values()].reduce((sum,value)=>sum+Number(value||0),0)>0,ids=new Set([...orderMap.keys(),...planMap.keys()]);const items=[...ids].map(product=>{const ordered=Math.max(0,Number(orderMap.get(product)||0)),rawQuantity=hasOrders?ordered:Math.max(0,Number(planMap.get(product)||0));return{product,ordered,planned:Math.max(0,Number(planMap.get(product)||0)),produced:ordered,waste:0,good:ordered,rawQuantity,recipeSnapshot:bakeRecipeSnapshot(product)}}).filter(item=>item.produced>0||item.rawQuantity>0);if(!items.length)return;const deterministicTime=`${date}T23:59:59.000Z`;existing.push({id:`bake:${date}`,date,items,note:'Перенесено из учёта Panora до 6.08',source:'legacy_inferred',createdAt:deterministicTime,updatedAt:deterministicTime,deviceId:'migration-v608',deletedAt:''})});
  localStorage.setItem(BAKE_COMPLETION_KEY,JSON.stringify(existing));localStorage.setItem(BAKE_COMPLETION_MIGRATION,'1');
+}
+function upgradeBakeCompletionSnapshots(){
+ const list=readBakeCompletions();let changed=false;
+ list.forEach(completion=>{
+  if(completion?.deletedAt)return;
+  (completion.items||[]).forEach(item=>{
+   if(Array.isArray(item.recipeSnapshot)&&item.recipeSnapshot.length)return;
+   item.recipeSnapshot=bakeRecipeSnapshot(String(item.product||''));changed=true;
+  });
+ });
+ if(!changed)return false;
+ const now=new Date().toISOString();
+ list.forEach(completion=>{
+  if(completion?.deletedAt)return;
+  completion.snapshotVersion=1;
+  completion.updatedAt=now;
+  completion.deviceId=bakeCompletionDeviceId;
+ });
+ saveBakeCompletions(list);return true;
 }
 function bakeWeekDates(){const end=new Date(weekStart);end.setDate(end.getDate()+6);const from=iso(weekStart),to=iso(end),dates=new Set();plans.filter(plan=>String(plan?.bakeDate||'')>=from&&String(plan?.bakeDate||'')<=to).forEach(plan=>dates.add(String(plan.bakeDate)));stockRead('panora-orders',[]).filter(order=>order&&order.status!=='cancelled'&&String(order.date||'')>=from&&String(order.date||'')<=to).forEach(order=>dates.add(String(order.date).slice(0,10)));readBakeCompletions().filter(item=>!item.deletedAt&&String(item.date||'')>=from&&String(item.date||'')<=to).forEach(item=>dates.add(String(item.date)));return[...dates].sort()}
 function renderBakeCompletionBoard(){
@@ -63,7 +93,7 @@ function renderBakeCompletionBoard(){
 }
 function updateBakeCompletionDialog(){const form=$('#bakeCompletionForm'),body=$('#bakeCompletionRows'),summary=$('#bakeCompletionSummary'),error=$('#bakeCompletionError');if(!form||!body||!summary)return;let producedTotal=0,wasteTotal=0,goodTotal=0,orderedTotal=0;body.querySelectorAll('tr[data-product]').forEach(row=>{const produced=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-produced]')?.value||0)));let waste=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-waste]')?.value||0)));if(waste>produced)waste=produced;const good=produced-waste,ordered=Math.max(0,Number(row.dataset.ordered||0)),goodCell=row.querySelector('[data-bake-good]');if(goodCell)goodCell.textContent=`${good} шт.`;const difference=good-ordered,diff=row.querySelector('[data-bake-diff]');if(diff){diff.textContent=difference===0?'по заказу':difference>0?`+${difference} свободно`:`−${Math.abs(difference)} к заказу`;diff.className=`bake-completion-diff ${difference<0?'negative':difference>0?'positive':'zero'}`}producedTotal+=produced;wasteTotal+=waste;goodTotal+=good;orderedTotal+=ordered});summary.innerHTML=`<span>Заказано <strong>${orderedTotal} шт.</strong></span><span>Выпечено <strong>${producedTotal} шт.</strong></span><span>Брак <strong>${wasteTotal} шт.</strong></span><span>На склад <strong>${goodTotal} шт.</strong></span>`;if(error)error.textContent=''}
 function openBakeCompletion(date){if(!date||date>stockLocalDate())return;const dialog=$('#bakeCompletionDialog'),form=$('#bakeCompletionForm'),body=$('#bakeCompletionRows');if(!dialog||!form||!body)return;const existing=bakeCompletionFor(date),rows=bakeSnapshot(date,existing);if(!rows.length){alert('На эту дату нет ни заказа, ни плана выпечки.');return}form.reset();form.bakeDate.value=date;form.note.value=existing?.note&&existing.source!=='legacy_inferred'?existing.note:'';$('#bakeCompletionDateLabel').textContent=fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'});body.innerHTML=rows.map(row=>`<tr data-product="${adminEscape(row.product)}" data-ordered="${row.ordered}"><td><strong>${adminEscape(stockProductName(row.product))}</strong><small>${row.planned?`План ${row.planned} шт.`:'Без отдельного плана'}</small></td><td><strong>${row.ordered} шт.</strong></td><td><input type="number" min="0" step="1" inputmode="numeric" data-bake-produced value="${Math.floor(row.produced)}" aria-label="Выпечено ${adminEscape(stockProductName(row.product))}"></td><td><input type="number" min="0" step="1" inputmode="numeric" data-bake-waste value="${Math.floor(row.waste)}" aria-label="Брак ${adminEscape(stockProductName(row.product))}"></td><td><strong data-bake-good>${Math.max(0,Math.floor(row.produced-row.waste))} шт.</strong><small data-bake-diff></small></td></tr>`).join('');body.querySelectorAll('input').forEach(input=>input.oninput=updateBakeCompletionDialog);updateBakeCompletionDialog();dialog.showModal()}
-function bindBakeCompletion(){const dialog=$('#bakeCompletionDialog'),form=$('#bakeCompletionForm');if(!dialog||!form||form.dataset.bound==='1')return;form.dataset.bound='1';const close=()=>dialog.open&&dialog.close();$('#bakeCompletionClose').onclick=$('#bakeCompletionCancel').onclick=close;dialog.onclick=event=>{if(event.target===dialog)close()};form.onsubmit=event=>{event.preventDefault();if(!form.reportValidity())return;const date=String(form.bakeDate.value||'');if(!date||date>stockLocalDate())return;const items=[];let invalid=false;$('#bakeCompletionRows').querySelectorAll('tr[data-product]').forEach(row=>{const produced=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-produced]')?.value||0))),waste=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-waste]')?.value||0)));if(waste>produced){invalid=true;return}const ordered=Math.max(0,Number(row.dataset.ordered||0)),product=String(row.dataset.product||''),plan=plans.filter(p=>String(p?.bakeDate||'')===date&&String(p?.product||'')===product).reduce((sum,p)=>sum+Math.max(0,Number(p?.planned||0)),0);items.push({product,ordered,planned:plan,produced,waste,good:produced-waste,rawQuantity:produced})});if(invalid){$('#bakeCompletionError').textContent='Брак не может быть больше общего количества выпеченного хлеба.';return}if(!items.some(item=>item.produced>0)&&!confirm('Сохранить завершённую выпечку с нулевым выпуском?'))return;const list=readBakeCompletions(),index=list.findIndex(item=>String(item.date||'')===date),now=new Date().toISOString(),previous=index>=0?list[index]:null,record={id:previous?.id||`bake:${date}`,date,items,note:String(form.note.value||'').trim(),source:'actual',createdAt:previous?.createdAt||now,updatedAt:now,deviceId:bakeCompletionDeviceId,deletedAt:''};if(index>=0)list[index]=record;else list.push(record);saveBakeCompletions(list);close();renderPlan();renderStock();window.panoraRawStock?.render?.();window.dispatchEvent(new CustomEvent('panora:order-cycle-updated'))}}
+function bindBakeCompletion(){const dialog=$('#bakeCompletionDialog'),form=$('#bakeCompletionForm');if(!dialog||!form||form.dataset.bound==='1')return;form.dataset.bound='1';const close=()=>dialog.open&&dialog.close();$('#bakeCompletionClose').onclick=$('#bakeCompletionCancel').onclick=close;dialog.onclick=event=>{if(event.target===dialog)close()};form.onsubmit=event=>{event.preventDefault();if(!form.reportValidity())return;const date=String(form.bakeDate.value||'');if(!date||date>stockLocalDate())return;const items=[];let invalid=false;$('#bakeCompletionRows').querySelectorAll('tr[data-product]').forEach(row=>{const produced=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-produced]')?.value||0))),waste=Math.max(0,Math.floor(Number(row.querySelector('[data-bake-waste]')?.value||0)));if(waste>produced){invalid=true;return}const ordered=Math.max(0,Number(row.dataset.ordered||0)),product=String(row.dataset.product||''),plan=plans.filter(p=>String(p?.bakeDate||'')===date&&String(p?.product||'')===product).reduce((sum,p)=>sum+Math.max(0,Number(p?.planned||0)),0);const prior=bakeCompletionFor(date)?.items?.find(item=>String(item.product)===product);items.push({product,ordered,planned:plan,produced,waste,good:produced-waste,rawQuantity:produced,recipeSnapshot:Array.isArray(prior?.recipeSnapshot)&&prior.recipeSnapshot.length?prior.recipeSnapshot:bakeRecipeSnapshot(product)})});if(invalid){$('#bakeCompletionError').textContent='Брак не может быть больше общего количества выпеченного хлеба.';return}if(!items.some(item=>item.produced>0)&&!confirm('Сохранить завершённую выпечку с нулевым выпуском?'))return;const list=readBakeCompletions(),index=list.findIndex(item=>String(item.date||'')===date),now=new Date().toISOString(),previous=index>=0?list[index]:null,record={id:previous?.id||`bake:${date}`,date,items,note:String(form.note.value||'').trim(),source:'actual',createdAt:previous?.createdAt||now,updatedAt:now,deviceId:bakeCompletionDeviceId,deletedAt:''};if(index>=0)list[index]=record;else list.push(record);saveBakeCompletions(list);close();renderPlan();renderStock();window.panoraRawStock?.render?.();window.dispatchEvent(new CustomEvent('panora:order-cycle-updated'))}}
 window.panoraBakeCompletion={read:readBakeCompletions,get:bakeCompletionFor,open:openBakeCompletion,render:renderBakeCompletionBoard,deviceId:bakeCompletionDeviceId,storageKey:BAKE_COMPLETION_KEY};
 function applyLanguage(){$('#adminLanguage').value=lang;$$('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));renderAll()}
 function renderAll(){renderPlan();renderRecipes();renderPurchase();renderStock()}
@@ -126,10 +156,19 @@ function stockManualProduced(date,product){
 }
 function stockAutoBakeMovements(){
  const today=stockLocalDate();
- return readBakeCompletions().filter(completion=>completion&&!completion.deletedAt&&String(completion.date||'')<=today).flatMap(completion=>(completion.items||[]).flatMap((item,index)=>{const product=String(item.product||''),good=Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))));if(!product||good<=0)return[];const manual=stockManualProduced(completion.date,product),auto=Math.max(0,good-manual);if(auto<=0)return[];return[{id:`auto-bake:${completion.date}:${product}:${index}`,date:completion.date,product,type:'baked',quantity:auto,note:completion.source==='legacy_inferred'?'Перенесённый факт выпечки':'Фактическая выпечка завершена',bakeDate:completion.date,virtual:true,bakeCompletionId:completion.id}]}));
+ return readBakeCompletions().filter(completion=>completion&&!completion.deletedAt&&String(completion.date||'')<=today).flatMap(completion=>(completion.items||[]).flatMap((item,index)=>{const product=String(item.product||''),good=Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))));if(!product||good<=0)return[];const legacyManual=completion.source==='legacy_inferred'?stockManualProduced(completion.date,product):0,auto=Math.max(0,good-legacyManual);if(auto<=0)return[];return[{id:`auto-bake:${completion.date}:${product}:${index}`,date:completion.date,product,type:'baked',quantity:auto,note:completion.source==='legacy_inferred'?'Перенесённый факт выпечки':'Фактическая выпечка завершена',bakeDate:completion.date,virtual:true,bakeCompletionId:completion.id,occurredAt:completion.createdAt||`${completion.date}T12:00:00`}]}));
+}
+function stockCanonicalNotes(){
+ const seen=new Set(),rows=[];
+ stockNotes().slice().sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||''))).forEach(note=>{
+  const key=note.orderId?`order:${String(note.orderId)}`:`note:${String(note.id||'')}`;
+  if(seen.has(key))return;
+  seen.add(key);rows.push(note);
+ });
+ return rows;
 }
 function stockShipmentMovements(){
- return stockNotes().flatMap(note=>(note.items||[]).map((item,index)=>({
+ return stockCanonicalNotes().flatMap(note=>(note.items||[]).map((item,index)=>({
   id:`auto-ship:${note.id}:${item.product}:${index}`,
   date:String(note.date||''),
   product:String(item.product||''),
@@ -138,11 +177,12 @@ function stockShipmentMovements(){
   note:`Накладная DN-${String(note.number||'').padStart(4,'0')}`,
   noteId:String(note.id||''),
   orderId:String(note.orderId||''),
+  occurredAt:note.createdAt||note.customerConfirmedAt||`${String(note.date||'')}T12:00:00`,
   virtual:true
  }))).filter(m=>m.product&&m.quantity>0);
 }
 function stockEffectiveMovements(){
- const notes=stockNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
+ const notes=stockCanonicalNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
  const manual=movements.filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
  return [...manual,...stockAutoBakeMovements(),...stockShipmentMovements()];
 }
@@ -150,9 +190,9 @@ function stockRawBalance(product){
  return stockEffectiveMovements().filter(m=>String(m.product)===String(product)).reduce((sum,m)=>sum+signed(m),0);
 }
 function stockReserved(product){
- const today=stockLocalDate();
+ const today=stockLocalDate(),shippedOrders=new Set(stockCanonicalNotes().map(note=>String(note.orderId||'')).filter(Boolean));
  return stockOrders()
-  .filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&String(o.date||'')&&String(o.date)<=today)
+  .filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&!shippedOrders.has(String(o.id||''))&&String(o.date||'')&&String(o.date)<=today)
   .flatMap(o=>o.items||[])
   .filter(item=>String(item.product)===String(product))
   .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||item.quantityPieces||0)),0);
@@ -275,7 +315,7 @@ $('#movementForm').onsubmit=e=>{
  }
  if(quantity<=0)return alert('Количество должно быть больше нуля.');
  movements.push({
-  id:crypto.randomUUID(),date:iso(new Date()),product,type,quantity,
+  id:crypto.randomUUID(),date:iso(new Date()),product,type,quantity,createdAt:new Date().toISOString(),
   note:requestedType==='inventory_set'?`Инвентаризация: установлен остаток ${requested} шт.${note?` · ${note}`:''}`:note
  });
  store('panora-stock-movements',movements);
@@ -285,8 +325,9 @@ $('#movementForm').onsubmit=e=>{
 window.addEventListener('panora:order-cycle-updated',()=>{renderStock();renderBakeCompletionBoard()});
 window.addEventListener('panora:products-changed',()=>{renderStock();renderBakeCompletionBoard()});
 window.addEventListener('panora:stock-movements-changed',()=>renderStock());
-window.addEventListener('panora:bake-completions-cloud-updated',()=>{renderPlan();renderStock();window.panoraRawStock?.render?.()});
+window.addEventListener('panora:bake-completions-cloud-updated',()=>{upgradeBakeCompletionSnapshots();renderPlan();renderStock();window.panoraRawStock?.render?.()});
 window.addEventListener('panora:bake-completions-changed',()=>{renderPlan();renderStock();window.panoraRawStock?.render?.()});
 migrateLegacyBakeCompletions();
+upgradeBakeCompletionSnapshots();
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindBakeCompletion,{once:true}):bindBakeCompletion();
 $('#printPurchase').onclick=()=>window.print();applyLanguage();

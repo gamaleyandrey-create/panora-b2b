@@ -77,7 +77,7 @@
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
 <link rel="stylesheet" href="finance-dashboard.css?v=6050">
-<link rel="stylesheet" href="admin-partner-theme.css?v=6080">
+<link rel="stylesheet" href="admin-partner-theme.css?v=6090">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -187,7 +187,7 @@
               <tbody id="rawStockMovementRows"></tbody>
             </table>
           </div>
-          <p class="raw-stock-note">Сырьё списывается по подтверждённому факту выпечки и рассчитывается одинаково на обоих устройствах. Ручные движения и завершённые выпечки синхронизируются через Supabase; офлайн-изменения отправляются после восстановления связи.</p>
+          <p class="raw-stock-note">Сырьё списывается по подтверждённому факту и по рецептуре, сохранённой в момент завершения выпечки. Последующие изменения рецептуры не переписывают старые остатки. Движения и факты синхронизируются через Supabase.</p>
         </section>
       </div>
       <div class="view" id="view-stock">
@@ -408,7 +408,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6080"></script>
+<script src="admin.js?v=6090"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -420,7 +420,7 @@
 <script src="document-library.js?v=3390"></script>
 <script src="invoice-preview.js?v=3390"></script>
 <script src="admin-localization.js?v=3390"></script>
-<script src="product-admin.js?v=6080"></script>
+<script src="product-admin.js?v=6090"></script>
 <script src="calendar-plan.js?v=3390"></script>
 <script src="qrcode-browser.js?v=3390"></script>
 <script src="delivery-qr.js?v=3390"></script>
@@ -428,7 +428,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=6080"></script>
+<script src="purchase-costs.js?v=6090"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
@@ -443,7 +443,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6080"></script>
+<script src="pwa-stable.js?v=6090"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
@@ -489,7 +489,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=6050"></script>
+<script src="finance-dashboard.js?v=6090"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>
