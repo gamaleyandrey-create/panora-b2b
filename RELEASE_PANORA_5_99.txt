@@ -1,0 +1,16 @@
+Panora 5.99 — bakery design aligned with partner interface
+DESIGN ONLY. No business logic, calculations, data model, navigation behavior or workflows were changed.
+
+- Bakery now uses the same visual language as the partner workspace.
+- Dark-green Panora header with partner-style branding.
+- Light cream/paper workspace background with subtle orange accent.
+- Sidebar made lighter; active section uses a soft green state instead of a heavy solid block.
+- Page headings made more compact and use partner-style display typography.
+- Unified white cards with 18px radii, subtle borders and restrained shadows.
+- Summary/KPI cards visually aligned with partner dashboard cards.
+- Tables made lighter: soft-green headers, cleaner row rhythm, subtle hover.
+- Primary/secondary buttons unified with partner styling.
+- Active/Archive and status tabs unified as soft pills.
+- Forms, inputs and dialogs visually aligned with partner workspace.
+- Mobile bakery keeps all existing navigation behavior, but receives the same partner-like visual treatment.
+- No JavaScript application functionality changed; only service-worker cache version was bumped so the new CSS is delivered.
