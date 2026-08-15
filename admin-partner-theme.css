@@ -862,3 +862,666 @@ body.admin-page .stock-product-main b{
     font-size:21px!important;
   }
 }
+
+
+/* Panora 6.04 — unified bakery mobile design.
+   VISUAL ONLY. Existing mobile navigation/workflows stay unchanged. */
+@media(max-width:720px){
+
+  /* ----- Header ----- */
+  body.admin-page .admin-topbar{
+    position:sticky!important;
+    top:0!important;
+    z-index:120!important;
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:10px!important;
+    min-height:58px!important;
+    padding:7px 10px!important;
+    padding-top:max(7px,env(safe-area-inset-top))!important;
+    background:rgba(31,52,39,.98)!important;
+    box-shadow:0 5px 20px rgba(25,43,32,.13)!important;
+    backdrop-filter:blur(14px);
+  }
+  body.admin-page .admin-topbar .brand{
+    min-width:0!important;
+    gap:8px!important;
+    font-size:18px!important;
+    white-space:nowrap!important;
+  }
+  body.admin-page .admin-topbar .brand span{
+    width:34px!important;
+    height:34px!important;
+    font-size:17px!important;
+  }
+  body.admin-page .admin-topbar>div{
+    min-width:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:6px!important;
+  }
+  /* Bottom "Ещё" already owns section navigation on phones. */
+  body.admin-page #adminMenuToggle{
+    display:none!important;
+  }
+  body.admin-page #adminLanguage{
+    width:56px!important;
+    min-width:56px!important;
+    height:36px!important;
+    min-height:36px!important;
+    padding:0 7px!important;
+    border-radius:10px!important;
+    font-size:12px!important;
+    text-align:center!important;
+  }
+  body.admin-page #saveState{
+    display:block!important;
+    min-width:0!important;
+    max-width:76px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    color:#c8d5cc!important;
+    font-size:9.5px!important;
+    font-weight:700!important;
+  }
+  body.admin-page .admin-logout{
+    min-width:58px!important;
+    min-height:36px!important;
+    height:36px!important;
+    padding:0 9px!important;
+    border-radius:10px!important;
+    font-size:11px!important;
+  }
+
+  /* ----- Main canvas ----- */
+  body.admin-page .admin-shell{
+    min-height:calc(100dvh - 58px)!important;
+    display:block!important;
+    background:
+      radial-gradient(circle at 100% 0,rgba(217,119,62,.045),transparent 16rem),
+      #fbfaf7!important;
+  }
+  body.admin-page .admin-content{
+    width:100%!important;
+    max-width:none!important;
+    padding:18px 12px calc(92px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+  }
+  body.admin-page .view{
+    min-width:0!important;
+    width:100%!important;
+  }
+
+  /* ----- Page head ----- */
+  body.admin-page .page-head{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:11px!important;
+    margin-bottom:16px!important;
+  }
+  body.admin-page .page-head>div:first-child{
+    min-width:0!important;
+  }
+  body.admin-page .page-head .kicker{
+    margin-bottom:2px!important;
+    font-size:9px!important;
+    letter-spacing:.15em!important;
+  }
+  body.admin-page .page-head h2{
+    margin:2px 0 5px!important;
+    font-size:27px!important;
+    line-height:1.08!important;
+    overflow-wrap:anywhere;
+  }
+  body.admin-page .page-head p{
+    max-width:none!important;
+    margin:0!important;
+    color:#758078!important;
+    font-size:12px!important;
+    line-height:1.45!important;
+  }
+  body.admin-page .page-head>button{
+    justify-self:start!important;
+    width:auto!important;
+    max-width:100%!important;
+  }
+  body.admin-page .page-head .head-actions,
+  body.admin-page .page-head .purchase-head-actions{
+    width:100%!important;
+    display:flex!important;
+    gap:8px!important;
+    flex-wrap:wrap!important;
+  }
+  body.admin-page .page-head .head-actions>button,
+  body.admin-page .page-head .purchase-head-actions>button{
+    flex:1 1 130px!important;
+    width:auto!important;
+  }
+
+  /* ----- Controls ----- */
+  body.admin-page .primary,
+  body.admin-page .secondary{
+    min-height:44px!important;
+    padding:0 14px!important;
+    border-radius:11px!important;
+  }
+  body.admin-page input,
+  body.admin-page select,
+  body.admin-page textarea{
+    max-width:100%!important;
+    min-height:44px!important;
+    border-radius:11px!important;
+  }
+  body.admin-page textarea{
+    min-height:92px!important;
+    padding:10px 11px!important;
+  }
+  body.admin-page label{
+    min-width:0!important;
+  }
+
+  /* ----- KPIs ----- */
+  body.admin-page .summary-grid,
+  body.admin-page .finance-main-kpis,
+  body.admin-page .finance-secondary-kpis,
+  body.admin-page .finance-vat-grid,
+  body.admin-page .stock-overview-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+    margin-bottom:14px!important;
+  }
+  body.admin-page .summary-grid article,
+  body.admin-page .finance-main-kpis article,
+  body.admin-page .finance-secondary-kpis article,
+  body.admin-page .finance-vat-grid article,
+  body.admin-page .stock-overview-grid article{
+    min-width:0!important;
+    min-height:94px!important;
+    padding:13px 14px!important;
+    border-radius:15px!important;
+  }
+  body.admin-page .summary-grid article strong,
+  body.admin-page .finance-main-kpis article strong,
+  body.admin-page .finance-secondary-kpis article strong,
+  body.admin-page .finance-vat-grid article strong{
+    font-size:23px!important;
+  }
+  body.admin-page .summary-grid article:last-child:nth-child(odd),
+  body.admin-page .finance-main-kpis article:last-child:nth-child(odd),
+  body.admin-page .finance-secondary-kpis article:last-child:nth-child(odd),
+  body.admin-page .finance-vat-grid article:last-child:nth-child(odd),
+  body.admin-page .stock-overview-grid article:last-child:nth-child(odd){
+    grid-column:1/-1!important;
+  }
+
+  /* ----- Cards ----- */
+  body.admin-page .stock-product-grid,
+  body.admin-page .recipe-grid,
+  body.admin-page .restaurant-grid,
+  body.admin-page .reminder-list{
+    gap:10px!important;
+  }
+  body.admin-page .stock-product-card,
+  body.admin-page .recipe-card,
+  body.admin-page .restaurant-card,
+  body.admin-page .reminder-card,
+  body.admin-page .finance-panel,
+  body.admin-page .finance-vat-panel,
+  body.admin-page .cost-period,
+  body.admin-page .daily-order-summary,
+  body.admin-page .order-filter-card,
+  body.admin-page .sync-backup-panel,
+  body.admin-page .export-card{
+    border-radius:15px!important;
+    box-shadow:0 5px 18px rgba(38,61,45,.045)!important;
+  }
+  body.admin-page .stock-product-card,
+  body.admin-page .recipe-card,
+  body.admin-page .restaurant-card,
+  body.admin-page .reminder-card{
+    padding:14px!important;
+  }
+
+  /* ----- Tables ----- */
+  body.admin-page .table-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    border-radius:14px!important;
+    box-shadow:0 4px 15px rgba(38,61,45,.04)!important;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.admin-page table{
+    max-width:none!important;
+  }
+  body.admin-page th{
+    padding:10px 11px!important;
+    white-space:nowrap;
+  }
+  body.admin-page td{
+    padding:11px!important;
+  }
+
+  /* ----- Unified pills / tabs ----- */
+  body.admin-page .order-archive-tabs,
+  body.admin-page .order-status-bar,
+  body.admin-page .purchase-mode-tabs,
+  body.admin-page .stock-movement-tabs,
+  body.admin-page .account-debt-tabs,
+  body.admin-page .account-history-tabs,
+  body.admin-page .history-tabs,
+  body.admin-page .debt-tabs{
+    width:100%!important;
+    max-width:100%!important;
+    display:flex!important;
+    gap:6px!important;
+    overflow-x:auto!important;
+    padding:2px 1px 5px!important;
+    scrollbar-width:none;
+  }
+  body.admin-page .order-archive-tabs::-webkit-scrollbar,
+  body.admin-page .order-status-bar::-webkit-scrollbar,
+  body.admin-page .purchase-mode-tabs::-webkit-scrollbar,
+  body.admin-page .stock-movement-tabs::-webkit-scrollbar,
+  body.admin-page .account-debt-tabs::-webkit-scrollbar,
+  body.admin-page .account-history-tabs::-webkit-scrollbar,
+  body.admin-page .history-tabs::-webkit-scrollbar,
+  body.admin-page .debt-tabs::-webkit-scrollbar{display:none}
+  body.admin-page .order-archive-tabs button,
+  body.admin-page .order-status-bar button,
+  body.admin-page .purchase-mode-tabs button,
+  body.admin-page .stock-movement-tabs button,
+  body.admin-page .account-debt-tabs button,
+  body.admin-page .account-history-tabs button,
+  body.admin-page .history-tabs button,
+  body.admin-page .debt-tabs button{
+    flex:0 0 auto!important;
+    min-height:40px!important;
+    padding:0 12px!important;
+    white-space:nowrap!important;
+  }
+
+  /* ----- Orders ----- */
+  body.admin-page #view-orders .order-filter-card{
+    padding:10px!important;
+  }
+  body.admin-page #view-orders .order-filter-card input,
+  body.admin-page #view-orders .order-filter-card select{
+    width:100%!important;
+  }
+  body.admin-page .order-card,
+  body.admin-page .admin-order-card{
+    border-radius:15px!important;
+  }
+  body.admin-page .order-card-actions,
+  body.admin-page .order-actions{
+    display:flex!important;
+    gap:7px!important;
+    flex-wrap:wrap!important;
+  }
+  body.admin-page .order-card-actions button,
+  body.admin-page .order-actions button{
+    flex:1 1 120px!important;
+  }
+
+  /* ----- Calendar ----- */
+  body.admin-page .plan-navigation{
+    display:grid!important;
+    gap:9px!important;
+  }
+  body.admin-page .week-navigation{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:7px!important;
+  }
+  body.admin-page .week-navigation #periodLabel{
+    grid-column:1/-1!important;
+    grid-row:1!important;
+    text-align:center!important;
+    padding:8px!important;
+    border-radius:11px!important;
+    background:#f1f4ef!important;
+  }
+  body.admin-page .week-navigation button{
+    min-height:42px!important;
+    border-radius:10px!important;
+  }
+  body.admin-page .week-navigation #today{
+    grid-column:1/-1!important;
+  }
+  body.admin-page .date-jump{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:7px!important;
+    align-items:end!important;
+  }
+  body.admin-page .date-jump label{
+    min-width:0!important;
+  }
+  body.admin-page .date-jump input{
+    width:100%!important;
+  }
+  body.admin-page .plan-list{
+    gap:10px!important;
+  }
+
+  /* ----- Purchase ----- */
+  body.admin-page .purchase-date-selector-head{
+    gap:8px!important;
+  }
+  body.admin-page .purchase-date-options{
+    margin-left:-2px!important;
+    margin-right:-2px!important;
+    padding-bottom:7px!important;
+  }
+  body.admin-page .purchase-date-option{
+    min-width:118px!important;
+    padding:9px 10px!important;
+    border-radius:12px!important;
+  }
+  body.admin-page .purchase-selection-summary{
+    padding:4px 1px 0!important;
+  }
+  body.admin-page .cost-summary{
+    gap:8px!important;
+  }
+
+  /* ----- Stock ----- */
+  body.admin-page .stock-product-grid{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .stock-history-head{
+    margin-top:15px!important;
+    gap:9px!important;
+  }
+  body.admin-page .stock-history-head h3{
+    font-size:21px!important;
+  }
+
+  /* ----- Reminders ----- */
+  body.admin-page .reminder-summary-four{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  body.admin-page .reminder-info-compact{
+    gap:5px!important;
+    padding:10px 11px!important;
+    font-size:10.5px!important;
+  }
+  body.admin-page .reminder-card-top{
+    gap:7px!important;
+  }
+  body.admin-page .reminder-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+  body.admin-page .reminder-actions button{
+    width:100%!important;
+    min-height:41px!important;
+  }
+
+  /* ----- Partners / product cards ----- */
+  body.admin-page .partner-contact-grid,
+  body.admin-page .settings-row{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .product-admin-grid{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .product-card-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:7px!important;
+  }
+  body.admin-page .product-card-actions button{
+    width:100%!important;
+  }
+
+  /* ----- Finance ----- */
+  body.admin-page .finance-dashboard,
+  body.admin-page .finance-panel,
+  body.admin-page .finance-vat-panel{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body.admin-page .finance-panel{
+    padding:14px!important;
+  }
+  body.admin-page .finance-panel h3{
+    margin-top:0!important;
+    font-size:21px!important;
+  }
+
+  /* ----- Settings / exports ----- */
+  body.admin-page .export-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+  body.admin-page .export-actions button{
+    width:100%!important;
+  }
+  body.admin-page .audit-card-head{
+    align-items:flex-start!important;
+    flex-direction:column!important;
+    gap:9px!important;
+  }
+
+  /* ----- Dialogs: mobile sheet ----- */
+  body.admin-page dialog{
+    width:calc(100% - 14px)!important;
+    max-width:none!important;
+    max-height:92dvh!important;
+    margin:auto 7px!important;
+    border-radius:18px!important;
+    overflow:auto!important;
+  }
+  body.admin-page dialog form,
+  body.admin-page .account-detail-shell{
+    padding:19px 13px 14px!important;
+  }
+  body.admin-page dialog h3{
+    padding-right:38px!important;
+    font-size:24px!important;
+  }
+  body.admin-page .dialog-close{
+    top:10px!important;
+    right:10px!important;
+    width:34px!important;
+    height:34px!important;
+  }
+  body.admin-page .dialog-actions{
+    position:sticky!important;
+    bottom:-14px!important;
+    z-index:4!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    margin:12px -13px -14px!important;
+    padding:10px 13px calc(10px + env(safe-area-inset-bottom))!important;
+    border-top:1px solid #e1e6df!important;
+    background:rgba(252,251,248,.96)!important;
+    backdrop-filter:blur(10px);
+  }
+  body.admin-page .dialog-actions button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+  }
+
+  /* ----- More drawer ----- */
+  body.admin-page .admin-nav{
+    display:none!important;
+  }
+  body.admin-page.admin-menu-open::before{
+    content:""!important;
+    position:fixed!important;
+    inset:0!important;
+    z-index:998!important;
+    background:rgba(19,33,24,.46)!important;
+    backdrop-filter:blur(2px);
+  }
+  body.admin-page.admin-menu-open .admin-nav{
+    position:fixed!important;
+    z-index:999!important;
+    left:8px!important;
+    right:8px!important;
+    bottom:calc(72px + env(safe-area-inset-bottom))!important;
+    top:auto!important;
+    display:block!important;
+    width:auto!important;
+    max-height:min(68dvh,620px)!important;
+    overflow:auto!important;
+    padding:12px!important;
+    border:1px solid #dce3db!important;
+    border-radius:18px!important;
+    background:#fcfbf8!important;
+    box-shadow:0 22px 55px rgba(23,40,29,.22)!important;
+    animation:panoraMobileDrawerIn .16s ease-out both;
+  }
+  @keyframes panoraMobileDrawerIn{
+    from{transform:translateY(12px);opacity:.65}
+    to{transform:translateY(0);opacity:1}
+  }
+  body.admin-page.admin-menu-open .admin-nav h1{
+    margin:2px 8px 11px!important;
+    font-size:22px!important;
+  }
+  body.admin-page.admin-menu-open .admin-nav .admin-nav-group-label{
+    margin:10px 7px 4px!important;
+    padding-top:9px!important;
+    font-size:8.5px!important;
+  }
+  body.admin-page.admin-menu-open .admin-nav button{
+    width:100%!important;
+    min-height:43px!important;
+    margin:1px 0!important;
+    padding:8px 10px!important;
+    border-radius:11px!important;
+    font-size:12.5px!important;
+  }
+
+  /* ----- Bottom navigation ----- */
+  body.admin-page .admin-mobile-tabs{
+    position:fixed!important;
+    z-index:1000!important;
+    left:8px!important;
+    right:8px!important;
+    bottom:max(8px,env(safe-area-inset-bottom))!important;
+    width:auto!important;
+    height:64px!important;
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:4px!important;
+    padding:5px!important;
+    border:1px solid rgba(210,219,211,.96)!important;
+    border-radius:18px!important;
+    background:rgba(252,251,248,.96)!important;
+    box-shadow:0 10px 30px rgba(28,48,35,.16)!important;
+    backdrop-filter:blur(16px);
+  }
+  body.admin-page .admin-mobile-tabs button{
+    position:relative!important;
+    min-width:0!important;
+    min-height:52px!important;
+    display:grid!important;
+    grid-template-rows:25px 17px!important;
+    place-items:center!important;
+    gap:1px!important;
+    padding:4px 2px!important;
+    border:0!important;
+    border-radius:13px!important;
+    background:transparent!important;
+    color:#768078!important;
+  }
+  body.admin-page .admin-mobile-tabs button>span{
+    position:relative!important;
+    display:grid!important;
+    place-items:center!important;
+    min-width:26px!important;
+    height:25px!important;
+    font-size:18px!important;
+    line-height:1!important;
+    font-weight:700!important;
+  }
+  body.admin-page .admin-mobile-tabs button>i{
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    color:inherit!important;
+    font-style:normal!important;
+    font-size:9.5px!important;
+    line-height:1!important;
+    font-weight:800!important;
+  }
+  body.admin-page .admin-mobile-tabs button.active{
+    background:#eaf1e8!important;
+    color:#315b42!important;
+  }
+  body.admin-page .admin-mobile-tabs .order-alert-badge{
+    position:absolute!important;
+    top:-5px!important;
+    right:-8px!important;
+  }
+}
+
+/* Extra-narrow phones */
+@media(max-width:380px){
+  body.admin-page .admin-topbar{
+    grid-template-columns:auto minmax(0,1fr)!important;
+    gap:6px!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  body.admin-page .admin-topbar .brand{
+    font-size:17px!important;
+  }
+  body.admin-page .admin-topbar .brand span{
+    width:32px!important;
+    height:32px!important;
+  }
+  body.admin-page #saveState{
+    display:none!important;
+  }
+  body.admin-page #adminLanguage{
+    width:52px!important;
+    min-width:52px!important;
+  }
+  body.admin-page .admin-logout{
+    min-width:54px!important;
+    padding:0 7px!important;
+  }
+  body.admin-page .admin-content{
+    padding-left:9px!important;
+    padding-right:9px!important;
+  }
+  body.admin-page .page-head h2{
+    font-size:25px!important;
+  }
+  body.admin-page .summary-grid,
+  body.admin-page .finance-main-kpis,
+  body.admin-page .finance-secondary-kpis,
+  body.admin-page .finance-vat-grid,
+  body.admin-page .stock-overview-grid{
+    gap:7px!important;
+  }
+  body.admin-page .summary-grid article,
+  body.admin-page .finance-main-kpis article,
+  body.admin-page .finance-secondary-kpis article,
+  body.admin-page .finance-vat-grid article,
+  body.admin-page .stock-overview-grid article{
+    padding:12px!important;
+  }
+  body.admin-page .admin-mobile-tabs{
+    left:5px!important;
+    right:5px!important;
+    bottom:max(5px,env(safe-area-inset-bottom))!important;
+  }
+}
