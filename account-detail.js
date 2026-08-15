@@ -204,7 +204,7 @@
     const distribution = paymentDistributionFor(id).get(String(item.id));
     if (!distribution) return "";
 
-    const rows = (distribution.rows || []).map(({note, amount}) =>
+    const rows = (distribution.rows || []).map(({note, amount, date}) =>
       `<div><span>${prettyDate(date)} · <button type="button" class="account-allocation-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button></span><strong>${euro(amount)}</strong></div>`
     );
     if (Number(distribution.credit || 0) > 0.005) {
