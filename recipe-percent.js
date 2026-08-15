@@ -161,22 +161,25 @@
   function rowHtml(pid,item,index,total){
     const unit=item.unit||'g',qty=numeric(item.qty),isBase=gramUnit(unit)&&flourName(item.name),percent=total&&unit!=='pcs'?display(qty/total*100):'';
     const source=String(item.sourceIngredientName||''),sourceUnit=item.sourceUnit||'g',yieldPct=Number(item.sourceYieldPct||0),isSemi=Boolean(source&&yieldPct>0);
-    return `<div class="recipe-row recipe-percent-row" data-row-id="${esc(pid)}:${index}" data-index="${index}">
+    return `<div class="recipe-row recipe-percent-row${isSemi?' is-semi':''}" data-row-id="${esc(pid)}:${index}" data-index="${index}">
       <label class="recipe-field recipe-field-name"><small>${L().ingredient}</small><input data-role="name" data-draft-key="name" value="${esc(item.name)}" aria-label="${L().ingredient}"></label>
       <label class="recipe-field"><small>${L().amount}</small><input data-role="qty" data-draft-key="qty" type="text" inputmode="decimal" value="${Number(item.qty)||0}" aria-label="${L().amount}"></label>
       <label class="recipe-field recipe-percent-suffix"><small>${L().percent}</small><input data-role="percent" data-draft-key="percent" type="text" inputmode="decimal" value="${percent}" ${!total||unit==='pcs'||isBase?'readonly':''} aria-label="${L().percent}"></label>
       <label class="recipe-field recipe-unit-field"><small>${L().unit}</small><select data-role="unit" data-draft-key="unit" aria-label="${L().unit}"><option ${item.unit==='g'?'selected':''}>g</option><option ${item.unit==='ml'?'selected':''}>ml</option><option ${item.unit==='pcs'?'selected':''}>pcs</option></select></label>
       <button class="recipe-delete" data-delete-ingredient="${pid}:${index}" type="button" aria-label="${L().delete}">×</button>
-      <details class="recipe-semi-settings" ${isSemi?'open':''}>
-        <summary>${L().semi}${isSemi?` · ${esc(source)} · ${display(yieldPct)}%`:''}</summary>
-        <label class="recipe-semi-toggle"><input type="checkbox" data-role="sourceEnabled" ${isSemi?'checked':''}> <span>${L().semiToggle}</span></label>
+
+      <section class="recipe-semi-settings">
+        <label class="recipe-semi-toggle">
+          <input type="checkbox" data-role="sourceEnabled" ${isSemi?'checked':''}>
+          <span><strong>${L().semiToggle}</strong><small>${lang==='ru'?'Включите для пюре, закваски, сиропа и других заготовок':lang==='es'?'Para puré, masa madre, jarabe y otras preparaciones':'For purée, starter, syrup and other preparations'}</small></span>
+        </label>
         <div class="recipe-semi-fields" ${isSemi?'':'hidden'}>
           <label><span>${L().semiSource}</span><input data-role="sourceName" value="${esc(source)}" placeholder="${lang==='ru'?'Например: Тыква свежая':lang==='es'?'Ej.: Calabaza fresca':'e.g. Fresh pumpkin'}"></label>
           <label><span>${L().unit}</span><select data-role="sourceUnit"><option ${sourceUnit==='g'?'selected':''}>g</option><option ${sourceUnit==='ml'?'selected':''}>ml</option><option ${sourceUnit==='pcs'?'selected':''}>pcs</option></select></label>
           <label><span>${L().semiYield}</span><input data-role="sourceYield" type="text" inputmode="decimal" value="${yieldPct||''}" placeholder="60"></label>
-          <small>${L().semiHelp}</small>
+          <small class="recipe-semi-example">${lang==='ru'?'Пример: для «Пюре тыквенное» укажите «Тыква свежая» и 60%. Если нужно 3,55 кг пюре, Panora рассчитает 5,92 кг свежей тыквы до учёта остатка готового пюре.':lang==='es'?'Ejemplo: para puré de calabaza indique calabaza fresca y 60%.':'Example: for pumpkin purée set Fresh pumpkin and 60% yield.'}</small>
         </div>
-      </details>
+      </section>
     </div>`
   }
   function professionalRender(force=false){
@@ -204,6 +207,7 @@
       <p class="recipe-warning" data-warning="salt-range" hidden>${L().saltRange}</p>
       <p class="recipe-cost-hint" data-warning="cost" hidden>${L().priceHint}</p>
       <div class="recipe-batch-summary" data-recipe-batch></div>
+      <div class="recipe-semi-banner"><strong>Полуфабрикаты</strong><span>У каждого ингредиента ниже есть переключатель «Производится из сырья». Для тыквенного пюре включите его и задайте свежую тыкву + процент выхода.</span></div>
       <div class="recipe-column-heads"><span>${L().ingredient}</span><span>${L().amount}</span><span>${L().percent}</span><span>${L().unit}</span><span></span></div>
       <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index,initialFlour)).join('')}</div>
       <p class="recipe-warning" hidden>${L().noFlour}</p>
@@ -218,7 +222,7 @@
       card.querySelector('[data-tech-cancel]')?.addEventListener('click',()=>cancelProtectedEdit(card));
       const updateDraft=()=>{const pid=card.dataset.recipeCard,previous=recipes[pid]||[];recipes[pid]=[...card.querySelectorAll('.recipe-percent-row')].map((row,index)=>({name:row.querySelector('[data-role="name"]').value,qty:numeric(row.querySelector('[data-role="qty"]').value),unit:row.querySelector('[data-role="unit"]').value,stock:Number(previous[index]?.stock)||0,margin:Number(previous[index]?.margin??5)||0,sourceIngredientName:row.querySelector('[data-role="sourceEnabled"]')?.checked?(row.querySelector('[data-role="sourceName"]')?.value.trim()||''):'',sourceUnit:row.querySelector('[data-role="sourceUnit"]')?.value||'g',sourceYieldPct:row.querySelector('[data-role="sourceEnabled"]')?.checked?Math.max(0,numeric(row.querySelector('[data-role="sourceYield"]')?.value)):0}))};
       card.querySelectorAll('[data-role="name"],[data-role="qty"],[data-role="unit"],[data-role="sourceName"],[data-role="sourceUnit"],[data-role="sourceYield"]').forEach(el=>el.addEventListener('input',()=>{updateDraft();updateCard(card)}));
-      card.querySelectorAll('[data-role="sourceEnabled"]').forEach(box=>box.addEventListener('change',()=>{const fields=box.closest('.recipe-semi-settings')?.querySelector('.recipe-semi-fields');if(fields)fields.hidden=!box.checked;updateDraft();updateCard(card)}));
+      card.querySelectorAll('[data-role="sourceEnabled"]').forEach(box=>box.addEventListener('change',()=>{const fields=box.closest('.recipe-semi-settings')?.querySelector('.recipe-semi-fields');if(fields)fields.hidden=!box.checked;box.closest('.recipe-percent-row')?.classList.toggle('is-semi',box.checked);updateDraft();updateCard(card)}));
       card.querySelector('[data-recipe-weight]')?.addEventListener('input',()=>updateCard(card));
       card.querySelectorAll('[data-role="percent"]').forEach(pct=>{
         pct.addEventListener('input',()=>{if(pct.readOnly)return;const total=flourTotal(card),row=pct.closest('.recipe-percent-row'),raw=String(pct.value).replace(',','.').trim(),value=Number(raw);if(raw!==''&&total&&Number.isFinite(value)&&value>=0){row.querySelector('[data-role="qty"]').value=round(total*value/100,3);updateDraft();updateCard(card,pct)}});

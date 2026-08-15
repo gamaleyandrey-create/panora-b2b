@@ -203,7 +203,7 @@
    const buyCost=isSemi?0:buy/factor(row.unit)*row.price;
    purchaseTotal+=buyCost;
    return `<tr class="${isSemi?'purchase-semi-row':''}">
-    <td><strong>${row.name}</strong><small>${isSemi?`Полуфабрикат · из «${row.sourceName}» · выход ${row.yieldPct}%`:`Цена за ${row.unit==='g'?'1 кг':row.unit==='ml'?'1 л':'1 шт.'}`}</small>${ingredientSourcesHtml(row)}</td>
+    <td><strong>${row.name}</strong><small>${isSemi?`Полуфабрикат · производится из «${row.sourceName}» · выход ${row.yieldPct}%`:`Цена за ${row.unit==='g'?'1 кг':row.unit==='ml'?'1 л':'1 шт.'}`}</small>${ingredientSourcesHtml(row)}</td>
     <td>${niceQty(row.required,row.unit)}</td>
     <td><input data-cost-stock="${index}" type="number" min="0" step="0.01" value="${row.stock}"> ${row.unit}</td>
     <td>${isSemi?'<span class="purchase-auto-mark">по сырью</span>':`<input data-cost-margin="${index}" type="number" min="0" step="0.1" value="${row.margin}">%`}</td>

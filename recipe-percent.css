@@ -44,3 +44,68 @@
 .recipe-semi-fields label span{display:block;margin-bottom:4px;color:#6f7b72;font-size:11px}
 .recipe-semi-fields>small{grid-column:1/-1;color:#748078}
 @media(max-width:700px){.recipe-semi-fields{grid-template-columns:1fr 1fr}.recipe-semi-fields label:first-child{grid-column:1/-1}}
+
+
+/* Panora 5.84 — semi-finished controls are always visible */
+.recipe-semi-banner{
+  margin:12px 0 10px;
+  padding:11px 13px;
+  border:1px solid #cfdccf;
+  border-radius:11px;
+  background:#eef5ed;
+}
+.recipe-semi-banner strong,.recipe-semi-banner span{display:block}
+.recipe-semi-banner strong{color:#2f5f40;font-size:13px}
+.recipe-semi-banner span{margin-top:4px;color:#68746c;font-size:12px;line-height:1.4}
+.recipe-semi-settings{
+  grid-column:1/-1;
+  margin-top:5px;
+  padding:10px 12px;
+  border:1px solid #dce5dc;
+  border-radius:10px;
+  background:#fbfdfb;
+}
+.recipe-percent-row.is-semi .recipe-semi-settings{
+  border-color:#9fbea7;
+  background:#f2f8f1;
+}
+.recipe-semi-toggle{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:9px!important;
+  margin:0!important;
+  cursor:pointer;
+}
+.recipe-semi-toggle input{
+  width:18px!important;
+  height:18px!important;
+  min-height:18px!important;
+  margin-top:1px!important;
+  flex:0 0 18px;
+}
+.recipe-semi-toggle span{display:block}
+.recipe-semi-toggle strong,.recipe-semi-toggle small{display:block}
+.recipe-semi-toggle strong{color:#315e40;font-size:12px}
+.recipe-semi-toggle small{margin-top:3px;color:#78827b;font-size:11px}
+.recipe-semi-fields{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) 100px 160px;
+  gap:10px;
+  margin:10px 0 0 27px;
+  padding-top:10px;
+  border-top:1px solid #dce5dc;
+}
+.recipe-semi-fields[hidden]{display:none!important}
+.recipe-semi-fields label span{display:block;margin-bottom:4px;color:#657168;font-size:11px}
+.recipe-semi-fields input,.recipe-semi-fields select{width:100%}
+.recipe-semi-example{
+  grid-column:1/-1;
+  display:block;
+  color:#66756b;
+  font-size:11px;
+  line-height:1.45;
+}
+@media(max-width:700px){
+  .recipe-semi-fields{grid-template-columns:1fr 1fr;margin-left:0}
+  .recipe-semi-fields label:first-child{grid-column:1/-1}
+}
