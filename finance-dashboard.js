@@ -78,6 +78,11 @@
     expenses=expenses.filter(row=>row.id!==id);save(KEY,expenses);render();
     try{await request(`finance_expenses?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'})}catch{}
   };
+  window.panoraFinanceAddExpense=async row=>{
+    await persist(row);
+    window.dispatchEvent(new CustomEvent('panora:finance-expenses-changed',{detail:{id:row.id}}));
+    return row;
+  };
 
   const from=document.querySelector('#financeDateFrom'),to=document.querySelector('#financeDateTo');
   const today=new Date(),monthStart=new Date(today.getFullYear(),today.getMonth(),1);
