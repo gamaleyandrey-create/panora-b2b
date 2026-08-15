@@ -75,7 +75,7 @@
 <link rel="stylesheet" href="mobile-partner-prices-v49.css?v=4910">
 <link rel="stylesheet" href="order-messages-v565.css?v=5650">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=5870">
+<link rel="stylesheet" href="finance-dashboard.css?v=5890">
 </head>
 <body class="auth-pending admin-page">
   <div class="admin-auth-layer" id="adminAuthLayer">
@@ -168,9 +168,17 @@
       </div>
 
       <div class="view" id="view-finance">
-        <div class="page-head">
-          <div><span class="kicker">PANORA</span><h2>Финансы</h2><p>Выручка, НДС, себестоимость сырья, расходы и операционная прибыль.</p></div>
+        <div class="page-head finance-page-head">
+          <div>
+            <span class="kicker">PANORA</span>
+            <div class="finance-title-row">
+              <h2>Финансы</h2>
+              <strong id="financePeriodLabel">—</strong>
+            </div>
+            <p>Выручка, себестоимость, расходы, НДС и операционная прибыль.</p>
+          </div>
         </div>
+
         <section class="finance-dashboard-period">
           <label><span>Период с</span><input id="financeDateFrom" type="date" data-panora-no-draft="1"></label>
           <label><span>по</span><input id="financeDateTo" type="date" data-panora-no-draft="1"></label>
@@ -178,45 +186,98 @@
           <button type="button" class="secondary" id="financeThisYear">Этот год</button>
         </section>
 
-        <section class="finance-kpi-grid">
-          <article><span>Выручка без НДС</span><strong id="financeRevenueNet">0,00 €</strong><small id="financeRevenueGross">С НДС: 0,00 €</small></article>
-          <article><span>НДС с продаж</span><strong id="financeSalesVat">0,00 €</strong><small>Не считается доходом</small></article>
-          <article><span>Себестоимость сырья</span><strong id="financeCogs">0,00 €</strong><small>По фактически отгруженному хлебу</small></article>
-          <article><span>Валовая прибыль</span><strong id="financeGrossProfit">0,00 €</strong><small id="financeGrossMargin">Маржа: 0%</small></article>
-          <article><span>Операционные расходы</span><strong id="financeExpensesNet">0,00 €</strong><small id="financeInputVat">Входящий НДС: 0,00 €</small></article>
-          <article class="finance-profit-card"><span>Операционная прибыль</span><strong id="financeOperatingProfit">0,00 €</strong><small id="financeOperatingMargin">Маржа: 0%</small></article>
-          <article><span>НДС к расчёту</span><strong id="financeVatPayable">0,00 €</strong><small>НДС с продаж − входящий НДС</small></article>
-          <article><span>Отгружено хлеба</span><strong id="financePieces">0 шт.</strong><small id="financeAvgProfit">Прибыль / хлеб: 0,00 €</small></article>
+        <section class="finance-main-kpis" aria-label="Главные финансовые показатели">
+          <article>
+            <span>Выручка без НДС</span>
+            <strong id="financeRevenueNet">0,00 €</strong>
+            <small id="financeRevenueGross">С НДС: 0,00 €</small>
+          </article>
+          <article>
+            <span>Сырьё по отгруженному хлебу</span>
+            <strong id="financeCogs">0,00 €</strong>
+            <small>По фактически отгруженным изделиям</small>
+          </article>
+          <article class="finance-profit-card">
+            <span>Операционная прибыль</span>
+            <strong id="financeOperatingProfit">0,00 €</strong>
+            <small>После сырья и прочих расходов</small>
+          </article>
+          <article class="finance-margin-card">
+            <span>Операционная маржа</span>
+            <strong id="financeOperatingMarginValue">0%</strong>
+            <small>Операционная прибыль / выручка без НДС</small>
+          </article>
+        </section>
+
+        <section class="finance-secondary-kpis">
+          <article>
+            <span>Валовая прибыль</span>
+            <strong id="financeGrossProfit">0,00 €</strong>
+            <small id="financeGrossMargin">Маржа: 0%</small>
+          </article>
+          <button type="button" class="finance-secondary-card finance-expense-jump" id="financeExpenseJump">
+            <span>Прочие расходы</span>
+            <strong id="financeExpensesNet">0,00 €</strong>
+            <small>Перейти к расходам ↓</small>
+          </button>
+          <article>
+            <span>Отгружено хлеба</span>
+            <strong id="financePieces">0 шт.</strong>
+            <small>За выбранный период</small>
+          </article>
+          <article>
+            <span>Средняя операционная прибыль / 1 хлеб</span>
+            <strong id="financeAvgProfitValue">0,00 €</strong>
+            <small id="financeAvgProfit">По всей выбранной отгрузке</small>
+          </article>
+        </section>
+
+        <section class="finance-vat-panel">
+          <div class="finance-panel-head">
+            <div><h3>НДС</h3><p>Налог показан отдельно и не смешивается с доходом или прибылью.</p></div>
+          </div>
+          <div class="finance-vat-grid">
+            <article><span>НДС с продаж</span><strong id="financeSalesVat">0,00 €</strong><small>Начислен покупателям</small></article>
+            <article><span>Входящий НДС</span><strong id="financeInputVat">0,00 €</strong><small>По расходам, отмеченным к вычету</small></article>
+            <article><span>Ориентировочный НДС к уплате</span><strong id="financeVatPayable">0,00 €</strong><small>НДС с продаж − входящий НДС</small></article>
+          </div>
         </section>
 
         <section class="finance-panel">
           <div class="finance-panel-head">
-            <div><h3>По видам хлеба</h3><p>Продажи и себестоимость сырья по каждому продукту.</p></div>
+            <div><h3>По видам хлеба</h3><p>Экономика каждого продукта до прочих операционных расходов.</p></div>
           </div>
           <div class="table-wrap finance-table-wrap">
-            <table><thead><tr><th>Хлеб</th><th>Штук</th><th>Выручка без НДС</th><th>Сырьё</th><th>Валовая прибыль</th><th>Прибыль / шт.</th><th>Маржа</th></tr></thead><tbody id="financeProductRows"></tbody></table>
+            <table>
+              <thead><tr><th>Хлеб</th><th>Штук</th><th>Цена продажи / шт.</th><th>Выручка без НДС</th><th>Сырьё</th><th>Валовая прибыль</th><th>Прибыль / шт.</th><th>Маржа</th></tr></thead>
+              <tbody id="financeProductRows"></tbody>
+            </table>
           </div>
         </section>
 
         <section class="finance-panel">
           <div class="finance-panel-head">
-            <div><h3>По партнёрам</h3><p>Какие партнёры формируют выручку и валовую прибыль.</p></div>
+            <div><h3>По партнёрам</h3><p>Объём, средняя выручка на хлеб и валовая прибыль по каждому партнёру.</p></div>
           </div>
           <div class="table-wrap finance-table-wrap">
-            <table><thead><tr><th>Партнёр</th><th>Выручка без НДС</th><th>Сырьё</th><th>Валовая прибыль</th><th>Маржа</th></tr></thead><tbody id="financePartnerRows"></tbody></table>
+            <table>
+              <thead><tr><th>Партнёр</th><th>Штук</th><th>Выручка без НДС</th><th>Средняя выручка / хлеб</th><th>Сырьё</th><th>Валовая прибыль</th><th>Маржа</th></tr></thead>
+              <tbody id="financePartnerRows"></tbody>
+            </table>
           </div>
         </section>
 
-        <section class="finance-panel">
+        <section class="finance-panel" id="financeExpensesPanel">
           <div class="finance-panel-head">
-            <div><h3>Расходы</h3><p>Указывайте сумму с НДС. Panora отделит расход без НДС и входящий НДС.</p></div>
+            <div><h3>Прочие расходы</h3><p>Указывайте сумму с НДС. Panora отделит расход без НДС и входящий НДС.</p></div>
             <button type="button" class="primary" id="financeAddExpense">+ Добавить расход</button>
           </div>
           <div class="table-wrap finance-table-wrap">
             <table><thead><tr><th>Дата</th><th>Категория</th><th>Описание</th><th>Тип</th><th>Сумма с НДС</th><th>НДС</th><th>Без НДС</th><th></th></tr></thead><tbody id="financeExpenseRows"></tbody></table>
           </div>
         </section>
-        <p class="finance-note">Себестоимость сырья рассчитывается по текущим рецептурам и текущим ценам ингредиентов. НДС к расчёту является управленческой оценкой, а не налоговой декларацией.</p>
+
+        <p class="finance-note">Себестоимость сырья рассчитывается по текущим рецептурам и текущим ценам ингредиентов. Показатель НДС является управленческой оценкой и не заменяет налоговую декларацию.</p>
       </div>
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
@@ -305,6 +366,6 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=5870"></script>
+<script src="finance-dashboard.js?v=5890"></script>
 </body>
 </html>
