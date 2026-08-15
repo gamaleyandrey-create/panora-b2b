@@ -560,3 +560,305 @@ body.admin-page .partner-requisites{
   body.admin-page .admin-content{padding-left:10px!important;padding-right:10px!important}
   body.admin-page .page-head h2{font-size:25px!important}
 }
+
+
+/* Panora 6.03 — unified bakery typography.
+   Manrope = all working UI; Prata = display headings only. */
+body.admin-page,
+body.admin-page button,
+body.admin-page input,
+body.admin-page select,
+body.admin-page textarea,
+body.admin-page table,
+body.admin-page label,
+body.admin-page small,
+body.admin-page .admin-nav,
+body.admin-page .admin-content,
+body.admin-page dialog{
+  font-family:Manrope,Arial,sans-serif!important;
+}
+
+body.admin-page{
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* Display type is intentionally limited to major headings. */
+body.admin-page .admin-topbar .brand,
+body.admin-page .admin-topbar .brand span,
+body.admin-page .admin-nav h1,
+body.admin-page .page-head h2,
+body.admin-page .summary-grid article strong,
+body.admin-page .finance-main-kpis article strong,
+body.admin-page .finance-secondary-kpis article strong,
+body.admin-page .finance-vat-grid article strong,
+body.admin-page .stock-product-main b,
+body.admin-page .reminder-section-head h3,
+body.admin-page .stock-history-head h3,
+body.admin-page .finance-panel h3,
+body.admin-page dialog h3,
+body.admin-page .account-detail-shell h2{
+  font-family:Prata,Georgia,serif!important;
+  font-weight:400!important;
+}
+
+/* Header */
+body.admin-page .admin-topbar .brand{
+  font-size:22px!important;
+  line-height:1;
+}
+body.admin-page .admin-topbar select,
+body.admin-page .admin-topbar .admin-logout,
+body.admin-page .admin-topbar .admin-menu-toggle{
+  font-size:13px!important;
+}
+body.admin-page #saveState{
+  font-size:11px!important;
+}
+
+/* Sidebar */
+body.admin-page .admin-nav h1{
+  font-size:27px!important;
+  line-height:1.08!important;
+}
+body.admin-page .admin-nav .admin-nav-group-label{
+  font-size:9px!important;
+}
+body.admin-page .admin-nav button{
+  font-size:13.5px!important;
+  line-height:1.3!important;
+}
+
+/* Page hierarchy */
+body.admin-page .page-head .kicker,
+body.admin-page .kicker{
+  font-size:10px!important;
+}
+body.admin-page .page-head h2{
+  font-size:clamp(31px,2.5vw,38px)!important;
+  line-height:1.08!important;
+}
+body.admin-page .page-head p{
+  font-size:13px!important;
+  line-height:1.55!important;
+}
+body.admin-page h3{
+  font-family:Manrope,Arial,sans-serif!important;
+  font-size:18px;
+  line-height:1.3;
+  font-weight:800;
+}
+body.admin-page h4{
+  font-family:Manrope,Arial,sans-serif!important;
+  font-size:15px;
+  line-height:1.35;
+  font-weight:800;
+}
+
+/* KPI cards */
+body.admin-page .summary-grid article span,
+body.admin-page .finance-main-kpis article span,
+body.admin-page .finance-secondary-kpis article span,
+body.admin-page .finance-vat-grid article span,
+body.admin-page .stock-overview-grid article span{
+  font-size:11.5px!important;
+  line-height:1.35!important;
+}
+body.admin-page .summary-grid article strong,
+body.admin-page .finance-main-kpis article strong,
+body.admin-page .finance-secondary-kpis article strong,
+body.admin-page .finance-vat-grid article strong{
+  font-size:clamp(24px,1.9vw,29px)!important;
+  line-height:1.1!important;
+}
+body.admin-page .summary-grid article small,
+body.admin-page .finance-main-kpis article small,
+body.admin-page .finance-secondary-kpis article small,
+body.admin-page .finance-vat-grid article small{
+  font-size:10.5px!important;
+  line-height:1.4!important;
+}
+
+/* Tables — large enough to read without making the admin dense. */
+body.admin-page th{
+  font-family:Manrope,Arial,sans-serif!important;
+  font-size:11px!important;
+  line-height:1.35!important;
+  font-weight:800!important;
+}
+body.admin-page td{
+  font-family:Manrope,Arial,sans-serif!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+}
+body.admin-page td small{
+  font-size:10.5px!important;
+}
+
+/* Controls */
+body.admin-page .primary,
+body.admin-page .secondary,
+body.admin-page button{
+  font-family:Manrope,Arial,sans-serif!important;
+}
+body.admin-page .primary,
+body.admin-page .secondary{
+  font-size:13px!important;
+}
+body.admin-page input,
+body.admin-page select,
+body.admin-page textarea{
+  font-size:14px!important;
+  line-height:1.4!important;
+}
+body.admin-page label,
+body.admin-page label>span{
+  font-size:12.5px;
+}
+body.admin-page label small,
+body.admin-page .form-hint,
+body.admin-page .finance-note{
+  font-size:10.5px!important;
+  line-height:1.45!important;
+}
+
+/* Tabs / status controls */
+body.admin-page .order-archive-tabs button,
+body.admin-page .order-status-bar button,
+body.admin-page .purchase-mode-tabs button,
+body.admin-page .stock-movement-tabs button,
+body.admin-page .account-debt-tabs button,
+body.admin-page .account-history-tabs button,
+body.admin-page .history-tabs button,
+body.admin-page .debt-tabs button{
+  font-size:12px!important;
+}
+
+/* Stock */
+body.admin-page .stock-product-card-head>strong{
+  font-size:13px!important;
+  line-height:1.4!important;
+}
+body.admin-page .stock-product-main small{
+  font-size:10.5px!important;
+}
+body.admin-page .stock-product-main b{
+  font-size:27px!important;
+  line-height:1.1!important;
+}
+body.admin-page .stock-product-card dt{
+  font-size:9.5px!important;
+}
+body.admin-page .stock-product-card dd{
+  font-size:12.5px!important;
+}
+
+/* Reminder / finance section headings retain Prata but are deliberately smaller
+   than page titles. */
+body.admin-page .reminder-section-head h3,
+body.admin-page .stock-history-head h3,
+body.admin-page .finance-panel h3{
+  font-size:23px!important;
+  line-height:1.15!important;
+}
+body.admin-page .reminder-card h3,
+body.admin-page .restaurant-card h3,
+body.admin-page .recipe-card h3{
+  font-family:Manrope,Arial,sans-serif!important;
+  font-size:17px!important;
+  font-weight:800!important;
+}
+body.admin-page .reminder-message,
+body.admin-page .restaurant-card p,
+body.admin-page .recipe-card p{
+  font-size:12.5px!important;
+  line-height:1.5!important;
+}
+
+/* Dialog typography */
+body.admin-page dialog h3{
+  font-size:27px!important;
+  line-height:1.12!important;
+}
+body.admin-page dialog p{
+  font-size:12.5px!important;
+  line-height:1.5!important;
+}
+body.admin-page .dialog-actions button{
+  font-size:13px!important;
+}
+
+/* Replace legacy Georgia/Arial declarations in specialised modules without
+   changing their layout or functionality. */
+body.admin-page .account-detail-shell h3,
+body.admin-page .account-detail-shell h4,
+body.admin-page .account-detail-shell p,
+body.admin-page .finance-dashboard,
+body.admin-page .finance-dashboard *,
+body.admin-page .purchase-costs,
+body.admin-page .purchase-costs *,
+body.admin-page .order-management,
+body.admin-page .order-management *,
+body.admin-page .recipe-card *,
+body.admin-page .restaurant-card *,
+body.admin-page .reminder-card *{
+  font-family:Manrope,Arial,sans-serif;
+}
+
+/* Restore Prata only where a display face adds useful hierarchy after the
+   broad specialised-module reset above. */
+body.admin-page .finance-dashboard .finance-panel h3,
+body.admin-page .purchase-costs .cost-summary strong,
+body.admin-page .stock-product-main b{
+  font-family:Prata,Georgia,serif!important;
+}
+
+@media(max-width:1100px) and (min-width:721px){
+  body.admin-page{font-size:13.5px}
+  body.admin-page .page-head h2{font-size:33px!important}
+  body.admin-page .admin-nav button{font-size:13px!important}
+  body.admin-page td{font-size:12.5px!important}
+}
+
+@media(max-width:720px){
+  body.admin-page{
+    font-size:14px!important;
+    line-height:1.48!important;
+  }
+  body.admin-page .admin-topbar .brand{
+    font-size:19px!important;
+  }
+  body.admin-page .page-head h2{
+    font-size:28px!important;
+    line-height:1.08!important;
+  }
+  body.admin-page .page-head p{
+    font-size:12.5px!important;
+  }
+  body.admin-page .admin-nav button{
+    font-size:13px!important;
+  }
+  body.admin-page th{
+    font-size:10.5px!important;
+  }
+  body.admin-page td{
+    font-size:12.5px!important;
+  }
+  body.admin-page input,
+  body.admin-page select,
+  body.admin-page textarea{
+    font-size:16px!important; /* prevents Safari/iOS input zoom */
+  }
+  body.admin-page .primary,
+  body.admin-page .secondary{
+    font-size:13px!important;
+  }
+  body.admin-page dialog h3{
+    font-size:25px!important;
+  }
+  body.admin-page .reminder-section-head h3,
+  body.admin-page .stock-history-head h3,
+  body.admin-page .finance-panel h3{
+    font-size:21px!important;
+  }
+}
