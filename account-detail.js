@@ -157,14 +157,14 @@
         String(a.id || "").localeCompare(String(b.id || ""))
       );
 
-    const takeFromNote = (paymentId, note, amount) => {
+    const takeFromNote = (paymentId, note, amount, date, payment) => {
       const key = String(note.id || note.number);
       const due = Math.max(0, Number(remaining.get(key) || 0));
       const used = Math.min(due, Math.max(0, Number(amount || 0)));
       if (used <= 0.005) return 0;
       remaining.set(key, Math.max(0, due - used));
       const entry = byId.get(paymentId) || { rows: [], credit: 0 };
-      entry.rows.push({ note, amount: used });
+      entry.rows.push({ note, amount: used, date: String(date || payment.receivedAt || payment.date || note.date || "") });
       byId.set(paymentId, entry);
       return used;
     };
@@ -179,11 +179,11 @@
           String(note.id || "") === String(payment.deliveryNoteId) ||
           String(note.number || "") === String(payment.deliveryNoteId)
         );
-        if (target) left -= takeFromNote(paymentId, target, left);
+        if (target) left -= takeFromNote(paymentId, target, left, payment.receivedAt||payment.date||target.date, payment);
       } else {
         for (const note of notes) {
           if (left <= 0.005) break;
-          left -= takeFromNote(paymentId, note, left);
+          left -= takeFromNote(paymentId, note, left, payment.receivedAt||payment.date||note.date, payment);
         }
       }
 
@@ -205,7 +205,7 @@
     if (!distribution) return "";
 
     const rows = (distribution.rows || []).map(({note, amount}) =>
-      `<div><span>DN-${String(note.number).padStart(4,"0")}</span><strong>${euro(amount)}</strong></div>`
+      `<div><span>${prettyDate(date)} · DN-${String(note.number).padStart(4,"0")}</span><strong>${euro(amount)}</strong></div>`
     );
     if (Number(distribution.credit || 0) > 0.005) {
       rows.push(`<div class="payment-allocation-credit"><span>Осталось в авансе</span><strong>${euro(distribution.credit)}</strong></div>`);
