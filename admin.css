@@ -86,3 +86,61 @@
 .finance-summary article:nth-child(4) strong{
   color:#2f4036;
 }
+
+
+/* Panora 5.96 — finished bread warehouse */
+.stock-overview-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin:0 0 18px;
+}
+.stock-overview-grid article{
+  padding:15px 16px;
+  border:1px solid #dce3db;
+  border-radius:14px;
+  background:#fff;
+}
+.stock-overview-grid span,.stock-overview-grid strong,.stock-overview-grid small{display:block}
+.stock-overview-grid span{color:#6d786f;font-size:11px}
+.stock-overview-grid strong{margin-top:7px;color:#2f533d;font-size:24px}
+.stock-overview-grid small{margin-top:5px;color:#7c867e;font-size:10px;line-height:1.35}
+.stock-product-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:22px;
+}
+.stock-product-card{
+  padding:16px;
+  border:1px solid #dce3db;
+  border-radius:15px;
+  background:#fff;
+}
+.stock-product-card.has-shortage{border-color:#e5c8a4;background:#fffaf3}
+.stock-product-card.has-discrepancy{border-color:#e4b9b5}
+.stock-product-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.stock-product-card-head>strong{color:#33453a;font-size:13px;line-height:1.35}
+.stock-product-card-head>span{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#fff0df;color:#9a5b22;font-size:9px;font-weight:800}
+.stock-product-main{margin:13px 0 11px}
+.stock-product-main small,.stock-product-main b{display:block}
+.stock-product-main small{color:#7c867e;font-size:10px}
+.stock-product-main b{margin-top:3px;color:#263b2e;font:28px Georgia,serif}
+.stock-product-card dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+.stock-product-card dl div{padding:8px 9px;border-radius:9px;background:#f3f6f2}
+.stock-product-card dt{color:#778179;font-size:9px}.stock-product-card dd{margin:3px 0 0;color:#405047;font-size:12px;font-weight:800}
+.stock-discrepancy{margin:10px 0 0;padding:7px 8px;border-radius:8px;background:#fff0ee;color:#9d4b43;font-size:9.5px;line-height:1.35}
+.stock-warning-list{margin:0 0 14px;padding:10px 12px;border:1px solid #e5c1b6;border-radius:11px;background:#fff4f0;color:#874c43}
+.stock-warning-list p{margin:2px 0;font-size:11px}
+.stock-history-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin:4px 0 10px}
+.stock-history-head h3{margin:0;font:25px Georgia,serif;color:#26392d}.stock-history-head p{margin:4px 0 0;color:#788179;font-size:11px}
+.stock-movement-tabs{display:flex;gap:8px}
+.stock-movement-tabs button{display:flex;align-items:center;gap:7px;min-height:38px;padding:0 13px;border:1px solid #d6ded6;border-radius:999px;background:#fff;color:#546159;font:700 11px/1 inherit;cursor:pointer}
+.stock-movement-tabs button b{display:grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border-radius:999px;background:#edf1ec;color:#6e7971;font-size:9px}
+.stock-movement-tabs button.active{border-color:#315b42;background:#315b42;color:#fff}.stock-movement-tabs button.active b{background:rgba(255,255,255,.18);color:#fff}
+.stock-movement-table .stock-auto-row{background:#fbfcfa}
+.stock-operation{font-weight:750}.stock-operation-baked{color:#356747}.stock-operation-shipped,.stock-qty-minus{color:#a64b43}.stock-qty-plus{color:#2f6b43;font-weight:800}
+.stock-doc-link{padding:0;border:0;background:transparent;color:#316747;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.stock-adjust-dialog{width:min(560px,calc(100% - 24px));border:0;border-radius:18px}.stock-adjust-dialog form{padding:22px}.stock-adjust-preview{min-height:34px;padding:9px 10px;border-radius:9px;background:#f2f6f1;color:#657168;font-size:11px}.stock-adjust-preview strong{color:#315b42}
+@media(max-width:1100px){.stock-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stock-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.stock-overview-grid,.stock-product-grid{grid-template-columns:1fr}.stock-history-head{align-items:stretch;flex-direction:column}.stock-movement-tabs{display:grid;grid-template-columns:1fr 1fr}.stock-movement-tabs button{justify-content:center}.stock-product-card dl{grid-template-columns:1fr 1fr}}

@@ -1,8 +1,8 @@
 const PRODUCTS={plain:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Yeast-free flaxseed bread with seeds',es:'Pan de lino sin levadura con semillas'},pumpkin:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'}};
 const TEXT={
-ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Остатки и движения учитываются в штуках.',movement:'+ Движение',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Движение хлеба',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
-en:{bakery:'Bakery',plan:'Bake plan',recipes:'Recipes',purchase:'Purchasing',stock:'Bread stock',planTitle:'Bake and delivery plan',planText:'Add dates and plan each bread in pieces.',addBake:'+ Add bake',today:'Today',planned:'Planned',ordered:'Ordered',reserve:'Available',recipeTitle:'Bread recipes',recipeText:'For each bread, enter the finished cooled product weight and ingredients per piece.',purchaseTitle:'Purchase list',purchaseText:'Calculated from the bake plan, stock and safety margin.',print:'Print',ingredient:'Ingredient',required:'Required',ingredientStock:'Stock',margin:'Margin',buy:'Buy',stockTitle:'Finished bread stock',stockText:'Stock and movements are counted in pieces.',movement:'+ Movement',date:'Date',product:'Bread',operation:'Operation',quantity:'Quantity',note:'Note',newBake:'New bake',bakeDate:'Bake date',deliveryDate:'Delivery date',plannedPiecesLabel:'Plan, pcs',cutoff:'Order cutoff',accepting:'Accept orders',cancel:'Cancel',save:'Save',newMovement:'Bread movement',open:'Orders open',closed:'Closed',delivery:'Delivery',cutoffShort:'Cutoff',empty:'No bakes this week',pcs:'pcs',orderedShort:'ordered'},
-es:{bakery:'Panadería',plan:'Plan de horneado',recipes:'Recetas',purchase:'Compras',stock:'Stock de pan',planTitle:'Plan de horneado y entrega',planText:'Añade fechas y planifica cada pan por unidades.',addBake:'+ Añadir horneado',today:'Hoy',planned:'Planificado',ordered:'Pedido',reserve:'Disponible',recipeTitle:'Recetas de pan',recipeText:'Indique para cada pan el peso del producto frío terminado y los ingredientes por unidad.',purchaseTitle:'Lista de compras',purchaseText:'Cálculo según el plan, existencias y margen de seguridad.',print:'Imprimir',ingredient:'Ingrediente',required:'Necesario',ingredientStock:'Existencias',margin:'Margen',buy:'Comprar',stockTitle:'Stock de pan terminado',stockText:'Las existencias y movimientos se cuentan por unidades.',movement:'+ Movimiento',date:'Fecha',product:'Pan',operation:'Operación',quantity:'Cantidad',note:'Nota',newBake:'Nuevo horneado',bakeDate:'Fecha de horneado',deliveryDate:'Fecha de entrega',plannedPiecesLabel:'Plan, uds.',cutoff:'Cierre de pedidos',accepting:'Aceptar pedidos',cancel:'Cancelar',save:'Guardar',newMovement:'Movimiento de pan',open:'Pedidos abiertos',closed:'Cerrado',delivery:'Entrega',cutoffShort:'Cierre',empty:'No hay horneados esta semana',pcs:'uds.',orderedShort:'pedido'}
+ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Выпечка приходуется автоматически в день производства, отгрузка списывается по накладной.',movement:'+ Корректировка',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Корректировка склада',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
+en:{bakery:'Bakery',plan:'Bake plan',recipes:'Recipes',purchase:'Purchasing',stock:'Bread stock',planTitle:'Bake and delivery plan',planText:'Add dates and plan each bread in pieces.',addBake:'+ Add bake',today:'Today',planned:'Planned',ordered:'Ordered',reserve:'Available',recipeTitle:'Bread recipes',recipeText:'For each bread, enter the finished cooled product weight and ingredients per piece.',purchaseTitle:'Purchase list',purchaseText:'Calculated from the bake plan, stock and safety margin.',print:'Print',ingredient:'Ingredient',required:'Required',ingredientStock:'Stock',margin:'Margin',buy:'Buy',stockTitle:'Finished bread stock',stockText:'Bakes are added automatically on the production day; shipments are deducted from delivery notes.',movement:'+ Adjustment',date:'Date',product:'Bread',operation:'Operation',quantity:'Quantity',note:'Note',newBake:'New bake',bakeDate:'Bake date',deliveryDate:'Delivery date',plannedPiecesLabel:'Plan, pcs',cutoff:'Order cutoff',accepting:'Accept orders',cancel:'Cancel',save:'Save',newMovement:'Stock adjustment',open:'Orders open',closed:'Closed',delivery:'Delivery',cutoffShort:'Cutoff',empty:'No bakes this week',pcs:'pcs',orderedShort:'ordered'},
+es:{bakery:'Panadería',plan:'Plan de horneado',recipes:'Recetas',purchase:'Compras',stock:'Stock de pan',planTitle:'Plan de horneado y entrega',planText:'Añade fechas y planifica cada pan por unidades.',addBake:'+ Añadir horneado',today:'Hoy',planned:'Planificado',ordered:'Pedido',reserve:'Disponible',recipeTitle:'Recetas de pan',recipeText:'Indique para cada pan el peso del producto frío terminado y los ingredientes por unidad.',purchaseTitle:'Lista de compras',purchaseText:'Cálculo según el plan, existencias y margen de seguridad.',print:'Imprimir',ingredient:'Ingrediente',required:'Necesario',ingredientStock:'Existencias',margin:'Margen',buy:'Comprar',stockTitle:'Stock de pan terminado',stockText:'El horneado entra automáticamente el día de producción y los envíos se descuentan por albarán.',movement:'+ Ajuste',date:'Fecha',product:'Pan',operation:'Operación',quantity:'Cantidad',note:'Nota',newBake:'Nuevo horneado',bakeDate:'Fecha de horneado',deliveryDate:'Fecha de entrega',plannedPiecesLabel:'Plan, uds.',cutoff:'Cierre de pedidos',accepting:'Aceptar pedidos',cancel:'Cancelar',save:'Guardar',newMovement:'Ajuste de stock',open:'Pedidos abiertos',closed:'Cerrado',delivery:'Entrega',cutoffShort:'Cierre',empty:'No hay horneados esta semana',pcs:'uds.',orderedShort:'pedido'}
 };
 Object.assign(TEXT.ru,{plan:'Календарь выпечки',planTitle:'Календарь выпечки',planText:'Назначайте дни выпечки и указывайте количество каждого хлеба.'});
 Object.assign(TEXT.en,{plan:'Bake calendar',planTitle:'Bake calendar',planText:'Schedule bake days and enter the quantity of each bread.'});
@@ -41,8 +41,156 @@ function renderPurchaseFilter(){const select=$('#purchaseDateFilter');if(!select
 function ingredientTotals(){const totals={};plans.filter(p=>p.bakeDate>=iso(new Date())&&(purchaseDateFilter==='all'||p.bakeDate===purchaseDateFilter)).forEach(p=>(recipes[p.product]||[]).forEach(r=>{const key=`${r.name}|${r.unit}`;totals[key]??={name:r.name,unit:r.unit,required:0,stock:Number(r.stock||0),margin:Number(r.margin||5)};totals[key].required+=Math.max(Number(p.planned)||0,Number(p.ordered)||0)*Number(r.qty)}));return Object.values(totals)}
 function niceQty(n,unit){if(unit==='g'&&n>=1000)return `${(n/1000).toFixed(2)} kg`;if(unit==='ml'&&n>=1000)return `${(n/1000).toFixed(2)} l`;return `${Math.ceil(n*100)/100} ${unit}`}
 function renderPurchase(){renderPurchaseFilter();const rows=ingredientTotals();$('#purchaseRows').innerHTML=rows.length?rows.map((r,i)=>{const buy=Math.max(0,r.required*(1+r.margin/100)-r.stock);return `<tr><td><strong>${adminEscape(r.name)}</strong></td><td>${niceQty(r.required,r.unit)}</td><td><input data-stock="${i}" type="number" min="0" value="${r.stock}"> ${r.unit}</td><td><input data-margin="${i}" type="number" min="0" value="${r.margin}">%</td><td><strong>${niceQty(buy,r.unit)}</strong></td></tr>`}).join(''):`<tr><td colspan="5">${t('empty')}</td></tr>`;$$('[data-stock],[data-margin]').forEach(e=>e.onchange=()=>{const row=rows[Number(e.dataset.stock??e.dataset.margin)];Object.values(recipes).flat().filter(r=>r.name===row.name&&r.unit===row.unit).forEach(r=>{if(e.dataset.stock!==undefined)r.stock=Number(e.value);else r.margin=Number(e.value)});store('panora-recipes',recipes);renderPurchase()})}
-function signed(m){return ['shipped','written_off'].includes(m.type)?-Number(m.quantity):Number(m.quantity)}
-function renderStock(){const balances=Object.keys(PRODUCTS).map(pid=>({pid,qty:movements.filter(m=>m.product===pid).reduce((s,m)=>s+signed(m),0)}));$('#stockCards').innerHTML=balances.map(x=>`<article><span>${productName(x.pid)}</span><strong>${x.qty} ${t('pcs')}</strong></article>`).join('');$('#movementRows').innerHTML=movements.slice().reverse().map(m=>`<tr><td>${fmt(m.date)}</td><td>${productName(m.product)}</td><td>${m.type}</td><td>${signed(m)>0?'+':''}${signed(m)} ${t('pcs')}</td><td>${adminEscape(m.note||'')}</td></tr>`).join('')}
+let stockMovementView='active';
+function stockRead(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??structuredClone(fallback)}catch{return structuredClone(fallback)}}
+function stockLocalDate(){return iso(new Date())}
+function stockCutoffDate(days=30){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-days);return iso(d)}
+function stockProductIds(){
+ const ids=new Set(Object.keys(PRODUCTS));
+ try{(JSON.parse(localStorage.getItem('panora-products')||'[]')||[]).forEach(p=>{if(p?.id&&!p.deletedAt)ids.add(String(p.id))})}catch{}
+ stockRead('panora-orders',[]).forEach(o=>(o.items||[]).forEach(i=>i?.product&&ids.add(String(i.product))));
+ stockRead('panora-delivery-notes',[]).forEach(n=>(n.items||[]).forEach(i=>i?.product&&ids.add(String(i.product))));
+ movements.forEach(m=>m?.product&&ids.add(String(m.product)));
+ return [...ids];
+}
+function stockProductName(pid){
+ try{
+  const product=(JSON.parse(localStorage.getItem('panora-products')||'[]')||[]).find(p=>String(p.id)===String(pid));
+  if(product)return product.names?.[lang]||product.names?.ru||product.name||String(pid);
+ }catch{}
+ return productName(pid);
+}
+function signed(m){
+ const type=String(m?.type||'');
+ const qty=Math.abs(Number(m?.quantity||0));
+ return ['shipped','written_off','correction_minus'].includes(type)?-qty:qty;
+}
+function stockOperationLabel(type){
+ return ({
+  baked:'Выпечка',
+  produced:'Ручной приход',
+  shipped:'Отгрузка',
+  returned:'Возврат',
+  written_off:'Списание / брак',
+  correction_plus:'Корректировка +',
+  correction_minus:'Корректировка −',
+  initial_balance:'Начальный остаток'
+ })[type]||type;
+}
+function stockOrders(){return stockRead('panora-orders',[])}
+function stockNotes(){return stockRead('panora-delivery-notes',[])}
+function stockManualProduced(date,product){
+ return movements.filter(m=>m.type==='produced'&&String(m.date||'')===String(date)&&String(m.product)===String(product)).reduce((sum,m)=>sum+Math.abs(Number(m.quantity||0)),0);
+}
+function stockAutoBakeMovements(){
+ const today=stockLocalDate(),grouped=new Map();
+ stockOrders().filter(o=>o&&o.status!=='cancelled'&&String(o.date||'')&&String(o.date)<=today).forEach(order=>{
+  (order.items||[]).forEach(item=>{
+   const qty=Math.max(0,Number(item.quantity||item.quantityPieces||0)),product=String(item.product||'');
+   if(!product||!qty)return;
+   const key=`${order.date}|${product}`;
+   grouped.set(key,(grouped.get(key)||0)+qty);
+  });
+ });
+ return [...grouped.entries()].flatMap(([key,ordered])=>{
+  const [date,product]=key.split('|'),manual=stockManualProduced(date,product),auto=Math.max(0,ordered-manual);
+  if(auto<=0)return[];
+  return [{id:`auto-bake:${date}:${product}`,date,product,type:'baked',quantity:auto,note:'Автоприход по заказам на дату выпечки',bakeDate:date,virtual:true}];
+ });
+}
+function stockShipmentMovements(){
+ return stockNotes().flatMap(note=>(note.items||[]).map((item,index)=>({
+  id:`auto-ship:${note.id}:${item.product}:${index}`,
+  date:String(note.date||''),
+  product:String(item.product||''),
+  type:'shipped',
+  quantity:Math.max(0,Number(item.quantity||0)),
+  note:`Накладная DN-${String(note.number||'').padStart(4,'0')}`,
+  noteId:String(note.id||''),
+  orderId:String(note.orderId||''),
+  virtual:true
+ }))).filter(m=>m.product&&m.quantity>0);
+}
+function stockEffectiveMovements(){
+ const notes=stockNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
+ const manual=movements.filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
+ return [...manual,...stockAutoBakeMovements(),...stockShipmentMovements()];
+}
+function stockRawBalance(product){
+ return stockEffectiveMovements().filter(m=>String(m.product)===String(product)).reduce((sum,m)=>sum+signed(m),0);
+}
+function stockReserved(product){
+ const today=stockLocalDate();
+ return stockOrders()
+  .filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&String(o.date||'')&&String(o.date)<=today)
+  .flatMap(o=>o.items||[])
+  .filter(item=>String(item.product)===String(product))
+  .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||item.quantityPieces||0)),0);
+}
+function stockOpenNote(noteId,orderId){
+ if(noteId&&typeof window.panoraOpenDeliveryNote==='function'){window.panoraOpenDeliveryNote(noteId);return}
+ if(orderId&&typeof window.printNote==='function'){window.printNote(orderId);return}
+ if(orderId&&typeof printNote==='function'){printNote(orderId)}
+}
+function stockOpenBake(date){
+ const button=document.querySelector('.admin-nav [data-view="plan"]');
+ if(button)button.click();
+ if(date&&typeof startOfWeek==='function'){weekStart=startOfWeek(new Date(`${date}T12:00:00`));if(typeof renderPlan==='function')renderPlan()}
+ const jump=$('#planDateJump');if(jump)jump.value=date;
+}
+function stockMovementNote(m){
+ if(m.type==='shipped'&&m.noteId)return `<button type="button" class="stock-doc-link" data-stock-note="${adminEscape(m.noteId)}" data-stock-order="${adminEscape(m.orderId||'')}">${adminEscape(m.note||'Накладная')}</button>`;
+ if(m.type==='baked'&&m.bakeDate)return `<button type="button" class="stock-doc-link" data-stock-bake="${adminEscape(m.bakeDate)}">${adminEscape(m.note||'Выпечка')}</button>`;
+ return adminEscape(m.note||'—');
+}
+function renderStock(){
+ const ids=stockProductIds(),effective=stockEffectiveMovements(),today=stockLocalDate(),cutoff=stockCutoffDate(30);
+ const cards=ids.map(pid=>{
+  const raw=effective.filter(m=>String(m.product)===String(pid)).reduce((sum,m)=>sum+signed(m),0);
+  const onHand=Math.max(0,raw),reserved=stockReserved(pid),free=Math.max(0,onHand-reserved),shortage=Math.max(0,reserved-onHand);
+  return {pid,raw,onHand,reserved,free,shortage};
+ }).sort((x,y)=>stockProductName(x.pid).localeCompare(stockProductName(y.pid),'ru'));
+ const totalOnHand=cards.reduce((s,x)=>s+x.onHand,0),totalReserved=cards.reduce((s,x)=>s+x.reserved,0),totalFree=cards.reduce((s,x)=>s+x.free,0);
+ const writtenOff30=effective.filter(m=>String(m.date||'')>=cutoff&&m.type==='written_off').reduce((s,m)=>s+Math.abs(Number(m.quantity||0)),0);
+ $('#stockTotalOnHand').textContent=`${totalOnHand} ${t('pcs')}`;
+ $('#stockTotalReserved').textContent=`${totalReserved} ${t('pcs')}`;
+ $('#stockTotalFree').textContent=`${totalFree} ${t('pcs')}`;
+ $('#stockWrittenOff30').textContent=`${writtenOff30} ${t('pcs')}`;
+ $('#stockCards').innerHTML=cards.map(x=>`<article class="stock-product-card ${x.shortage?'has-shortage':''} ${x.raw<0?'has-discrepancy':''}">
+   <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Не хватает ${x.shortage} шт.</span>`:''}</div>
+   <div class="stock-product-main"><small>На складе</small><b>${x.onHand} ${t('pcs')}</b></div>
+   <dl><div><dt>Зарезервировано</dt><dd>${x.reserved} ${t('pcs')}</dd></div><div><dt>Свободно</dt><dd>${x.free} ${t('pcs')}</dd></div></dl>
+   ${x.raw<0?`<p class="stock-discrepancy">Нужна инвентаризация: старые движения дают расчётный остаток ${x.raw} шт.</p>`:''}
+  </article>`).join('');
+ const warnings=[];
+ cards.filter(x=>x.raw<0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: требуется инвентаризация, исторический расчёт ${x.raw} шт.</p>`));
+ cards.filter(x=>x.shortage>0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: на текущую выпечку не хватает ${x.shortage} шт.</p>`));
+ const warningRoot=$('#stockWarnings');warningRoot.hidden=!warnings.length;warningRoot.innerHTML=warnings.join('');
+ const sorted=effective.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
+ const recent=sorted.filter(m=>String(m.date||'')>=cutoff),archive=sorted.filter(m=>String(m.date||'')<cutoff);
+ const tabs=$('#stockMovementTabs');
+ tabs.innerHTML=`<button type="button" class="${stockMovementView==='active'?'active':''}" data-stock-view="active"><span>Активные</span><b>${recent.length}</b></button><button type="button" class="${stockMovementView==='archive'?'active':''}" data-stock-view="archive"><span>Архив</span><b>${archive.length}</b></button>`;
+ tabs.querySelectorAll('[data-stock-view]').forEach(button=>button.onclick=()=>{stockMovementView=button.dataset.stockView;renderStock()});
+ const rows=stockMovementView==='archive'?archive:recent;
+ $('#movementRows').innerHTML=rows.length?rows.map(m=>{const value=signed(m);return `<tr class="${m.virtual?'stock-auto-row':''}"><td>${fmt(m.date)}</td><td>${adminEscape(stockProductName(m.product))}</td><td><span class="stock-operation stock-operation-${adminEscape(m.type)}">${stockOperationLabel(m.type)}</span></td><td class="${value<0?'stock-qty-minus':'stock-qty-plus'}">${value>0?'+':''}${value} ${t('pcs')}</td><td>${stockMovementNote(m)}</td></tr>`}).join(''):`<tr><td colspan="5">Движений пока нет.</td></tr>`;
+ $$('[data-stock-note]').forEach(b=>b.onclick=()=>stockOpenNote(b.dataset.stockNote,b.dataset.stockOrder));
+ $$('[data-stock-bake]').forEach(b=>b.onclick=()=>stockOpenBake(b.dataset.stockBake));
+}
+function fillMovementProducts(){
+ const select=$('#movementProduct');if(!select)return;
+ const current=select.value;
+ select.innerHTML=stockProductIds().map(pid=>`<option value="${adminEscape(pid)}">${adminEscape(stockProductName(pid))}</option>`).join('');
+ if(current&&[...select.options].some(o=>o.value===current))select.value=current;
+}
+function updateStockAdjustPreview(){
+ const form=$('#movementForm'),product=form.product.value,type=form.type.value,qty=Math.max(0,Number(form.quantity.value||0)),current=Math.max(0,stockRawBalance(product));
+ const label=$('#movementQuantityLabel'),preview=$('#stockAdjustPreview');
+ label.textContent=type==='inventory_set'?'Фактический остаток, шт.':'Количество, шт.';
+ if(type==='inventory_set'){
+  const delta=qty-current;
+  preview.innerHTML=`Сейчас по расчёту: <strong>${current} шт.</strong>${form.quantity.value!==''?` · после инвентаризации: <strong>${qty} шт.</strong> · корректировка ${delta>=0?'+':''}${delta} шт.`:''}`;
+ }else preview.innerHTML=`Сейчас по расчёту: <strong>${current} шт.</strong>`;
+}
 $$('.admin-nav button').forEach(b=>b.onclick=()=>{$$('.admin-nav button,.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');$('#view-'+b.dataset.view).classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 $('#prevWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()-7);renderPlan()};$('#nextWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()+7);renderPlan()};$('#today').onclick=()=>{weekStart=startOfWeek(new Date());renderPlan()};
@@ -70,5 +218,33 @@ $('#cancelBakeDate').onchange=renderCancelBakeSummary;
 $('#closeCancelBake').onclick=$('#keepBakeDay').onclick=()=>$('#cancelBakeDialog').close();
 $('#cancelBakeDialog').onclick=e=>{if(e.target===$('#cancelBakeDialog'))$('#cancelBakeDialog').close()};
 $('#cancelBakeForm').onsubmit=e=>{e.preventDefault();const form=$('#cancelBakeForm');if(!form.reportValidity())return;const f=new FormData(form),date=f.get('bakeDate'),reason=f.get('reason');if(performCancelBake(date,reason))$('#cancelBakeDialog').close()};
-$('#addMovement').onclick=()=>$('#movementDialog').showModal();$('#saveMovement').onclick=e=>{e.preventDefault();const f=new FormData($('#movementForm'));movements.push({id:crypto.randomUUID(),date:iso(new Date()),product:f.get('product'),type:f.get('type'),quantity:Number(f.get('quantity')),note:f.get('note')});store('panora-stock-movements',movements);$('#movementDialog').close();$('#movementForm').reset();renderStock()};
+$('#addMovement').onclick=()=>{
+ fillMovementProducts();
+ const form=$('#movementForm');form.reset();form.type.value='inventory_set';updateStockAdjustPreview();$('#movementDialog').showModal()
+};
+$('#movementProduct').onchange=updateStockAdjustPreview;
+$('#movementType').onchange=updateStockAdjustPreview;
+$('#movementForm').quantity.oninput=updateStockAdjustPreview;
+$('#saveMovement').onclick=e=>{
+ e.preventDefault();
+ const form=$('#movementForm');if(!form.reportValidity())return;
+ const f=new FormData(form),product=String(f.get('product')||''),requested=Math.max(0,Number(f.get('quantity')||0)),requestedType=String(f.get('type')||''),note=String(f.get('note')||'').trim();
+ let type=requestedType,quantity=requested;
+ if(requestedType==='inventory_set'){
+  const current=stockRawBalance(product),delta=requested-current;
+  if(Math.abs(delta)<0.0001){$('#movementDialog').close();form.reset();return}
+  type=delta>0?'correction_plus':'correction_minus';quantity=Math.abs(delta);
+ }
+ if(quantity<=0)return alert('Количество должно быть больше нуля.');
+ movements.push({
+  id:crypto.randomUUID(),date:iso(new Date()),product,type,quantity,
+  note:requestedType==='inventory_set'?`Инвентаризация: установлен остаток ${requested} шт.${note?` · ${note}`:''}`:note
+ });
+ store('panora-stock-movements',movements);
+ window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));
+ $('#movementDialog').close();form.reset();renderStock()
+};
+window.addEventListener('panora:order-cycle-updated',()=>renderStock());
+window.addEventListener('panora:products-changed',()=>renderStock());
+window.addEventListener('panora:stock-movements-changed',()=>renderStock());
 $('#printPurchase').onclick=()=>window.print();applyLanguage();

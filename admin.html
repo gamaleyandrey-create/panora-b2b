@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#39764d">
   <title>Panora — управление пекарней</title>
-<link rel="stylesheet" href="admin.css?v=5920">
+<link rel="stylesheet" href="admin.css?v=5960">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=3390">
     <link rel="stylesheet" href="date-jump.css?v=3390">
   <link rel="stylesheet" href="easy-plan.css?v=3390">
-  <link rel="stylesheet" href="product-admin.css?v=5920">
+  <link rel="stylesheet" href="product-admin.css?v=5960">
   <link rel="stylesheet" href="product-close.css?v=3390">
   <link rel="stylesheet" href="calendar-plan.css?v=3390">
   <link rel="stylesheet" href="calendar-weekend.css?v=3390">
@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=5940">
+  <link rel="stylesheet" href="purchase-costs.css?v=5950">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5860">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -133,35 +133,31 @@
         <div id="recipeList" class="recipe-grid"></div>
       </div>
       <div class="view" id="view-purchase">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по выбранным датам: хлеб по видам → рецептуры → общий список ингредиентов → остаток и страховой запас.</p></div><button class="secondary" id="printPurchase" data-t="print">Печать</button></div>
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="purchaseTitle">Список закупки</h2><p data-t="purchaseText">Расчёт по выбранным датам: хлеб по видам → рецептуры → общий список ингредиентов → остаток и страховой запас.</p></div><div class="purchase-head-actions"><button class="secondary" id="copyPurchaseList" type="button">Скопировать список</button><button class="secondary" id="printPurchase" data-t="print">Печать</button></div></div>
         <nav class="purchase-mode-tabs" id="purchaseModeTabs" aria-label="Активные и архивные закупки"></nav>
-
-        <section class="purchase-workflow" id="purchaseWorkflow">
-          <div class="purchase-workflow-head">
-            <div>
-              <strong>Статус закупки</strong>
-              <span id="purchaseWorkflowCaption">Текущий расчёт ещё не зафиксирован</span>
-            </div>
-            <div class="purchase-status-steps" id="purchaseStatusSteps" aria-label="Этапы закупки"></div>
-          </div>
-          <div class="purchase-workflow-actions" id="purchaseWorkflowActions">
-            <button type="button" class="primary" id="purchaseFreeze">Зафиксировать закупку</button>
-            <button type="button" class="secondary" id="purchaseMarkOrdered">Заказано поставщику</button>
-            <button type="button" class="secondary" id="purchaseReceive">Закупка выполнена</button>
-            <button type="button" class="secondary" id="purchaseCopyList">Скопировать список</button>
-          </div>
-          <div class="purchase-price-warning" id="purchasePriceWarning" hidden></div>
-          <div class="purchase-plan-fact" id="purchasePlanFact" hidden></div>
-        </section>
-
-        <div class="purchase-archive-note" id="purchaseArchiveNote" hidden>Архив хранит зафиксированные снимки закупок. Старые записи не пересчитываются по новым ценам и рецептурам.</div>
+        <div class="purchase-archive-note" id="purchaseArchiveNote" hidden>Архив — только просмотр прошлых дат. Он не влияет на текущую закупку и не изменяет цены, остатки или страховой запас.</div>
         <section class="cost-period"><div class="cost-bake-select"><label><span id="costBakeFilterLabel">Рассчитать закупку для</span><select id="costBakeFilter"></select></label></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span id="costPiecesLabel">Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span id="costConsumptionLabel">Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span id="costPurchaseLabel">Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Средняя себестоимость сырья / 1 хлеб</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p id="purchaseModeHint">Выберите отдельную дату выпечки или общий расчёт по активным датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th id="purchaseBuyHeader" data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
       </div>
       <div class="view" id="view-stock">
-        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Остатки и движения учитываются в штуках.</p></div><button class="primary" id="addMovement" data-t="movement">+ Движение</button></div>
-        <div id="stockCards" class="summary-grid"></div>
-        <div class="table-wrap"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
+        <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Выпечка приходуется автоматически в день производства, отгрузка списывается по накладной.</p></div><button class="primary" id="addMovement" data-t="movement">+ Корректировка</button></div>
+
+        <div id="stockWarnings" class="stock-warning-list" hidden></div>
+
+        <section class="stock-overview-grid">
+          <article><span>Всего на складе</span><strong id="stockTotalOnHand">0 шт.</strong><small>Фактический готовый хлеб</small></article>
+          <article><span>Зарезервировано сегодня</span><strong id="stockTotalReserved">0 шт.</strong><small>Под неотгруженные заказы текущей выпечки</small></article>
+          <article><span>Свободно</span><strong id="stockTotalFree">0 шт.</strong><small>Можно использовать без нарушения заказов</small></article>
+          <article><span>Списано за 30 дней</span><strong id="stockWrittenOff30">0 шт.</strong><small>Брак и ручные списания</small></article>
+        </section>
+
+        <div id="stockCards" class="stock-product-grid"></div>
+
+        <div class="stock-history-head">
+          <div><h3>Движения склада</h3><p>Автоматическая выпечка, отгрузки и ручные корректировки.</p></div>
+          <nav class="stock-movement-tabs" id="stockMovementTabs" aria-label="Движения склада"></nav>
+        </div>
+        <div class="table-wrap stock-movement-table"><table><thead><tr><th data-t="date">Дата</th><th data-t="product">Хлеб</th><th data-t="operation">Операция</th><th data-t="quantity">Количество</th><th data-t="note">Примечание</th></tr></thead><tbody id="movementRows"></tbody></table></div>
       </div>
       <div class="view" id="view-products">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Карточки продукции</h2><p>Настройте фотографии, названия, описания, вес и отображение хлеба в каталоге.</p></div><button class="primary" id="addProductCard">+ Новый вид хлеба</button></div>
@@ -326,7 +322,7 @@
 
   <dialog id="planDialog" class="easy-plan-dialog"><form method="dialog" id="planForm"><button type="button" class="dialog-close" id="closePlan" aria-label="Закрыть">×</button><h3>Запланировать выпечку</h3><p class="form-hint">Выберите день и укажите количество хотя бы одного хлеба.</p><div class="settings-row"><label><span>Дата выпечки</span><input type="date" name="bakeDate" required></label><label><span>Дата доставки</span><input type="date" name="deliveryDate" required></label></div><fieldset class="bread-plan-fields"><legend>Количество хлеба, шт.</legend><label><span>Льняной бездрожжевой хлеб с семенами</span><input type="number" name="plainPlanned" min="0" max="5000" step="1" placeholder="Количество"></label><label><span>Тыквенный бездрожжевой хлеб с семенами</span><input type="number" name="pumpkinPlanned" min="0" max="5000" step="1" placeholder="Количество"></label></fieldset><p class="plan-error" id="planError" role="alert"></p><details class="plan-extra"><summary>Дополнительные настройки</summary><label><span>Приём заказов до</span><input type="datetime-local" name="cutoff" required></label><label class="check"><input type="checkbox" name="open" checked><span>Принимать заказы</span></label></details><div class="plan-cancel-day"><button type="button" class="danger" id="cancelSelectedBake" hidden>Отменить день выпечки</button></div><div class="dialog-actions"><button type="button" id="cancelPlan">Закрыть</button><button type="submit" class="primary" id="savePlan">Сохранить выпечку</button></div></form></dialog>
   <dialog id="cancelBakeDialog" class="easy-plan-dialog"><form method="dialog" id="cancelBakeForm"><button type="button" class="dialog-close" id="closeCancelBake" aria-label="Закрыть">×</button><h3>Отменить день выпечки</h3><p class="form-hint">Приём заказов на выбранную дату будет закрыт. Неотгруженные заказы будут отменены.</p><label><span>Дата выпечки</span><select name="bakeDate" id="cancelBakeDate" required></select></label><div class="cancel-bake-summary" id="cancelBakeSummary"></div><label><span>Причина отмены</span><input name="reason" placeholder="Например: технические работы" required></label><label class="confirm-cancel-check"><input type="checkbox" name="confirmed" required><span>Подтверждаю отмену этого дня</span></label><div class="dialog-actions"><button type="button" id="keepBakeDay">Оставить день</button><button type="submit" class="danger" id="confirmCancelBake">Отменить выпечку</button></div></form></dialog>
-  <dialog id="movementDialog"><form method="dialog" id="movementForm"><h3 data-t="newMovement">Движение хлеба</h3><label><span data-t="product">Хлеб</span><select name="product"><option value="plain">Льняной бездрожжевой хлеб с семенами</option><option value="pumpkin">Тыквенный бездрожжевой хлеб с семенами</option></select></label><label><span data-t="operation">Операция</span><select name="type"><option value="produced">Произведено</option><option value="shipped">Отгружено</option><option value="returned">Возврат</option><option value="written_off">Списано</option></select></label><label><span data-t="quantity">Количество, шт.</span><input type="number" name="quantity" min="1" step="1" required></label><label><span data-t="note">Примечание</span><input name="note"></label><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="saveMovement" data-t="save">Сохранить</button></div></form></dialog>
+  <dialog id="movementDialog" class="stock-adjust-dialog"><form method="dialog" id="movementForm"><h3 data-t="newMovement">Корректировка склада</h3><p class="form-hint">Выпечка и отгрузки создаются автоматически. Здесь вводятся только инвентаризация, дополнительный приход, возврат или списание.</p><label><span data-t="product">Хлеб</span><select name="product" id="movementProduct"></select></label><label><span data-t="operation">Операция</span><select name="type" id="movementType"><option value="inventory_set">Инвентаризация — установить остаток</option><option value="correction_plus">Дополнительный приход</option><option value="returned">Возврат</option><option value="written_off">Списание / брак</option><option value="correction_minus">Корректировка −</option></select></label><label><span id="movementQuantityLabel">Фактический остаток, шт.</span><input type="number" name="quantity" min="0" step="1" required></label><label><span data-t="note">Примечание</span><input name="note" placeholder="Причина корректировки"></label><div class="stock-adjust-preview" id="stockAdjustPreview"></div><div class="dialog-actions"><button value="cancel" data-t="cancel">Отмена</button><button value="default" class="primary" id="saveMovement" data-t="save">Сохранить</button></div></form></dialog>
   <dialog id="restaurantDialog"><form method="dialog" id="restaurantForm"><h3>Новый партнёр</h3><label><span>Тип партнёра</span><select name="partnerType"><option value="restaurant">Ресторан</option><option value="shop">Магазин</option><option value="hotel">Отель</option><option value="cafe">Кафе</option><option value="catering">Кейтеринг</option><option value="other">Другое</option></select></label><label><span>Название партнёра</span><input name="name" maxlength="120" required></label><label><span>Email для входа и напоминаний</span><input name="email" type="email" required></label><label><span>Код доступа</span><input name="accessCode" minlength="4" required placeholder="Например: 4826"></label><label><span>Телефон</span><input name="phone" maxlength="30" type="tel"></label><label><span>WhatsApp</span><input name="whatsapp" maxlength="30" type="tel" placeholder="+34 600 000 000"></label><label><span>Telegram</span><input name="telegram" maxlength="120" placeholder="@username"></label><label><span>Язык сообщений</span><select name="language"><option value="ru">Русский</option><option value="en">English</option><option value="es">Español</option></select></label><label><span>Адрес доставки</span><input name="address" maxlength="300"></label><hr><h3>Реквизиты</h3><label><span>Юридическое название</span><input name="legalName" maxlength="180"></label><label><span>NIF / CIF</span><input name="taxId" maxlength="25"></label><label><span>Адрес для счетов</span><input name="billingAddress" maxlength="300"></label><label><span>Оптовая цена льняного хлеба, € / шт.</span><input name="plainPrice" type="text" inputmode="decimal" autocomplete="off" value="4.50" required></label><label><span>Оптовая цена тыквенного хлеба, € / шт.</span><input name="pumpkinPrice" type="text" inputmode="decimal" autocomplete="off" value="5.00" required></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveRestaurant">Сохранить</button></div></form></dialog>
   <dialog id="orderDialog"><form method="dialog" id="orderForm"><h3>Новый заказ</h3><label><span>Партнёр</span><select name="restaurant" id="orderRestaurant" required></select></label><label><span>Дата выпечки и доставки</span><input name="date" type="date" required></label><label><span>Льняной бездрожжевой хлеб с семенами, шт.</span><input name="plain" type="number" min="0" step="1" placeholder="Количество"></label><label><span>Тыквенный бездрожжевой хлеб с семенами, шт.</span><input name="pumpkin" type="number" min="0" step="1" placeholder="Количество"></label><p class="form-hint">Минимальный заказ — 12 шт. суммарно.</p><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="saveOrder">Создать заказ</button></div></form></dialog>
   <dialog id="shipmentDialog"><form method="dialog" id="shipmentForm"><h3>Отгрузка и накладная</h3><input type="hidden" name="orderId"><div id="shipmentSummary"></div><div class="shipment-trays"><label><span>Передано возвратных лотков, шт.</span><input name="traysDelivered" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label><label><span>Возвращено лотков партнёром, шт.</span><input name="traysReturned" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></label></div><div class="shipment-trays-preview"><span>Лотков останется у партнёра</span><strong id="shipmentTrayBalance">0 шт.</strong></div><label><span>Плановая дата оплаты</span><input name="paymentDueDate" type="date"><small>Необязательно. Дата будет видна партнёру и появится в напоминаниях.</small></label><label><span>Оплата при отгрузке, €</span><input name="paid" type="number" min="0" step="0.01" placeholder="Введите сумму или оставьте пустым"></label><label><span>Способ оплаты</span><select name="method"><option selected>Наличные</option><option>Банковский перевод</option><option>Карта</option></select></label><div class="dialog-actions"><button value="cancel">Отмена</button><button class="primary" id="confirmShipment">Отгрузить и создать накладную</button></div></form></dialog>
@@ -335,7 +331,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=5620"></script>
+<script src="admin.js?v=5960"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5920"></script>
@@ -347,7 +343,7 @@
 <script src="document-library.js?v=3390"></script>
 <script src="invoice-preview.js?v=3390"></script>
 <script src="admin-localization.js?v=3390"></script>
-<script src="product-admin.js?v=5710"></script>
+<script src="product-admin.js?v=5960"></script>
 <script src="calendar-plan.js?v=3390"></script>
 <script src="qrcode-browser.js?v=3390"></script>
 <script src="delivery-qr.js?v=3390"></script>
@@ -355,7 +351,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=5940"></script>
+<script src="purchase-costs.js?v=5950"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
@@ -375,37 +371,14 @@
 <script src="admin-partner-prices-direct-v426.js?v=5630"></script>
 <script src="order-messages-v565.js?v=5650"></script>
 
-  
-  <dialog id="purchaseReceiveDialog" class="purchase-receive-dialog">
-    <form method="dialog" id="purchaseReceiveForm">
-      <button type="button" class="dialog-close" id="purchaseReceiveClose" aria-label="Закрыть">×</button>
-      <span class="kicker">PANORA</span>
-      <h3>Закупка выполнена</h3>
-      <p class="form-hint">Укажите фактически полученное количество, цену без НДС и ставку НДС. Эти данные попадут в остатки и «Финансы».</p>
-      <label class="purchase-received-date"><span>Дата получения</span><input id="purchaseReceivedDate" name="receivedDate" type="date" required></label>
-      <div class="purchase-receive-summary" id="purchaseReceiveSummary"></div>
-      <div class="purchase-receive-table-wrap">
-        <table class="purchase-receive-table">
-          <thead><tr><th>Ингредиент</th><th>План</th><th>Факт</th><th>Цена без НДС</th><th>НДС, %</th><th>Итого без НДС</th></tr></thead>
-          <tbody id="purchaseReceiveRows"></tbody>
-        </table>
-      </div>
-      <div class="purchase-receive-totals" id="purchaseReceiveTotals"></div>
-      <div class="dialog-actions">
-        <button type="button" id="purchaseReceiveCancel">Отмена</button>
-        <button type="submit" class="primary">Сохранить факт закупки</button>
-      </div>
-    </form>
-  </dialog>
-
-<dialog id="financeExpenseDialog" class="finance-expense-dialog">
+  <dialog id="financeExpenseDialog" class="finance-expense-dialog">
     <form method="dialog" id="financeExpenseForm">
       <button type="button" class="dialog-close" id="financeExpenseClose" aria-label="Закрыть">×</button>
       <span class="kicker">PANORA</span>
       <h3>Расход</h3>
       <input type="hidden" name="id">
       <label><span>Дата</span><input name="date" type="date" required></label>
-      <label><span>Категория</span><select name="category"><option>Сырьё</option><option>Упаковка</option><option>Доставка</option><option>Электричество</option><option>Аренда</option><option>Зарплата</option><option>Эквайринг / комиссия</option><option>Бухгалтерия</option><option>Связь</option><option>Оборудование</option><option>Другое</option></select></label>
+      <label><span>Категория</span><select name="category"><option>Упаковка</option><option>Доставка</option><option>Электричество</option><option>Аренда</option><option>Зарплата</option><option>Эквайринг / комиссия</option><option>Бухгалтерия</option><option>Связь</option><option>Оборудование</option><option>Другое</option></select></label>
       <label><span>Описание</span><input name="description" placeholder="Например: коробки для хлеба"></label>
       <label><span>Тип расхода</span><select name="expenseType"><option value="variable">Переменный</option><option value="fixed">Постоянный</option></select></label>
       <div class="finance-expense-row">
@@ -418,6 +391,6 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=5940"></script>
+<script src="finance-dashboard.js?v=5890"></script>
 </body>
 </html>
