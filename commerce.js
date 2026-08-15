@@ -608,7 +608,7 @@ function renderAccounting() {
             : credit > 0.005
               ? `<span class="account-balance-credit">Переплата <strong>${euro(credit)}</strong></span>`
               : `<span class="account-balance-zero"><strong>${euro(0)}</strong></span>`;
-          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></td><td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}">${balanceHtml}</td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
+          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></button></td><td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}"><button type="button" class="account-balance-button" data-open-account="${commerceEscape(r.id)}">${balanceHtml}</button></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';

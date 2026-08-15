@@ -278,8 +278,10 @@
   }
 
   function open(id) {
-    const client = restaurant(id);
+    const normalizedId = String(id ?? "");
+    const client = restaurants.find((item) => String(item.id) === normalizedId) || restaurant(id);
     if (!client) return;
+    id = client.id;
     selectedId = id;
     debtTab = "active";
     const shipped = shippedFor(id);
@@ -361,6 +363,13 @@
   }
 
   body.addEventListener("click", (event) => {
+    const explicit = event.target.closest("[data-open-account]");
+    if (explicit) {
+      event.preventDefault();
+      event.stopPropagation();
+      open(explicit.dataset.openAccount);
+      return;
+    }
     const row = event.target.closest("[data-account-restaurant]");
     if (row) open(row.dataset.accountRestaurant);
   });

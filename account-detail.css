@@ -75,3 +75,14 @@
   .payment-allocation{width:100%}
   .payment-allocation-rows{padding:10px 11px}
 }
+
+/* Panora 5.77 — reliable partner accounting drill-down */
+.account-open-button,.account-balance-button{
+  width:100%;margin:0;padding:0;border:0;background:transparent;color:inherit;
+  font:inherit;text-align:left;cursor:pointer
+}
+.account-open-button strong,.account-open-button small{display:block}
+.account-open-button:hover strong,.account-balance-button:hover strong{text-decoration:underline}
+.account-open-button:focus-visible,.account-balance-button:focus-visible{
+  outline:2px solid rgba(49,84,62,.32);outline-offset:4px;border-radius:4px
+}
