@@ -196,6 +196,7 @@
   let financeFiltersOpen = false;
   let debtSearchDraft = "";
   let financeArchiveSearchDraft = "";
+  const openPaymentAllocations = new Set();
 
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
@@ -802,6 +803,108 @@
         const bd=b.dueDate||b.note.date||"9999-12-31";
         return String(ad).localeCompare(String(bd))||Number(a.note.number||0)-Number(b.note.number||0);
       });
+  };
+
+  const partnerPaymentDistribution=(notes,payments)=>{
+    const sortedNotes=(Array.isArray(notes)?notes:[])
+      .slice()
+      .sort((a,b)=>
+        String(a.date||"").localeCompare(String(b.date||""))||
+        Number(a.number||0)-Number(b.number||0)||
+        String(a.id||"").localeCompare(String(b.id||""))
+      );
+    const sortedPayments=(Array.isArray(payments)?payments:[])
+      .filter(payment=>payment&&payment.status!=="cancelled"&&Number(payment.amount||0)>0)
+      .slice()
+      .sort((a,b)=>
+        String(a.receivedAt||a.date||"").localeCompare(String(b.receivedAt||b.date||""))||
+        String(a.id||"").localeCompare(String(b.id||""))
+      );
+
+    const noteById=new Map(sortedNotes.map(note=>[String(note.id),note]));
+    const remainingByNote=new Map(
+      sortedNotes.map(note=>[String(note.id),Math.max(0,Number(note.total||0))])
+    );
+    const byPayment=new Map();
+    const pooled=[];
+
+    const rowFor=payment=>{
+      const key=String(payment.id||"");
+      if(!byPayment.has(key)){
+        byPayment.set(key,{
+          payment,
+          amount:Math.max(0,Number(payment.amount||0)),
+          allocations:[],
+          credit:0
+        });
+      }
+      return byPayment.get(key);
+    };
+
+    const apply=(row,note,requested)=>{
+      if(!note||requested<=0)return 0;
+      const key=String(note.id);
+      const remaining=Math.max(0,Number(remainingByNote.get(key)||0));
+      const used=Math.min(remaining,Math.max(0,Number(requested||0)));
+      if(used<=0)return 0;
+      remainingByNote.set(key,remaining-used);
+      row.allocations.push({note,amount:used});
+      return used;
+    };
+
+    // Match the bakery/shared balance algorithm:
+    // first apply payments explicitly linked to a delivery note,
+    // then distribute unlinked/excess amounts FIFO across the oldest open notes.
+    sortedPayments.forEach(payment=>{
+      const row=rowFor(payment);
+      let amount=row.amount;
+      const linked=payment.deliveryNoteId
+        ? noteById.get(String(payment.deliveryNoteId))
+        : null;
+      if(linked){
+        amount-=apply(row,linked,amount);
+      }
+      if(amount>0.005)pooled.push({row,amount});
+    });
+
+    pooled.forEach(pool=>{
+      let amount=pool.amount;
+      for(const note of sortedNotes){
+        if(amount<=0.005)break;
+        amount-=apply(pool.row,note,amount);
+      }
+      pool.row.credit=Math.max(0,amount);
+    });
+
+    return {byPayment,remainingByNote};
+  };
+
+  const partnerPaymentAllocationHtml=(payment,distribution)=>{
+    const key=String(payment?.id||"");
+    const row=distribution?.byPayment?.get?.(key);
+    if(!row)return "";
+    const allocations=(row.allocations||[]).filter(item=>Number(item.amount||0)>0.005);
+    const credit=Math.max(0,Number(row.credit||0));
+    if(!allocations.length&&credit<=0.005)return "";
+
+    const open=openPaymentAllocations.has(key);
+    const allocatedTotal=allocations.reduce((sum,item)=>sum+Number(item.amount||0),0);
+    const summary=lang==="ru"
+      ? `Куда зачтено · ${portalMoney(allocatedTotal)}${credit>0.005?` · аванс ${portalMoney(credit)}`:""}`
+      : lang==="es"
+        ? `Aplicación · ${portalMoney(allocatedTotal)}${credit>0.005?` · anticipo ${portalMoney(credit)}`:""}`
+        : `Applied to · ${portalMoney(allocatedTotal)}${credit>0.005?` · credit ${portalMoney(credit)}`:""}`;
+
+    return `<details class="rw-payment-allocation" data-rw-payment-allocation="${esc(key)}"${open?" open":""}>
+      <summary>${esc(summary)}</summary>
+      <div class="rw-payment-allocation-list">
+        ${allocations.map(item=>`<div class="rw-payment-allocation-row">
+          <button type="button" class="rw-payment-note-link" data-rw-allocation-note="${esc(item.note.id)}">${esc(noteNumber(item.note))}</button>
+          <strong>${portalMoney(item.amount)}</strong>
+        </div>`).join("")}
+        ${credit>0.005?`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Аванс / переплата":lang==="es"?"Anticipo / saldo":"Advance / credit"}</span><strong>${portalMoney(credit)}</strong></div>`:""}
+      </div>
+    </details>`;
   };
 
   function paymentsHtml() {
