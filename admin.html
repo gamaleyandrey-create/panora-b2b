@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=3390">
   <link rel="stylesheet" href="calendar-calm.css?v=3390">
   <link rel="stylesheet" href="admin-mobile-tabs.css?v=5270">
-  <link rel="stylesheet" href="purchase-costs.css?v=6000">
+  <link rel="stylesheet" href="purchase-costs.css?v=6060">
   <link rel="stylesheet" href="purchase-filter-simple.css?v=3390">
   <link rel="stylesheet" href="daily-order-summary.css?v=5860">
   <link rel="stylesheet" href="daily-selection.css?v=3390">
@@ -103,6 +103,7 @@
       <button class="active" data-view="orders">Заказы и отгрузки <span class="order-alert-badge" data-new-order-count hidden>0</span></button>
       <button data-view="plan" data-t="plan">Календарь выпечки</button>
       <button data-view="purchase" data-t="purchase">Закупка</button>
+      <button data-view="rawstock">Склад сырья</button>
       <button data-view="stock" data-t="stock">Склад хлеба</button>
 
       <div class="admin-nav-group-label">Финансы</div>
@@ -140,6 +141,52 @@
         <div class="purchase-archive-note" id="purchaseArchiveNote" hidden>Архив — только просмотр прошлых дат. Он не влияет на текущую закупку и не изменяет цены, остатки или страховой запас.</div>
         <section class="cost-period"><div class="cost-bake-select"><div class="purchase-date-selector-label" id="costBakeFilterLabel">Рассчитать закупку для</div><div id="costBakeFilter" class="purchase-date-selector" aria-label="Выбор дат выпечки"></div><div id="purchaseSelectionSummary" class="purchase-selection-summary"></div></div><div id="costBreadBreakdown" class="purchase-bread-breakdown" hidden></div><div class="cost-summary"><article><span id="costPiecesLabel">Хлеба к выпечке</span><strong id="costPeriodPieces">0 шт.</strong></article><article><span id="costConsumptionLabel">Стоимость сырья</span><strong id="costConsumptionTotal">0,00 €</strong></article><article><span id="costPurchaseLabel">Нужно закупить</span><strong id="costPurchaseTotal">0,00 €</strong></article><article><span>Средняя себестоимость сырья / 1 хлеб</span><strong id="costPerBread">0,00 € / шт.</strong></article></div><p id="purchaseModeHint">Выберите отдельную дату выпечки или общий расчёт по активным датам. Введите цену за 1 кг, 1 литр или 1 штуку.</p></section>
         <div class="table-wrap purchase-cost-table"><table><thead><tr><th data-t="ingredient">Ингредиент</th><th data-t="required">Нужно</th><th data-t="ingredientStock">Остаток</th><th data-t="margin">Запас</th><th id="purchaseBuyHeader" data-t="buy">Купить</th><th>Цена, €</th><th>Затраты, €</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+      </div>
+      <div class="view" id="view-rawstock">
+        <div class="page-head">
+          <div>
+            <span class="kicker">PANORA</span>
+            <h2>Склад сырья</h2>
+            <p>Фактические остатки ингредиентов. Прошедшие дни выпечки автоматически списывают сырьё по заказам и рецептурам.</p>
+          </div>
+          <div class="raw-stock-head-actions">
+            <button class="secondary" type="button" id="rawStockOpenPurchase">Открыть закупку</button>
+            <button class="primary" type="button" id="rawStockAddMovement">+ Приход / корректировка</button>
+          </div>
+        </div>
+
+        <section class="raw-stock-summary">
+          <article><span>Позиций сырья</span><strong id="rawStockIngredientCount">0</strong><small>По действующим рецептурам</small></article>
+          <article><span>Стоимость остатков</span><strong id="rawStockValue">0,00 €</strong><small>По текущим ценам закупки</small></article>
+          <article class="raw-stock-shortage-card"><span>Не хватает на активные даты</span><strong id="rawStockShortages">0</strong><small>С учётом текущего остатка</small></article>
+          <article><span>Автосписаний</span><strong id="rawStockAutoCount">0</strong><small>По прошедшим выпечкам</small></article>
+        </section>
+
+        <section class="raw-stock-panel">
+          <div class="raw-stock-panel-head">
+            <div><h3>Остатки</h3><p>«Нужно» — потребность по активным датам выпечки. Полуфабрикаты рассчитываются через исходное сырьё и процент выхода.</p></div>
+          </div>
+          <div class="table-wrap raw-stock-table-wrap">
+            <table>
+              <thead><tr><th>Ингредиент</th><th>Остаток</th><th>Нужно</th><th>После выпечки</th><th>Цена</th><th>Стоимость остатка</th><th>Статус</th></tr></thead>
+              <tbody id="rawStockRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="raw-stock-panel">
+          <div class="raw-stock-panel-head raw-stock-history-head">
+            <div><h3>Движения сырья</h3><p>Приходы и корректировки вводятся вручную. Списание по прошедшей выпечке создаётся автоматически.</p></div>
+            <nav class="stock-movement-tabs" id="rawStockHistoryTabs" aria-label="Движения склада сырья"></nav>
+          </div>
+          <div class="table-wrap raw-stock-table-wrap">
+            <table>
+              <thead><tr><th>Дата</th><th>Ингредиент</th><th>Операция</th><th>Количество</th><th>Примечание</th><th></th></tr></thead>
+              <tbody id="rawStockMovementRows"></tbody>
+            </table>
+          </div>
+          <p class="raw-stock-note">Автосписание выполняется только для завершившихся календарных дней. Текущий день не списывается заранее. Движения склада сырья в этой версии хранятся на текущем устройстве.</p>
+        </section>
       </div>
       <div class="view" id="view-stock">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2 data-t="stockTitle">Склад готового хлеба</h2><p data-t="stockText">Выпечка приходуется автоматически в день производства, отгрузка списывается по накладной.</p></div><button class="primary" id="addMovement" data-t="movement">+ Корректировка</button></div>
@@ -358,7 +405,7 @@
 <script src="mobile-admin-nav.js?v=3390"></script>
 <script src="admin-status-sync.js?v=3390"></script>
 <script src="admin-mobile-tabs.js?v=3390"></script>
-<script src="purchase-costs.js?v=6000"></script>
+<script src="purchase-costs.js?v=6060"></script>
 <script src="invoice-close.js?v=3390"></script>
 <script src="account-detail.js?v=5880"></script>
 <script src="order-notifications.js?v=2510"></script>
@@ -373,10 +420,31 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=2410"></script>
+<script src="pwa-stable.js?v=6060"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
+
+  <dialog id="rawStockMovementDialog" class="raw-stock-movement-dialog">
+    <form method="dialog" id="rawStockMovementForm">
+      <button type="button" class="dialog-close" id="rawStockMovementClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA</span>
+      <h3>Движение сырья</h3>
+      <label><span>Дата</span><input name="date" type="date" required></label>
+      <label><span>Ингредиент</span><select name="ingredient" required></select></label>
+      <label><span>Операция</span><select name="type">
+        <option value="purchase_in">Приход закупки</option>
+        <option value="inventory_set">Инвентаризация — установить остаток</option>
+        <option value="correction_plus">Корректировка +</option>
+        <option value="written_off">Списание / брак</option>
+        <option value="correction_minus">Корректировка −</option>
+      </select></label>
+      <label><span id="rawStockQuantityLabel">Количество</span><input name="quantity" type="number" min="0" step="0.01" required></label>
+      <label><span>Примечание</span><input name="note" maxlength="180" placeholder="Например: поставка муки"></label>
+      <div class="raw-stock-movement-preview" id="rawStockMovementPreview"></div>
+      <div class="dialog-actions"><button type="button" id="rawStockMovementCancel">Отмена</button><button type="submit" class="primary">Сохранить</button></div>
+    </form>
+  </dialog>
 
   <dialog id="financeExpenseDialog" class="finance-expense-dialog">
     <form method="dialog" id="financeExpenseForm">
