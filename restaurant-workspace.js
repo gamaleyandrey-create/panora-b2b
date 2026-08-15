@@ -785,6 +785,8 @@
   };
 
 
+  const openPaymentAllocations = new Set();
+
   const partnerPaymentDistribution=(notes,payments)=>{
     const allocations=new Map();
     const noteState=new Map();
@@ -886,7 +888,8 @@
       rows.push(`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Осталось в авансе":lang==="es"?"Queda como anticipo":"Remaining as advance"}</span><strong>${portalMoney(entry.credit)}</strong></div>`);
     }
     if(!rows.length)return "";
-    return `<details class="rw-payment-allocation"><summary>${lang==="ru"?"Куда зачтено":lang==="es"?"Dónde se aplicó":"Applied to"}</summary><div class="rw-payment-allocation-list">${rows.join("")}</div></details>`;
+    const paymentKey=String(payment.id||"");
+    return `<details class="rw-payment-allocation" data-rw-payment-allocation="${esc(paymentKey)}"${openPaymentAllocations.has(paymentKey)?" open":""}><summary>${lang==="ru"?"Куда зачтено":lang==="es"?"Dónde se aplicó":"Applied to"}</summary><div class="rw-payment-allocation-list">${rows.join("")}</div></details>`;
   };
 
   function paymentsHtml() {
@@ -1106,6 +1109,14 @@
     return ordersHtml();
   }
   function bind(modal) {
+    modal.querySelectorAll("[data-rw-payment-allocation]").forEach((details)=>{
+      details.addEventListener("toggle",()=>{
+        const key=String(details.dataset.rwPaymentAllocation||"");
+        if(!key)return;
+        if(details.open)openPaymentAllocations.add(key);
+        else openPaymentAllocations.delete(key);
+      });
+    });
     modal.querySelectorAll("[data-rw-summary]").forEach((button) => button.onclick = () => {
       if (button.dataset.rwSummary === "payments") activeTab = "payments";
       else if (button.dataset.rwSummary === "delivery") {
