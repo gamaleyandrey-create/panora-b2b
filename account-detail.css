@@ -54,3 +54,24 @@
 .account-detail-debt-list .paid-full{color:#2f6b43!important}
 .account-credit-text{color:#2f6b43!important;font-weight:700}
 @media(max-width:600px){.account-debt-tabs{overflow:auto}.account-debt-tabs button{white-space:nowrap}}
+
+
+/* Panora 5.74 — human-readable operation amounts and payment allocation */
+.account-detail-history .operation-amount-payment{color:#2f6543!important}
+.account-detail-history .operation-amount-shipment{color:#a8463e!important}
+.account-detail-history .operation-amount-pending{color:#8b692c!important}
+.payment-allocation{width:min(360px,100%);margin-top:2px;text-align:left}
+.payment-allocation summary{cursor:pointer;color:#45634f;font-size:12px;font-weight:750;list-style:none}
+.payment-allocation summary::-webkit-details-marker{display:none}
+.payment-allocation summary::before{content:"▸";display:inline-block;margin-right:6px;transition:transform .15s ease}
+.payment-allocation[open] summary::before{transform:rotate(90deg)}
+.payment-allocation-rows{display:grid;gap:5px;margin-top:7px;padding:9px 10px;border:1px solid #dce5dc;border-radius:10px;background:#f7faf7}
+.payment-allocation-rows>div{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px}
+.payment-allocation-rows>div span{margin:0!important;color:#647169!important}
+.payment-allocation-rows>div strong{white-space:nowrap;color:#315e40}
+.payment-allocation-credit{padding-top:5px;border-top:1px solid #dce5dc}
+.payment-allocation-credit strong{color:#2f6543!important}
+@media(max-width:600px){
+  .payment-allocation{width:100%}
+  .payment-allocation-rows{padding:10px 11px}
+}

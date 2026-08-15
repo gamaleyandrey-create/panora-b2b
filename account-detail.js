@@ -132,6 +132,101 @@
       .reverse();
   }
 
+
+  function paymentDistributionFor(id) {
+    const notes = deliveryNotes
+      .filter(note => note.restaurantId === id)
+      .slice()
+      .sort((a,b) =>
+        String(a.date || "").localeCompare(String(b.date || "")) ||
+        Number(a.number || 0) - Number(b.number || 0)
+      );
+    const remaining = new Map(
+      notes.map(note => [String(note.id || note.number), Math.max(0, Number(note.total || 0))])
+    );
+    const byId = new Map();
+    const confirmed = payments
+      .filter(payment =>
+        payment.restaurantId === id &&
+        paymentConfirmed(payment) &&
+        payment.status !== "cancelled"
+      )
+      .slice()
+      .sort((a,b) =>
+        String(a.receivedAt || a.date || "").localeCompare(String(b.receivedAt || b.date || "")) ||
+        String(a.id || "").localeCompare(String(b.id || ""))
+      );
+
+    const takeFromNote = (paymentId, note, amount) => {
+      const key = String(note.id || note.number);
+      const due = Math.max(0, Number(remaining.get(key) || 0));
+      const used = Math.min(due, Math.max(0, Number(amount || 0)));
+      if (used <= 0.005) return 0;
+      remaining.set(key, Math.max(0, due - used));
+      const entry = byId.get(paymentId) || { rows: [], credit: 0 };
+      entry.rows.push({ note, amount: used });
+      byId.set(paymentId, entry);
+      return used;
+    };
+
+    confirmed.forEach(payment => {
+      const paymentId = String(payment.id || "");
+      let left = Math.max(0, Number(payment.amount || 0));
+      byId.set(paymentId, { rows: [], credit: 0 });
+
+      if (payment.deliveryNoteId) {
+        const target = notes.find(note =>
+          String(note.id || "") === String(payment.deliveryNoteId) ||
+          String(note.number || "") === String(payment.deliveryNoteId)
+        );
+        if (target) left -= takeFromNote(paymentId, target, left);
+      } else {
+        for (const note of notes) {
+          if (left <= 0.005) break;
+          left -= takeFromNote(paymentId, note, left);
+        }
+      }
+
+      if (left > 0.005) {
+        const entry = byId.get(paymentId);
+        entry.credit = left;
+        byId.set(paymentId, entry);
+      }
+    });
+
+    return byId;
+  }
+
+  function paymentDistributionHtml(id, item) {
+    if (!item?.id || item.amount >= 0 || item.className.includes("pending")) return "";
+    const payment = payments.find(row => String(row.id) === String(item.id));
+    if (!payment || payment.deliveryNoteId) return "";
+    const distribution = paymentDistributionFor(id).get(String(item.id));
+    if (!distribution) return "";
+
+    const rows = (distribution.rows || []).map(({note, amount}) =>
+      `<div><span>DN-${String(note.number).padStart(4,"0")}</span><strong>${euro(amount)}</strong></div>`
+    );
+    if (Number(distribution.credit || 0) > 0.005) {
+      rows.push(`<div class="payment-allocation-credit"><span>Осталось в авансе</span><strong>${euro(distribution.credit)}</strong></div>`);
+    }
+    if (!rows.length) {
+      rows.push(`<div class="payment-allocation-credit"><span>В аванс / переплату</span><strong>${euro(Math.abs(item.amount))}</strong></div>`);
+    }
+
+    return `<details class="payment-allocation">
+      <summary>Распределение платежа</summary>
+      <div class="payment-allocation-rows">${rows.join("")}</div>
+    </details>`;
+  }
+
+  function operationAmountHtml(item) {
+    const amount = euro(Math.abs(Number(item.amount || 0)));
+    if (item.className.includes("pending")) return `<b class="operation-amount-pending">Ожидается ${amount}</b>`;
+    if (Number(item.amount || 0) < 0) return `<b class="operation-amount-payment">Оплата ${amount}</b>`;
+    return `<b class="operation-amount-shipment">Начислено ${amount}</b>`;
+  }
+
   function balanceAfterHtml(value) {
     const balance=Number(value||0);
     if(balance>0.005)return `<small>Задолженность после операции: ${euro(balance)}</small>`;
@@ -225,7 +320,7 @@
       ? history
           .map(
             (item) =>
-              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value"><b>${item.amount < 0 ? "−" : "+"}${euro(Math.abs(item.amount))}</b>${balanceAfterHtml(item.balanceAfter)}${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
+              `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`,
           )
           .join("")
       : '<p class="empty-row">Операций пока нет.</p>';
