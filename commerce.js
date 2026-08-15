@@ -638,48 +638,136 @@ function accountingDate(value) {
     return String(value);
   }
 }
+
+function accountingAllocationFor(restaurantId) {
+  const shared = typeof window.panoraFinanceAllocation === "function"
+    ? window.panoraFinanceAllocation(restaurantId)
+    : null;
+  if (shared?.notes) return shared;
+
+  const notes = deliveryNotes
+    .filter((note) => note.restaurantId === restaurantId)
+    .slice()
+    .sort((a, b) =>
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      Number(a.number || 0) - Number(b.number || 0) ||
+      String(a.id || "").localeCompare(String(b.id || ""))
+    );
+  const confirmed = payments
+    .filter((payment) =>
+      payment.restaurantId === restaurantId &&
+      paymentConfirmed(payment) &&
+      payment.status !== "cancelled" &&
+      Number(payment.amount || 0) > 0
+    )
+    .slice()
+    .sort((a, b) =>
+      String(a.receivedAt || a.date || "").localeCompare(String(b.receivedAt || b.date || "")) ||
+      String(a.id || "").localeCompare(String(b.id || ""))
+    );
+
+  const noteById = new Map(notes.map((note) => [String(note.id), note]));
+  const paidByNote = new Map(notes.map((note) => [String(note.id), 0]));
+  let fifoPool = 0;
+
+  confirmed.forEach((payment) => {
+    const amount = Math.max(0, Number(payment.amount || 0));
+    const linked = payment.deliveryNoteId
+      ? noteById.get(String(payment.deliveryNoteId))
+      : null;
+    if (!linked) {
+      fifoPool += amount;
+      return;
+    }
+    const key = String(linked.id);
+    const already = Number(paidByNote.get(key) || 0);
+    const total = Math.max(0, Number(linked.total || 0));
+    const applied = Math.min(Math.max(0, total - already), amount);
+    paidByNote.set(key, already + applied);
+    fifoPool += Math.max(0, amount - applied);
+  });
+
+  notes.forEach((note) => {
+    if (fifoPool <= 0) return;
+    const key = String(note.id);
+    const already = Number(paidByNote.get(key) || 0);
+    const total = Math.max(0, Number(note.total || 0));
+    const due = Math.max(0, total - already);
+    const applied = Math.min(due, fifoPool);
+    if (applied > 0) {
+      paidByNote.set(key, already + applied);
+      fifoPool -= applied;
+    }
+  });
+
+  const rows = notes.map((note) => {
+    const total = Math.max(0, Number(note.total || 0));
+    const paid = Math.min(total, Math.max(0, Number(paidByNote.get(String(note.id)) || 0)));
+    const due = Math.max(0, total - paid);
+    return { note, total, paid, due, closed: due <= 0.005 };
+  });
+
+  return {
+    notes: rows,
+    debt: rows.reduce((sum, row) => sum + row.due, 0),
+    credit: Math.max(0, fifoPool)
+  };
+}
+
 function renderAccounting() {
-  let shipped = 0,
-    paid = 0,
+  let activeInvoiceTotal = 0,
+    activeAllocatedTotal = 0,
     debtTotal = 0,
     creditTotal = 0;
+
   document.querySelector("#accountRows").innerHTML = restaurants.length
     ? restaurants
         .map((r) => {
-          const s = shippedFor(r.id),
-            p = paidFor(r.id),
-            allocation = window.panoraFinanceAllocation?.(r.id),
-            debt = Number(allocation?.debt ?? Math.max(0, s - p)),
-            credit = Number(allocation?.credit ?? Math.max(0, p - s)),
-            last =
-              [
-                ...deliveryNotes
-                  .filter((n) => n.restaurantId === r.id)
-                  .map((n) => n.date),
-                ...payments
-                  .filter((x) => x.restaurantId === r.id)
-                  .map((x) => x.date),
-              ]
-                .sort()
-                .pop() || "—";
-          shipped += s;
-          paid += p;
+          const allocation = accountingAllocationFor(r.id);
+          const activeNotes = (allocation.notes || []).filter((row) => Number(row.due || 0) > 0.005);
+          const activeInvoices = activeNotes.reduce((sum, row) => sum + Number(row.total || 0), 0);
+          const activeAllocated = activeNotes.reduce((sum, row) => sum + Number(row.paid || 0), 0);
+          const debt = activeNotes.reduce((sum, row) => sum + Number(row.due || 0), 0);
+          const credit = Number(allocation.credit || 0);
+          const last =
+            [
+              ...deliveryNotes
+                .filter((n) => n.restaurantId === r.id)
+                .map((n) => n.date),
+              ...payments
+                .filter((x) => x.restaurantId === r.id)
+                .map((x) => x.date),
+            ]
+              .sort()
+              .pop() || "—";
+
+          activeInvoiceTotal += activeInvoices;
+          activeAllocatedTotal += activeAllocated;
           debtTotal += debt;
           creditTotal += credit;
+
           const balanceHtml = debt > 0.005
             ? `<span class="account-balance-debt"><small>Партнёр должен</small>К оплате пекарне <strong>${euro(debt)}</strong></span>`
             : credit > 0.005
               ? `<span class="account-balance-credit"><small>Пекарня получила аванс</small>Переплата партнёра <strong>${euro(credit)}</strong></span>`
               : `<span class="account-balance-zero"><small>Долга и аванса нет</small><strong>Расчёты закрыты</strong></span>`;
-          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}"><td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></button></td><td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}"><button type="button" class="account-balance-button" data-open-account="${commerceEscape(r.id)}">${balanceHtml}</button></td><td>${euro(s)}</td><td>${euro(p)}</td><td>${commerceEscape(accountingDate(last))}</td></tr>`;
+
+          return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}">
+            <td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></button></td>
+            <td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}"><button type="button" class="account-balance-button" data-open-account="${commerceEscape(r.id)}">${balanceHtml}</button></td>
+            <td><strong>${euro(activeInvoices)}</strong><small class="account-current-hint">${activeNotes.length} ${activeNotes.length===1?"накладная":"накладных"}</small></td>
+            <td><strong>${euro(activeAllocated)}</strong><small class="account-current-hint">в текущие накладные</small></td>
+            <td>${commerceEscape(accountingDate(last))}</td>
+          </tr>`;
         })
         .join("")
     : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';
-  document.querySelector("#totalShipped").textContent = euro(shipped);
-  document.querySelector("#totalPaid").textContent = euro(paid);
+
+  document.querySelector("#totalShipped").textContent = euro(activeInvoiceTotal);
+  document.querySelector("#totalPaid").textContent = euro(activeAllocatedTotal);
   document.querySelector("#totalDebt").textContent = euro(debtTotal);
-  const creditNode=document.querySelector("#totalCredit");
-  if(creditNode)creditNode.textContent=euro(creditTotal);
+  const creditNode = document.querySelector("#totalCredit");
+  if (creditNode) creditNode.textContent = euro(creditTotal);
 }
 const reminderCopy = {
   ru: (r, p) =>
