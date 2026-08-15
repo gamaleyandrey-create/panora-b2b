@@ -881,7 +881,7 @@
     const entry=distribution.get(String(payment.id||""));
     if(!entry)return "";
     const rows=(entry.rows||[]).map(row=>`<div class="rw-payment-allocation-row">
-      <span><b>${esc(localDate(row.date))}</b> · ${esc(noteNumber(row.note))}</span>
+      <span><b>${esc(localDate(row.date))}</b> · <button type="button" class="rw-payment-note-link" data-rw-allocation-note="${esc(row.note.id)}">${esc(noteNumber(row.note))}</button></span>
       <strong>${portalMoney(row.amount)}</strong>
     </div>`);
     if(Number(entry.credit||0)>0.005){
@@ -1116,6 +1116,15 @@
         if(details.open)openPaymentAllocations.add(key);
         else openPaymentAllocations.delete(key);
       });
+    });
+    modal.querySelectorAll("[data-rw-allocation-note]").forEach((button)=>{
+      button.onclick=(event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        activeTab="notes";
+        noteToReveal=button.dataset.rwAllocationNote||"";
+        renderAccountModal();
+      };
     });
     modal.querySelectorAll("[data-rw-summary]").forEach((button) => button.onclick = () => {
       if (button.dataset.rwSummary === "payments") activeTab = "payments";
