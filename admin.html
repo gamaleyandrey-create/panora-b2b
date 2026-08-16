@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6230">
+<link rel="stylesheet" href="admin.css?v=6240">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -204,7 +204,7 @@
 
         <section class="stock-overview-grid">
           <article><span>Всего на складе</span><strong id="stockTotalOnHand">0 шт.</strong><small>Фактический готовый хлеб</small></article>
-          <article><span>Зарезервировано сегодня</span><strong id="stockTotalReserved">0 шт.</strong><small>Под неотгруженные заказы текущей выпечки</small></article>
+          <article><span>Зарезервировано сегодня</span><strong id="stockTotalReserved">0 шт.</strong><small>Партнёрские заказы + активные розничные заказы из наличия</small></article>
           <article><span>Свободно</span><strong id="stockTotalFree">0 шт.</strong><small>Можно использовать без нарушения заказов</small></article>
           <article><span>Списано за 30 дней</span><strong id="stockWrittenOff30">0 шт.</strong><small>Брак и ручные списания</small></article>
         </section>
@@ -369,53 +369,55 @@
       </div>
       <div class="view" id="view-retail-orders">
         <div class="page-head retail-page-head">
-          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Розничный канал для частных покупателей. Единственная точка выдачи и учёта — Пекарня.</p></div>
+          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Рабочая очередь частных покупателей. Единственная точка получения и учёта — Пекарня.</p></div>
           <div class="retail-page-actions"><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a><button type="button" class="secondary" id="retailOpenSettings">Настройки розницы</button></div>
         </div>
         <section class="retail-state-banner" id="retailStateBanner" data-state="on">
-          <div><span class="retail-state-dot"></span><strong id="retailStateTitle">Розничная витрина включена</strong><p id="retailStateText">Экран покупателя доступен для настройки. Реальное оформление заказов и оплата пока не запускаются.</p></div>
-          <span class="retail-location-pill">Пекарня · 1 объект</span>
+          <div><span class="retail-state-dot"></span><strong id="retailStateTitle">Розничная витрина и приём заказов включены</strong><p id="retailStateText">Покупатели могут создавать реальные заказы. Заказы из наличия резервируют свободный хлеб.</p></div>
+          <div class="retail-state-side"><span class="retail-location-pill">Пекарня · 1 объект</span><span class="retail-cloud-pill" id="retailOrdersCloudStatus">Проверяем облако…</span></div>
         </section>
         <section class="retail-summary-grid">
-          <article><span>Новые</span><strong id="retailNewCount">0</strong><small>Нужно принять в работу</small></article>
-          <article><span>К выпечке</span><strong id="retailPreorderCount">0</strong><small>Будущий спрос по выбранной дате</small></article>
+          <article><span>Новые</span><strong id="retailNewCount">0</strong><small>Нужно подтвердить</small></article>
+          <article><span>К выпечке</span><strong id="retailPreorderCount">0</strong><small>Предзаказы будущих дней</small></article>
           <article><span>Из наличия</span><strong id="retailStockCount">0</strong><small>Резерв готового хлеба</small></article>
           <article><span>Готовы к выдаче</span><strong id="retailReadyCount">0</strong><small>Самовывоз из пекарни</small></article>
         </section>
         <section class="retail-workflow-card">
-          <div><h3>Как будет работать розница</h3><p>Один объект — Пекарня. Покупатель не выбирает точку.</p></div>
+          <div><h3>Рабочий процесс</h3><p>Статус оплаты ведётся отдельно от статуса исполнения заказа.</p></div>
           <div class="retail-workflow-steps">
-            <span><b>1</b>Из наличия → резерв свободного хлеба</span>
-            <span><b>2</b>К выпечке → спрос выбранного дня</span>
-            <span><b>3</b>Самовывоз или доставка</span>
-            <span><b>4</b>Оплата → готов → выдан / доставлен</span>
+            <span><b>1</b>Новый → подтвердить заказ</span>
+            <span><b>2</b>Подтверждён → готовить</span>
+            <span><b>3</b>Готов → ждать покупателя</span>
+            <span><b>4</b>Выдать → списать хлеб со склада</span>
           </div>
+          <p class="retail-stage-note"><strong>6.24:</strong> «Из наличия» уже резервирует фактический склад. Предзаказы «К выпечке» принимаются и видны здесь, но в производственный план и расчёт сырья будут подключены следующим этапом.</p>
         </section>
         <section class="retail-orders-panel">
-          <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>При запуске здесь появятся розничные заказы отдельно от партнёрских заказов и накладных.</p></div><span id="retailOrderTotal">0 заказов</span></div>
-          <div class="table-wrap retail-orders-table"><table><thead><tr><th>№</th><th>Источник</th><th>Получение</th><th>Состав</th><th>Сумма</th><th>Оплата</th><th>Статус</th></tr></thead><tbody id="retailOrderRows"></tbody></table></div>
-          <div class="retail-empty-state" id="retailEmptyState"><strong>Розничных заказов пока нет</strong><p id="retailEmptyText">Витрина включена для настройки. Реальное оформление заказов пока не подключено.</p></div>
+          <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
+          <nav class="retail-order-filters" id="retailOrderFilters" aria-label="Фильтр розничных заказов"></nav>
+          <div class="table-wrap retail-orders-table"><table><thead><tr><th>№</th><th>Получение</th><th>Покупатель</th><th>Состав</th><th>Сумма</th><th>Оплата</th><th>Статус</th><th>Действие</th></tr></thead><tbody id="retailOrderRows"></tbody></table></div>
+          <div class="retail-order-cards" id="retailOrderCards"></div>
+          <div class="retail-empty-state" id="retailEmptyState"><strong>Заказов в этой выборке пока нет</strong><p id="retailEmptyText">Откройте экран покупателя и оформите тестовый заказ.</p></div>
         </section>
       </div>
-
       <div class="view" id="view-retail-catalog">
         <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Ассортимент розницы</h2><p>Те же карточки хлеба, фотографии и названия, что используются в Panora. Здесь отдельно задаётся доступность для розничных покупателей и розничная цена.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
         <section class="retail-location-card"><div><span>Объект продажи</span><strong>Пекарня</strong><p>Розничный ассортимент относится только к пекарне. Второй точки и отдельного склада нет.</p></div><span class="retail-location-lock">Один объект</span></section>
         <form id="retailCatalogForm" class="retail-catalog-form">
-          <div class="retail-catalog-help"><strong>Как работает</strong><p>«Из наличия» позже будет продавать только свободный готовый хлеб. «К выпечке» позже будет добавлять подтверждённый розничный предзаказ в реальный спрос выбранного дня.</p></div>
+          <div class="retail-catalog-help"><strong>Как работает</strong><p>«Из наличия» продаёт только свободный готовый хлеб и создаёт резерв. «К выпечке» создаёт реальный розничный предзаказ; подключение этих предзаказов к производственному плану — следующий этап.</p></div>
           <div class="retail-catalog-grid" id="retailCatalogGrid"></div>
           <div class="retail-settings-actions"><span id="retailCatalogSaved">Ассортимент ещё не менялся</span><button type="submit" class="primary">Сохранить ассортимент</button></div>
         </form>
       </div>
 
       <div class="view" id="view-retail-settings">
-        <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Настройки розницы</h2><p>Пекарня может в любой момент включить или выключить розничную витрину и заранее настроить правила будущих заказов.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
+        <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Настройки розницы</h2><p>Пекарня может в любой момент включить или выключить розничную витрину и настроить правила приёма заказов.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
         <section class="retail-location-card">
           <div><span>Единственный объект</span><strong>Пекарня</strong><p>Остатки, самовывоз, будущие предзаказы и доставка относятся только к этой пекарне. Кафе и другие точки не создаются.</p></div>
           <span class="retail-location-lock">Один объект</span>
         </section>
         <form id="retailSettingsForm" class="retail-settings-card">
-          <div class="retail-setting-row retail-master-row"><div><strong>Розничная витрина</strong><small>Включает или закрывает экран покупателя. Пока можно безопасно настраивать витрину — реальное создание заказов ещё не подключено.</small></div><label class="retail-switch"><input type="checkbox" name="enabled"><span></span><em id="retailEnabledLabel">Включена</em></label></div>
+          <div class="retail-setting-row retail-master-row"><div><strong>Розничная витрина</strong><small>Включает или полностью закрывает экран покупателя и приём новых розничных заказов.</small></div><label class="retail-switch"><input type="checkbox" name="enabled"><span></span><em id="retailEnabledLabel">Включена</em></label></div>
           <hr>
           <h3>Сценарии заказа</h3>
           <label class="retail-option"><input type="checkbox" name="stockSales"><span><strong>Покупка из наличия</strong><small>Показывать сценарий покупки свободного остатка готового хлеба.</small></span></label>
@@ -432,15 +434,15 @@
           </div>
           <label><span>Интервалы самовывоза</span><textarea name="pickupSlots" rows="4" placeholder="09:00–11:00&#10;11:00–13:00&#10;13:00–15:00"></textarea><small>По одному интервалу в строке. Покупатель сможет выбрать только эти интервалы.</small></label>
           <div class="retail-settings-grid">
-            <label><span>Максимум заказов на один интервал</span><input name="maxOrdersPerSlot" type="number" min="1" max="100" step="1"><small>Ограничение пригодится, когда подключим настоящие заказы.</small></label>
-            <label><span>Временный резерв корзины, мин.</span><input name="reservationMinutes" type="number" min="5" max="60" step="1"><small>После истечения времени незавершённый резерв будет освобождаться.</small></label>
+            <label><span>Максимум заказов на один интервал</span><input name="maxOrdersPerSlot" type="number" min="1" max="100" step="1"><small>После достижения лимита этот интервал перестаёт принимать новые заказы.</small></label>
+            <label><span>Временный резерв корзины, мин.</span><input name="reservationMinutes" type="number" min="5" max="60" step="1"><small>На это время хлеб из наличия удерживается за покупателем во время оформления.</small></label>
           </div>
-          <label><span>Предзаказ закрывается за, ч.</span><input name="preorderCutoffHours" type="number" min="1" max="168" step="1"><small>Дополнительное правило безопасности до выбранной выпечки.</small></label>
+          <label><span>Предзаказ закрывается за, ч.</span><input name="preorderCutoffHours" type="number" min="1" max="168" step="1"><small>Правило сохранено для этапа интеграции с производственным планом; в 6.24 действует календарный cutoff дня выпечки.</small></label>
           <hr>
           <h3>Оплата</h3>
           <div class="retail-settings-grid">
             <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Будущая оплата картой/ссылкой. Провайдер пока не подключён.</small></span></label>
-            <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Заказ сможет быть подтверждён без дистанционной оплаты.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Рабочий способ оплаты для 6.24: заказ подтверждается без дистанционной оплаты и оплачивается при получении.</small></span></label>
           </div>
           <hr>
           <h3>Контакты для покупателя</h3>
@@ -449,7 +451,7 @@
             <label><span>Email</span><input name="contactEmail" type="email" placeholder="hello@panora..."></label>
           </div>
           <label><span>Информация о самовывозе</span><textarea name="pickupNote" rows="3" maxlength="500" placeholder="Например: вход со стороны улицы, назовите номер заказа"></textarea></label>
-          <div class="retail-settings-note"><strong>Важно</strong><p>Эти настройки пока управляют только витриной и её предпросмотром. Реальные розничные заказы ещё не создаются и не меняют партнёрские заказы, Склад хлеба, Склад сырья, Закупку, выпечку или финансы.</p></div>
+          <div class="retail-settings-note"><strong>Важно</strong><p>Реальные розничные заказы включены. «Из наличия» резервирует свободный хлеб и при выдаче списывает его со Склада хлеба. Предзаказы «К выпечке» пока не добавляются автоматически в производство, Склад сырья и Закупку. Онлайн-оплата и доставка ещё не подключены.</p></div>
           <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить настройки</button></div>
         </form>
       </div>
@@ -540,7 +542,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6230"></script>
+<script src="admin.js?v=6240"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -575,7 +577,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6230"></script>
+<script src="pwa-stable.js?v=6240"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
