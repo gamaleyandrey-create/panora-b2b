@@ -1,7 +1,6 @@
 {
-  "version": "6.33",
-  "build": "6330",
-  "channel": "test",
+  "version": "6.34",
+  "build": "6340",
   "date": "2026-08-16",
-  "change": "retail-end-to-end-audit"
+  "change": "retail-in-app-messages-fallback-channels"
 }
