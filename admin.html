@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6270">
+<link rel="stylesheet" href="admin.css?v=6280">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -380,17 +380,17 @@
           <article><span>Новые</span><strong id="retailNewCount">0</strong><small>Нужно подтвердить</small></article>
           <article><span>К выпечке</span><strong id="retailPreorderCount">0</strong><small>Предзаказы будущих дней</small></article>
           <article><span>Из наличия</span><strong id="retailStockCount">0</strong><small>Резерв готового хлеба</small></article>
-          <article><span>Готовы к выдаче</span><strong id="retailReadyCount">0</strong><small>Самовывоз из пекарни</small></article>
+          <article><span>Готовы</span><strong id="retailReadyCount">0</strong><small>К выдаче или доставке</small></article>
         </section>
         <section class="retail-workflow-card">
           <div><h3>Рабочий процесс</h3><p>Статус оплаты ведётся отдельно от статуса исполнения заказа.</p></div>
           <div class="retail-workflow-steps">
             <span><b>1</b>Новый → подтвердить заказ</span>
             <span><b>2</b>Подтверждён → готовить</span>
-            <span><b>3</b>Готов → ждать покупателя</span>
-            <span><b>4</b>Выдать → списать хлеб со склада</span>
+            <span><b>3</b>Готов → выдача или доставка</span>
+            <span><b>4</b>Выдать / доставить → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.27:</strong> предзаказы «К выпечке» входят в реальный спрос производства и сырья. Покупатель получает безопасную ссылку на заказ без регистрации. Оплата теперь отделена от выполнения заказа и подготовлена к подключению внешнего платёжного провайдера.</p>
+          <p class="retail-stage-note"><strong>6.28:</strong> добавлена доставка из одной пекарни: фиксированная зона, стоимость, бесплатный порог, отдельные интервалы и статусы «Передан в доставку → Доставлен». Самовывоз работает как раньше.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -430,9 +430,19 @@
           <h3>Получение</h3>
           <div class="retail-settings-grid">
             <label class="retail-option"><input type="checkbox" name="pickup"><span><strong>Самовывоз</strong><small>Получение в единственной точке — пекарне.</small></span></label>
-            <label class="retail-option"><input type="checkbox" name="delivery"><span><strong>Доставка</strong><small>Настройка заложена заранее. Реальную доставку подключим после самовывоза.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="delivery"><span><strong>Доставка</strong><small>Одна простая зона доставки от пекарни: фиксированная стоимость, минимальный заказ и интервалы.</small></span></label>
           </div>
           <label><span>Интервалы самовывоза</span><textarea name="pickupSlots" rows="4" placeholder="09:00–11:00&#10;11:00–13:00&#10;13:00–15:00"></textarea><small>По одному интервалу в строке. Покупатель сможет выбрать только эти интервалы.</small></label>
+          <div class="retail-delivery-settings">
+            <h4>Доставка из пекарни</h4>
+            <div class="retail-settings-grid">
+              <label><span>Минимальная сумма заказа, €</span><input name="deliveryMinTotal" type="number" min="0" max="10000" step="0.01"><small>Если сумма хлеба меньше — доставка недоступна.</small></label>
+              <label><span>Стоимость доставки, €</span><input name="deliveryFee" type="number" min="0" max="1000" step="0.01"><small>Добавляется к заказу, если не действует бесплатная доставка.</small></label>
+              <label><span>Бесплатная доставка от, €</span><input name="deliveryFreeFrom" type="number" min="0" max="10000" step="0.01"><small>0 — бесплатный порог отключён.</small></label>
+              <label><span>Максимум доставок на интервал</span><input name="maxDeliveriesPerSlot" type="number" min="1" max="100" step="1"><small>Отдельный лимит от самовывоза.</small></label>
+            </div>
+            <label><span>Интервалы доставки</span><textarea name="deliverySlots" rows="4" placeholder="11:00–13:00&#10;13:00–15:00&#10;15:00–17:00"></textarea><small>Одна зона доставки. Адрес покупатель вводит при оформлении.</small></label>
+          </div>
           <div class="retail-settings-grid">
             <label><span>Максимум заказов на один интервал</span><input name="maxOrdersPerSlot" type="number" min="1" max="100" step="1"><small>После достижения лимита этот интервал перестаёт принимать новые заказы.</small></label>
             <label><span>Временный резерв корзины, мин.</span><input name="reservationMinutes" type="number" min="5" max="60" step="1"><small>На это время хлеб из наличия удерживается за покупателем во время оформления.</small></label>
@@ -444,7 +454,7 @@
             <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Показывать онлайн-оплату после подключения платёжного провайдера.</small></span></label>
             <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Покупатель оформляет заказ без онлайн-платежа; статус оплаты остаётся отдельным.</small></span></label>
           </div>
-          <label><span>Платёжный провайдер</span><select name="paymentProvider"><option value="none">Не подключён</option></select><small>6.27 закладывает безопасную архитектуру оплаты без привязки к конкретному сервису. После выбора провайдера здесь появится его настройка.</small></label>
+          <label><span>Платёжный провайдер</span><select name="paymentProvider"><option value="none">Не подключён</option></select><small>6.28 закладывает безопасную архитектуру оплаты без привязки к конкретному сервису. После выбора провайдера здесь появится его настройка.</small></label>
           <hr>
           <h3>Контакты для покупателя</h3>
           <div class="retail-settings-grid">
@@ -452,7 +462,7 @@
             <label><span>Email</span><input name="contactEmail" type="email" placeholder="hello@panora..."></label>
           </div>
           <label><span>Информация о самовывозе</span><textarea name="pickupNote" rows="3" maxlength="500" placeholder="Например: вход со стороны улицы, назовите номер заказа"></textarea></label>
-          <div class="retail-settings-note"><strong>Важно</strong><p>Реальные розничные заказы включены. «Из наличия» резервирует свободный хлеб и при выдаче списывает его со Склада хлеба. Предзаказы «К выпечке» участвуют в производстве и сырье. В 6.27 статусы оплаты отделены от выполнения заказа; онлайн-провайдер пока не подключён. Доставка ещё не подключена.</p></div>
+          <div class="retail-settings-note"><strong>Важно</strong><p>Реальные розничные заказы включены. Самовывоз и доставка используют один склад и один объект — Пекарню. «Из наличия» резервирует свободный хлеб; предзаказы «К выпечке» участвуют в производстве и сырье. Онлайн-провайдер пока не подключён.</p></div>
           <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить настройки</button></div>
         </form>
       </div>
@@ -543,7 +553,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6270"></script>
+<script src="admin.js?v=6280"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -578,7 +588,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6270"></script>
+<script src="pwa-stable.js?v=6280"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>

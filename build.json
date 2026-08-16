@@ -1,7 +1,7 @@
 {
-  "version": "6.27",
-  "build": "6270",
+  "version": "6.28",
+  "build": "6280",
   "channel": "test",
   "date": "2026-08-16",
-  "change": "retail-payment-architecture"
+  "change": "retail-delivery-single-zone"
 }
