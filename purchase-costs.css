@@ -397,3 +397,12 @@
 @media(max-width:720px){
  .raw-stock-selection-scope{white-space:normal;line-height:1.35;padding:5px 9px}
 }
+
+/* Panora 6.14 — inventory preview shows the remaining shortage against the active purchase selection */
+.raw-stock-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.raw-stock-preview-grid>span{display:grid;gap:2px;padding:8px 9px;border-radius:8px;background:#fff9;color:#6b776f;font-size:10px;font-weight:700}
+.raw-stock-preview-grid strong{color:#315b42;font-size:12px;font-weight:800}
+.raw-stock-preview-result{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;padding:8px 9px;border-radius:8px;font-size:11px;font-weight:800}
+.raw-stock-preview-result.warning{background:#fff0dc;color:#955a2d}.raw-stock-preview-result.ok{background:#e8f2e8;color:#326044}
+.raw-stock-preview-result strong{font-size:12px}
+@media(max-width:520px){.raw-stock-preview-grid{grid-template-columns:1fr 1fr}.raw-stock-preview-grid>span:last-child{grid-column:1/-1}}

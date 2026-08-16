@@ -496,7 +496,8 @@
  function updateRawMovementPreview(){
   const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel'),hint=document.querySelector('#rawStockEntryUnitHint');
   if(!form||!preview)return;
-  const ledger=rawLedger(),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,type=form.type.value;
+  const ledger=rawLedger(),forward=rawForwardNeeds(ledger),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,type=form.type.value;
+  const required=row?Math.max(0,Number(forward.needs.get(row.key)||0)):0;
   const entryUnit=row?rawEntryUnitLabel(row.unit):'',entryValue=Math.max(0,Number(form.quantity.value||0)),qty=row?rawEntryToBase(entryValue,row.unit):0;
   if(label)label.textContent=`${type==='inventory_set'?'Фактический остаток':'Количество'}, ${entryUnit}`;
   if(form.quantity){
@@ -509,15 +510,23 @@
     ?'Ввод в литрах: 1 л = 1000 мл. Например, 2,5 л = 2500 мл.'
     :'Ввод в штуках.';
   let after=current;if(form.quantity.value!==''&&row)after=type==='inventory_set'?qty:current+rawSignedType(type)*qty;
+  const hasQuantity=form.quantity.value!==''&&row;
+  const shortageAfter=hasQuantity?Math.max(0,required-Math.max(0,after)):Math.max(0,required-Math.max(0,current));
+  const surplusAfter=hasQuantity?Math.max(0,Math.max(0,after)-required):Math.max(0,Math.max(0,current)-required);
   const guidance=row&&current<0&&type==='inventory_set'
    ?'<small>Инвентаризация заменит отрицательный расчёт указанным фактическим остатком.</small>'
    :row&&current<0&&type==='purchase_in'
     ?'<small>Приход прибавится к текущему расчёту. Если хотите установить реальный остаток с нуля, выберите «Инвентаризация».</small>'
     :'';
-  const conversion=row&&form.quantity.value!==''&&row.unit!=='pcs'
+  const conversion=row&&hasQuantity&&row.unit!=='pcs'
    ?`<small>${entryValue} ${entryUnit} = ${niceQty(qty,row.unit)} (${Math.round(qty*1000)/1000} ${rawUnitLabel(row.unit)})</small>`
    :'';
-  preview.innerHTML=`Сейчас: <strong>${row?niceQty(current,row.unit):'—'}</strong>${form.quantity.value!==''&&row?` · после операции: <strong>${niceQty(after,row.unit)}</strong>`:''}${conversion}${guidance}`;
+  const result=row&&hasQuantity
+   ? shortageAfter>0.0005
+    ?`<div class="raw-stock-preview-result warning"><span>После операции не хватает</span><strong>${niceQty(shortageAfter,row.unit)}</strong></div>`
+    :`<div class="raw-stock-preview-result ok"><span>После операции</span><strong>Хватает${surplusAfter>0.0005?` · запас ${niceQty(surplusAfter,row.unit)}`:''}</strong></div>`
+   :'';
+  preview.innerHTML=row?`<div class="raw-stock-preview-grid"><span>Сейчас<strong>${niceQty(current,row.unit)}</strong></span><span>Нужно по выборке<strong>${niceQty(required,row.unit)}</strong></span>${hasQuantity?`<span>После операции<strong>${niceQty(after,row.unit)}</strong></span>`:''}</div>${result}${conversion}${guidance}`:'Ингредиент не найден.';
  }
  function bindRawStock(){
   const add=document.querySelector('#rawStockAddMovement'),dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
@@ -546,8 +555,12 @@
    try{saveRawMovements(movements)}
    catch(error){rawStockFeedback(error.message||String(error),'error');return}
    dialog.close();renderRawStock();renderPurchase();
+   const afterLedger=rawLedger(),afterForward=rawForwardNeeds(afterLedger),afterStock=Number(afterLedger.balances.get(row.key)||0),afterRequired=Math.max(0,Number(afterForward.needs.get(row.key)||0)),afterShortage=Math.max(0,afterRequired-Math.max(0,afterStock));
    const state=document.querySelector('#rawStockCloudState')?.dataset.state;
-   rawStockFeedback(state==='error'?'Сохранено на устройстве. Облако повторит синхронизацию.':'Остаток сохранён.');
+   const operationResult=data.type==='inventory_set'
+    ?`Инвентаризация сохранена · ${afterShortage>0.0005?`не хватает ${niceQty(afterShortage,row.unit)}`:'сырья хватает'}.`
+    :'Остаток сохранён.';
+   rawStockFeedback(state==='error'?`${operationResult} На устройстве; облако повторит синхронизацию.`:operationResult);
   });
 
   document.querySelector('.admin-nav button[data-view="rawstock"]')?.addEventListener('click',()=>setTimeout(renderRawStock,0));
