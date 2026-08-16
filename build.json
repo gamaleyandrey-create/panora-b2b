@@ -1,7 +1,7 @@
 {
-  "version": "6.26",
-  "build": "6260",
+  "version": "6.27",
+  "build": "6270",
   "channel": "test",
   "date": "2026-08-16",
-  "change": "retail-customer-order-status-page"
+  "change": "retail-payment-architecture"
 }
