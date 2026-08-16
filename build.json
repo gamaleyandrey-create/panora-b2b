@@ -1,7 +1,7 @@
 {
-  "version": "6.28",
-  "build": "6280",
+  "version": "6.29",
+  "build": "6290",
   "channel": "test",
   "date": "2026-08-16",
-  "change": "retail-delivery-single-zone"
+  "change": "retail-analytics"
 }
