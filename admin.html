@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6320">
+<link rel="stylesheet" href="admin.css?v=6330">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -416,7 +416,7 @@
             <span><b>3</b>Готов → выдача или доставка</span>
             <span><b>4</b>Выдать / доставить → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.32:</strong> выполнен сквозной аудит розницы: дубли заказов нейтрализуются до расчёта склада и финансов, а аналитика показывает конфликты резерва, завершения и оплаты.</p>
+          <p class="retail-stage-note"><strong>6.33:</strong> по каждому розничному заказу ведётся журнал событий; история доступна пекарне и покупателю. Финансовая логика 6.31 сохранена: оплаченные завершённые продажи, доставка, возвраты и COGS считаются отдельно от B2B и входят в общую операционную прибыль без двойного списания сырья.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -438,10 +438,9 @@
 
       <div class="view" id="view-retail-analytics">
         <div class="page-head retail-page-head">
-          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Аналитика розницы</h2><p>Операционная аналитика розницы. Финансовые суммы сверяются с общим разделом «Финансы».</p></div>
+          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Аналитика розницы</h2><p>Отдельная операционная аналитика розничных заказов. Пока она не смешивается с B2B-финансами Panora.</p></div>
           <button type="button" class="secondary" id="retailAnalyticsOpenOrders">Открыть заказы</button>
         </div>
-        <div class="retail-consistency-audit" id="retailConsistencyAudit"><div><strong>Проверяем контур…</strong><p>Заказы → резерв → склад → выдача → финансы.</p></div></div>
         <nav class="retail-analytics-periods" id="retailAnalyticsPeriods" aria-label="Период аналитики"></nav>
         <section class="retail-analytics-kpis">
           <article><span>Завершённые заказы</span><strong id="retailAnalyticsOrders">0</strong><small id="retailAnalyticsOrdersSub">За выбранный период</small></article>
@@ -480,7 +479,7 @@
           <div class="retail-panel-head"><div><h3>Популярный хлеб</h3><p>По количеству штук в завершённых розничных заказах.</p></div></div>
           <div class="retail-popular-list" id="retailPopularProducts"></div>
         </section>
-        <div class="retail-settings-note"><strong>Финансы</strong><p>Розничная выручка и COGS уже входят в общий раздел «Финансы». 6.32 дополнительно защищает расчёт от дублей локального кеша и показывает конфликт резерва со складом.</p></div>
+        <div class="retail-settings-note"><strong>Финансы</strong><p>Розничная аналитика пока отдельная. Эти суммы не добавляются автоматически в общий раздел «Финансы», чтобы не задвоить выручку до отдельной проверки финансового контура.</p></div>
       </div>
 
       <div class="view" id="view-retail-settings">
@@ -535,6 +534,15 @@
             <label><span>Email</span><input name="contactEmail" type="email" placeholder="hello@panora..."></label>
           </div>
           <label><span>Информация о самовывозе</span><textarea name="pickupNote" rows="3" maxlength="500" placeholder="Например: вход со стороны улицы, назовите номер заказа"></textarea></label>
+          <hr>
+          <h3>Уведомления покупателю</h3>
+          <p class="retail-settings-intro">Сейчас Panora только формирует события внутри заказа. Эти переключатели определяют, какие события позже можно отправлять по email / SMS / WhatsApp без изменения логики заказа.</p>
+          <div class="retail-settings-grid">
+            <label class="retail-option"><input type="checkbox" name="notifyOrderReceived"><span><strong>Заказ принят</strong><small>Событие создаётся сразу после оформления.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="notifyReady"><span><strong>Заказ готов</strong><small>Для самовывоза и перед передачей в доставку.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="notifyDelivery"><span><strong>Передан в доставку</strong><small>Отдельное событие для заказов с доставкой.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="notifyCancelled"><span><strong>Заказ отменён</strong><small>Покупатель должен видеть отмену и причину в истории.</small></span></label>
+          </div>
           <div class="retail-settings-note"><strong>Важно</strong><p>Реальные розничные заказы включены. Самовывоз и доставка используют один склад и один объект — Пекарню. «Из наличия» резервирует свободный хлеб; предзаказы «К выпечке» участвуют в производстве и сырье. Онлайн-провайдер пока не подключён.</p></div>
           <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить настройки</button></div>
         </form>
@@ -626,7 +634,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6320"></script>
+<script src="admin.js?v=6330"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -661,11 +669,21 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6320"></script>
+<script src="pwa-stable.js?v=6330"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
 
+
+  <dialog id="retailOrderEventsDialog" class="retail-events-dialog">
+    <div class="retail-events-shell">
+      <button type="button" class="dialog-close" id="retailOrderEventsClose" aria-label="Закрыть">×</button>
+      <span class="kicker">PANORA · РОЗНИЦА</span>
+      <h3 id="retailOrderEventsTitle">История заказа</h3>
+      <p id="retailOrderEventsMeta" class="retail-events-meta"></p>
+      <div id="retailOrderEventsList" class="retail-events-list"></div>
+    </div>
+  </dialog>
   <dialog id="financeExpenseDialog" class="finance-expense-dialog">
     <form method="dialog" id="financeExpenseForm">
       <button type="button" class="dialog-close" id="financeExpenseClose" aria-label="Закрыть">×</button>
@@ -686,7 +704,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=6320"></script>
+<script src="finance-dashboard.js?v=6330"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>

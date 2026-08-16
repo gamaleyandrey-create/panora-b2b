@@ -262,3 +262,25 @@
 
 /* Panora 6.32 · retail end-to-end consistency audit */
 .retail-consistency-audit{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px;padding:14px 16px;border:1px solid var(--line,#e7e1d8);border-radius:16px;background:#fff}.retail-consistency-audit strong{display:block;font-size:14px}.retail-consistency-audit p{margin:4px 0 0;font-size:12px;color:var(--muted,#756f68);line-height:1.45}.retail-consistency-audit.is-warning{border-color:#e3b8a4;background:#fff8f4}.retail-audit-ok,.retail-audit-warn{display:grid;place-items:center;min-width:34px;height:34px;border-radius:999px;font-weight:800}.retail-audit-ok{background:#edf7ef;color:#28733d}.retail-audit-warn{background:#fbe7df;color:#9c442b}@media(max-width:720px){.retail-consistency-audit{align-items:flex-start;padding:13px 14px}.retail-consistency-audit p{font-size:12px}.retail-audit-ok,.retail-audit-warn{min-width:30px;height:30px}}
+
+/* Panora 6.33 · retail order event journal */
+.retail-settings-intro{margin:-4px 0 12px;color:#6f6b63;font-size:13px;line-height:1.55}
+.retail-events-dialog{width:min(620px,calc(100vw - 28px));max-height:min(760px,calc(100vh - 28px));padding:0;border:0;border-radius:22px;box-shadow:0 24px 80px rgba(32,26,18,.22)}
+.retail-events-dialog::backdrop{background:rgba(30,26,20,.32);backdrop-filter:blur(3px)}
+.retail-events-shell{position:relative;padding:26px}
+.retail-events-shell h3{margin:5px 42px 4px 0;font-size:25px}
+.retail-events-meta{margin:0 0 20px;color:#777168}
+.retail-events-list{display:grid;gap:0}
+.retail-event-row{position:relative;display:grid;grid-template-columns:18px 1fr;gap:12px;padding:0 0 18px;margin:0}
+.retail-event-row:after{content:"";position:absolute;left:5px;top:12px;bottom:-2px;width:1px;background:#ded8cc}
+.retail-event-row:last-child:after{display:none}
+.retail-event-row>i{width:11px;height:11px;margin-top:5px;border-radius:50%;background:#745b42;box-shadow:0 0 0 4px #f1ece4;z-index:1}
+.retail-event-row strong{display:block;font-size:14px}
+.retail-event-row p{margin:4px 0;color:#625e57;font-size:13px;line-height:1.45}
+.retail-event-row small{display:block;margin-top:4px;color:#948d83;font-size:12px}
+.retail-event-loading{padding:20px;border:1px dashed #d9d1c5;border-radius:14px;color:#817a70;background:#faf8f4;font-size:13px;line-height:1.5}
+@media(max-width:720px){
+ .retail-events-dialog{width:calc(100vw - 16px);max-height:calc(100vh - 16px);border-radius:18px}
+ .retail-events-shell{padding:20px 16px}
+ .retail-events-shell h3{font-size:22px}
+}
