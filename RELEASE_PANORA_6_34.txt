@@ -1,0 +1,11 @@
+Panora 6.34 — in-app retail messages and fallback channels
+
+- Main customer communication channel is now inside Panora order page.
+- Bakery can write to a customer from Retail orders; customer can reply without registration through the protected order token.
+- Message read state is tracked separately for bakery and customer.
+- Backup contact channels are configurable: WhatsApp, Telegram, SMS and Email.
+- Backup channels do not replace Panora messaging and do not affect order, stock, production or finance status.
+- Existing 6.33 event journal remains separate from human conversation.
+- Push notifications are intentionally not enabled yet; 6.34 provides the message/event source for future Web Push.
+- Mobile admin and retail-order layouts are adapted for messaging.
+- PWA build 6340.
