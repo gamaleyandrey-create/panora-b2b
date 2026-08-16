@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6240">
+<link rel="stylesheet" href="admin.css?v=6250">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -390,7 +390,7 @@
             <span><b>3</b>Готов → ждать покупателя</span>
             <span><b>4</b>Выдать → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.24:</strong> «Из наличия» уже резервирует фактический склад. Предзаказы «К выпечке» принимаются и видны здесь, но в производственный план и расчёт сырья будут подключены следующим этапом.</p>
+          <p class="retail-stage-note"><strong>6.25:</strong> предзаказы «К выпечке» уже входят в реальный спрос производства и в расчёт сырья. После «Выпечка завершена» они резервируют готовый хлеб; при недовыпуске Panora показывает необеспечённое количество.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -404,7 +404,7 @@
         <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Ассортимент розницы</h2><p>Те же карточки хлеба, фотографии и названия, что используются в Panora. Здесь отдельно задаётся доступность для розничных покупателей и розничная цена.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
         <section class="retail-location-card"><div><span>Объект продажи</span><strong>Пекарня</strong><p>Розничный ассортимент относится только к пекарне. Второй точки и отдельного склада нет.</p></div><span class="retail-location-lock">Один объект</span></section>
         <form id="retailCatalogForm" class="retail-catalog-form">
-          <div class="retail-catalog-help"><strong>Как работает</strong><p>«Из наличия» продаёт только свободный готовый хлеб и создаёт резерв. «К выпечке» создаёт реальный розничный предзаказ; подключение этих предзаказов к производственному плану — следующий этап.</p></div>
+          <div class="retail-catalog-help"><strong>Как работает</strong><p>«Из наличия» продаёт только свободный готовый хлеб и создаёт резерв. «К выпечке» создаёт реальный розничный предзаказ и сразу добавляет его в спрос выбранного дня выпечки и потребность сырья.</p></div>
           <div class="retail-catalog-grid" id="retailCatalogGrid"></div>
           <div class="retail-settings-actions"><span id="retailCatalogSaved">Ассортимент ещё не менялся</span><button type="submit" class="primary">Сохранить ассортимент</button></div>
         </form>
@@ -437,12 +437,12 @@
             <label><span>Максимум заказов на один интервал</span><input name="maxOrdersPerSlot" type="number" min="1" max="100" step="1"><small>После достижения лимита этот интервал перестаёт принимать новые заказы.</small></label>
             <label><span>Временный резерв корзины, мин.</span><input name="reservationMinutes" type="number" min="5" max="60" step="1"><small>На это время хлеб из наличия удерживается за покупателем во время оформления.</small></label>
           </div>
-          <label><span>Предзаказ закрывается за, ч.</span><input name="preorderCutoffHours" type="number" min="1" max="168" step="1"><small>Правило сохранено для этапа интеграции с производственным планом; в 6.24 действует календарный cutoff дня выпечки.</small></label>
+          <label><span>Предзаказ закрывается за, ч.</span><input name="preorderCutoffHours" type="number" min="1" max="168" step="1"><small>Предзаказ попадает в производство только пока выбранный день выпечки открыт для заказов; календарный cutoff остаётся обязательным.</small></label>
           <hr>
           <h3>Оплата</h3>
           <div class="retail-settings-grid">
             <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Будущая оплата картой/ссылкой. Провайдер пока не подключён.</small></span></label>
-            <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Рабочий способ оплаты для 6.24: заказ подтверждается без дистанционной оплаты и оплачивается при получении.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Рабочий способ оплаты для 6.25: заказ подтверждается без дистанционной оплаты и оплачивается при получении.</small></span></label>
           </div>
           <hr>
           <h3>Контакты для покупателя</h3>
@@ -542,7 +542,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6240"></script>
+<script src="admin.js?v=6250"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -577,7 +577,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6240"></script>
+<script src="pwa-stable.js?v=6250"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
