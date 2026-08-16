@@ -31,166 +31,114 @@ function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}
 function productName(id){return PRODUCTS[id]?.[lang]||id}
 
-/* Panora 6.22 — retail storefront settings. One and only location: bakery. */
-const RETAIL_SETTINGS_KEY='panora-retail-settings-v622';
-const RETAIL_LEGACY_SETTINGS_KEY='panora-retail-settings-v619';
+/* Panora 6.23 — retail setup + assortment. One and only location: bakery. */
+const RETAIL_SETTINGS_KEY='panora-retail-settings-v623';
+const RETAIL_SETTINGS_LEGACY_KEYS=['panora-retail-settings-v622','panora-retail-settings-v619'];
+const RETAIL_PRODUCT_SETTINGS_KEY='panora-retail-product-settings-v623';
 const RETAIL_ORDERS_KEY='panora-retail-orders';
 const RETAIL_DEFAULT_SETTINGS={
- enabled:true,
- location:'bakery',
- locationName:'Пекарня',
- stockSales:true,
- preorders:true,
- pickup:true,
- delivery:false,
- onlinePayment:true,
- reservationMinutes:15,
- preorderCutoffHours:24,
- pickupSlots:['09:00–11:00','11:00–13:00','13:00–15:00']
+ enabled:true,location:'bakery',locationName:'Пекарня',stockSales:true,preorders:true,pickup:true,delivery:false,
+ onlinePayment:true,payOnPickup:true,reservationMinutes:15,preorderCutoffHours:24,preorderHorizonDays:7,
+ pickupLeadMinutes:60,maxOrdersPerSlot:12,pickupSlots:['09:00–11:00','11:00–13:00','13:00–15:00'],
+ contactPhone:'',contactEmail:'',pickupNote:''
 };
 function retailSettingsSavedValue(){
  try{
-  const current=JSON.parse(localStorage.getItem(RETAIL_SETTINGS_KEY)||'null');
-  if(current&&typeof current==='object')return {saved:current,isCurrent:true};
-  const legacy=JSON.parse(localStorage.getItem(RETAIL_LEGACY_SETTINGS_KEY)||'null');
-  if(legacy&&typeof legacy==='object')return {saved:{...legacy,enabled:true},isCurrent:false};
+  const current=JSON.parse(localStorage.getItem(RETAIL_SETTINGS_KEY)||'null');if(current&&typeof current==='object')return {saved:current,isCurrent:true};
+  for(const key of RETAIL_SETTINGS_LEGACY_KEYS){const legacy=JSON.parse(localStorage.getItem(key)||'null');if(legacy&&typeof legacy==='object')return {saved:{...legacy,enabled:legacy.enabled!==false},isCurrent:false}}
  }catch{}
  return {saved:{},isCurrent:false};
 }
 function normalizeRetailSettings(saved={}){
- return {
-  ...RETAIL_DEFAULT_SETTINGS,...saved,
-  enabled:saved.enabled!==false,
-  location:'bakery',locationName:'Пекарня',
-  pickupSlots:Array.isArray(saved.pickupSlots)&&saved.pickupSlots.length?saved.pickupSlots:RETAIL_DEFAULT_SETTINGS.pickupSlots
- };
+ const slots=Array.isArray(saved.pickupSlots)&&saved.pickupSlots.length?saved.pickupSlots:RETAIL_DEFAULT_SETTINGS.pickupSlots;
+ return {...RETAIL_DEFAULT_SETTINGS,...saved,enabled:saved.enabled!==false,location:'bakery',locationName:'Пекарня',
+  stockSales:saved.stockSales!==false,preorders:saved.preorders!==false,pickup:saved.pickup!==false,delivery:!!saved.delivery,
+  onlinePayment:saved.onlinePayment!==false,payOnPickup:saved.payOnPickup!==false,
+  reservationMinutes:Math.min(60,Math.max(5,Number(saved.reservationMinutes||15))),preorderCutoffHours:Math.min(168,Math.max(1,Number(saved.preorderCutoffHours||24))),
+  preorderHorizonDays:Math.min(30,Math.max(1,Number(saved.preorderHorizonDays||7))),pickupLeadMinutes:Math.min(1440,Math.max(0,Number(saved.pickupLeadMinutes??60))),
+  maxOrdersPerSlot:Math.min(100,Math.max(1,Number(saved.maxOrdersPerSlot||12))),pickupSlots:slots.map(v=>String(v||'').trim()).filter(Boolean).slice(0,20),
+  contactPhone:String(saved.contactPhone||'').trim().slice(0,80),contactEmail:String(saved.contactEmail||'').trim().slice(0,160),pickupNote:String(saved.pickupNote||'').trim().slice(0,500)};
 }
 function readRetailSettings(){return normalizeRetailSettings(retailSettingsSavedValue().saved)}
 function saveRetailSettingsLocal(value){const normalized=normalizeRetailSettings(value);localStorage.setItem(RETAIL_SETTINGS_KEY,JSON.stringify(normalized));return normalized}
 function readRetailOrders(){try{const list=JSON.parse(localStorage.getItem(RETAIL_ORDERS_KEY)||'[]');return Array.isArray(list)?list:[]}catch{return[]}}
+function readRetailProductSettings(){try{const value=JSON.parse(localStorage.getItem(RETAIL_PRODUCT_SETTINGS_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
+function saveRetailProductSettingsLocal(value){const next=value&&typeof value==='object'?value:{};localStorage.setItem(RETAIL_PRODUCT_SETTINGS_KEY,JSON.stringify(next));return next}
+function retailAdminProducts(){
+ let list=[];try{list=JSON.parse(localStorage.getItem('panora-products')||'[]')}catch{}
+ if(!Array.isArray(list)||!list.length)list=[
+  {id:'plain',active:true,basePrice:4.5,image:'bread-plain.jpg',names:{ru:'Льняной бездрожжевой хлеб с семенами'}},
+  {id:'pumpkin',active:true,basePrice:5,image:'bread-pumpkin.jpg',names:{ru:'Тыквенный бездрожжевой хлеб с семенами'}}
+ ];
+ return list.filter(product=>product&&product.id&&!product.deletedAt);
+}
+function retailProductLabel(product){return String(product?.names?.ru||product?.nameRu||product?.name_ru||product?.name||PRODUCTS[String(product?.id)]?.ru||product?.id||'Хлеб')}
+function normalizeRetailProductSetting(product,saved={}){
+ const basePrice=Number(product?.basePrice??product?.retailPrice??product?.retail_price??product?.price??0);
+ return {productId:String(product?.id||saved.productId||''),enabled:saved.enabled!==undefined?!!saved.enabled:product?.active!==false,stockSales:saved.stockSales!==false,preorders:saved.preorders!==false,
+  retailPrice:Number.isFinite(Number(saved.retailPrice))?Math.max(0,Number(saved.retailPrice)):Math.max(0,Number.isFinite(basePrice)?basePrice:0),sortOrder:Number.isFinite(Number(saved.sortOrder))?Number(saved.sortOrder):0};
+}
+function retailProductSetting(product,map=readRetailProductSettings()){return normalizeRetailProductSetting(product,map[String(product?.id)]||{})}
 function retailOrderStatus(order){return String(order?.status||'new')}
 function retailStatusLabel(status){return({new:'Новый',awaiting_payment:'Ожидает оплаты',confirmed:'Подтверждён',production:'К выпечке',reserved:'Зарезервирован',ready:'Готов',completed:'Выдан',delivered:'Доставлен',cancelled:'Отменён'}[status]||status||'—')}
 function retailPaymentLabel(order){const value=String(order?.paymentStatus||'pending');return({pending:'Не оплачено',paid:'Оплачен',refunded:'Возврат',failed:'Ошибка'}[value]||value)}
 function retailFulfillmentLabel(order){return String(order?.fulfillment||'pickup')==='delivery'?'Доставка':'Самовывоз'}
 function retailSourceLabel(order){return String(order?.source||'stock')==='bake_preorder'?'К выпечке':'Из наличия'}
-function retailItemsLabel(order){
- const items=Array.isArray(order?.items)?order.items:[];
- if(!items.length)return '—';
- return items.map(item=>`${productName(String(item?.product||''))} × ${Math.max(0,Number(item?.quantity||0))}`).join(', ');
+function retailItemsLabel(order){const items=Array.isArray(order?.items)?order.items:[];if(!items.length)return '—';return items.map(item=>`${productName(String(item?.product||''))} × ${Math.max(0,Number(item?.quantity||0))}`).join(', ')}
+function retailCloudRow(settings,{legacy=false}={}){
+ const row={id:1,enabled:!!settings.enabled,stock_sales:!!settings.stockSales,preorders:!!settings.preorders,pickup:!!settings.pickup,delivery:!!settings.delivery,online_payment:!!settings.onlinePayment,
+  reservation_minutes:settings.reservationMinutes,preorder_cutoff_hours:settings.preorderCutoffHours,pickup_slots:Array.isArray(settings.pickupSlots)?settings.pickupSlots:RETAIL_DEFAULT_SETTINGS.pickupSlots,
+  updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null};
+ if(!legacy)Object.assign(row,{pay_on_pickup:!!settings.payOnPickup,preorder_horizon_days:settings.preorderHorizonDays,pickup_lead_minutes:settings.pickupLeadMinutes,max_orders_per_slot:settings.maxOrdersPerSlot,
+  contact_phone:settings.contactPhone||null,contact_email:settings.contactEmail||null,pickup_note:settings.pickupNote||null});
+ return row;
 }
-function retailCloudRow(settings){
- return {
-  id:1,enabled:!!settings.enabled,stock_sales:!!settings.stockSales,preorders:!!settings.preorders,
-  pickup:!!settings.pickup,delivery:!!settings.delivery,online_payment:!!settings.onlinePayment,
-  reservation_minutes:Math.min(60,Math.max(5,Number(settings.reservationMinutes||15))),
-  preorder_cutoff_hours:Math.min(168,Math.max(1,Number(settings.preorderCutoffHours||24))),
-  pickup_slots:Array.isArray(settings.pickupSlots)?settings.pickupSlots:RETAIL_DEFAULT_SETTINGS.pickupSlots,
-  updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null
- };
-}
-function retailSettingsFromCloud(row){
- if(!row)return null;
- return normalizeRetailSettings({
-  enabled:row.enabled,stockSales:row.stock_sales,preorders:row.preorders,pickup:row.pickup,delivery:row.delivery,
-  onlinePayment:row.online_payment,reservationMinutes:row.reservation_minutes,preorderCutoffHours:row.preorder_cutoff_hours,
-  pickupSlots:Array.isArray(row.pickup_slots)?row.pickup_slots:RETAIL_DEFAULT_SETTINGS.pickupSlots
- });
-}
+function retailSettingsFromCloud(row){if(!row)return null;return normalizeRetailSettings({enabled:row.enabled,stockSales:row.stock_sales,preorders:row.preorders,pickup:row.pickup,delivery:row.delivery,onlinePayment:row.online_payment,payOnPickup:row.pay_on_pickup,
+ reservationMinutes:row.reservation_minutes,preorderCutoffHours:row.preorder_cutoff_hours,preorderHorizonDays:row.preorder_horizon_days,pickupLeadMinutes:row.pickup_lead_minutes,maxOrdersPerSlot:row.max_orders_per_slot,
+ pickupSlots:Array.isArray(row.pickup_slots)?row.pickup_slots:RETAIL_DEFAULT_SETTINGS.pickupSlots,contactPhone:row.contact_phone,contactEmail:row.contact_email,pickupNote:row.pickup_note})}
 async function retailAdminApi(path,options={}){
- const cfg=window.PANORA_SUPABASE,session=window.panoraSupabaseSession;
- if(!cfg?.url||!cfg?.publishableKey)throw new Error('Supabase не настроен');
- if(!session?.access_token)throw new Error('Нет активной сессии пекарни');
+ const cfg=window.PANORA_SUPABASE,session=window.panoraSupabaseSession;if(!cfg?.url||!cfg?.publishableKey)throw new Error('Supabase не настроен');if(!session?.access_token)throw new Error('Нет активной сессии пекарни');
  const response=await fetch(`${cfg.url}/rest/v1/${path}`,{cache:'no-store',...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}});
- if(!response.ok){let detail='';try{const data=await response.json();detail=data?.message||data?.details||data?.hint||''}catch{}throw new Error(detail||`HTTP ${response.status}`)}
+ if(!response.ok){let detail='';try{const data=await response.json();detail=data?.message||data?.details||data?.hint||''}catch{}const error=new Error(detail||`HTTP ${response.status}`);error.status=response.status;throw error}
  if(response.status===204)return null;const text=await response.text();return text?JSON.parse(text):null;
 }
 async function loadRetailSettingsCloud(){
- try{
-  const rows=await retailAdminApi('retail_settings?id=eq.1&select=id,enabled,stock_sales,preorders,pickup,delivery,online_payment,reservation_minutes,preorder_cutoff_hours,pickup_slots,updated_at&limit=1');
-  if(rows?.[0])saveRetailSettingsLocal(retailSettingsFromCloud(rows[0]));
-  renderRetailFoundation();
-  const saved=$('#retailSettingsSaved');if(saved&&rows?.[0])saved.textContent='Настройки загружены из облака';
-  return !!rows?.[0];
- }catch(error){
-  const saved=$('#retailSettingsSaved');if(saved)saved.textContent='Локальные настройки · для общего переключателя выполните SQL 6.22';
-  return false;
- }
+ let rows=null,extended=true;try{rows=await retailAdminApi('retail_settings?id=eq.1&select=id,enabled,stock_sales,preorders,pickup,delivery,online_payment,pay_on_pickup,reservation_minutes,preorder_cutoff_hours,preorder_horizon_days,pickup_lead_minutes,max_orders_per_slot,pickup_slots,contact_phone,contact_email,pickup_note,updated_at&limit=1')}
+ catch(error){extended=false;try{rows=await retailAdminApi('retail_settings?id=eq.1&select=id,enabled,stock_sales,preorders,pickup,delivery,online_payment,reservation_minutes,preorder_cutoff_hours,pickup_slots,updated_at&limit=1')}catch(second){const saved=$('#retailSettingsSaved');if(saved)saved.textContent='Локальные настройки · выполните SQL 6.23 для общей розницы';return false}}
+ if(rows?.[0])saveRetailSettingsLocal(retailSettingsFromCloud(rows[0]));renderRetailFoundation();const saved=$('#retailSettingsSaved');if(saved&&rows?.[0])saved.textContent=extended?'Настройки загружены из облака':'Облако 6.22 · выполните SQL 6.23 для новых полей';return !!rows?.[0];
 }
 async function saveRetailSettingsCloud(settings){
- const rows=await retailAdminApi('retail_settings?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(retailCloudRow(settings))});
- return rows?.[0]||null;
+ try{const rows=await retailAdminApi('retail_settings?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(retailCloudRow(settings))});return {row:rows?.[0]||null,extended:true}}
+ catch(error){const rows=await retailAdminApi('retail_settings?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(retailCloudRow(settings,{legacy:true}))});return {row:rows?.[0]||null,extended:false}}
 }
-function syncRetailSettingsForm(settings){
- const form=$('#retailSettingsForm');if(!form)return;
- form.elements.enabled.checked=!!settings.enabled;
- form.elements.stockSales.checked=!!settings.stockSales;
- form.elements.preorders.checked=!!settings.preorders;
- form.elements.pickup.checked=!!settings.pickup;
- form.elements.delivery.checked=!!settings.delivery;
- form.elements.onlinePayment.checked=!!settings.onlinePayment;
- form.elements.reservationMinutes.value=String(settings.reservationMinutes||15);
- form.elements.preorderCutoffHours.value=String(settings.preorderCutoffHours||24);
- form.elements.pickupSlots.value=(settings.pickupSlots||[]).join('\n');
- const enabledLabel=$('#retailEnabledLabel');if(enabledLabel)enabledLabel.textContent=settings.enabled?'Включена':'Выключена';
+async function loadRetailProductSettingsCloud(){
+ try{const rows=await retailAdminApi('retail_product_settings?select=product_id,enabled,stock_sales,preorders,retail_price,sort_order,updated_at&order=sort_order.asc,product_id.asc');const map={};(Array.isArray(rows)?rows:[]).forEach(row=>{map[String(row.product_id)]={productId:String(row.product_id),enabled:row.enabled!==false,stockSales:row.stock_sales!==false,preorders:row.preorders!==false,retailPrice:Number(row.retail_price||0),sortOrder:Number(row.sort_order||0)}});saveRetailProductSettingsLocal(map);renderRetailCatalogSettings();const status=$('#retailCatalogSaved');if(status)status.textContent='Ассортимент загружен из облака';return true}
+ catch(error){const status=$('#retailCatalogSaved');if(status)status.textContent='Локальный ассортимент · выполните SQL 6.23';return false}
 }
+async function saveRetailProductSettingsCloud(map){const products=retailAdminProducts();const rows=products.map((product,index)=>{const item=retailProductSetting(product,map);return {product_id:item.productId,enabled:!!item.enabled,stock_sales:!!item.stockSales,preorders:!!item.preorders,retail_price:Number(item.retailPrice||0),sort_order:index,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}});if(!rows.length)return [];return retailAdminApi('retail_product_settings?on_conflict=product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(rows)})}
+function syncRetailSettingsForm(settings){const form=$('#retailSettingsForm');if(!form)return;['enabled','stockSales','preorders','pickup','delivery','onlinePayment','payOnPickup'].forEach(name=>{if(form.elements[name])form.elements[name].checked=!!settings[name]});['reservationMinutes','preorderCutoffHours','preorderHorizonDays','pickupLeadMinutes','maxOrdersPerSlot','contactPhone','contactEmail','pickupNote'].forEach(name=>{if(form.elements[name])form.elements[name].value=String(settings[name]??'')});if(form.elements.pickupSlots)form.elements.pickupSlots.value=(settings.pickupSlots||[]).join('\n');const label=$('#retailEnabledLabel');if(label)label.textContent=settings.enabled?'Включена':'Выключена'}
+function renderRetailCatalogSettings(){
+ const grid=$('#retailCatalogGrid');if(!grid)return;const products=retailAdminProducts(),map=readRetailProductSettings();if(!products.length){grid.innerHTML='<div class="retail-catalog-empty">Нет активных карточек продукции.</div>';return}
+ grid.innerHTML=products.map((product,index)=>{const item=retailProductSetting(product,map),inactive=product.active===false;return `<article class="retail-catalog-card ${inactive?'is-inactive':''}" data-retail-product="${adminEscape(item.productId)}"><img src="${adminEscape(product.image||product.imageUrl||product.image_url||'icon.svg')}" alt="${adminEscape(retailProductLabel(product))}" onerror="this.src='icon.svg'"><div class="retail-catalog-card-body"><div class="retail-catalog-title"><div><strong>${adminEscape(retailProductLabel(product))}</strong><small>${inactive?'Товар выключен в карточках продукции':'Товар активен'}</small></div><label class="retail-switch"><input type="checkbox" data-retail-field="enabled" ${item.enabled&&!inactive?'checked':''} ${inactive?'disabled':''}><span></span><em>${item.enabled&&!inactive?'вкл.':'выкл.'}</em></label></div><div class="retail-catalog-controls"><label><span>Розничная цена, €</span><input type="number" min="0" step="0.01" data-retail-field="retailPrice" value="${Number(item.retailPrice||0).toFixed(2)}" ${inactive?'disabled':''}></label><label class="retail-option compact"><input type="checkbox" data-retail-field="stockSales" ${item.stockSales?'checked':''} ${inactive?'disabled':''}><span><strong>Из наличия</strong><small>Можно купить свободный остаток</small></span></label><label class="retail-option compact"><input type="checkbox" data-retail-field="preorders" ${item.preorders?'checked':''} ${inactive?'disabled':''}><span><strong>К выпечке</strong><small>Можно заказать на будущий день</small></span></label></div></div></article>`}).join('');
+ grid.querySelectorAll('[data-retail-field="enabled"]').forEach(input=>input.addEventListener('change',()=>{const em=input.closest('.retail-switch')?.querySelector('em');if(em)em.textContent=input.checked?'вкл.':'выкл.'}));
+}
+function collectRetailCatalogForm(){const current=readRetailProductSettings(),next={...current};$$('#retailCatalogGrid [data-retail-product]').forEach((card,index)=>{const product=retailAdminProducts().find(p=>String(p.id)===String(card.dataset.retailProduct));if(!product)return;const get=name=>card.querySelector(`[data-retail-field="${name}"]`);next[String(product.id)]=normalizeRetailProductSetting(product,{productId:String(product.id),enabled:!!get('enabled')?.checked,stockSales:!!get('stockSales')?.checked,preorders:!!get('preorders')?.checked,retailPrice:Math.max(0,Number(get('retailPrice')?.value||0)),sortOrder:index})});return next}
 function renderRetailFoundation(){
- const settings=readRetailSettings(),orders=readRetailOrders().filter(order=>order&&retailOrderStatus(order)!=='cancelled');
- const active=orders.filter(order=>!['completed','delivered'].includes(retailOrderStatus(order)));
- const set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
- set('#retailNewCount',active.filter(o=>['new','awaiting_payment','confirmed'].includes(retailOrderStatus(o))).length);
- set('#retailPreorderCount',active.filter(o=>String(o.source)==='bake_preorder').length);
- set('#retailStockCount',active.filter(o=>String(o.source||'stock')==='stock').length);
- set('#retailReadyCount',active.filter(o=>retailOrderStatus(o)==='ready').length);
- set('#retailOrderTotal',`${orders.length} ${orders.length===1?'заказ':'заказов'}`);
- const banner=$('#retailStateBanner');if(banner)banner.dataset.state=settings.enabled?'on':'off';
- set('#retailStateTitle',settings.enabled?'Розничная витрина включена':'Розничная витрина выключена');
- set('#retailStateText',settings.enabled?'Экран покупателя доступен для настройки. Реальное оформление заказов и оплата пока не запускаются.':'Экран покупателя закрыт для посетителей. Настройки сохранены и будут готовы при следующем включении.');
+ const settings=readRetailSettings(),orders=readRetailOrders().filter(order=>order&&retailOrderStatus(order)!=='cancelled'),active=orders.filter(order=>!['completed','delivered'].includes(retailOrderStatus(order))),set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
+ set('#retailNewCount',active.filter(o=>['new','awaiting_payment','confirmed'].includes(retailOrderStatus(o))).length);set('#retailPreorderCount',active.filter(o=>String(o.source)==='bake_preorder').length);set('#retailStockCount',active.filter(o=>String(o.source||'stock')==='stock').length);set('#retailReadyCount',active.filter(o=>retailOrderStatus(o)==='ready').length);set('#retailOrderTotal',`${orders.length} ${orders.length===1?'заказ':'заказов'}`);
+ const banner=$('#retailStateBanner');if(banner)banner.dataset.state=settings.enabled?'on':'off';set('#retailStateTitle',settings.enabled?'Розничная витрина включена':'Розничная витрина выключена');set('#retailStateText',settings.enabled?'Экран покупателя доступен для настройки. Реальное оформление заказов и оплата пока не запускаются.':'Экран покупателя закрыт для посетителей. Настройки и ассортимент сохранены для следующего включения.');
  const badge=$('#retailNavBadge');if(badge){badge.textContent=settings.enabled?'вкл.':'выкл.';badge.classList.toggle('is-on',!!settings.enabled)}
- const rows=$('#retailOrderRows');
- if(rows){rows.innerHTML=orders.map(order=>`<tr><td><strong>${adminEscape(order.number||order.id||'—')}</strong></td><td>${adminEscape(retailSourceLabel(order))}</td><td>${adminEscape(retailFulfillmentLabel(order))}${order.slot?`<small class="retail-order-sub">${adminEscape(order.slot)}</small>`:''}</td><td>${adminEscape(retailItemsLabel(order))}</td><td>${Number(order.total||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${adminEscape(retailPaymentLabel(order))}</td><td><span class="retail-order-status">${adminEscape(retailStatusLabel(retailOrderStatus(order)))}</span></td></tr>`).join('')}
- const empty=$('#retailEmptyState');if(empty)empty.hidden=orders.length>0;
- set('#retailEmptyText',settings.enabled?'Витрина включена для настройки. Реальное оформление заказов пока не подключено.':'Витрина выключена. Партнёрские заказы, склад и план выпечки работают без изменений.');
- syncRetailSettingsForm(settings);
+ const rows=$('#retailOrderRows');if(rows)rows.innerHTML=orders.map(order=>`<tr><td><strong>${adminEscape(order.number||order.id||'—')}</strong></td><td>${adminEscape(retailSourceLabel(order))}</td><td>${adminEscape(retailFulfillmentLabel(order))}${order.slot?`<small class="retail-order-sub">${adminEscape(order.slot)}</small>`:''}</td><td>${adminEscape(retailItemsLabel(order))}</td><td>${Number(order.total||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${adminEscape(retailPaymentLabel(order))}</td><td><span class="retail-order-status">${adminEscape(retailStatusLabel(retailOrderStatus(order)))}</span></td></tr>`).join('');
+ const empty=$('#retailEmptyState');if(empty)empty.hidden=orders.length>0;set('#retailEmptyText',settings.enabled?'Витрина включена для настройки. Реальное оформление заказов пока не подключено.':'Витрина выключена. Партнёрские заказы, склад и план выпечки работают без изменений.');syncRetailSettingsForm(settings);renderRetailCatalogSettings();
 }
-function openRetailView(view){
- const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
- if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}
- const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click();
-}
+function openRetailView(view){const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click()}
 function bindRetailFoundation(){
- const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
- if(toggle&&menu)toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')==='true';toggle.setAttribute('aria-expanded',String(!open));menu.hidden=open};
- $$('#retailNavItems [data-view]').forEach(button=>button.addEventListener('click',()=>{if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}}));
+ const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');if(toggle&&menu)toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')==='true';toggle.setAttribute('aria-expanded',String(!open));menu.hidden=open};
+ $$('#retailNavItems [data-view]').forEach(button=>button.addEventListener('click',()=>{if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}if(button.dataset.view==='retail-catalog')renderRetailCatalogSettings()}));
  const openSettings=$('#retailOpenSettings');if(openSettings)openSettings.onclick=()=>openRetailView('retail-settings');
- const form=$('#retailSettingsForm');
- if(form){
-  form.elements.enabled.addEventListener('change',()=>{const label=$('#retailEnabledLabel');if(label)label.textContent=form.elements.enabled.checked?'Включена':'Выключена'});
-  form.onsubmit=async event=>{
-   event.preventDefault();
-   const slots=String(form.elements.pickupSlots.value||'').split(/\n+/).map(v=>v.trim()).filter(Boolean).slice(0,12);
-   const value=saveRetailSettingsLocal({
-    ...readRetailSettings(),enabled:!!form.elements.enabled.checked,location:'bakery',locationName:'Пекарня',
-    stockSales:!!form.elements.stockSales.checked,preorders:!!form.elements.preorders.checked,
-    pickup:!!form.elements.pickup.checked,delivery:!!form.elements.delivery.checked,
-    onlinePayment:!!form.elements.onlinePayment.checked,
-    reservationMinutes:Math.min(60,Math.max(5,Number(form.elements.reservationMinutes.value||15))),
-    preorderCutoffHours:Math.min(168,Math.max(1,Number(form.elements.preorderCutoffHours.value||24))),
-    pickupSlots:slots.length?slots:RETAIL_DEFAULT_SETTINGS.pickupSlots
-   });
-   renderRetailFoundation();
-   const saved=$('#retailSettingsSaved');if(saved)saved.textContent='Сохраняем для экрана покупателя…';
-   try{
-    await saveRetailSettingsCloud(value);
-    if(saved)saved.textContent=value.enabled?'Сохранено в облаке · витрина включена':'Сохранено в облаке · витрина выключена';
-   }catch(error){
-    if(saved)saved.textContent=`Сохранено на этом устройстве · облако: ${error.message||'ошибка'}`;
-   }
-  };
- }
- renderRetailFoundation();
- window.addEventListener('panora:authenticated',()=>loadRetailSettingsCloud(),{once:true});
- if(window.panoraSupabaseSession?.access_token)setTimeout(()=>loadRetailSettingsCloud(),0);
- window.panoraRetailFoundation={settings:readRetailSettings,orders:readRetailOrders,render:renderRetailFoundation,loadCloud:loadRetailSettingsCloud,location:'bakery'};
+ const form=$('#retailSettingsForm');if(form){form.elements.enabled.addEventListener('change',()=>{const label=$('#retailEnabledLabel');if(label)label.textContent=form.elements.enabled.checked?'Включена':'Выключена'});form.onsubmit=async event=>{event.preventDefault();const slots=String(form.elements.pickupSlots.value||'').split(/\n+/).map(v=>v.trim()).filter(Boolean).slice(0,20);const value=saveRetailSettingsLocal({...readRetailSettings(),enabled:!!form.elements.enabled.checked,location:'bakery',locationName:'Пекарня',stockSales:!!form.elements.stockSales.checked,preorders:!!form.elements.preorders.checked,pickup:!!form.elements.pickup.checked,delivery:!!form.elements.delivery.checked,onlinePayment:!!form.elements.onlinePayment.checked,payOnPickup:!!form.elements.payOnPickup.checked,reservationMinutes:Number(form.elements.reservationMinutes.value||15),preorderCutoffHours:Number(form.elements.preorderCutoffHours.value||24),preorderHorizonDays:Number(form.elements.preorderHorizonDays.value||7),pickupLeadMinutes:Number(form.elements.pickupLeadMinutes.value||60),maxOrdersPerSlot:Number(form.elements.maxOrdersPerSlot.value||12),pickupSlots:slots.length?slots:RETAIL_DEFAULT_SETTINGS.pickupSlots,contactPhone:form.elements.contactPhone.value,contactEmail:form.elements.contactEmail.value,pickupNote:form.elements.pickupNote.value});renderRetailFoundation();const saved=$('#retailSettingsSaved');if(saved)saved.textContent='Сохраняем для экрана покупателя…';try{const result=await saveRetailSettingsCloud(value);if(saved)saved.textContent=result.extended?(value.enabled?'Сохранено в облаке · витрина включена':'Сохранено в облаке · витрина выключена'):'Основные настройки сохранены · выполните SQL 6.23 для новых полей'}catch(error){if(saved)saved.textContent=`Сохранено на этом устройстве · облако: ${error.message||'ошибка'}`}}}
+ const catalogForm=$('#retailCatalogForm');if(catalogForm)catalogForm.onsubmit=async event=>{event.preventDefault();const map=saveRetailProductSettingsLocal(collectRetailCatalogForm()),saved=$('#retailCatalogSaved');if(saved)saved.textContent='Сохраняем ассортимент…';try{await saveRetailProductSettingsCloud(map);if(saved)saved.textContent='Ассортимент сохранён в облаке'}catch(error){if(saved)saved.textContent=`Сохранено на этом устройстве · облако: ${error.message||'выполните SQL 6.23'}`}renderRetailCatalogSettings()};
+ renderRetailFoundation();const cloudLoad=()=>Promise.allSettled([loadRetailSettingsCloud(),loadRetailProductSettingsCloud()]);window.addEventListener('panora:authenticated',cloudLoad,{once:true});if(window.panoraSupabaseSession?.access_token)setTimeout(cloudLoad,0);['panora:products-changed','panora:public-products-changed','panora:retail-catalog-updated'].forEach(name=>window.addEventListener(name,renderRetailCatalogSettings));window.addEventListener('storage',event=>{if(['panora-products',RETAIL_PRODUCT_SETTINGS_KEY,RETAIL_SETTINGS_KEY].includes(event.key))renderRetailFoundation()});window.panoraRetailFoundation={settings:readRetailSettings,productSettings:readRetailProductSettings,orders:readRetailOrders,render:renderRetailFoundation,loadCloud:cloudLoad,location:'bakery'};
 }
 
 /* Panora 6.08 — фактическое завершение выпечки. */
