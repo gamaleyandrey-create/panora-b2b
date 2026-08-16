@@ -70,6 +70,15 @@ const tr=path=>{
 };
 const money=n=>{const value=new Intl.NumberFormat(I18N[lang].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
 const pText=p=>p.text[lang];
+function primaryProductImage(p){
+ const image=String(p?.image||'').trim(),gallery=Array.isArray(p?.gallery)?p.gallery.filter(Boolean):[];
+ if(image&&!/(^|\/)icon\.svg(?:[?#]|$)/i.test(image))return image;
+ return String(gallery[0]||image||'icon.svg');
+}
+function productGallery(p){
+ const primary=primaryProductImage(p),gallery=Array.isArray(p?.gallery)?p.gallery.filter(Boolean):[];
+ return [primary,...gallery].filter((value,index,array)=>value&&array.indexOf(value)===index);
+}
 const unit=()=>lang==='ru'?'за 1 шт.':lang==='es'?'por 1 ud.':'per 1 pc';
 const weight=p=>`${p.weight} g`;
 function applyLanguage(){document.documentElement.lang=lang;document.title=tr('title');if($('#languageSelect'))$('#languageSelect').value=lang;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));document.querySelectorAll('[data-i18n-html]').forEach(el=>el.innerHTML=tr(el.dataset.i18nHtml));document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.placeholder=tr(el.dataset.i18nPlaceholder));$('#fulfillmentSelect').innerHTML=`<option value="delivery">${tr('checkout.deliveryOption')}</option><option value="pickup">${tr('checkout.pickupOption')}</option>`;renderBakeDates();renderCategories();renderProducts();renderCart();toggleFulfillment()}
@@ -134,7 +143,7 @@ function renderProducts(){
   const priceKind=account?(displayPartnerWholesale||isWholesale?tr('catalog.wholesalePrice'):tr('catalog.retailPrice')):tr('catalog.retailPrice');
   const warning=tierWarningText(p,qty);
   const threshold=account?(lang==='ru'?`Оптовая цена от ${min} шт.`:lang==='es'?`Precio mayorista desde ${min} uds.`:`Wholesale from ${min} pcs`):'';
-  const gallery=[p.image,...(Array.isArray(p.gallery)?p.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
+  const gallery=productGallery(p);
   return `<article class="product-card" data-tier-product="${p.id}">
    <div class="product-image product-slider" style="--product-bg:${p.bg}" data-product-slider="${p.id}" data-slide-index="0"><img data-product-main="${p.id}" src="${gallery[0]||p.image}" alt="${x[0]}" loading="lazy" decoding="async"><span class="product-tag">${x[2]}</span>${gallery.length>1?`<button type="button" class="product-slide-arrow prev" data-product-slide="${p.id}" data-dir="-1" aria-label="‹">‹</button><button type="button" class="product-slide-arrow next" data-product-slide="${p.id}" data-dir="1" aria-label="›">›</button><div class="product-slide-dots">${gallery.map((_,index)=>`<button type="button" class="${index===0?'active':''}" data-product-dot="${p.id}" data-index="${index}" aria-label="${index+1}"></button>`).join('')}</div>`:""}</div>
    <div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p>
@@ -148,7 +157,7 @@ function renderProducts(){
 }
 function bindQty(){
  document.querySelectorAll('[data-qty-select]').forEach(s=>s.onchange=()=>setQty(s.dataset.qtySelect,Number(s.value)));
- const move=(id,next)=>{const p=PRODUCTS.find(x=>String(x.id)===String(id));if(!p)return;const gallery=[p.image,...(Array.isArray(p.gallery)?p.gallery:[])].filter((v,i,a)=>v&&a.indexOf(v)===i);if(!gallery.length)return;const slider=document.querySelector(`[data-product-slider="${CSS.escape(String(id))}"]`),main=document.querySelector(`[data-product-main="${CSS.escape(String(id))}"]`);if(!slider||!main)return;const index=(Number(next)+gallery.length)%gallery.length;slider.dataset.slideIndex=String(index);if(main.getAttribute('src')!==gallery[index])main.setAttribute('src',gallery[index]);slider.querySelectorAll('[data-product-dot]').forEach(b=>b.classList.toggle('active',Number(b.dataset.index)===index))};
+ const move=(id,next)=>{const p=PRODUCTS.find(x=>String(x.id)===String(id));if(!p)return;const gallery=productGallery(p);if(!gallery.length)return;const slider=document.querySelector(`[data-product-slider="${CSS.escape(String(id))}"]`),main=document.querySelector(`[data-product-main="${CSS.escape(String(id))}"]`);if(!slider||!main)return;const index=(Number(next)+gallery.length)%gallery.length;slider.dataset.slideIndex=String(index);if(main.getAttribute('src')!==gallery[index])main.setAttribute('src',gallery[index]);slider.querySelectorAll('[data-product-dot]').forEach(b=>b.classList.toggle('active',Number(b.dataset.index)===index))};
  document.querySelectorAll('[data-product-slide]').forEach(b=>b.onclick=e=>{e.preventDefault();const slider=b.closest('[data-product-slider]'),current=Number(slider?.dataset.slideIndex||0);move(b.dataset.productSlide,current+Number(b.dataset.dir||0))});
  document.querySelectorAll('[data-product-dot]').forEach(b=>b.onclick=e=>{e.preventDefault();move(b.dataset.productDot,Number(b.dataset.index||0))});
  document.querySelectorAll('[data-product-slider]').forEach(slider=>{let x=0;slider.addEventListener('touchstart',e=>{x=e.touches[0]?.clientX||0},{passive:true});slider.addEventListener('touchend',e=>{const dx=(e.changedTouches[0]?.clientX||x)-x;if(Math.abs(dx)>35){const current=Number(slider.dataset.slideIndex||0);move(slider.dataset.productSlider,current+(dx<0?1:-1))}},{passive:true})});
@@ -160,7 +169,8 @@ function renderCart(){
  const{rows,total,count}=cartData();
  ['cartTotal','subtotal','summaryTotal','checkoutTotal'].forEach(id=>$('#'+id).textContent=SHOW_PRICES?money(total):'—');
  $('#cartCount').textContent=count;$('#cartButton').classList.toggle('visible',count>0);$('#cartEmpty').style.display=count?'none':'block';$('#cartSummary').style.display=count?'block':'none';
- $('#cartItems').innerHTML=rows.map(p=>{const warning=tierWarningText(p,p.quantityPieces),min=wholesaleMinQty(p),wholesale=account&&p.quantityPieces>=min;return `<div class="cart-item"><div class="cart-thumb"><span></span></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)} · ${wholesale?(lang==='ru'?'оптовая цена':lang==='es'?'precio mayorista':'wholesale price'):(lang==='ru'?'розничная цена':lang==='es'?'precio minorista':'retail price')} ${money(p.unitPrice)}/шт.</small>${qtyControl(p.id,p.quantityPieces)}${warning?`<p class="cart-tier-warning">${warning}</p>`:""}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`}).join('');
+ $('#cartItems').innerHTML=rows.map(p=>{const warning=tierWarningText(p,p.quantityPieces),min=wholesaleMinQty(p),wholesale=account&&p.quantityPieces>=min,image=primaryProductImage(p);return `<div class="cart-item"><div class="cart-thumb"><img src="${image}" alt="${pText(p)[0]}" loading="lazy" decoding="async"></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)} · ${wholesale?(lang==='ru'?'оптовая цена':lang==='es'?'precio mayorista':'wholesale price'):(lang==='ru'?'розничная цена':lang==='es'?'precio minorista':'retail price')} ${money(p.unitPrice)}/шт.</small>${qtyControl(p.id,p.quantityPieces)}${warning?`<p class="cart-tier-warning">${warning}</p>`:""}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`}).join('');
+ $('#cartItems').querySelectorAll('.cart-thumb img').forEach(img=>img.addEventListener('error',()=>{if(img.dataset.fallback==='1')return;img.dataset.fallback='1';img.src='icon.svg'}));
  bindQty();
  $('#minimumHint').style.display='none';
  $('#checkoutButton').disabled=count<1
