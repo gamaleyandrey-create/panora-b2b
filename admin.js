@@ -32,7 +32,7 @@ function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeForma
 function productName(id){return PRODUCTS[id]?.[lang]||id}
 
 /* Panora 6.30 — retail stabilization audit for the single-Bakery retail pipeline. */
-/* Panora 6.31 — retail finance integration is calculated in finance-dashboard.js. */
+/* Panora 6.32 — retail finance/stock audit: canonical orders + consistency checks. */
 const RETAIL_SETTINGS_KEY='panora-retail-settings-v623';
 const RETAIL_SETTINGS_LEGACY_KEYS=['panora-retail-settings-v622','panora-retail-settings-v619'];
 const RETAIL_PRODUCT_SETTINGS_KEY='panora-retail-product-settings-v623';
@@ -66,7 +66,8 @@ function normalizeRetailSettings(saved={}){
 }
 function readRetailSettings(){return normalizeRetailSettings(retailSettingsSavedValue().saved)}
 function saveRetailSettingsLocal(value){const normalized=normalizeRetailSettings(value);localStorage.setItem(RETAIL_SETTINGS_KEY,JSON.stringify(normalized));return normalized}
-function readRetailOrders(){try{const list=JSON.parse(localStorage.getItem(RETAIL_ORDERS_KEY)||'[]');return Array.isArray(list)?list:[]}catch{return[]}}
+function canonicalRetailOrders(list){const map=new Map();(Array.isArray(list)?list:[]).filter(Boolean).forEach(order=>{const key=String(order.id||order.publicToken||order.number||'').trim();if(!key)return;const prev=map.get(key),stamp=o=>String(o?.updatedAt||o?.completedAt||o?.cancelledAt||o?.createdAt||'');if(!prev||stamp(order)>=stamp(prev))map.set(key,order)});return [...map.values()]}
+function readRetailOrders(){try{const list=JSON.parse(localStorage.getItem(RETAIL_ORDERS_KEY)||'[]');return canonicalRetailOrders(list)}catch{return[]}}
 function saveRetailOrdersLocal(value){const list=Array.isArray(value)?value:[];localStorage.setItem(RETAIL_ORDERS_KEY,JSON.stringify(list));return list}
 function readRetailProductSettings(){try{const value=JSON.parse(localStorage.getItem(RETAIL_PRODUCT_SETTINGS_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 function saveRetailProductSettingsLocal(value){const next=value&&typeof value==='object'?value:{};localStorage.setItem(RETAIL_PRODUCT_SETTINGS_KEY,JSON.stringify(next));return next}
@@ -183,7 +184,23 @@ function retailAnalyticsPeriodOrders(orders){
 }
 function retailAnalyticsMoney(value){return `${Number(value||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €`}
 function retailAnalyticsBreakdown(rootId,rows,total){const root=$(rootId);if(!root)return;const max=Math.max(1,...rows.map(row=>Number(row.value||0)));root.innerHTML=rows.map(row=>{const value=Number(row.value||0),pct=Math.max(0,Math.min(100,value/max*100)),share=total>0?Math.round(value/total*100):0;return `<div class="retail-analytics-breakdown-row"><span>${adminEscape(row.label)}</span><strong>${adminEscape(row.display??String(value))}</strong><i><b style="width:${pct}%"></b></i><small>${row.note?adminEscape(row.note):`${share}% выборки`}</small></div>`}).join('')||'<div class="retail-analytics-empty">Пока нет данных</div>'}
+function retailConsistencyAudit(){
+ const raw=(()=>{try{const x=JSON.parse(localStorage.getItem(RETAIL_ORDERS_KEY)||'[]');return Array.isArray(x)?x:[]}catch{return[]}})(),orders=readRetailOrders(),issues=[];
+ const dup=raw.length-orders.length;if(dup>0)issues.push(`Удалены дубли заказов в локальном кеше: ${dup}`);
+ orders.forEach(order=>{
+  const status=retailOrderStatus(order),items=Array.isArray(order.items)?order.items:[],qty=items.reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0)),0),total=Math.max(0,Number(order.total||0));
+  if(!items.length||qty<=0)issues.push(`${retailOrderNumber(order)}: нет позиций`);
+  if(status==='completed'&&!order.completedAt)issues.push(`${retailOrderNumber(order)}: завершён без времени завершения`);
+  if(status==='cancelled'&&String(order.paymentStatus)==='paid')issues.push(`${retailOrderNumber(order)}: отменён, но остаётся оплаченным`);
+  if(status==='completed'&&total<=0)issues.push(`${retailOrderNumber(order)}: завершён с нулевой суммой`);
+ });
+ const stockIssues=[];stockProductIds().forEach(pid=>{const rawBalance=stockRawBalance(pid),reserved=stockReserved(pid),onHand=Math.max(0,rawBalance);if(rawBalance>=0&&reserved>onHand)stockIssues.push(`${stockProductName(pid)}: резерв ${reserved} > остатка ${onHand}`)});
+ issues.push(...stockIssues);
+ return {ok:issues.length===0,issues,orders:orders.length,raw:raw.length};
+}
+function renderRetailConsistencyAudit(){const root=$('#retailConsistencyAudit');if(!root)return;const audit=retailConsistencyAudit();root.classList.toggle('is-warning',!audit.ok);root.innerHTML=audit.ok?`<div><strong>Контур согласован</strong><p>Заказы, резервы и склад не содержат обнаруженных дублей или конфликтов.</p></div><span class="retail-audit-ok">✓</span>`:`<div><strong>Нужно проверить</strong><p>${audit.issues.slice(0,5).map(adminEscape).join(' · ')}${audit.issues.length>5?` · ещё ${audit.issues.length-5}`:''}</p></div><span class="retail-audit-warn">${audit.issues.length}</span>`}
 function renderRetailAnalytics(){
+ renderRetailConsistencyAudit();
  const all=readRetailOrders().filter(Boolean),period=retailAnalyticsPeriodOrders(all),completed=period.filter(o=>retailOrderStatus(o)==='completed'&&String(o.paymentStatus||'')==='paid'),cancelled=period.filter(o=>retailOrderStatus(o)==='cancelled'),revenue=completed.reduce((sum,o)=>sum+Math.max(0,Number(o.total||0)),0),pieces=completed.reduce((sum,o)=>sum+(o.items||[]).reduce((n,item)=>n+Math.max(0,Number(item.quantity||0)),0),0),avg=completed.length?revenue/completed.length:0,set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
  const periods=$('#retailAnalyticsPeriods'),labels={today:'Сегодня','7':'7 дней','30':'30 дней',all:'Всё время'};if(periods){periods.innerHTML=Object.entries(labels).map(([key,label])=>`<button type="button" class="${retailAnalyticsPeriod===key?'active':''}" data-retail-analytics-period="${key}">${label}</button>`).join('');periods.querySelectorAll('[data-retail-analytics-period]').forEach(button=>button.onclick=()=>{retailAnalyticsPeriod=button.dataset.retailAnalyticsPeriod;renderRetailAnalytics()})}
  set('#retailAnalyticsOrders',String(completed.length));set('#retailAnalyticsRevenue',retailAnalyticsMoney(revenue));set('#retailAnalyticsAvg',retailAnalyticsMoney(avg));set('#retailAnalyticsPieces',String(Math.round(pieces)));set('#retailAnalyticsOrdersSub',`${period.length} всего · ${cancelled.length} отменено`);

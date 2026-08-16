@@ -22,6 +22,7 @@
   const recipes=()=>read('panora-recipes',{});
   const prices=()=>read('panora-ingredient-costs',{});
   const ingredientPrice=(map,name,unit)=>Number(map[`${normalize(name)}|${String(unit||'').toLowerCase()}`]??map[`${name}|${unit}`]??0);
+  const canonicalRetailOrders=list=>{const map=new Map();(Array.isArray(list)?list:[]).filter(Boolean).forEach(order=>{const key=String(order.id||order.number||'').trim();if(!key)return;const prev=map.get(key),stamp=o=>String(o?.updatedAt||o?.completedAt||o?.createdAt||'');if(!prev||stamp(order)>=stamp(prev))map.set(key,order)});return [...map.values()]};
 
   const unitRawCost=(product)=>{
     const recipe=recipes()?.[product]||[],priceMap=prices();
@@ -38,7 +39,7 @@
   };
 
   let expenses=read(KEY,[]);
-  let retailOrders=read('panora-retail-orders',[]);
+  let retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]));
   const session=()=>window.panoraSupabaseSession||null;
   const request=async(path,options={})=>{
     const s=session();
@@ -76,8 +77,8 @@
   const loadRetailCloud=async()=>{
     try{
       const rows=await request('retail_orders?select=id,order_number,source,fulfillment,bake_date,pickup_date,delivery_fee,status,payment_status,payment_method,total,created_at,completed_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');
-      if(Array.isArray(rows)){retailOrders=rows.map(retailOrderFromCloud);save('panora-retail-orders',retailOrders);render()}
-    }catch{retailOrders=read('panora-retail-orders',[])}
+      if(Array.isArray(rows)){retailOrders=canonicalRetailOrders(rows.map(retailOrderFromCloud));save('panora-retail-orders',retailOrders);render()}
+    }catch{retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]))}
   };
   const persist=async row=>{
     const index=expenses.findIndex(x=>x.id===row.id);
