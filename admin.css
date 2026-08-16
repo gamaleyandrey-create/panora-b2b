@@ -286,8 +286,20 @@
 }
 
 
-/* Panora 6.35 · retail in-app messages */
+/* Panora 6.36 · retail in-app messages */
 .retail-messages-shell{width:min(620px,calc(100vw - 28px))}.retail-message-list{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;padding:8px 2px 12px}.retail-chat-message{max-width:82%;padding:10px 12px;border-radius:14px;background:#f0f2ed;border:1px solid #e1e5df}.retail-chat-message.is-bakery{align-self:flex-end;background:#e9f1ea;border-color:#d5e2d7}.retail-chat-message.is-customer{align-self:flex-start}.retail-chat-message span{display:block;font-size:10px;font-weight:800;color:#6e796f}.retail-chat-message p{margin:4px 0 3px;white-space:pre-wrap;font-size:13px;line-height:1.45}.retail-chat-message small{font-size:10px;color:#858e87}.retail-message-compose{display:grid;gap:9px;padding-top:12px;border-top:1px solid #e4e7e2}.retail-message-compose textarea{width:100%;resize:vertical;min-height:78px}.retail-message-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.retail-message-compose-actions small{color:#7a837c;line-height:1.4}.retail-fallback-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.retail-fallback-actions:empty{display:none}.retail-fallback-actions a{min-height:38px;display:inline-flex;align-items:center;text-decoration:none;padding:0 12px;border-radius:10px}@media(max-width:680px){.retail-messages-shell{width:calc(100vw - 14px)}.retail-message-list{max-height:48vh}.retail-chat-message{max-width:92%}.retail-message-compose-actions{align-items:stretch;flex-direction:column}.retail-message-compose-actions button{width:100%;min-height:46px}.retail-fallback-actions a{flex:1;justify-content:center}}
 
-/* Panora 6.35 · retail notification center + Web Push controls */
+/* Panora 6.36 · retail notification center + Web Push controls */
 .retail-notification-center-button{position:relative;white-space:nowrap}.retail-notification-center-button span{display:inline-grid;min-width:20px;height:20px;padding:0 6px;margin-left:5px;place-items:center;border-radius:999px;background:#9b4239;color:#fff;font-size:11px}.retail-notifications-dialog{width:min(620px,calc(100vw - 24px))}.retail-notification-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 0 16px;border-bottom:1px solid #e4e7e2}.retail-notification-toolbar span{font-size:12px;color:#707b73}.retail-notifications-list{display:grid;gap:8px;max-height:min(60vh,560px);overflow:auto;padding-top:12px}.retail-notification{display:grid;grid-template-columns:10px 1fr;gap:11px;padding:12px;border:1px solid #e2e7e2;border-radius:13px;background:#fff}.retail-notification.is-unread{background:#f3f7f1;border-color:#cdddcf}.retail-notification i{width:9px;height:9px;border-radius:50%;margin-top:6px;background:#78977f}.retail-notification.is-unread i{background:#315c42;box-shadow:0 0 0 4px #e2eee3}.retail-notification strong{display:block;font-size:13px}.retail-notification p{margin:4px 0;color:#657168;font-size:12px;line-height:1.45}.retail-notification small{color:#8a938d;font-size:10px}.retail-push-tech{margin:8px 0 16px;padding:12px 14px;border:1px dashed #d6ddd6;border-radius:12px;background:#fafbf8}.retail-push-tech summary{cursor:pointer;font-weight:800;font-size:12px}.retail-push-tech label{margin-top:12px}.retail-push-tech textarea{font-family:monospace;font-size:12px}@media(max-width:700px){.retail-notification-center-button{width:100%}.retail-notification-toolbar{align-items:stretch;flex-direction:column}.retail-notification-toolbar .secondary{width:100%;min-height:46px}.retail-notifications-dialog{width:calc(100vw - 14px);max-height:92vh}}
+
+
+/* Panora 6.36 · retail admin mobile stabilization */
+@media(max-width:720px){
+ #retail-orders .button,#retail-orders button,#retail-settings button,#retail-analytics button{min-height:44px}
+ .retail-events-dialog,.retail-messages-dialog,.retail-notifications-dialog{max-height:calc(100dvh - 12px);overscroll-behavior:contain}
+ .retail-events-shell{max-height:calc(100dvh - 12px);overflow:auto;padding-bottom:max(20px,env(safe-area-inset-bottom))}
+ .retail-message-compose{position:sticky;bottom:0;background:#fff;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+ .retail-settings-actions{position:sticky;bottom:0;z-index:4;margin:16px -12px -12px;padding:10px 12px max(10px,env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid #e2e7e2;backdrop-filter:blur(8px)}
+ .retail-settings-actions button{width:100%}
+ .retail-order-card{scroll-margin-top:76px}
+}
