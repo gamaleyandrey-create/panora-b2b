@@ -31,6 +31,95 @@ function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}
 function productName(id){return PRODUCTS[id]?.[lang]||id}
 
+/* Panora 6.19 — retail foundation. One and only location: bakery. */
+const RETAIL_SETTINGS_KEY='panora-retail-settings-v619';
+const RETAIL_ORDERS_KEY='panora-retail-orders';
+const RETAIL_DEFAULT_SETTINGS={
+ enabled:false,
+ location:'bakery',
+ locationName:'Пекарня',
+ stockSales:true,
+ preorders:true,
+ pickup:true,
+ delivery:false,
+ onlinePayment:true,
+ reservationMinutes:15,
+ preorderCutoffHours:24,
+ pickupSlots:['09:00–11:00','11:00–13:00','13:00–15:00']
+};
+function readRetailSettings(){
+ let saved={};try{saved=JSON.parse(localStorage.getItem(RETAIL_SETTINGS_KEY)||'{}')||{}}catch{}
+ return {...RETAIL_DEFAULT_SETTINGS,...saved,enabled:false,location:'bakery',locationName:'Пекарня',pickupSlots:Array.isArray(saved.pickupSlots)?saved.pickupSlots:RETAIL_DEFAULT_SETTINGS.pickupSlots};
+}
+function readRetailOrders(){try{const list=JSON.parse(localStorage.getItem(RETAIL_ORDERS_KEY)||'[]');return Array.isArray(list)?list:[]}catch{return[]}}
+function retailOrderStatus(order){return String(order?.status||'new')}
+function retailStatusLabel(status){return({new:'Новый',awaiting_payment:'Ожидает оплаты',confirmed:'Подтверждён',production:'К выпечке',reserved:'Зарезервирован',ready:'Готов',completed:'Выдан',delivered:'Доставлен',cancelled:'Отменён'}[status]||status||'—')}
+function retailPaymentLabel(order){const value=String(order?.paymentStatus||'pending');return({pending:'Не оплачено',paid:'Оплачен',refunded:'Возврат',failed:'Ошибка'}[value]||value)}
+function retailFulfillmentLabel(order){return String(order?.fulfillment||'pickup')==='delivery'?'Доставка':'Самовывоз'}
+function retailSourceLabel(order){return String(order?.source||'stock')==='bake_preorder'?'К выпечке':'Из наличия'}
+function retailItemsLabel(order){
+ const items=Array.isArray(order?.items)?order.items:[];
+ if(!items.length)return '—';
+ return items.map(item=>`${productName(String(item?.product||''))} × ${Math.max(0,Number(item?.quantity||0))}`).join(', ');
+}
+function renderRetailFoundation(){
+ const settings=readRetailSettings(),orders=readRetailOrders().filter(order=>order&&retailOrderStatus(order)!=='cancelled');
+ const active=orders.filter(order=>!['completed','delivered'].includes(retailOrderStatus(order)));
+ const set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
+ set('#retailNewCount',active.filter(o=>['new','awaiting_payment','confirmed'].includes(retailOrderStatus(o))).length);
+ set('#retailPreorderCount',active.filter(o=>String(o.source)==='bake_preorder').length);
+ set('#retailStockCount',active.filter(o=>String(o.source||'stock')==='stock').length);
+ set('#retailReadyCount',active.filter(o=>retailOrderStatus(o)==='ready').length);
+ set('#retailOrderTotal',`${orders.length} ${orders.length===1?'заказ':'заказов'}`);
+ const rows=$('#retailOrderRows');
+ if(rows){
+  rows.innerHTML=orders.map(order=>`<tr><td><strong>${adminEscape(order.number||order.id||'—')}</strong></td><td>${adminEscape(retailSourceLabel(order))}</td><td>${adminEscape(retailFulfillmentLabel(order))}${order.slot?`<small class="retail-order-sub">${adminEscape(order.slot)}</small>`:''}</td><td>${adminEscape(retailItemsLabel(order))}</td><td>${Number(order.total||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${adminEscape(retailPaymentLabel(order))}</td><td><span class="retail-order-status">${adminEscape(retailStatusLabel(retailOrderStatus(order)))}</span></td></tr>`).join('');
+ }
+ const empty=$('#retailEmptyState');if(empty)empty.hidden=orders.length>0;
+ const form=$('#retailSettingsForm');
+ if(form&&!form.dataset.loaded){
+  form.elements.stockSales.checked=!!settings.stockSales;
+  form.elements.preorders.checked=!!settings.preorders;
+  form.elements.pickup.checked=!!settings.pickup;
+  form.elements.delivery.checked=!!settings.delivery;
+  form.elements.onlinePayment.checked=!!settings.onlinePayment;
+  form.elements.reservationMinutes.value=String(settings.reservationMinutes||15);
+  form.elements.preorderCutoffHours.value=String(settings.preorderCutoffHours||24);
+  form.elements.pickupSlots.value=(settings.pickupSlots||[]).join('\n');
+  form.dataset.loaded='1';
+ }
+}
+function openRetailView(view){
+ const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
+ if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}
+ const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click();
+}
+function bindRetailFoundation(){
+ const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
+ if(toggle&&menu)toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')==='true';toggle.setAttribute('aria-expanded',String(!open));menu.hidden=open};
+ $$('#retailNavItems [data-view]').forEach(button=>button.addEventListener('click',()=>{if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}}));
+ const openSettings=$('#retailOpenSettings');if(openSettings)openSettings.onclick=()=>openRetailView('retail-settings');
+ const form=$('#retailSettingsForm');
+ if(form)form.onsubmit=event=>{
+  event.preventDefault();
+  const slots=String(form.elements.pickupSlots.value||'').split(/\n+/).map(v=>v.trim()).filter(Boolean).slice(0,12);
+  const value={
+   ...readRetailSettings(),enabled:false,location:'bakery',locationName:'Пекарня',
+   stockSales:!!form.elements.stockSales.checked,preorders:!!form.elements.preorders.checked,
+   pickup:!!form.elements.pickup.checked,delivery:!!form.elements.delivery.checked,
+   onlinePayment:!!form.elements.onlinePayment.checked,
+   reservationMinutes:Math.min(60,Math.max(5,Number(form.elements.reservationMinutes.value||15))),
+   preorderCutoffHours:Math.min(168,Math.max(1,Number(form.elements.preorderCutoffHours.value||24))),
+   pickupSlots:slots.length?slots:RETAIL_DEFAULT_SETTINGS.pickupSlots
+  };
+  localStorage.setItem(RETAIL_SETTINGS_KEY,JSON.stringify(value));
+  const saved=$('#retailSettingsSaved');if(saved)saved.textContent='Подготовка сохранена на этом устройстве';
+  renderRetailFoundation();
+ };
+ renderRetailFoundation();
+ window.panoraRetailFoundation={settings:readRetailSettings,orders:readRetailOrders,render:renderRetailFoundation,location:'bakery'};
+}
+
 /* Panora 6.08 — фактическое завершение выпечки. */
 const BAKE_COMPLETION_KEY='panora-bake-completions';
 const BAKE_COMPLETION_MIGRATION='panora-bake-completion-migration-v608';
@@ -281,7 +370,7 @@ function updateStockAdjustPreview(){
  const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
  preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
 }
-$$('.admin-nav button').forEach(b=>b.onclick=()=>{$$('.admin-nav button,.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');$('#view-'+b.dataset.view).classList.add('active')});
+$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 $('#prevWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()-7);renderPlan()};$('#nextWeek').onclick=()=>{weekStart.setDate(weekStart.getDate()+7);renderPlan()};$('#today').onclick=()=>{weekStart=startOfWeek(new Date());renderPlan()};
 const planDateJump=$('#planDateJump');
@@ -350,4 +439,5 @@ window.addEventListener('panora:bake-completions-changed',()=>{renderPlan();rend
 migrateLegacyBakeCompletions();
 upgradeBakeCompletionSnapshots();
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindBakeCompletion,{once:true}):bindBakeCompletion();
+bindRetailFoundation();
 $('#printPurchase').onclick=()=>window.print();applyLanguage();

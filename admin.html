@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6180">
+<link rel="stylesheet" href="admin.css?v=6190">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -115,6 +115,12 @@
       <button data-view="restaurants">Партнёры и цены</button>
       <button data-view="products">Карточки продукции</button>
       <button data-view="recipes" data-t="recipes">Рецептуры</button>
+
+      <button type="button" class="admin-nav-disclosure" id="retailNavToggle" aria-expanded="false" aria-controls="retailNavItems"><span>Розница</span><i aria-hidden="true">⌄</i></button>
+      <div class="admin-nav-submenu" id="retailNavItems" hidden>
+        <button data-view="retail-orders">Розничные заказы <span class="retail-off-badge">выкл.</span></button>
+        <button data-view="retail-settings">Настройки розницы</button>
+      </div>
 
       <div class="admin-nav-group-label">Настройки</div>
       <button data-view="settings">Настройки Panora</button>
@@ -360,6 +366,68 @@
 
         <p class="finance-note"><strong>Правило учёта Panora:</strong> закупка сырья не уменьшает операционную прибыль второй раз — сырьё уже попадает в себестоимость отгруженного хлеба. Входящий НДС по закупке при этом учитывается отдельно. Себестоимость пока рассчитывается по текущим рецептурам и текущим ценам ингредиентов; НДС является управленческой оценкой.</p>
       </div>
+      <div class="view" id="view-retail-orders">
+        <div class="page-head retail-page-head">
+          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Будущая зона заказов частных покупателей. Единственная точка выдачи и учёта — Пекарня.</p></div>
+          <button type="button" class="secondary" id="retailOpenSettings">Настройки розницы</button>
+        </div>
+        <section class="retail-state-banner" id="retailStateBanner" data-state="off">
+          <div><span class="retail-state-dot"></span><strong id="retailStateTitle">Розничные продажи выключены</strong><p id="retailStateText">Раздел подготовлен, но публичные заказы не принимаются и не влияют на склад, производство или финансы.</p></div>
+          <span class="retail-location-pill">Пекарня · 1 объект</span>
+        </section>
+        <section class="retail-summary-grid">
+          <article><span>Новые</span><strong id="retailNewCount">0</strong><small>Нужно принять в работу</small></article>
+          <article><span>К выпечке</span><strong id="retailPreorderCount">0</strong><small>Будущий спрос по выбранной дате</small></article>
+          <article><span>Из наличия</span><strong id="retailStockCount">0</strong><small>Резерв готового хлеба</small></article>
+          <article><span>Готовы к выдаче</span><strong id="retailReadyCount">0</strong><small>Самовывоз из пекарни</small></article>
+        </section>
+        <section class="retail-workflow-card">
+          <div><h3>Как будет работать розница</h3><p>Один объект — Пекарня. Покупатель не выбирает точку.</p></div>
+          <div class="retail-workflow-steps">
+            <span><b>1</b>Из наличия → резерв свободного хлеба</span>
+            <span><b>2</b>К выпечке → спрос выбранного дня</span>
+            <span><b>3</b>Самовывоз или доставка</span>
+            <span><b>4</b>Оплата → готов → выдан / доставлен</span>
+          </div>
+        </section>
+        <section class="retail-orders-panel">
+          <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>При запуске здесь появятся розничные заказы отдельно от партнёрских заказов и накладных.</p></div><span id="retailOrderTotal">0 заказов</span></div>
+          <div class="table-wrap retail-orders-table"><table><thead><tr><th>№</th><th>Источник</th><th>Получение</th><th>Состав</th><th>Сумма</th><th>Оплата</th><th>Статус</th></tr></thead><tbody id="retailOrderRows"></tbody></table></div>
+          <div class="retail-empty-state" id="retailEmptyState"><strong>Розничных заказов пока нет</strong><p>Продажи выключены. Текущие партнёрские заказы, склад и план выпечки работают без изменений.</p></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-retail-settings">
+        <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Настройки розницы</h2><p>Подготовка будущих продаж частным покупателям. Сейчас публикация и приём заказов остаются выключенными.</p></div></div>
+        <section class="retail-location-card">
+          <div><span>Единственный объект</span><strong>Пекарня</strong><p>Остатки, самовывоз, будущие предзаказы и доставка относятся только к этой пекарне. Кафе и другие точки не создаются.</p></div>
+          <span class="retail-location-lock">Один объект</span>
+        </section>
+        <form id="retailSettingsForm" class="retail-settings-card">
+          <div class="retail-setting-row retail-master-row"><div><strong>Розничные продажи</strong><small>Публичная витрина пока не подключена, поэтому включение продаж заблокировано.</small></div><label class="retail-switch is-locked"><input type="checkbox" name="enabled" disabled><span></span><em>Выключены</em></label></div>
+          <hr>
+          <h3>Сценарии заказа</h3>
+          <label class="retail-option"><input type="checkbox" name="stockSales"><span><strong>Покупка из наличия</strong><small>Резервировать только свободный остаток готового хлеба на складе пекарни.</small></span></label>
+          <label class="retail-option"><input type="checkbox" name="preorders"><span><strong>Заказ к выпечке</strong><small>Подтверждённый предзаказ позже будет добавляться в реальный спрос выбранного дня выпечки.</small></span></label>
+          <hr>
+          <h3>Получение</h3>
+          <div class="retail-settings-grid">
+            <label class="retail-option"><input type="checkbox" name="pickup"><span><strong>Самовывоз</strong><small>Получение только в пекарне.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="delivery"><span><strong>Доставка</strong><small>Будет подключена позже, без второго склада или точки.</small></span></label>
+          </div>
+          <label><span>Интервалы самовывоза</span><textarea name="pickupSlots" rows="4" placeholder="09:00–11:00&#10;11:00–13:00&#10;13:00–15:00"></textarea><small>По одному интервалу в строке. Это заготовка будущего выбора времени.</small></label>
+          <div class="retail-settings-grid">
+            <label><span>Временный резерв корзины, мин.</span><input name="reservationMinutes" type="number" min="5" max="60" step="1"></label>
+            <label><span>Предзаказ закрывается за, ч.</span><input name="preorderCutoffHours" type="number" min="1" max="168" step="1"></label>
+          </div>
+          <hr>
+          <h3>Оплата</h3>
+          <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Сохраняем как будущую настройку. Платёжный провайдер пока не подключён.</small></span></label>
+          <div class="retail-settings-note"><strong>Важно</strong><p>Пока розница выключена, эти настройки ничего не меняют в текущих заказах партнёров, Складе хлеба, Складе сырья, Закупке, выпечке или финансах.</p></div>
+          <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить подготовку</button></div>
+        </form>
+      </div>
+
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
         <form id="bakerySettingsForm" class="settings-card"><label><span>Юридическое название</span><input name="legalName" value="Panora"></label><label><span>Налоговый номер</span><input name="taxId" placeholder="NIF / CIF"></label><label><span>Адрес</span><input name="address"></label><div class="settings-row"><label><span>Email</span><input name="email" type="email" value="gamaley1@gmail.com"></label><label><span>Телефон</span><input name="phone" value="+34611187640"></label></div><hr><h3>Налог и НДС</h3><label class="check tax-switch"><input name="useTax" type="checkbox"><span><strong>Начислять НДС</strong><small>Если отключено, налог не рассчитывается и не попадает в итог.</small></span></label><label id="taxRateLabel"><span>Ставка НДС, %</span><input name="taxRate" type="number" min="0" step="0.01" value="0"></label><hr><h3>Форма накладной</h3><div class="settings-row"><label><span>Префикс номера</span><input name="notePrefix" value="DN-"></label><label><span>Следующий номер</span><input name="nextNoteNumber" type="number" min="1" step="1" value="1"></label></div><label><span>Заголовок документа</span><input name="noteTitle" value="Накладная"></label><label><span>Условия оплаты</span><input name="paymentTerms" placeholder="Например: оплата в течение 7 дней"></label><label><span>Текст внизу накладной</span><textarea name="noteFooter" rows="3" placeholder="Спасибо за сотрудничество"></textarea></label><div class="settings-row"><label><span>Подпись пекарни</span><input name="bakerySignature" value="Panora"></label><label><span>Подпись получателя</span><input name="customerSignature" value="Партнёр"></label></div><label class="check"><input name="showTax" type="checkbox" checked><span>Показывать НДС отдельной строкой</span></label><button class="primary" type="submit">Сохранить настройки</button></form>
@@ -446,7 +514,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6180"></script>
+<script src="admin.js?v=6190"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -481,7 +549,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6180"></script>
+<script src="pwa-stable.js?v=6190"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
