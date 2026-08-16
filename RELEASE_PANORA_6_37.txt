@@ -1,0 +1,8 @@
+Panora 6.37 — server Web Push
+- Real customer Push opt-in on retail-order.html.
+- Admin device subscription and test Push control.
+- Service Worker receives real server Web Push and opens the relevant Panora screen.
+- Background sender is supplied as a separate Supabase Edge Function package.
+- VAPID private key is never stored in app/GitHub files.
+- Existing in-app notifications and fallback WhatsApp / Telegram / SMS / Email remain.
+- PWA build 6370.
