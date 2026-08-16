@@ -249,17 +249,37 @@ function renderStock(){
 function fillMovementProducts(){
  const select=$('#movementProduct');if(!select)return;
  const current=select.value;
- select.innerHTML=stockProductIds().map(pid=>`<option value="${adminEscape(pid)}">${adminEscape(stockProductName(pid))}</option>`).join('');
+ select.innerHTML=stockProductIds().map(pid=>{
+  const raw=stockRawBalance(pid),stockText=raw<0?`расчёт ${raw} шт.`:`${Math.max(0,raw)} шт.`;
+  return `<option value="${adminEscape(pid)}">${adminEscape(stockProductName(pid))} — ${adminEscape(stockText)}</option>`;
+ }).join('');
  if(current&&[...select.options].some(o=>o.value===current))select.value=current;
 }
+function updateStockAdjustCurrent(){
+ const form=$('#movementForm'),root=$('#stockAdjustCurrent');if(!form||!root)return;
+ const product=form.product.value,raw=stockRawBalance(product),onHand=Math.max(0,raw),reserved=stockReserved(product),free=Math.max(0,onHand-reserved);
+ if(raw<0){
+  root.classList.add('is-warning');
+  root.innerHTML=`<span><small>Расчётный остаток</small><strong>${raw} шт.</strong></span><em>Требуется инвентаризация</em>`;
+  return;
+ }
+ root.classList.remove('is-warning');
+ root.innerHTML=`<span><small>На складе</small><strong>${onHand} шт.</strong></span><span><small>Зарезервировано</small><strong>${reserved} шт.</strong></span><span><small>Свободно</small><strong>${free} шт.</strong></span>`;
+}
 function updateStockAdjustPreview(){
- const form=$('#movementForm'),product=form.product.value,type=form.type.value,qty=Math.max(0,Number(form.quantity.value||0)),current=Math.max(0,stockRawBalance(product));
+ const form=$('#movementForm'),product=form.product.value,type=form.type.value,qty=Math.max(0,Number(form.quantity.value||0)),raw=stockRawBalance(product);
  const label=$('#movementQuantityLabel'),preview=$('#stockAdjustPreview');
+ updateStockAdjustCurrent();
  label.textContent=type==='inventory_set'?'Фактический остаток, шт.':'Количество, шт.';
  if(type==='inventory_set'){
-  const delta=qty-current;
-  preview.innerHTML=`Сейчас по расчёту: <strong>${current} шт.</strong>${form.quantity.value!==''?` · после инвентаризации: <strong>${qty} шт.</strong> · корректировка ${delta>=0?'+':''}${delta} шт.`:''}`;
- }else preview.innerHTML=`Сейчас по расчёту: <strong>${current} шт.</strong>`;
+  if(form.quantity.value===''){preview.innerHTML='Введите фактический остаток — Panora сразу покажет изменение.';return}
+  const delta=qty-raw;
+  preview.innerHTML=`После операции: <strong>${qty} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
+  return;
+ }
+ if(form.quantity.value===''){preview.innerHTML=`Текущий расчётный остаток: <strong>${raw} шт.</strong>`;return}
+ const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
+ preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
 }
 $$('.admin-nav button').forEach(b=>b.onclick=()=>{$$('.admin-nav button,.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');$('#view-'+b.dataset.view).classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
