@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6360">
+<link rel="stylesheet" href="admin.css?v=6370">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -545,7 +545,19 @@
           <label><span>Информация о самовывозе</span><textarea name="pickupNote" rows="3" maxlength="500" placeholder="Например: вход со стороны улицы, назовите номер заказа"></textarea></label>
           <hr>
           <h3>Уведомления покупателю</h3>
-          <p class="retail-settings-intro">События и новые сообщения показываются внутри Panora. Позже Web Push будет уведомлять о них на телефоне, а резервные мессенджеры останутся дополнительным каналом.</p>
+          <p class="retail-settings-intro">События и сообщения остаются внутри Panora. Web Push 6.37 отправляется сервером через Supabase Edge Function; резервные мессенджеры остаются дополнительным каналом.</p>
+          <div class="retail-settings-grid retail-push-server-grid">
+            <label class="retail-option"><input type="checkbox" name="pushCustomerEnabled"><span><strong>Push покупателям</strong><small>Разрешить подписку покупателей на уведомления заказа.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushAdminEnabled"><span><strong>Push пекарне</strong><small>Новые заказы и сообщения на устройства сотрудников.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushNewOrder"><span><strong>Новый заказ</strong><small>Отправлять серверный Push сотрудникам.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushNewMessage"><span><strong>Новое сообщение</strong><small>Push для противоположной стороны переписки.</small></span></label>
+          </div>
+          <div class="retail-settings-grid">
+            <label><span>Тихие часы · с</span><input name="pushQuietFrom" type="time"></label>
+            <label><span>Тихие часы · до</span><input name="pushQuietTo" type="time"></label>
+            <label><span>VAPID public key</span><input name="pushVapidPublicKey" type="text" autocomplete="off"><small>Публичный ключ. Private key хранится только в Supabase Secrets.</small></label>
+          </div>
+          <div class="retail-push-test-row"><button class="secondary" type="button" id="retailEnableAdminPush">Подписать это устройство</button><button class="secondary" type="button" id="retailTestPush">Отправить тест Push</button><span id="retailAdminPushState"></span></div>
           <div class="retail-settings-grid">
             <label class="retail-option"><input type="checkbox" name="notifyOrderReceived"><span><strong>Заказ принят</strong><small>Событие создаётся сразу после оформления.</small></span></label>
             <label class="retail-option"><input type="checkbox" name="notifyReady"><span><strong>Заказ готов</strong><small>Для самовывоза и перед передачей в доставку.</small></span></label>
@@ -643,7 +655,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6360"></script>
+<script src="admin.js?v=6370"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -678,7 +690,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6360"></script>
+<script src="pwa-stable.js?v=6370"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
@@ -727,7 +739,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=6360"></script>
+<script src="finance-dashboard.js?v=6370"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>
