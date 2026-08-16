@@ -19,6 +19,8 @@
  };
 
  const readBakeCompletions=()=>{try{const value=JSON.parse(localStorage.getItem('panora-bake-completions')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+ const readRetailOrders=()=>{try{const value=JSON.parse(localStorage.getItem('panora-retail-orders')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+ const activeRetailPreorders=()=>readRetailOrders().filter(order=>order&&String(order.source||'')==='bake_preorder'&&String(order.status||'new')!=='cancelled');
  const completedBakeDates=()=>new Set(readBakeCompletions().filter(item=>item&&!item.deletedAt).map(item=>String(item.date||'')));
 
  function allAvailableDates(){
@@ -210,23 +212,19 @@
  }
 
  function rawDemandByDate(dateSet){
-  const dates=[...dateSet].sort(),ordersInSelection=activeOrders().filter(order=>dateSet.has(dateOfOrder(order)));
-  const hasOrderDemand=ordersInSelection.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
-  const rows=[];
+  const dates=[...dateSet].sort(),partnerOrders=activeOrders().filter(order=>dateSet.has(dateOfOrder(order))),retailOrders=activeRetailPreorders().filter(order=>dateSet.has(String(order.bakeDate||order.pickupDate||'').slice(0,10)));
+  const partnerHasDemand=partnerOrders.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
+  const retailHasDemand=retailOrders.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
+  const hasRealDemand=partnerHasDemand||retailHasDemand,rows=[];
   dates.forEach(date=>{
-   const products=new Map();
-   if(hasOrderDemand){
-    ordersInSelection.filter(order=>dateOfOrder(order)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{
-     const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));
-     if(product&&qty)products.set(product,(products.get(product)||0)+qty);
-    }));
+   const products=new Map(),partnerProducts=new Map(),retailProducts=new Map();
+   if(hasRealDemand){
+    partnerOrders.filter(order=>dateOfOrder(order)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);partnerProducts.set(product,(partnerProducts.get(product)||0)+qty)}}));
+    retailOrders.filter(order=>String(order.bakeDate||order.pickupDate||'').slice(0,10)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);retailProducts.set(product,(retailProducts.get(product)||0)+qty)}}));
    }else{
-    (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{
-     const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));
-     if(product&&qty)products.set(product,(products.get(product)||0)+qty);
-    });
+    (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));if(product&&qty)products.set(product,(products.get(product)||0)+qty)});
    }
-   if(products.size)rows.push({date,source:hasOrderDemand?'orders':'plan',products});
+   if(products.size)rows.push({date,source:hasRealDemand?'orders':'plan',products,partnerProducts,retailProducts});
   });
   return rows;
  }
@@ -301,7 +299,7 @@
    (Array.isArray(latest?.[product])?latest[product]:[]).forEach(item=>{
     const perBread=Math.max(0,Number(item?.qty||0)),qty=perBread*pieces;if(!qty)return;
     const key=ingredientKey(item);
-    const base={date:day.date,source:day.source,product,pieces,perBread,qty,kind:'direct'};
+    const base={date:day.date,source:day.source,product,pieces,partnerPieces:Number(day.partnerProducts?.get(product)||0),retailPieces:Number(day.retailProducts?.get(product)||0),perBread,qty,kind:'direct'};
     if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){
      semiNeeds.set(key,(semiNeeds.get(key)||0)+qty);
      needs.set(key,(needs.get(key)||0)+qty);
@@ -387,8 +385,8 @@
    :'Только подтверждённый дефицит по выбранным датам';
   const selected=[...selectedPurchaseActiveDates()].sort(),scope=document.querySelector('#rawStockSelectionScope'),summary=document.querySelector('#rawStockSelectionSummary');
   const selectedDays=rawDemandByDate(new Set(selected)),usesPlan=selectedDays.some(day=>day.source==='plan');
-  if(scope)scope.textContent=selected.length?`Выборка закупки: ${selected.length} ${selected.length===1?'дата':'дат'} · ${usesPlan?'план (заказов в выборке нет)':'заказы партнёров'}`:'Выборка закупки: даты не выбраны';
-  if(summary)summary.textContent=selected.length?`${selected.length} ${selected.length===1?'выбранная дата':'выбранных дат'} · ${usesPlan?'план':'заказы'}`:'В Закупке даты не выбраны';
+  if(scope)scope.textContent=selected.length?`Выборка закупки: ${selected.length} ${selected.length===1?'дата':'дат'} · ${usesPlan?'план (реальных заказов в выборке нет)':'партнёры + розница'}`:'Выборка закупки: даты не выбраны';
+  if(summary)summary.textContent=selected.length?`${selected.length} ${selected.length===1?'выбранная дата':'выбранных дат'} · ${usesPlan?'план':'реальные заказы'}`:'В Закупке даты не выбраны';
   const autoEvents=ledger.events.filter(event=>event.virtual);
   document.querySelector('#rawStockAutoCount').textContent=String(autoEvents.length);
 
@@ -424,7 +422,7 @@
  }
 
  function rawNeedSourceLabel(source){
-  return source==='orders'?'Заказы партнёров':'План выпечки · во всей выборке нет заказов';
+  return source==='orders'?'Реальные заказы · партнёры + розница':'План выпечки · во всей выборке нет реальных заказов';
  }
 
  function rawNeedEntryQty(entry,row){
@@ -446,8 +444,8 @@
    <article class="${needsInventory||shortage>0.0005?'warning':''}"><span>${needsInventory?'Дефицит':'Не хватает'}</span><strong>${needsInventory?'После инвентаризации':niceQty(shortage,row.unit)}</strong></article>`;
   const planUsed=entries.some(entry=>entry.source==='plan');
   document.querySelector('#rawStockNeedSourceNote').innerHTML=planUsed
-   ?'<strong>Источник:</strong> во всей выбранной выборке нет реальных заказов партнёров, поэтому Panora использует количество из Календаря выпечки. Такие строки отмечены «План».'
-   :'<strong>Источник:</strong> вся показанная потребность сформирована реальными заказами партнёров на активные даты.';
+   ?'<strong>Источник:</strong> во всей выбранной выборке нет реальных заказов партнёров и розничных предзаказов, поэтому Panora использует количество из Календаря выпечки. Такие строки отмечены «План».'
+   :'<strong>Источник:</strong> потребность сформирована реальными заказами: партнёры + розничные предзаказы «К выпечке». Покупки из готового остатка сюда не попадают.';
 
   const grouped=new Map();
   entries.forEach(entry=>{
@@ -465,7 +463,7 @@
     <div class="raw-stock-need-lines">${list.map(entry=>{
      const product=productName(entry.product),via=entry.kind==='semi_source'?`<small>через «${entry.via}», выход ${entry.yieldPct}%</small>`:entry.kind==='semi'?`<small>полуфабрикат · выход ${entry.yieldPct}%</small>`:'';
      return `<div class="raw-stock-need-line">
-      <div><strong>${product}</strong><span>${entry.pieces} шт. хлеба</span>${via}</div>
+      <div><strong>${product}</strong><span>${entry.pieces} шт. хлеба${entry.source==='orders'?` · партнёры ${entry.partnerPieces||0} · розница ${entry.retailPieces||0}`:''}</span>${via}</div>
       <b>${rawNeedEntryQty(entry,row)}</b>
      </div>`;
     }).join('')}</div>
@@ -705,8 +703,8 @@
   document.querySelector('#costPurchaseLabel').textContent=isArchive?'Расчётная закупка':'Нужно закупить';
   document.querySelector('#purchaseBuyHeader').textContent=isArchive?'Требовалось':'Купить';
   document.querySelector('#purchaseModeHint').textContent=isArchive
-    ? 'Архив предназначен только для просмотра прошлых дат. Расчёт показывается по сохранённым заказам и текущим рецептурам/ценам; данные закупки здесь не редактируются.'
-    : 'Отметьте одну или несколько дат выпечки. Все количества и суммы ниже считаются только по выбранным датам. Введите цену за 1 кг, 1 литр или 1 штуку.';
+    ? 'Архив предназначен только для просмотра прошлых дат. Расчёт показывает реальные партнёрские и розничные предзаказы либо план, если реальных заказов во всей выборке не было; данные закупки здесь не редактируются.'
+    : 'Отметьте одну или несколько дат выпечки. Реальный спрос = партнёры + розничные предзаказы «К выпечке». План используется только если во всей выборке нет реальных заказов. Покупки из наличия не создают новую потребность в сырье.';
   const {demand,rows,breadCosts}=buildTotals(),priceMap=costs();
   const pieces=demand.reduce((sum,row)=>sum+Number(row.quantity||0),0);
   const consumption=breadCosts.reduce((sum,row)=>sum+row.totalCost,0);
