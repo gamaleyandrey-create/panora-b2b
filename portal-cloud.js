@@ -367,51 +367,104 @@
     const wholesale=Number(account?.prices?.[item.product] ?? retail);
     return Number(item.quantity)>=min?wholesale:retail;
   };
-  async function createOrderDirect(id,date,deliveryDate,items,comment){
-    const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
-    if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
-    const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
-    const created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
-    await api('order_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item)}))) });
-    return created;
-  }
-  async function verifyCreatedOrder(id){
+  const expectedOrderItems=items=>{
+    const expected=new Map();
+    for(const item of items||[]){
+      const product=String(item?.product||'').trim(),quantity=Math.trunc(Number(item?.quantity)||0);
+      if(product&&quantity>0)expected.set(product,quantity);
+    }
+    return expected;
+  };
+  const orderSnapshotMatches=(row,items)=>{
+    if(!row?.id)return false;
+    const expected=expectedOrderItems(items),actual=new Map();
+    if(!expected.size)return false;
+    for(const item of row.order_items||[]){
+      const product=String(item?.product_id||'').trim(),quantity=Math.trunc(Number(item?.quantity)||0);
+      if(!product||quantity<=0||actual.has(product))return false;
+      actual.set(product,quantity);
+    }
+    if(actual.size!==expected.size)return false;
+    for(const [product,quantity] of expected){if(actual.get(product)!==quantity)return false}
+    return true;
+  };
+  async function verifyCreatedOrder(id,items,{requireComplete=true}={}){
     for(const delay of [0,180,450,900]){
       if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
       try{
-        const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&select=id,order_number,status&limit=1`);
-        if(rows?.[0]?.id===id)return rows[0];
+        const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&select=id,order_number,restaurant_id,status,order_items(product_id,quantity,unit_price)&limit=1`);
+        const row=rows?.[0];
+        if(row?.id===id&&(!requireComplete||orderSnapshotMatches(row,items)))return row;
       }catch(error){if(delay===900)throw error}
     }
     return null;
   }
+  const incompleteOrderError=()=>{
+    const error=new Error(labels(
+      'Заказ не подтверждён: не все позиции сохранились. Корзина сохранена — повторите отправку после обновления SQL Panora 6.16.',
+      'Order was not confirmed: not all items were saved. Your cart is preserved — retry after applying the Panora 6.16 SQL update.',
+      'El pedido no se confirmó: no se guardaron todas las posiciones. Tu carrito se conserva; reintenta después de aplicar la actualización SQL de Panora 6.16.'
+    ));
+    error.code='PANORA_ORDER_INCOMPLETE';return error;
+  };
+  async function createOrderDirect(id,date,deliveryDate,items,comment){
+    const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
+    if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
+    let created=await verifyCreatedOrder(id,items,{requireComplete:false}).catch(()=>null);
+    if(created){
+      if(String(created.restaurant_id)!==String(account.id))throw new Error(labels('Идентификатор заказа уже принадлежит другому партнёру','Order identifier already belongs to another partner','El identificador del pedido ya pertenece a otro socio'));
+      if(created.status!=='submitted')throw new Error(labels('Существующий заказ уже нельзя дополнять','The existing order can no longer be repaired','El pedido existente ya no se puede reparar'));
+    }else{
+      const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
+      created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
+    }
+    const payload=items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item)}));
+    if(!payload.length)throw incompleteOrderError();
+    await api('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+    const verified=await verifyCreatedOrder(id,items);
+    if(!verified)throw incompleteOrderError();
+    return verified;
+  }
   const isOrderNumberConflict=error=>/orders_order_number_key|duplicate key value[^\n]*order_number|key \(order_number\)=/i.test(String(error?.message||error||''));
   const isCreateOrderRpcUnavailable=error=>error?.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(String(error?.message||error||''));
   async function createOrderWithRecovery(id,date,deliveryDate,items,comment){
-    let lastConflict=null;
+    let lastError=null;
     for(let attempt=0;attempt<3;attempt++){
       try{
         const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});
-        const created=rows?.[0];
-        if(created)return created;
-        const verified=await verifyCreatedOrder(id).catch(()=>null);
-        if(verified)return verified;
-        throw new Error('Order was not created');
+        const created=rows?.[0]||null;
+        const verified=await verifyCreatedOrder(id,items);
+        if(verified)return{...created,...verified};
+        throw incompleteOrderError();
       }catch(error){
-        const verified=await verifyCreatedOrder(id).catch(()=>null);
+        lastError=error;
+        const verified=await verifyCreatedOrder(id,items).catch(()=>null);
         if(verified)return verified;
         if(isCreateOrderRpcUnavailable(error))return createOrderDirect(id,date,deliveryDate,items,comment);
-        if(!isOrderNumberConflict(error))throw error;
-        lastConflict=error;
-        if(attempt<2)await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));
+        const partial=await verifyCreatedOrder(id,items,{requireComplete:false}).catch(()=>null);
+        /* A 6.15 client could leave only the order header. Reusing the same UUID
+           makes the server RPC idempotently upsert the missing items instead of
+           allocating another order. Never treat the header alone as success. */
+        if(partial?.id===id&&partial.status==='submitted'&&attempt<2){
+          await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));
+          continue;
+        }
+        if(isOrderNumberConflict(error)&&attempt<2){
+          await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));
+          continue;
+        }
+        throw error;
       }
     }
-    const friendly=new Error(labels(
-      'Нумерация заказов временно не синхронизирована. Корзина сохранена. Повторите заказ после обновления базы Panora.',
-      'Order numbering is temporarily out of sync. Your cart is saved. Retry after the Panora database is updated.',
-      'La numeración de pedidos está temporalmente desincronizada. Tu carrito está guardado. Reintenta después de actualizar la base de datos de Panora.'
-    ));
-    friendly.code='PANORA_ORDER_NUMBER_CONFLICT';friendly.cause=lastConflict;throw friendly;
+    if(isOrderNumberConflict(lastError)){
+      const friendly=new Error(labels(
+        'Нумерация заказов временно не синхронизирована. Корзина сохранена. Повторите заказ после обновления базы Panora.',
+        'Order numbering is temporarily out of sync. Your cart is saved. Retry after the Panora database is updated.',
+        'La numeración de pedidos está temporalmente desincronizada. Tu carrito está guardado. Reintenta después de actualizar la base de datos de Panora.'
+      ));
+      friendly.code='PANORA_ORDER_NUMBER_CONFLICT';friendly.cause=lastError;throw friendly;
+    }
+    throw lastError||incompleteOrderError();
   }
   const orderAttemptKey=accountId=>`panora-order-attempt-${accountId}`;
   const orderFingerprint=(date,items,comment)=>JSON.stringify({date,items:[...items].sort((a,b)=>String(a.product).localeCompare(String(b.product))),comment:String(comment||'')});
@@ -481,7 +534,7 @@
         if(created&&priceError?.status!==404)throw priceError;
         if(created&&priceError?.status===404)throw new Error(labels('Обновите SQL Panora 5.44: правило розничной/оптовой цены ещё не установлено.','Run the Panora 5.44 SQL update: tier pricing is not installed yet.','Ejecuta el SQL de Panora 5.44: aún no está instalada la tarifa por cantidad.'));
       }
-      const saved=await verifyCreatedOrder(id);
+      const saved=await verifyCreatedOrder(id,items);
       if(!saved)throw new Error(labels('Заказ сохранён, но не найден при контрольной загрузке','Order saved but was not found during verification','El pedido se guardó, pero no apareció durante la verificación'));
       localStorage.removeItem(orderAttemptKey(account.id));
       /* Contact details are a reusable checkout profile, not order draft data.
