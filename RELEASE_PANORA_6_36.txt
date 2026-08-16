@@ -1,0 +1,9 @@
+Panora 6.36 — retail UX and mobile stabilization
+
+- Retail storefront: visible online/offline state and safe offline blocking before hold/order creation.
+- Checkout: customer contact draft is preserved locally while the hold is active; repeated submits are guarded.
+- Mobile storefront: sticky cart action, safer dialog height/scrolling, 44px+ touch targets and reduced layout jumps.
+- Customer order page: background refresh is silent (no 30-second screen flicker); connection state is visible; message send failures are surfaced.
+- Admin retail dialogs/cards: improved mobile sizing, scroll containment and touch actions.
+- No database migration in 6.36. Existing 6.35 schema is used.
+- PWA build 6360.
