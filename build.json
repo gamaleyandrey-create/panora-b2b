@@ -1,7 +1,7 @@
 {
-  "version": "6.25",
-  "build": "6250",
+  "version": "6.26",
+  "build": "6260",
   "channel": "test",
   "date": "2026-08-16",
-  "change": "retail-preorders-production-raw-stock"
+  "change": "retail-customer-order-status-page"
 }
