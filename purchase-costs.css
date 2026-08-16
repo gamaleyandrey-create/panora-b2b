@@ -406,3 +406,8 @@
 .raw-stock-preview-result.warning{background:#fff0dc;color:#955a2d}.raw-stock-preview-result.ok{background:#e8f2e8;color:#326044}
 .raw-stock-preview-result strong{font-size:12px}
 @media(max-width:520px){.raw-stock-preview-grid{grid-template-columns:1fr 1fr}.raw-stock-preview-grid>span:last-child{grid-column:1/-1}}
+
+
+/* Panora 6.17 — inventory-first raw stock logic */
+.raw-stock-status.neutral{background:#f0f2ef;color:#778078}
+.raw-stock-pending{display:inline-block;color:#9a5a29;font-size:10px;font-weight:800;line-height:1.3}

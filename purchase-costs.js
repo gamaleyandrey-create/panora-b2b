@@ -347,36 +347,44 @@
  function renderRawStock(){
   const root=document.querySelector('#view-rawstock');if(!root)return;
   const ledger=rawLedger(),forward=rawForwardNeeds(ledger),{needs}=forward,priceMap=costs();
-  let stockValue=0,shortages=0;
+  let stockValue=0,shortages=0,inventoryIssues=0;
   const rows=[...ledger.catalog.values()].sort((a,b)=>a.semi!==b.semi?(a.semi?1:-1):a.name.localeCompare(b.name,'ru'));
   document.querySelector('#rawStockRows').innerHTML=rows.length?rows.map(row=>{
-   const stock=Number(ledger.balances.get(row.key)||0),required=Math.max(0,Number(needs.get(row.key)||0));
+   const stock=Number(ledger.balances.get(row.key)||0),required=Math.max(0,Number(needs.get(row.key)||0)),needsInventory=stock<0;
    const price=ingredientPrice(priceMap,row.name,row.unit);
    const unitValue=row.semi&&row.sourceName&&row.yieldPct>0?ingredientPrice(priceMap,row.sourceName,row.sourceUnit)/(row.yieldPct/100):price;
    const value=Math.max(0,stock)/factor(row.unit)*unitValue;stockValue+=value;
-   const shortage=Math.max(0,required-Math.max(0,stock));if(!row.semi&&shortage>0.0005)shortages++;
-   const after=stock-required;
-   const status=row.semi
-    ? (shortage>0.0005?`<span class="raw-stock-status prepare">Приготовить ${niceQty(shortage,row.unit)}</span>`:`<span class="raw-stock-status ok">Хватает</span>`)
-    : (stock<0
-      ?`<button type="button" class="raw-stock-status danger action" data-raw-fix="${row.key}" title="Установить фактический остаток">Отрицательный остаток · исправить</button>`
+   const shortage=needsInventory?0:Math.max(0,required-stock);
+   if(needsInventory)inventoryIssues++;
+   else if(!row.semi&&shortage>0.0005)shortages++;
+   const after=needsInventory?null:stock-required;
+   const status=needsInventory
+    ?`<button type="button" class="raw-stock-status danger action" data-raw-fix="${row.key}" title="Установить фактический остаток">Требуется инвентаризация</button>`
+    :row.semi
+      ? (shortage>0.0005?`<span class="raw-stock-status prepare">Приготовить ${niceQty(shortage,row.unit)}</span>`:required>0.0005?`<span class="raw-stock-status ok">Хватает</span>`:`<span class="raw-stock-status neutral">Нет потребности</span>`)
       :shortage>0.0005
         ?`<button type="button" class="raw-stock-status warning action" data-raw-receive="${row.key}" title="Добавить приход этого сырья">Не хватает ${niceQty(shortage,row.unit)} · приход</button>`
-        :'<span class="raw-stock-status ok">Хватает</span>');
+        :required>0.0005?'<span class="raw-stock-status ok">Хватает</span>':'<span class="raw-stock-status neutral">Нет потребности</span>';
    const priceText=row.semi?'по сырью':price>0?`${price.toFixed(2)} € / ${row.unit==='g'?'кг':row.unit==='ml'?'л':'шт.'}`:'—';
    const needLabel=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
    const needText=required>0.0005?`<button type="button" class="raw-stock-need-link" data-raw-need="${row.key}" title="Показать, откуда взялась потребность">${needLabel}<small>Расшифровка</small></button>`:'—';
-   const afterText=row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
-   return `<tr class="${stock<0?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''}">
+   const afterText=needsInventory
+    ?'<span class="raw-stock-pending">После инвентаризации</span>'
+    :row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
+   return `<tr class="${needsInventory?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''}">
     <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}</small></td>
     <td><strong>${niceQty(stock,row.unit)}</strong></td><td>${needText}</td>
-    <td class="${after<0&&!row.semi?'raw-stock-negative':''}">${afterText}</td><td>${priceText}</td>
+    <td class="${after!==null&&after<0&&!row.semi?'raw-stock-negative':''}">${afterText}</td><td>${priceText}</td>
     <td>${euroCost(value)}</td><td>${status}</td></tr>`;
   }).join(''):'<tr><td colspan="7">В рецептурах пока нет ингредиентов.</td></tr>';
 
   document.querySelector('#rawStockIngredientCount').textContent=String(rows.length);
   document.querySelector('#rawStockValue').textContent=euroCost(stockValue);
   document.querySelector('#rawStockShortages').textContent=String(shortages);
+  const shortageHint=document.querySelector('#rawStockShortageHint');
+  if(shortageHint)shortageHint.textContent=inventoryIssues>0
+   ?`${inventoryIssues} ${inventoryIssues===1?'позиция требует':'позиции требуют'} инвентаризации · дефицит после проверки остатка`
+   :'Только подтверждённый дефицит по выбранным датам';
   const selected=[...selectedPurchaseActiveDates()].sort(),scope=document.querySelector('#rawStockSelectionScope'),summary=document.querySelector('#rawStockSelectionSummary');
   const selectedDays=rawDemandByDate(new Set(selected)),usesPlan=selectedDays.some(day=>day.source==='plan');
   if(scope)scope.textContent=selected.length?`Выборка закупки: ${selected.length} ${selected.length===1?'дата':'дат'} · ${usesPlan?'план (заказов в выборке нет)':'заказы партнёров'}`:'Выборка закупки: даты не выбраны';
@@ -416,7 +424,7 @@
  }
 
  function rawNeedSourceLabel(source){
-  return source==='orders'?'Заказы партнёров':'План выпечки · заказов на эту дату нет';
+  return source==='orders'?'Заказы партнёров':'План выпечки · во всей выборке нет заказов';
  }
 
  function rawNeedEntryQty(entry,row){
@@ -428,17 +436,17 @@
   const dialog=document.querySelector('#rawStockNeedDialog');if(!dialog)return;
   const ledger=rawLedger(),forward=rawForwardNeeds(ledger),row=ledger.catalog.get(String(key));
   if(!row)return rawStockFeedback('Ингредиент не найден.','error');
-  const required=Math.max(0,Number(forward.needs.get(row.key)||0)),stock=Number(ledger.balances.get(row.key)||0),shortage=Math.max(0,required-Math.max(0,stock));
+  const required=Math.max(0,Number(forward.needs.get(row.key)||0)),stock=Number(ledger.balances.get(row.key)||0),needsInventory=stock<0,shortage=needsInventory?0:Math.max(0,required-stock);
   const entries=(forward.details.get(row.key)||[]).slice();
   document.querySelector('#rawStockNeedTitle').textContent=`Откуда нужно: ${row.name}`;
   const selectedDatesList=[...selectedPurchaseActiveDates()].sort();document.querySelector('#rawStockNeedSubtitle').textContent=`Выборка «Закупки»: ${selectedDatesList.length} ${selectedDatesList.length===1?'дата':'дат'}. Расчёт полностью совпадает с выбранной закупкой.`;
   document.querySelector('#rawStockNeedSummary').innerHTML=`
    <article><span>Нужно всего</span><strong>${niceQty(required,row.unit)}</strong></article>
    <article><span>Сейчас на складе</span><strong>${niceQty(stock,row.unit)}</strong></article>
-   <article class="${shortage>0.0005?'warning':''}"><span>Не хватает</span><strong>${niceQty(shortage,row.unit)}</strong></article>`;
+   <article class="${needsInventory||shortage>0.0005?'warning':''}"><span>${needsInventory?'Дефицит':'Не хватает'}</span><strong>${needsInventory?'После инвентаризации':niceQty(shortage,row.unit)}</strong></article>`;
   const planUsed=entries.some(entry=>entry.source==='plan');
   document.querySelector('#rawStockNeedSourceNote').innerHTML=planUsed
-   ?'<strong>Важно:</strong> для дат без заказов партнёров Panora использовала количество из Календаря выпечки. Такие строки отмечены «План».'
+   ?'<strong>Источник:</strong> во всей выбранной выборке нет реальных заказов партнёров, поэтому Panora использует количество из Календаря выпечки. Такие строки отмечены «План».'
    :'<strong>Источник:</strong> вся показанная потребность сформирована реальными заказами партнёров на активные даты.';
 
   const grouped=new Map();
