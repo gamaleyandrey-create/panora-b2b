@@ -215,6 +215,6 @@
 .retail-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:18px}.retail-settings-actions>span{color:#728078;font-size:10px}
 @media(max-width:1100px){.retail-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.retail-workflow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.admin-nav-disclosure{margin-top:4px!important;padding-top:12px!important;border-top:0!important}.admin-nav-submenu{display:flex;gap:4px;padding:0}.admin-nav-submenu[hidden]{display:none!important}.admin-nav-submenu button{padding-left:14px!important}.retail-state-banner,.retail-location-card,.retail-setting-row,.retail-panel-head{align-items:flex-start;flex-direction:column}.retail-summary-grid,.retail-workflow-steps,.retail-settings-grid{grid-template-columns:1fr}.retail-settings-actions{align-items:stretch;flex-direction:column}.retail-settings-actions .primary{width:100%}}
-/* Panora 6.20 — retail customer preview entry */
+/* Panora 6.21 — retail multilingual customer preview */
 .retail-page-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.retail-page-actions a.secondary,.retail-page-head>a.secondary{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:720px){.retail-page-actions{width:100%;align-items:stretch;flex-direction:column}.retail-page-actions a.secondary,.retail-page-actions button,.retail-page-head>a.secondary{width:100%}}
