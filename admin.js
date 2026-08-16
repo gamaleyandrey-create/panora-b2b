@@ -31,7 +31,7 @@ function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}
 function productName(id){return PRODUCTS[id]?.[lang]||id}
 
-/* Panora 6.29 — retail analytics on top of the single-Bakery retail pipeline. */
+/* Panora 6.30 — retail stabilization audit for the single-Bakery retail pipeline. */
 const RETAIL_SETTINGS_KEY='panora-retail-settings-v623';
 const RETAIL_SETTINGS_LEGACY_KEYS=['panora-retail-settings-v622','panora-retail-settings-v619'];
 const RETAIL_PRODUCT_SETTINGS_KEY='panora-retail-product-settings-v623';
@@ -386,8 +386,20 @@ function stockReserved(product){
   .flatMap(o=>o.items||[])
   .filter(item=>String(item.product)===String(product))
   .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||item.quantityPieces||0)),0);
+ // 6.30: keep the admin stock view aligned with panora_retail_stock_snapshot().
+ // Stock orders reserve immediately. Bake preorders start reserving finished bread
+ // only after a factual bake completion exists for their bake date. Delivery orders
+ // remain reserved while they are physically "delivering" and are released only
+ // when completed/cancelled.
  const retail=readRetailOrders()
-  .filter(o=>o&&String(o.source||'stock')==='stock'&&!['completed','cancelled'].includes(retailOrderStatus(o)))
+  .filter(o=>{
+   if(!o||['completed','cancelled'].includes(retailOrderStatus(o)))return false;
+   const source=String(o.source||'stock');
+   if(source==='stock')return true;
+   if(source!=='bake_preorder')return false;
+   const bakeDate=String(o.bakeDate||o.pickupDate||'').slice(0,10);
+   return !!(bakeDate&&bakeCompletionFor(bakeDate));
+  })
   .flatMap(o=>o.items||[])
   .filter(item=>String(item.product)===String(product))
   .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0)),0);
@@ -430,7 +442,7 @@ function renderStock(){
   </article>`).join('');
  const warnings=[];
  cards.filter(x=>x.raw<0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: требуется инвентаризация, исторический расчёт ${x.raw} шт.</p>`));
- cards.filter(x=>x.shortage>0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: на текущую выпечку не хватает ${x.shortage} шт.</p>`));
+ cards.filter(x=>x.shortage>0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: не хватает для активных резервов ${x.shortage} шт.</p>`));
  const warningRoot=$('#stockWarnings');warningRoot.hidden=!warnings.length;warningRoot.innerHTML=warnings.join('');
  const sorted=effective.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
  const recent=sorted.filter(m=>String(m.date||'')>=cutoff),archive=sorted.filter(m=>String(m.date||'')<cutoff);

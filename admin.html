@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6290">
+<link rel="stylesheet" href="admin.css?v=6300">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -391,7 +391,7 @@
             <span><b>3</b>Готов → выдача или доставка</span>
             <span><b>4</b>Выдать / доставить → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.29:</strong> добавлена отдельная аналитика розницы: оборот завершённых заказов, средний чек, хлеб, самовывоз/доставка, источник спроса, оплаты, отмены и дефицит после выпечки.</p>
+          <p class="retail-stage-note"><strong>6.30:</strong> аудит розничного контура: склад, резервы, предзаказы после факта выпечки, доставка, отмены, возвраты и мобильные сценарии приведены к одной логике.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -501,7 +501,7 @@
             <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Показывать онлайн-оплату после подключения платёжного провайдера.</small></span></label>
             <label class="retail-option"><input type="checkbox" name="payOnPickup"><span><strong>Разрешить оплату при получении</strong><small>Покупатель оформляет заказ без онлайн-платежа; статус оплаты остаётся отдельным.</small></span></label>
           </div>
-          <label><span>Платёжный провайдер</span><select name="paymentProvider"><option value="none">Не подключён</option></select><small>6.29 сохраняет безопасную архитектуру оплаты без привязки к конкретному сервису. После выбора провайдера здесь появится его настройка.</small></label>
+          <label><span>Платёжный провайдер</span><select name="paymentProvider"><option value="none">Не подключён</option></select><small>Архитектура оплаты остаётся без привязки к конкретному сервису. После выбора провайдера здесь появится его настройка.</small></label>
           <hr>
           <h3>Контакты для покупателя</h3>
           <div class="retail-settings-grid">
@@ -600,7 +600,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6290"></script>
+<script src="admin.js?v=6300"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -635,7 +635,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6290"></script>
+<script src="pwa-stable.js?v=6300"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
