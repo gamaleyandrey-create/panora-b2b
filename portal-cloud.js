@@ -385,6 +385,34 @@
     }
     return null;
   }
+  const isOrderNumberConflict=error=>/orders_order_number_key|duplicate key value[^\n]*order_number|key \(order_number\)=/i.test(String(error?.message||error||''));
+  const isCreateOrderRpcUnavailable=error=>error?.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(String(error?.message||error||''));
+  async function createOrderWithRecovery(id,date,deliveryDate,items,comment){
+    let lastConflict=null;
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});
+        const created=rows?.[0];
+        if(created)return created;
+        const verified=await verifyCreatedOrder(id).catch(()=>null);
+        if(verified)return verified;
+        throw new Error('Order was not created');
+      }catch(error){
+        const verified=await verifyCreatedOrder(id).catch(()=>null);
+        if(verified)return verified;
+        if(isCreateOrderRpcUnavailable(error))return createOrderDirect(id,date,deliveryDate,items,comment);
+        if(!isOrderNumberConflict(error))throw error;
+        lastConflict=error;
+        if(attempt<2)await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));
+      }
+    }
+    const friendly=new Error(labels(
+      'Нумерация заказов временно не синхронизирована. Корзина сохранена. Повторите заказ после обновления базы Panora.',
+      'Order numbering is temporarily out of sync. Your cart is saved. Retry after the Panora database is updated.',
+      'La numeración de pedidos está temporalmente desincronizada. Tu carrito está guardado. Reintenta después de actualizar la base de datos de Panora.'
+    ));
+    friendly.code='PANORA_ORDER_NUMBER_CONFLICT';friendly.cause=lastConflict;throw friendly;
+  }
   const orderAttemptKey=accountId=>`panora-order-attempt-${accountId}`;
   const orderFingerprint=(date,items,comment)=>JSON.stringify({date,items:[...items].sort((a,b)=>String(a.product).localeCompare(String(b.product))),comment:String(comment||'')});
   function orderAttempt(accountId,fingerprint){
@@ -440,9 +468,8 @@
         }
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
-      const plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(date,items,comment),id=orderAttempt(account.id,fingerprint);let created;
-      try{const rows=await api('rpc/panora_create_order',{method:'POST',body:JSON.stringify({p_order_id:id,p_bake_date:date,p_delivery_date:deliveryDate,p_items:items,p_comment:comment})});created=rows?.[0]}
-      catch(error){const unusableRpc=error.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(error.message);if(!unusableRpc)throw error;created=await createOrderDirect(id,date,deliveryDate,items,comment)}
+      const plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(date,items,comment),id=orderAttempt(account.id,fingerprint);
+      const created=await createOrderWithRecovery(id,date,deliveryDate,items,comment);
       if(!created)throw new Error('Order was not created');
       try{
         await api('rpc/panora_apply_order_tier_prices',{method:'POST',body:JSON.stringify({p_order_id:id})});
