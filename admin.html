@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6340">
+<link rel="stylesheet" href="admin.css?v=6350">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -396,6 +396,7 @@
       <div class="view" id="view-retail-orders">
         <div class="page-head retail-page-head">
           <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Рабочая очередь частных покупателей. Единственная точка получения и учёта — Пекарня.</p></div>
+          <button type="button" class="secondary retail-notification-center-button" id="retailNotificationCenter">🔔 Уведомления <span id="retailNotificationBadge" hidden>0</span></button>
           <div class="retail-page-actions"><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a><button type="button" class="secondary" id="retailOpenSettings">Настройки розницы</button></div>
         </div>
         <section class="retail-state-banner" id="retailStateBanner" data-state="on">
@@ -416,7 +417,7 @@
             <span><b>3</b>Готов → выдача или доставка</span>
             <span><b>4</b>Выдать / доставить → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.34:</strong> основной канал связи с розничным покупателем — сообщения внутри Panora. Журнал событий остаётся отдельно; резервные каналы WhatsApp / Telegram / SMS / Email настраиваются пекарней. Финансовая логика 6.31 сохранена: оплаченные завершённые продажи, доставка, возвраты и COGS считаются отдельно от B2B и входят в общую операционную прибыль без двойного списания сырья.</p>
+          <p class="retail-stage-note"><strong>6.35:</strong> основной канал связи с розничным покупателем — сообщения внутри Panora. Журнал событий остаётся отдельно; резервные каналы WhatsApp / Telegram / SMS / Email настраиваются пекарней. Финансовая логика 6.31 сохранена: оплаченные завершённые продажи, доставка, возвраты и COGS считаются отдельно от B2B и входят в общую операционную прибыль без двойного списания сырья.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -544,8 +545,19 @@
           </div>
           <label><span>Информация о самовывозе</span><textarea name="pickupNote" rows="3" maxlength="500" placeholder="Например: вход со стороны улицы, назовите номер заказа"></textarea></label>
           <hr>
-          <h3>Уведомления покупателю</h3>
-          <p class="retail-settings-intro">События и новые сообщения показываются внутри Panora. Позже Web Push будет уведомлять о них на телефоне, а резервные мессенджеры останутся дополнительным каналом.</p>
+          <h3>Уведомления и Push</h3>
+          <p class="retail-settings-intro">Основной центр уведомлений находится внутри Panora. Web Push можно включить отдельно для покупателей и для сотрудников пекарни. WhatsApp / Telegram / SMS / Email остаются запасными каналами.</p>
+          <div class="retail-settings-grid">
+            <label class="retail-option"><input type="checkbox" name="pushCustomerEnabled"><span><strong>Push покупателям</strong><small>Предлагать покупателю включить уведомления по его заказу.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushAdminEnabled"><span><strong>Push пекарне</strong><small>Новые заказы и сообщения покупателей в браузере / установленной PWA.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushNewOrder"><span><strong>Новый розничный заказ</strong><small>Событие для сотрудников пекарни.</small></span></label>
+            <label class="retail-option"><input type="checkbox" name="pushNewMessage"><span><strong>Новое сообщение</strong><small>Уведомлять противоположную сторону о новом сообщении.</small></span></label>
+          </div>
+          <div class="retail-settings-grid">
+            <label><span>Тихий режим с</span><input name="pushQuietFrom" type="time"><small>В это время Push можно подавлять на сервере доставки.</small></label>
+            <label><span>Тихий режим до</span><input name="pushQuietTo" type="time"></label>
+          </div>
+          <details class="retail-push-tech"><summary>Техническая настройка Web Push</summary><label><span>VAPID public key</span><textarea name="pushVapidPublicKey" rows="3" placeholder="Публичный ключ Web Push"></textarea><small>Секретный ключ сюда не вводится. Он хранится только на сервере отправки Push.</small></label></details>
           <div class="retail-settings-grid">
             <label class="retail-option"><input type="checkbox" name="notifyOrderReceived"><span><strong>Заказ принят</strong><small>Событие создаётся сразу после оформления.</small></span></label>
             <label class="retail-option"><input type="checkbox" name="notifyReady"><span><strong>Заказ готов</strong><small>Для самовывоза и перед передачей в доставку.</small></span></label>
@@ -572,6 +584,13 @@
     <button type="button" data-mobile-view="plan"><span>▦</span><i>План</i></button>
     <button type="button" id="adminMobileMore"><span>•••</span><i>Ещё</i></button>
   </nav>
+
+
+  <dialog id="retailNotificationsDialog" class="retail-events-dialog retail-notifications-dialog">
+    <div class="retail-events-dialog-head"><div><span>PANORA · РОЗНИЦА</span><h3>Центр уведомлений</h3></div><button type="button" class="dialog-close" id="retailNotificationsClose" aria-label="Закрыть">×</button></div>
+    <div class="retail-notification-toolbar"><button type="button" class="secondary" id="retailEnableAdminPush">Включить Push на этом устройстве</button><span id="retailAdminPushState">Push не настроен</span></div>
+    <div id="retailNotificationsList" class="retail-notifications-list"><p class="retail-event-loading">Загружаем уведомления…</p></div>
+  </dialog>
 
   <dialog id="planDialog" class="easy-plan-dialog"><form method="dialog" id="planForm"><button type="button" class="dialog-close" id="closePlan" aria-label="Закрыть">×</button><h3>Запланировать выпечку</h3><p class="form-hint">Выберите день и укажите количество хотя бы одного хлеба.</p><div class="settings-row"><label><span>Дата выпечки</span><input type="date" name="bakeDate" required></label><label><span>Дата доставки</span><input type="date" name="deliveryDate" required></label></div><fieldset class="bread-plan-fields"><legend>Количество хлеба, шт.</legend><label><span>Льняной бездрожжевой хлеб с семенами</span><input type="number" name="plainPlanned" min="0" max="5000" step="1" placeholder="Количество"></label><label><span>Тыквенный бездрожжевой хлеб с семенами</span><input type="number" name="pumpkinPlanned" min="0" max="5000" step="1" placeholder="Количество"></label></fieldset><p class="plan-error" id="planError" role="alert"></p><details class="plan-extra"><summary>Дополнительные настройки</summary><label><span>Приём заказов до</span><input type="datetime-local" name="cutoff" required></label><label class="check"><input type="checkbox" name="open" checked><span>Принимать заказы</span></label></details><div class="plan-cancel-day"><button type="button" class="danger" id="cancelSelectedBake" hidden>Отменить день выпечки</button></div><div class="dialog-actions"><button type="button" id="cancelPlan">Закрыть</button><button type="submit" class="primary" id="savePlan">Сохранить выпечку</button></div></form></dialog>
   <dialog id="cancelBakeDialog" class="easy-plan-dialog"><form method="dialog" id="cancelBakeForm"><button type="button" class="dialog-close" id="closeCancelBake" aria-label="Закрыть">×</button><h3>Отменить день выпечки</h3><p class="form-hint">Приём заказов на выбранную дату будет закрыт. Неотгруженные заказы будут отменены.</p><label><span>Дата выпечки</span><select name="bakeDate" id="cancelBakeDate" required></select></label><div class="cancel-bake-summary" id="cancelBakeSummary"></div><label><span>Причина отмены</span><input name="reason" placeholder="Например: технические работы" required></label><label class="confirm-cancel-check"><input type="checkbox" name="confirmed" required><span>Подтверждаю отмену этого дня</span></label><div class="dialog-actions"><button type="button" id="keepBakeDay">Оставить день</button><button type="submit" class="danger" id="confirmCancelBake">Отменить выпечку</button></div></form></dialog>
@@ -643,7 +662,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6340"></script>
+<script src="admin.js?v=6350"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -678,7 +697,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6340"></script>
+<script src="pwa-stable.js?v=6350"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
@@ -727,7 +746,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=6340"></script>
+<script src="finance-dashboard.js?v=6350"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>

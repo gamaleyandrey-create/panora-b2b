@@ -1,6 +1,4 @@
 {
-  "version": "6.34",
-  "build": "6340",
-  "date": "2026-08-16",
-  "change": "retail-in-app-messages-fallback-channels"
+  "version": "6.35",
+  "build": "6350"
 }
