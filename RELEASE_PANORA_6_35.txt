@@ -1,0 +1,10 @@
+Panora 6.35 — notification center + Web Push foundation
+
+- Added retail notification center in bakery admin.
+- Added customer notification panel on retail order status page.
+- Added browser Push permission/subscription flow for customer and bakery devices.
+- Service worker handles Web Push payloads and notification clicks.
+- In-app notification rows are generated from retail order events and messages.
+- Fallback WhatsApp / Telegram / SMS / Email from 6.34 remain available.
+- Push subscriptions are ready for a VAPID sender; the VAPID private key is never stored in browser settings.
+- PWA build 6350.
