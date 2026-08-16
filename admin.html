@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6190">
+<link rel="stylesheet" href="admin.css?v=6220">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -118,7 +118,7 @@
 
       <button type="button" class="admin-nav-disclosure" id="retailNavToggle" aria-expanded="false" aria-controls="retailNavItems"><span>Розница</span><i aria-hidden="true">⌄</i></button>
       <div class="admin-nav-submenu" id="retailNavItems" hidden>
-        <button data-view="retail-orders">Розничные заказы <span class="retail-off-badge">выкл.</span></button>
+        <button data-view="retail-orders">Розничные заказы <span class="retail-off-badge" id="retailNavBadge">вкл.</span></button>
         <button data-view="retail-settings">Настройки розницы</button>
       </div>
 
@@ -368,11 +368,11 @@
       </div>
       <div class="view" id="view-retail-orders">
         <div class="page-head retail-page-head">
-          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Будущая зона заказов частных покупателей. Единственная точка выдачи и учёта — Пекарня.</p></div>
+          <div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Розничные заказы</h2><p>Розничный канал для частных покупателей. Единственная точка выдачи и учёта — Пекарня.</p></div>
           <div class="retail-page-actions"><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a><button type="button" class="secondary" id="retailOpenSettings">Настройки розницы</button></div>
         </div>
-        <section class="retail-state-banner" id="retailStateBanner" data-state="off">
-          <div><span class="retail-state-dot"></span><strong id="retailStateTitle">Розничные продажи выключены</strong><p id="retailStateText">Раздел подготовлен, но публичные заказы не принимаются и не влияют на склад, производство или финансы.</p></div>
+        <section class="retail-state-banner" id="retailStateBanner" data-state="on">
+          <div><span class="retail-state-dot"></span><strong id="retailStateTitle">Розничная витрина включена</strong><p id="retailStateText">Экран покупателя доступен для настройки. Реальное оформление заказов и оплата пока не запускаются.</p></div>
           <span class="retail-location-pill">Пекарня · 1 объект</span>
         </section>
         <section class="retail-summary-grid">
@@ -393,18 +393,18 @@
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>При запуске здесь появятся розничные заказы отдельно от партнёрских заказов и накладных.</p></div><span id="retailOrderTotal">0 заказов</span></div>
           <div class="table-wrap retail-orders-table"><table><thead><tr><th>№</th><th>Источник</th><th>Получение</th><th>Состав</th><th>Сумма</th><th>Оплата</th><th>Статус</th></tr></thead><tbody id="retailOrderRows"></tbody></table></div>
-          <div class="retail-empty-state" id="retailEmptyState"><strong>Розничных заказов пока нет</strong><p>Продажи выключены. Текущие партнёрские заказы, склад и план выпечки работают без изменений.</p></div>
+          <div class="retail-empty-state" id="retailEmptyState"><strong>Розничных заказов пока нет</strong><p id="retailEmptyText">Витрина включена для настройки. Реальное оформление заказов пока не подключено.</p></div>
         </section>
       </div>
 
       <div class="view" id="view-retail-settings">
-        <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Настройки розницы</h2><p>Подготовка будущих продаж частным покупателям. Сейчас публикация и приём заказов остаются выключенными.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
+        <div class="page-head retail-page-head"><div><span class="kicker">PANORA · РОЗНИЦА</span><h2>Настройки розницы</h2><p>Пекарня может в любой момент включить или выключить розничную витрину. Пока включение используется для настройки интерфейса покупателя.</p></div><a class="secondary" href="retail.html" target="_blank" rel="noopener">Экран покупателя ↗</a></div>
         <section class="retail-location-card">
           <div><span>Единственный объект</span><strong>Пекарня</strong><p>Остатки, самовывоз, будущие предзаказы и доставка относятся только к этой пекарне. Кафе и другие точки не создаются.</p></div>
           <span class="retail-location-lock">Один объект</span>
         </section>
         <form id="retailSettingsForm" class="retail-settings-card">
-          <div class="retail-setting-row retail-master-row"><div><strong>Розничные продажи</strong><small>Публичная витрина пока не подключена, поэтому включение продаж заблокировано.</small></div><label class="retail-switch is-locked"><input type="checkbox" name="enabled" disabled><span></span><em>Выключены</em></label></div>
+          <div class="retail-setting-row retail-master-row"><div><strong>Розничная витрина</strong><small>Включает или закрывает экран покупателя. Сейчас режим нужен для настройки; реальное оформление заказов подключим отдельно.</small></div><label class="retail-switch"><input type="checkbox" name="enabled"><span></span><em id="retailEnabledLabel">Включена</em></label></div>
           <hr>
           <h3>Сценарии заказа</h3>
           <label class="retail-option"><input type="checkbox" name="stockSales"><span><strong>Покупка из наличия</strong><small>Резервировать только свободный остаток готового хлеба на складе пекарни.</small></span></label>
@@ -423,8 +423,8 @@
           <hr>
           <h3>Оплата</h3>
           <label class="retail-option"><input type="checkbox" name="onlinePayment"><span><strong>Дистанционная оплата</strong><small>Сохраняем как будущую настройку. Платёжный провайдер пока не подключён.</small></span></label>
-          <div class="retail-settings-note"><strong>Важно</strong><p>Пока розница выключена, эти настройки ничего не меняют в текущих заказах партнёров, Складе хлеба, Складе сырья, Закупке, выпечке или финансах.</p></div>
-          <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить подготовку</button></div>
+          <div class="retail-settings-note"><strong>Важно</strong><p>Переключатель управляет только доступностью розничного экрана. Пока реальное оформление заказов не подключено, розница не меняет партнёрские заказы, Склад хлеба, Склад сырья, Закупку, выпечку или финансы.</p></div>
+          <div class="retail-settings-actions"><span id="retailSettingsSaved">Настройки ещё не менялись</span><button type="submit" class="primary">Сохранить настройки</button></div>
         </form>
       </div>
 
@@ -514,7 +514,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6190"></script>
+<script src="admin.js?v=6220"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -549,7 +549,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6190"></script>
+<script src="pwa-stable.js?v=6220"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
