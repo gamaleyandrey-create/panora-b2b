@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#39764d">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora">
-<link rel="stylesheet" href="admin.css?v=6300">
+<link rel="stylesheet" href="admin.css?v=6310">
 <link rel="stylesheet" href="admin-v247.css?v=3390">
   <link rel="stylesheet" href="commerce.css?v=5300">
   <link rel="stylesheet" href="settings.css?v=3390">
@@ -259,7 +259,7 @@
               <h2>Финансы</h2>
               <strong id="financePeriodLabel">—</strong>
             </div>
-            <p>Выручка, себестоимость, расходы, НДС и операционная прибыль.</p>
+            <p>Единая экономика B2B и розницы: выручка, себестоимость, расходы, НДС и операционная прибыль.</p>
           </div>
         </div>
 
@@ -272,14 +272,14 @@
 
         <section class="finance-main-kpis" aria-label="Главные финансовые показатели">
           <article>
-            <span>Выручка без НДС</span>
+            <span>Общая выручка без НДС</span>
             <strong id="financeRevenueNet">0,00 €</strong>
             <small id="financeRevenueGross">С НДС: 0,00 €</small>
           </article>
           <article>
-            <span>Сырьё по отгруженному хлебу</span>
+            <span>Сырьё по реализованному хлебу</span>
             <strong id="financeCogs">0,00 €</strong>
-            <small>По фактически отгруженным изделиям</small>
+            <small>B2B отгрузки + оплаченная завершённая розница</small>
           </article>
           <article class="finance-profit-card">
             <span>Операционная прибыль</span>
@@ -310,15 +310,40 @@
             <small id="financeRawPurchasesGross">С НДС: 0,00 €</small>
           </article>
           <article>
-            <span>Отгружено хлеба</span>
+            <span>Реализовано хлеба</span>
             <strong id="financePieces">0 шт.</strong>
-            <small>За выбранный период</small>
+            <small>B2B + оплаченная завершённая розница</small>
           </article>
           <article>
             <span>Средняя операционная прибыль / 1 хлеб</span>
             <strong id="financeAvgProfitValue">0,00 €</strong>
             <small id="financeAvgProfit">По всей выбранной отгрузке</small>
           </article>
+        </section>
+
+        <section class="finance-channel-grid" aria-label="Финансы по каналам продаж">
+          <article class="finance-channel-card">
+            <div class="finance-channel-head"><div><span class="kicker">B2B</span><h3>Партнёрские продажи</h3></div><small>По фактическим накладным</small></div>
+            <div class="finance-channel-values">
+              <div><span>Выручка без НДС</span><strong id="financeB2bRevenue">0,00 €</strong></div>
+              <div><span>Сырьё / COGS</span><strong id="financeB2bCogs">0,00 €</strong></div>
+              <div><span>Валовая прибыль</span><strong id="financeB2bGrossProfit">0,00 €</strong></div>
+              <div><span>Хлеб</span><strong id="financeB2bPieces">0 шт.</strong></div>
+            </div>
+          </article>
+          <details class="finance-channel-card finance-retail-channel" open>
+            <summary class="finance-channel-head"><div><span class="kicker">РОЗНИЦА</span><h3>Розничные продажи</h3></div><small id="financeRetailOrders">0 оплаченных завершённых · 0 возвратов</small></summary>
+            <div class="finance-channel-values finance-retail-values">
+              <div><span>Выручка без НДС</span><strong id="financeRetailRevenue">0,00 €</strong><small id="financeRetailRevenueGross">С НДС: 0,00 €</small></div>
+              <div><span>Хлеб</span><strong id="financeRetailBreadRevenue">0,00 €</strong><small>Выручка без НДС</small></div>
+              <div><span>Доставка</span><strong id="financeRetailDeliveryRevenue">0,00 €</strong><small>Выручка без НДС</small></div>
+              <div><span>Возвраты</span><strong id="financeRetailRefunds">0,00 €</strong><small>Полностью возвращённые заказы</small></div>
+              <div><span>Сырьё / COGS</span><strong id="financeRetailCogs">0,00 €</strong><small>Только выданный / доставленный хлеб</small></div>
+              <div><span>Валовая прибыль</span><strong id="financeRetailGrossProfit">0,00 €</strong><small>До общих операционных расходов</small></div>
+              <div><span>Хлеб</span><strong id="financeRetailPieces">0 шт.</strong><small>Оплаченные завершённые заказы</small></div>
+            </div>
+            <p class="finance-channel-note"><strong>Когда признаётся розничная выручка:</strong> только после выдачи/доставки и статуса «Оплачен». Неоплаченные, отменённые и возвращённые заказы не увеличивают выручку. Розничный НДС рассчитывается по общей налоговой настройке пекарни.</p>
+          </details>
         </section>
 
         <section class="finance-vat-panel">
@@ -334,7 +359,7 @@
 
         <section class="finance-panel">
           <div class="finance-panel-head">
-            <div><h3>По видам хлеба</h3><p>Экономика каждого продукта до прочих операционных расходов.</p></div>
+            <div><h3>По видам хлеба</h3><p>Общая экономика B2B + розницы по каждому продукту до прочих операционных расходов.</p></div>
           </div>
           <div class="table-wrap finance-table-wrap">
             <table>
@@ -366,7 +391,7 @@
           </div>
         </section>
 
-        <p class="finance-note"><strong>Правило учёта Panora:</strong> закупка сырья не уменьшает операционную прибыль второй раз — сырьё уже попадает в себестоимость отгруженного хлеба. Входящий НДС по закупке при этом учитывается отдельно. Себестоимость пока рассчитывается по текущим рецептурам и текущим ценам ингредиентов; НДС является управленческой оценкой.</p>
+        <p class="finance-note"><strong>Правило учёта Panora:</strong> закупка сырья не уменьшает операционную прибыль второй раз — сырьё уже попадает в COGS реализованного хлеба. Для B2B реализация признаётся по накладной; для розницы — только после выдачи/доставки и статуса «Оплачен». Полный возврат исключает розничный заказ из выручки и COGS. Входящий НДС по закупке учитывается отдельно. Себестоимость пока рассчитывается по текущим рецептурам и текущим ценам ингредиентов; НДС является управленческой оценкой.</p>
       </div>
       <div class="view" id="view-retail-orders">
         <div class="page-head retail-page-head">
@@ -391,7 +416,7 @@
             <span><b>3</b>Готов → выдача или доставка</span>
             <span><b>4</b>Выдать / доставить → списать хлеб со склада</span>
           </div>
-          <p class="retail-stage-note"><strong>6.30:</strong> аудит розничного контура: склад, резервы, предзаказы после факта выпечки, доставка, отмены, возвраты и мобильные сценарии приведены к одной логике.</p>
+          <p class="retail-stage-note"><strong>6.31:</strong> розничная экономика встроена в Финансы: оплаченные завершённые продажи, доставка, возвраты и COGS считаются отдельно от B2B и входят в общую операционную прибыль без двойного списания сырья.</p>
         </section>
         <section class="retail-orders-panel">
           <div class="retail-panel-head"><div><h3>Очередь заказов</h3><p>Фильтруйте по дате и меняйте статус одной рабочей кнопкой.</p></div><span id="retailOrderTotal">0 заказов</span></div>
@@ -419,8 +444,8 @@
         <nav class="retail-analytics-periods" id="retailAnalyticsPeriods" aria-label="Период аналитики"></nav>
         <section class="retail-analytics-kpis">
           <article><span>Завершённые заказы</span><strong id="retailAnalyticsOrders">0</strong><small id="retailAnalyticsOrdersSub">За выбранный период</small></article>
-          <article><span>Оборот завершённых</span><strong id="retailAnalyticsRevenue">0,00 €</strong><small>Без отменённых и возвращённых оплат</small></article>
-          <article><span>Средний чек</span><strong id="retailAnalyticsAvg">0,00 €</strong><small>По завершённым заказам</small></article>
+          <article><span>Оборот оплаченных</span><strong id="retailAnalyticsRevenue">0,00 €</strong><small>Только завершённые и оплаченные · без возвратов</small></article>
+          <article><span>Средний чек</span><strong id="retailAnalyticsAvg">0,00 €</strong><small>По оплаченным завершённым заказам</small></article>
           <article><span>Продано хлеба</span><strong id="retailAnalyticsPieces">0</strong><small>Штук в завершённых заказах</small></article>
         </section>
         <section class="retail-analytics-today">
@@ -600,7 +625,7 @@
   <script src="pricing-sync-v44.js?v=4410"></script>
 <script src="supabase-config.js?v=3390"></script>
 <script src="admin-auth.js?v=3390"></script>
-<script src="admin.js?v=6300"></script>
+<script src="admin.js?v=6310"></script>
 <script src="stable-price-inputs-v42.js?v=4210"></script>
 <script src="money-edit-lock-v43.js?v=5290"></script>
 <script src="commerce.js?v=5980"></script>
@@ -635,7 +660,7 @@
 <script src="event-notifications.js?v=2610"></script>
 <script src="audit-trail.js?v=3390"></script>
 <script src="stable-health.js?v=3390"></script>
-<script src="pwa-stable.js?v=6300"></script>
+<script src="pwa-stable.js?v=6310"></script>
 <script src="admin-partner-prices-guard-v426.js?v=5330"></script>
 <script src="admin-partner-prices-direct-v426.js?v=5980"></script>
 <script src="order-messages-v565.js?v=5650"></script>
@@ -660,7 +685,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=6090"></script>
+<script src="finance-dashboard.js?v=6310"></script>
 <script>document.title='Panora — Пекарня';</script>
 </body>
 </html>

@@ -38,6 +38,7 @@
   };
 
   let expenses=read(KEY,[]);
+  let retailOrders=read('panora-retail-orders',[]);
   const session=()=>window.panoraSupabaseSession||null;
   const request=async(path,options={})=>{
     const s=session();
@@ -65,6 +66,18 @@
       const rows=await request('finance_expenses?select=id,expense_date,category,description,expense_type,gross_amount,vat_rate,vat_deductible&order=expense_date.desc,created_at.desc');
       if(Array.isArray(rows)){expenses=rows.map(rowFromCloud);save(KEY,expenses);render()}
     }catch{}
+  };
+  const retailOrderFromCloud=row=>({
+    id:String(row.id||''),number:Number(row.order_number||0),source:String(row.source||'stock'),fulfillment:String(row.fulfillment||'pickup'),
+    bakeDate:row.bake_date||'',pickupDate:row.pickup_date||'',deliveryFee:Number(row.delivery_fee||0),status:String(row.status||'new'),
+    paymentStatus:String(row.payment_status||'pending'),paymentMethod:String(row.payment_method||'pickup'),total:Number(row.total||0),createdAt:row.created_at||'',completedAt:row.completed_at||'',
+    items:(row.retail_order_items||[]).map(item=>({product:String(item.product_id||''),quantity:Math.max(0,Number(item.quantity||0)),unitPrice:Number(item.unit_price||0)}))
+  });
+  const loadRetailCloud=async()=>{
+    try{
+      const rows=await request('retail_orders?select=id,order_number,source,fulfillment,bake_date,pickup_date,delivery_fee,status,payment_status,payment_method,total,created_at,completed_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');
+      if(Array.isArray(rows)){retailOrders=rows.map(retailOrderFromCloud);save('panora-retail-orders',retailOrders);render()}
+    }catch{retailOrders=read('panora-retail-orders',[])}
   };
   const persist=async row=>{
     const index=expenses.findIndex(x=>x.id===row.id);
@@ -130,11 +143,11 @@
         seenNotes.add(key);return true;
       });
     const productMap=new Map(),partnerMap=new Map();
-    let grossRevenue=0,revenueNet=0,salesVat=0,cogs=0,pieces=0;
+    let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0;
 
     notes.forEach(note=>{
       const noteGross=Number(note.total||0),noteNet=Number(note.subtotal??(noteGross-Number(note.tax||0))),noteVat=Number(note.tax??Math.max(0,noteGross-noteNet));
-      grossRevenue+=noteGross;revenueNet+=noteNet;salesVat+=noteVat;
+      b2bGrossRevenue+=noteGross;b2bRevenueNet+=noteNet;b2bSalesVat+=noteVat;
       const items=Array.isArray(note.items)?note.items:[],pricesSnapshot=note.prices||{};
       const itemNetTotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(pricesSnapshot[item.product]||0),0)||noteNet||1;
       items.forEach(item=>{
@@ -142,14 +155,46 @@
         const unitCogs=unitRawCost(item.product),itemCogs=unitCogs*qty;
         const sourceGross=qty*Number(pricesSnapshot[item.product]||0);
         const itemNet=itemNetTotal>0?noteNet*(sourceGross/itemNetTotal):0;
-        cogs+=itemCogs;pieces+=qty;
-        const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0};
-        p.pieces+=qty;p.revenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
+        b2bCogs+=itemCogs;b2bPieces+=qty;
+        const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
+        p.pieces+=qty;p.b2bPieces+=qty;p.revenue+=itemNet;p.b2bRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
         const k=String(note.restaurantId||'');
         const partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};
         partner.pieces+=qty;partner.revenue+=itemNet;partner.cogs+=itemCogs;partnerMap.set(k,partner);
       });
     });
+
+    // Retail accounting: recognise revenue only when the order is completed and paid.
+    // A full refund removes that order from recognised revenue. Stock/preorder source does not change COGS logic:
+    // COGS is recognised once, on the bread that was actually handed over/delivered.
+    const bakery=read('panora-bakery-settings',{}),retailVatRate=bakery?.useTax?Math.max(0,Number(bakery.taxRate||0)):0;
+    const netOfVat=gross=>retailVatRate>0?gross/(1+retailVatRate/100):gross;
+    const retailPeriod=(Array.isArray(retailOrders)?retailOrders:[]).filter(order=>inPeriod(order.completedAt||order.pickupDate||order.createdAt));
+    const retailCompleted=retailPeriod.filter(order=>String(order.status)==='completed'&&String(order.paymentStatus)==='paid');
+    const retailRefunded=retailPeriod.filter(order=>String(order.paymentStatus)==='refunded');
+    let retailGrossRevenue=0,retailRevenueNet=0,retailSalesVat=0,retailCogs=0,retailPieces=0,retailDeliveryGross=0,retailDeliveryNet=0,retailBreadGross=0,retailBreadNet=0;
+    retailCompleted.forEach(order=>{
+      const items=Array.isArray(order.items)?order.items:[];
+      const itemGross=items.reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0))*Math.max(0,Number(item.unitPrice||0)),0);
+      const orderGross=Math.max(0,Number(order.total||0));
+      const deliveryGross=Math.max(0,Math.min(orderGross,Number(order.deliveryFee||0)));
+      const breadGross=Math.max(0,Math.min(orderGross-deliveryGross,itemGross||orderGross-deliveryGross));
+      const otherGross=Math.max(0,orderGross-breadGross-deliveryGross);
+      retailGrossRevenue+=orderGross;retailBreadGross+=breadGross+otherGross;retailDeliveryGross+=deliveryGross;
+      const orderNet=netOfVat(orderGross),deliveryNet=netOfVat(deliveryGross),breadNet=Math.max(0,orderNet-deliveryNet);
+      retailRevenueNet+=orderNet;retailDeliveryNet+=deliveryNet;retailBreadNet+=breadNet;retailSalesVat+=Math.max(0,orderGross-orderNet);
+      const grossBasis=itemGross||1;
+      items.forEach(item=>{
+        const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0));
+        const itemNet=breadNet*(itemGrossValue/grossBasis);
+        const itemCogs=unitRawCost(item.product)*qty;
+        retailCogs+=itemCogs;retailPieces+=qty;
+        const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
+        p.pieces+=qty;p.retailPieces+=qty;p.revenue+=itemNet;p.retailRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
+      });
+    });
+    const retailRefundsGross=retailRefunded.reduce((sum,order)=>sum+Math.max(0,Number(order.total||0)),0);
 
     const periodExpenses=expenses.filter(row=>inPeriod(row.date));
     let expensesNet=0,inputVat=0,rawPurchasesNet=0,rawPurchasesGross=0,rawPurchasesVat=0;
@@ -164,9 +209,12 @@
         expensesNet+=x.net;
       }
     });
+    const grossRevenue=b2bGrossRevenue+retailGrossRevenue,revenueNet=b2bRevenueNet+retailRevenueNet,salesVat=b2bSalesVat+retailSalesVat,cogs=b2bCogs+retailCogs,pieces=b2bPieces+retailPieces;
     const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-expensesNet;
     return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
-      vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses};
+      vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses,
+      b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,grossProfit:b2bRevenueNet-b2bCogs},
+      retail:{grossRevenue:retailGrossRevenue,revenueNet:retailRevenueNet,salesVat:retailSalesVat,cogs:retailCogs,pieces:retailPieces,grossProfit:retailRevenueNet-retailCogs,deliveryGross:retailDeliveryGross,deliveryNet:retailDeliveryNet,breadGross:retailBreadGross,breadNet:retailBreadNet,refundsGross:retailRefundsGross,completed:retailCompleted.length,refunded:retailRefunded.length,vatRate:retailVatRate}};
   }
 
   function setSignedState(element,value){
@@ -184,6 +232,10 @@
     document.querySelector('#financeRevenueNet').textContent=money(x.revenueNet);
     document.querySelector('#financeRevenueGross').textContent=`С НДС: ${money(x.grossRevenue)}`;
     document.querySelector('#financeCogs').textContent=money(x.cogs);
+    const setText=(id,value)=>{const el=document.querySelector(id);if(el)el.textContent=value};
+    setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
+    setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} оплаченных завершённых · ${x.retail.refunded} возвратов`);
+    setSignedState(document.querySelector('#financeRetailGrossProfit'),x.retail.grossProfit);
 
     const profit=document.querySelector('#financeOperatingProfit');
     profit.textContent=money(x.operatingProfit);
@@ -218,7 +270,7 @@
       const profit=row.revenue-row.cogs,margin=row.revenue?profit/row.revenue*100:0;
       const salePerPiece=row.pieces?row.revenue/row.pieces:0;
       return `<tr>
-        <td><strong>${esc(productLabel(row.product))}</strong></td>
+        <td><strong>${esc(productLabel(row.product))}</strong><small>${row.b2bPieces||0} B2B · ${row.retailPieces||0} розница</small></td>
         <td>${row.pieces}</td>
         <td><strong>${money(salePerPiece)}</strong></td>
         <td>${money(row.revenue)}</td>
@@ -291,8 +343,11 @@
   from.onchange=to.onchange=render;
   document.querySelector('#financeThisMonth').onclick=()=>{const d=new Date();from.value=iso(new Date(d.getFullYear(),d.getMonth(),1));to.value=iso(d);render()};
   document.querySelector('#financeThisYear').onclick=()=>{const d=new Date();from.value=`${d.getFullYear()}-01-01`;to.value=iso(d);render()};
-  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>{render();loadCloud()},20)},true);
+  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>{retailOrders=read('panora-retail-orders',[]);render();loadCloud();loadRetailCloud()},20)},true);
   window.addEventListener('panora:ingredient-costs-changed',render);
   window.addEventListener('panora:recipes-changed',render);
-  render();setTimeout(loadCloud,700);
+  window.addEventListener('panora:retail-orders-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
+  window.addEventListener('panora:retail-payments-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
+  window.addEventListener('storage',event=>{if(event.key==='panora-retail-orders'){retailOrders=read('panora-retail-orders',[]);render()}});
+  render();setTimeout(()=>{loadCloud();loadRetailCloud()},700);
 })();

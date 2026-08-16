@@ -1,7 +1,7 @@
 {
-  "version": "6.30",
-  "build": "6300",
+  "version": "6.31",
+  "build": "6310",
   "channel": "test",
   "date": "2026-08-16",
-  "change": "retail-analytics"
+  "change": "retail-finance-integration"
 }
