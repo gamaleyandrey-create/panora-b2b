@@ -134,6 +134,38 @@
     const day=row.bake_days||{},items=row.order_items||[];
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity)})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
   }
+
+  async function hydrateOrderRows(orderRows){
+    const rows=Array.isArray(orderRows)?orderRows:[];
+    const ids=rows.map(r=>String(r?.id||'')).filter(Boolean);
+    if(!ids.length)return rows;
+    const needsFallback=rows.some(r=>!Array.isArray(r?.order_items)||r.order_items.length===0);
+    if(!needsFallback)return rows;
+    try{
+      const encoded=ids.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
+      const itemRows=await api(`order_items?order_id=in.(${encodeURIComponent(encoded)})&select=order_id,product_id,quantity,unit_price&order=order_id.asc,product_id.asc`);
+      const grouped=new Map();
+      for(const item of itemRows||[]){const key=String(item.order_id||'');if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(item)}
+      return rows.map(row=>{
+        const direct=grouped.get(String(row.id||''))||[];
+        const nested=Array.isArray(row.order_items)?row.order_items:[];
+        return {...row,order_items:direct.length?direct:nested};
+      });
+    }catch(error){
+      console.warn('Panora order items fallback',error);
+      return rows;
+    }
+  }
+  function preserveKnownOrderItems(nextOrders){
+    const previous=read('panora-orders')||[];
+    const previousById=new Map(previous.map(order=>[String(order.id),order]));
+    return (nextOrders||[]).map(order=>{
+      if(order.items?.length)return order;
+      const old=previousById.get(String(order.id));
+      if(old?.items?.length)return {...order,items:old.items,prices:old.prices||order.prices,_itemsRecoveredFromCache:true};
+      return order;
+    });
+  }
   const mapStatusEvent=row=>({
     id:row.id,
     orderId:row.order_id,
@@ -176,7 +208,8 @@
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
-      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=attachStatusHistory((orderRows||[]).map(mapOrder),statusEvents);
+      const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
+      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents));
       write('panora-restaurants',[own]);write('panora-orders',orders);
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
@@ -196,7 +229,8 @@
     if(!session?.user?.id||!account?.id||!navigator.onLine)return [];
     partnerOrdersLoading=(async()=>{
       const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
-      const next=(rows||[]).map(mapOrder);
+      const hydratedRows=await hydrateOrderRows(rows||[]);
+      const next=preserveKnownOrderItems(hydratedRows.map(mapOrder));
       const previous=read('panora-orders')||[];
       const comparable=order=>({
         id:order.id,number:order.number,restaurantId:order.restaurantId,date:order.date,

@@ -1,0 +1,6 @@
+Panora 6.38 — B2B order composition recovery
+- Restores B2B order item loading with a direct order_items fallback when embedded PostgREST items are empty.
+- Protects a previously known non-empty order composition from being overwritten by a transient empty cloud response.
+- Partner order cards never fail silently: missing composition is shown as an explicit error instead of an empty order and 0.00 total without explanation.
+- Retail, production, stock, finance and Web Push 6.37 are not changed.
+- PWA build 6380.
