@@ -1,0 +1,11 @@
+Panora 6.46
+
+Partner portal local-storage quota fix.
+- panora-portal-orders uses a bounded compact local cache;
+- active/working orders are preserved locally;
+- only the 20 most recent archived orders are kept in the fallback cache;
+- heavy nested fields are removed from the local fallback copy only;
+- full order history remains in Supabase;
+- QuotaExceededError is no longer reported as a cloud synchronization error;
+- cart, authentication/session, messages, inventory movements and cloud data are not removed;
+- Partner Push UI from 6.44 remains enabled on desktop and mobile.

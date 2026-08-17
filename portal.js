@@ -1,3 +1,33 @@
+const PORTAL_ORDERS_LOCAL_CACHE_KEY="panora-portal-orders";
+function savePortalOrdersFallback(rows){
+  const all=Array.isArray(rows)?rows:[];
+  const archivedStatus=new Set(["delivered","cancelled","canceled","closed","archived"]);
+  const working=[],archived=[];
+  for(const row of all){
+    const status=String(row?.status||"").toLowerCase();
+    const isArchived=Boolean(row?.archived||row?.isArchived||row?.archive||archivedStatus.has(status));
+    (isArchived?archived:working).push(row);
+  }
+  const compact=[...working,...archived.slice(0,20)];
+  try{
+    localStorage.setItem(PORTAL_ORDERS_LOCAL_CACHE_KEY,JSON.stringify(compact));
+    return true;
+  }catch(error){
+    const quota=String(error?.name||"")==="QuotaExceededError"||/quota/i.test(String(error?.message||error||""));
+    if(!quota)throw error;
+    try{
+      localStorage.removeItem(PORTAL_ORDERS_LOCAL_CACHE_KEY);
+      localStorage.setItem(PORTAL_ORDERS_LOCAL_CACHE_KEY,JSON.stringify(working));
+      return true;
+    }catch(retryError){
+      const retryQuota=String(retryError?.name||"")==="QuotaExceededError"||/quota/i.test(String(retryError?.message||retryError||""));
+      if(!retryQuota)throw retryError;
+      try{localStorage.removeItem(PORTAL_ORDERS_LOCAL_CACHE_KEY);}catch(_){}
+      return false;
+    }
+  }
+}
+
 let account = null;
 const portalOrderUnitPrice=(order,productId)=>{const saved=Number(order?.prices?.[productId]),fallback=Number(account?.prices?.[productId]);return Number.isFinite(saved)&&saved>0?saved:(Number.isFinite(fallback)&&fallback>0?fallback:0)};
 const modal = $("#profileModal");

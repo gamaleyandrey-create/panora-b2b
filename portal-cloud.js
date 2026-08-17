@@ -2,6 +2,71 @@
 (()=>{
   let partnerOrderPoll=0,partnerOrdersLoading=null;
   'use strict';
+  const PORTAL_ORDERS_CACHE_KEY="panora-portal-orders";
+  const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=20;
+
+  function isPortalStorageQuotaError(error){
+    const name=String(error?.name||"");
+    const message=String(error?.message||error||"");
+    return name==="QuotaExceededError" ||
+      name==="NS_ERROR_DOM_QUOTA_REACHED" ||
+      /exceeded the quota|quota/i.test(message);
+  }
+
+  function isArchivedPortalOrder(row){
+    const status=String(row?.status||"").toLowerCase();
+    return Boolean(
+      row?.archived ||
+      row?.isArchived ||
+      row?.archive ||
+      ["delivered","cancelled","canceled","closed","archived"].includes(status)
+    );
+  }
+
+  function compactPortalOrderForCache(row){
+    const copy={...(row||{})};
+    if(Array.isArray(copy.order_items)){
+      copy.order_items=copy.order_items.map((item)=>({
+        product_id:item?.product_id,
+        quantity:item?.quantity,
+        unit_price:item?.unit_price,
+        product_names_snapshot:item?.product_names_snapshot,
+        product_image_snapshot:item?.product_image_snapshot
+      }));
+    }
+    delete copy.status_history;
+    delete copy.messages;
+    delete copy.notification_events;
+    delete copy.raw_payload;
+    return copy;
+  }
+
+  function savePortalOrdersCache(rows){
+    const source=Array.isArray(rows)?rows:[];
+    const working=[];
+    const archived=[];
+    for(const row of source){
+      (isArchivedPortalOrder(row)?archived:working).push(compactPortalOrderForCache(row));
+    }
+    archived.sort((a,b)=>String(b?.created_at||b?.createdAt||"").localeCompare(String(a?.created_at||a?.createdAt||"")));
+    const compact=[...working,...archived.slice(0,PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT)];
+    try{
+      localStorage.setItem(PORTAL_ORDERS_CACHE_KEY,JSON.stringify(compact));
+      return true;
+    }catch(error){
+      if(!isPortalStorageQuotaError(error))throw error;
+      try{
+        localStorage.removeItem(PORTAL_ORDERS_CACHE_KEY);
+        localStorage.setItem(PORTAL_ORDERS_CACHE_KEY,JSON.stringify(working));
+        return true;
+      }catch(retryError){
+        if(!isPortalStorageQuotaError(retryError))throw retryError;
+        try{localStorage.removeItem(PORTAL_ORDERS_CACHE_KEY);}catch(_){}
+        return false;
+      }
+    }
+  }
+
   const cfg=window.PANORA_SUPABASE;
   if(!cfg)return;
   const SESSION_KEY='panora-restaurant-cloud-session';
