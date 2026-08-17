@@ -15,6 +15,12 @@
   const isQuotaError=error=>error?.name==='QuotaExceededError'||error?.code===22||/quota/i.test(String(error?.message||error||''));
   const releaseStorageQuota=()=>{try{const backups=readBackups();if(backups.length>1)localStorage.setItem(backupKey,JSON.stringify(backups.slice(0,1)));else if(backups.length===1&&JSON.stringify(backups[0]).length>250000)localStorage.removeItem(backupKey)}catch{try{localStorage.removeItem(backupKey)}catch{}}};
   const safeLocalSet=(key,value,{quotaIsWarning=true}={})=>{try{localStorage.setItem(key,value);return true}catch(error){if(!isQuotaError(error))throw error;releaseStorageQuota();try{localStorage.setItem(key,value);return true}catch(retry){if(!isQuotaError(retry))throw retry;if(quotaIsWarning){console.warn('Panora localStorage quota · cache write skipped',key);window.dispatchEvent(new CustomEvent('panora:storage-quota',{detail:{key}}))}return false}}};
+  const cacheDeliveryNotesLocal=()=>typeof window.panoraSaveDeliveryNotesCache==='function'
+    ? window.panoraSaveDeliveryNotesCache(deliveryNotes)
+    : safeLocalSet('panora-delivery-notes',JSON.stringify(Array.isArray(deliveryNotes)?deliveryNotes:[]),{quotaIsWarning:false});
+  const cachePaymentsLocal=()=>typeof window.panoraSavePaymentsCache==='function'
+    ? window.panoraSavePaymentsCache(payments)
+    : safeLocalSet('panora-payments',JSON.stringify(Array.isArray(payments)?payments:[]),{quotaIsWarning:false});
   const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'};
   const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией','before-restore':'Перед восстановлением снимка',imported:'Импортировано с другого устройства'};
   const parseBackupSection=raw=>{try{return JSON.parse(raw)}catch{return null}};
@@ -775,16 +781,15 @@
     loadingOrders=(async()=>{const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');const hydrated=await hydrateAdminOrderRows(fetched||[]);const rows=await repairTrueOrphanOrders(hydrated);const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);
 const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   ? window.panoraSaveOrdersCache(orders)
-  : safeLocalSet('panora-orders',afterOrders,{quotaIsWarning:false});if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
+  : safeLocalSet('panora-orders',afterOrders,{quotaIsWarning:false});if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
     if(!ready)throw new Error('Облако ещё загружается');
     if(loadingOrders)await loadingOrders;
     clearTimeout(orderTimer);orderTimer=0;
     await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:nextStatus,cancelled_reason:cancelledReason,updated_at:new Date().toISOString()})});
-    try{await loadOrders()}catch{}
-    window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
     await loadOrders();
+    window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
     const saved=orders.find(order=>order.id===id);
     if(!saved||saved.status!==nextStatus)throw new Error('Supabase не подтвердил изменение статуса заказа');
     return saved;
@@ -890,7 +895,7 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
         if(index>=0)deliveryNotes[index]=restored;else deliveryNotes.push(restored);
       }
       for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
-      recalculateBalances();localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+      recalculateBalances();cacheDeliveryNotesLocal();
       if(typeof renderCommerce==='function')renderCommerce();
       return missing.length;
     })().finally(()=>repairingFinance=null);
@@ -901,7 +906,7 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
-    financeLoaded=true;localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+    financeLoaded=true;cacheDeliveryNotesLocal();
     if(pending.length){ready=true;try{await saveDeliveryNotesNow()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
@@ -916,7 +921,7 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     const payload=valid.map(note=>deliveryNoteRow(note));
     const rows=await request('delivery_notes?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
-    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));status('Облако ✓');
+    cacheDeliveryNotesLocal();status('Облако ✓');
   }
   const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status!=='cancelled',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,recordedBy:row.recorded_by||row.confirmed_by||null});
   function cachePayment(row){
@@ -924,7 +929,7 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     const index=payments.findIndex(item=>item.id===payment.id);
     if(index>=0)payments[index]=payment;
     else payments.push(payment);
-    localStorage.setItem('panora-payments',JSON.stringify(payments));
+    cachePaymentsLocal();
     recalculateBalances();
     if(typeof renderCommerce==='function')renderCommerce();
     return payment;
@@ -932,7 +937,7 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   async function loadPayments(){
     const rows=await request('payments?select=*&order=received_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
-    if(rows?.length){payments=rows.map(rowPayment);localStorage.setItem('panora-payments',JSON.stringify(payments));recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}
+    if(rows?.length){payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}
     else if(local.length){payments=local;ready=true;await savePaymentsNow()}
   }
   async function savePaymentsNow(){
@@ -1081,7 +1086,7 @@ function recalculateBalances(){
     ...deliveryNotes.map(note=>note.restaurantId),
     ...payments.map(payment=>payment.restaurantId)
   ].filter(Boolean)).forEach(financeTimeline);
-  localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+  cacheDeliveryNotesLocal();
 }
 window.panoraFinanceAllocation=financeAllocation;
 window.panoraFinanceTimeline=financeTimeline;
@@ -1253,7 +1258,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(!saved)throw new Error(`Накладная по заказу PN-${String(orders.find(order=>order.id===note.orderId)?.number||'—').padStart(4,'0')} не подтверждена облаком`);
       note.qrToken=saved.qr_token||note.qrToken;
     }
-    localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+    cacheDeliveryNotesLocal();
     recalculateBalances();
     if(typeof renderCommerce==='function')renderCommerce();
     return true;

@@ -21,8 +21,14 @@ let reminderLog = cRead("panora-reminder-log", {});
 const cSave = (key, value) => {
   if (key === "panora-orders" && typeof window.panoraSaveOrdersCache === "function") {
     window.panoraSaveOrdersCache(value);
+  } else if (key === "panora-delivery-notes" && typeof window.panoraSaveDeliveryNotesCache === "function") {
+    window.panoraSaveDeliveryNotesCache(value);
+  } else if (key === "panora-payments" && typeof window.panoraSavePaymentsCache === "function") {
+    window.panoraSavePaymentsCache(value);
+  } else if (typeof setLocalStorageSafely === "function") {
+    setLocalStorageSafely(key, JSON.stringify(value));
   } else {
-    localStorage.setItem(key, JSON.stringify(value));
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { console.warn("Panora local cache write skipped", key, error); }
   }
   if (key === "panora-restaurants") window.panoraCloud?.queueRestaurants();
   if (key === "panora-orders") window.panoraCloud?.queueOrders();

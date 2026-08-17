@@ -3,7 +3,7 @@
   const cfg=window.PANORA_SUPABASE||{};
   const KEY='panora-finance-expenses';
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
-  const save=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+  const save=(key,value)=>{const payload=JSON.stringify(value);if(key==='panora-delivery-notes'&&window.panoraSaveDeliveryNotesCache)return window.panoraSaveDeliveryNotesCache(value);if(key==='panora-payments'&&window.panoraSavePaymentsCache)return window.panoraSavePaymentsCache(value);if(typeof setLocalStorageSafely==='function')return setLocalStorageSafely(key,payload);try{localStorage.setItem(key,payload);return true}catch(error){console.warn('Panora finance cache write skipped',key,error);return false}};
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' €';
   const pct=value=>`${new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:1}).format(Number(value)||0)}%`;

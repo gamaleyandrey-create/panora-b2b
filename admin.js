@@ -101,6 +101,48 @@ function saveAdminOrdersCache(rows){
  }
 }
 window.panoraSaveOrdersCache=saveAdminOrdersCache;
+const PANORA_DELIVERY_NOTES_FULL_CACHE_LIMIT=24;
+const PANORA_DELIVERY_NOTES_TOTAL_CACHE_LIMIT=140;
+function compactDeliveryNoteForCache(note,{full=false}={}){
+ const copy={...(note||{})};
+ if(!full){
+  delete copy.items;
+  delete copy.orderedItems;
+  delete copy.prices;
+  delete copy.bakery;
+  delete copy.statusHistory;
+  delete copy.messages;
+  delete copy.rawPayload;
+ }
+ return copy;
+}
+function saveDeliveryNotesCache(rows){
+ const source=Array.isArray(rows)?rows:[];
+ const sorted=source.slice().sort((a,b)=>{
+  const av=Number(a?.number||0)||Date.parse(a?.date||0)||0;
+  const bv=Number(b?.number||0)||Date.parse(b?.date||0)||0;
+  return bv-av;
+ });
+ const recent=sorted.slice(0,PANORA_DELIVERY_NOTES_FULL_CACHE_LIMIT).map(note=>compactDeliveryNoteForCache(note,{full:true}));
+ const history=sorted.slice(PANORA_DELIVERY_NOTES_FULL_CACHE_LIMIT,PANORA_DELIVERY_NOTES_TOTAL_CACHE_LIMIT).map(note=>compactDeliveryNoteForCache(note));
+ const bounded=[...recent,...history];
+ let ok=setLocalStorageSafely('panora-delivery-notes',JSON.stringify(bounded));
+ if(ok)return true;
+ try{localStorage.removeItem('panora-delivery-notes')}catch(_){}
+ ok=setLocalStorageSafely('panora-delivery-notes',JSON.stringify(recent.slice(0,10)));
+ return Boolean(ok);
+}
+function savePaymentsCache(rows){
+ const source=Array.isArray(rows)?rows:[];
+ const sorted=source.slice().sort((a,b)=>String(b?.receivedAt||b?.date||b?.confirmedAt||'').localeCompare(String(a?.receivedAt||a?.date||a?.confirmedAt||'')));
+ let ok=setLocalStorageSafely('panora-payments',JSON.stringify(sorted.slice(0,250)));
+ if(ok)return true;
+ try{localStorage.removeItem('panora-payments')}catch(_){}
+ ok=setLocalStorageSafely('panora-payments',JSON.stringify(sorted.slice(0,80)));
+ return Boolean(ok);
+}
+window.panoraSaveDeliveryNotesCache=saveDeliveryNotesCache;
+window.panoraSavePaymentsCache=savePaymentsCache;
 function store(key,value){const cached=key==='panora-orders'?saveAdminOrdersCache(value):setLocalStorageSafely(key,JSON.stringify(value));const saveState=$('#saveState');if(saveState){const online=navigator.onLine&&window.panoraCloud?.ready;if(!cached&&key==='panora-production-plans'){saveState.textContent=online?(lang==='ru'?'Локальный кэш заполнен · сохраняем в облако':lang==='es'?'Caché local llena · guardando en la nube':'Local cache full · saving to cloud'):(lang==='ru'?'Локальный кэш заполнен · подключитесь для сохранения в облако':lang==='es'?'Caché local llena · conéctese para guardar en la nube':'Local cache full · connect to save to cloud');saveState.dataset.syncState=online?'syncing':'local'}else{saveState.textContent=online?(lang==='ru'?'Сохраняем…':lang==='es'?'Guardando…':'Saving…'):(lang==='ru'?'Сохранено на устройстве · отправим при подключении':lang==='es'?'Guardado en el dispositivo · se enviará al conectar':'Saved on device · will send when online');saveState.dataset.syncState=online?'syncing':'local'}}if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes'){setLocalStorageSafely('panora-recipes-version','cloud-2');window.panoraCloud?.queueRecipes();window.dispatchEvent(new CustomEvent('panora:recipes-changed'))}}
 function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`}
