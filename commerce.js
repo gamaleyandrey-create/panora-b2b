@@ -19,7 +19,11 @@ let bakerySettings = cRead("panora-bakery-settings", {
 });
 let reminderLog = cRead("panora-reminder-log", {});
 const cSave = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value));
+  if (key === "panora-orders" && typeof window.panoraSaveOrdersCache === "function") {
+    window.panoraSaveOrdersCache(value);
+  } else {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
   if (key === "panora-restaurants") window.panoraCloud?.queueRestaurants();
   if (key === "panora-orders") window.panoraCloud?.queueOrders();
   if (key === "panora-production-plans") window.panoraCloud?.queuePlans();

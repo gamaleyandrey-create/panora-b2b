@@ -46,7 +46,62 @@ function setLocalStorageSafely(key,payload){
   }
  }
 }
-function store(key,value){const cached=setLocalStorageSafely(key,JSON.stringify(value));const saveState=$('#saveState');if(saveState){const online=navigator.onLine&&window.panoraCloud?.ready;if(!cached&&key==='panora-production-plans'){saveState.textContent=online?(lang==='ru'?'Локальный кэш заполнен · сохраняем в облако':lang==='es'?'Caché local llena · guardando en la nube':'Local cache full · saving to cloud'):(lang==='ru'?'Локальный кэш заполнен · подключитесь для сохранения в облако':lang==='es'?'Caché local llena · conéctese para guardar en la nube':'Local cache full · connect to save to cloud');saveState.dataset.syncState=online?'syncing':'local'}else{saveState.textContent=online?(lang==='ru'?'Сохраняем…':lang==='es'?'Guardando…':'Saving…'):(lang==='ru'?'Сохранено на устройстве · отправим при подключении':lang==='es'?'Guardado en el dispositivo · se enviará al conectar':'Saved on device · will send when online');saveState.dataset.syncState=online?'syncing':'local'}}if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes'){setLocalStorageSafely('panora-recipes-version','cloud-2');window.panoraCloud?.queueRecipes();window.dispatchEvent(new CustomEvent('panora:recipes-changed'))}}
+const PANORA_ORDERS_CACHE_ARCHIVE_LIMIT=20;
+function isArchivedAdminOrder(row){
+ const status=String(row?.status||'').toLowerCase();
+ return Boolean(
+  row?.archived ||
+  row?.isArchived ||
+  row?.archive ||
+  ['delivered','cancelled','canceled','closed','archived'].includes(status)
+ );
+}
+function compactAdminOrderForCache(row){
+ const copy={...(row||{})};
+ if(Array.isArray(copy.items)){
+  copy.items=copy.items.map(item=>({
+   product:item?.product,
+   quantity:Number(item?.quantity||item?.quantityPieces||0),
+   nameSnapshot:item?.nameSnapshot||null,
+   imageSnapshot:item?.imageSnapshot||''
+  }));
+ }
+ delete copy.statusHistory;
+ delete copy.messages;
+ delete copy.notificationEvents;
+ delete copy.rawPayload;
+ return copy;
+}
+function saveAdminOrdersCache(rows){
+ const source=Array.isArray(rows)?rows:[];
+ const working=[],archived=[];
+ for(const row of source){
+  const compact=compactAdminOrderForCache(row);
+  (isArchivedAdminOrder(row)?archived:working).push(compact);
+ }
+ archived.sort((a,b)=>String(b?.createdAt||b?.created_at||b?.date||'').localeCompare(String(a?.createdAt||a?.created_at||a?.date||'')));
+ const bounded=[...working,...archived.slice(0,PANORA_ORDERS_CACHE_ARCHIVE_LIMIT)];
+ try{
+  localStorage.setItem('panora-orders',JSON.stringify(bounded));
+  return true;
+ }catch(error){
+  if(!isStorageQuotaError(error))throw error;
+  releaseNonCriticalStorage();
+  try{
+   localStorage.removeItem('panora-orders');
+   localStorage.setItem('panora-orders',JSON.stringify(working));
+   return true;
+  }catch(retryError){
+   if(!isStorageQuotaError(retryError))throw retryError;
+   try{localStorage.removeItem('panora-orders')}catch(_){}
+   console.warn('Panora local orders cache full · cloud remains authoritative',retryError);
+   window.dispatchEvent(new CustomEvent('panora:storage-quota',{detail:{key:'panora-orders'}}));
+   return false;
+  }
+ }
+}
+window.panoraSaveOrdersCache=saveAdminOrdersCache;
+function store(key,value){const cached=key==='panora-orders'?saveAdminOrdersCache(value):setLocalStorageSafely(key,JSON.stringify(value));const saveState=$('#saveState');if(saveState){const online=navigator.onLine&&window.panoraCloud?.ready;if(!cached&&key==='panora-production-plans'){saveState.textContent=online?(lang==='ru'?'Локальный кэш заполнен · сохраняем в облако':lang==='es'?'Caché local llena · guardando en la nube':'Local cache full · saving to cloud'):(lang==='ru'?'Локальный кэш заполнен · подключитесь для сохранения в облако':lang==='es'?'Caché local llena · conéctese para guardar en la nube':'Local cache full · connect to save to cloud');saveState.dataset.syncState=online?'syncing':'local'}else{saveState.textContent=online?(lang==='ru'?'Сохраняем…':lang==='es'?'Guardando…':'Saving…'):(lang==='ru'?'Сохранено на устройстве · отправим при подключении':lang==='es'?'Guardado en el dispositivo · se enviará al conectar':'Saved on device · will send when online');saveState.dataset.syncState=online?'syncing':'local'}}if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes'){setLocalStorageSafely('panora-recipes-version','cloud-2');window.panoraCloud?.queueRecipes();window.dispatchEvent(new CustomEvent('panora:recipes-changed'))}}
 function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`}
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}
@@ -600,7 +655,7 @@ $('#closePlan').onclick=$('#cancelPlan').onclick=()=>$('#planDialog').close();
 $('#planDialog').onclick=e=>{if(e.target===$('#planDialog'))$('#planDialog').close()};
 $('#planForm').onsubmit=e=>{e.preventDefault();const form=$('#planForm'),f=new FormData(form),amounts={plain:Number(f.get('plainPlanned')||0),pumpkin:Number(f.get('pumpkinPlanned')||0)},error=$('#planError');error.textContent='';if(!form.reportValidity())return;if(!amounts.plain&&!amounts.pumpkin){error.textContent='Укажите количество обычного или тыквенного хлеба.';form.plainPlanned.focus();return}Object.entries(amounts).forEach(([product,planned])=>{if(!planned)return;const existing=plans.find(p=>p.bakeDate===f.get('bakeDate')&&p.product===product);if(existing)Object.assign(existing,{deliveryDate:f.get('deliveryDate'),planned,cutoff:f.get('cutoff'),open:f.get('open')==='on'});else plans.push({id:crypto.randomUUID(),bakeDate:f.get('bakeDate'),deliveryDate:f.get('deliveryDate'),product,planned,ordered:0,cutoff:f.get('cutoff'),open:f.get('open')==='on'})});store('panora-production-plans',plans);$('#planDialog').close();renderAll()};
 function cancelBakeStats(date){const dayPlans=plans.filter(p=>p.bakeDate===date),orders=read('panora-orders',[]),affected=orders.filter(o=>o.date===date&&!['cancelled','shipped'].includes(o.status));return{dayPlans,orders,affected,pieces:affected.reduce((sum,o)=>sum+(o.items||[]).reduce((s,i)=>s+Number(i.quantity||i.quantityPieces||0),0),0)}}
-function performCancelBake(date,reason){if(bakeCompletionFor(date)){alert('Выпечка уже завершена. Отмена завершённого дня недоступна; при необходимости измените факт выпечки.');return false}const stats=cancelBakeStats(date),cancelledAt=new Date().toISOString();if(!stats.dayPlans.length){alert('Эта дата уже отменена или отсутствует в плане.');return false}stats.affected.forEach(o=>{o.status='cancelled';o.cancellationReason=reason;o.cancelledAt=cancelledAt});plans=plans.filter(p=>p.bakeDate!==date);const log=read('panora-cancelled-bake-dates',[]);log.push({date,reason,cancelledAt,orders:stats.affected.map(o=>o.id),pieces:stats.pieces});store('panora-production-plans',plans);localStorage.setItem('panora-orders',JSON.stringify(stats.orders));localStorage.setItem('panora-cancelled-bake-dates',JSON.stringify(log));renderAll();if(typeof renderCommerce==='function')renderCommerce();alert(`Выпечка ${date} отменена. Отменено заказов: ${stats.affected.length}.`);return true}
+function performCancelBake(date,reason){if(bakeCompletionFor(date)){alert('Выпечка уже завершена. Отмена завершённого дня недоступна; при необходимости измените факт выпечки.');return false}const stats=cancelBakeStats(date),cancelledAt=new Date().toISOString();if(!stats.dayPlans.length){alert('Эта дата уже отменена или отсутствует в плане.');return false}stats.affected.forEach(o=>{o.status='cancelled';o.cancellationReason=reason;o.cancelledAt=cancelledAt});plans=plans.filter(p=>p.bakeDate!==date);const log=read('panora-cancelled-bake-dates',[]);log.push({date,reason,cancelledAt,orders:stats.affected.map(o=>o.id),pieces:stats.pieces});store('panora-production-plans',plans);saveAdminOrdersCache(stats.orders);localStorage.setItem('panora-cancelled-bake-dates',JSON.stringify(log));renderAll();if(typeof renderCommerce==='function')renderCommerce();alert(`Выпечка ${date} отменена. Отменено заказов: ${stats.affected.length}.`);return true}
 function renderCancelBakeSummary(){const date=$('#cancelBakeDate').value,{dayPlans,affected,pieces}=cancelBakeStats(date);$('#cancelBakeSummary').innerHTML=`<strong>${date?fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—'}</strong><span>${dayPlans.length} ${dayPlans.length===1?'вид хлеба':'вида хлеба'} в плане</span><span>${affected.length} заказов · ${pieces} шт. нужно отменить</span>`}
 $('#cancelBakeDay').onclick=()=>{const dates=[...new Set(plans.map(p=>p.bakeDate))].sort();if(!dates.length){alert('Нет запланированных дней для отмены.');return}$('#cancelBakeDate').innerHTML=dates.map(date=>`<option value="${date}">${fmt(date,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</option>`).join('');$('#cancelBakeForm').reset();$('#cancelBakeDate').value=dates[0];renderCancelBakeSummary();$('#cancelBakeDialog').showModal()};
 $('#cancelBakeDate').onchange=renderCancelBakeSummary;
