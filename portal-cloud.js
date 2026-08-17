@@ -568,27 +568,6 @@
     if(changed){localStorage.setItem('panora-cart',JSON.stringify(cart));renderCart?.();renderProducts?.()}
     return changed;
   }
-  async function createOrderDirect(id,date,deliveryDate,items,comment){
-    const checked=validateCheckoutItems(items);
-    if(checked.unavailable.length){purgeUnavailableCart(checked.unavailable);throw unavailableCartError()}
-    items=checked.items;
-    const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
-    if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
-    let created=await verifyCreatedOrder(id,items,{requireComplete:false}).catch(()=>null);
-    if(created){
-      if(String(created.restaurant_id)!==String(account.id))throw new Error(labels('Идентификатор заказа уже принадлежит другому партнёру','Order identifier already belongs to another partner','El identificador del pedido ya pertenece a otro socio'));
-      if(created.status!=='submitted')throw new Error(labels('Существующий заказ уже нельзя дополнять','The existing order can no longer be repaired','El pedido existente ya no se puede reparar'));
-    }else{
-      const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
-      created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
-    }
-    const payload=items.map(item=>{const product=PRODUCTS.find(p=>String(p.id)===String(item.product));return{order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item),product_names_snapshot:product?.text?{ru:product.text.ru?.[0]||item.product,en:product.text.en?.[0]||product.text.ru?.[0]||item.product,es:product.text.es?.[0]||product.text.ru?.[0]||item.product}:null,product_image_snapshot:product?.image||null}});
-    if(!payload.length)throw incompleteOrderError();
-    await api('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
-    const verified=await verifyCreatedOrder(id,items);
-    if(!verified)throw incompleteOrderError();
-    return verified;
-  }
   const isOrderNumberConflict=error=>/orders_order_number_key|duplicate key value[^\n]*order_number|key \(order_number\)=/i.test(String(error?.message||error||''));
   const isCreateOrderRpcUnavailable=error=>error?.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(String(error?.message||error||''));
   async function createOrderWithRecovery(id,date,deliveryDate,items,comment){
@@ -604,7 +583,15 @@
         lastError=error;
         const verified=await verifyCreatedOrder(id,items).catch(()=>null);
         if(verified)return verified;
-        if(isCreateOrderRpcUnavailable(error))return createOrderDirect(id,date,deliveryDate,items,comment);
+        if(isCreateOrderRpcUnavailable(error)){
+          const rpcError=new Error(labels(
+            'Сервер оформления заказа ещё не обновлён. Корзина сохранена — сообщите пекарне и повторите после обновления.',
+            'The order server is not updated yet. Your cart is preserved — contact the bakery and try again after the update.',
+            'El servidor de pedidos aún no está actualizado. La cesta se conserva; contacte con la panadería y vuelva a intentarlo.'
+          ));
+          rpcError.code='PANORA_ORDER_RPC_REQUIRED';
+          throw rpcError;
+        }
         const partial=await verifyCreatedOrder(id,items,{requireComplete:false}).catch(()=>null);
         /* A 6.15 client could leave only the order header. Reusing the same UUID
            makes the server RPC idempotently upsert the missing items instead of

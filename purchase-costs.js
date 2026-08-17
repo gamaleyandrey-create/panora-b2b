@@ -1,6 +1,6 @@
 (function(){
  const INGREDIENT_COSTS_KEY='panora-ingredient-costs';
- const normalizeCostName=name=>String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/\s+/g,' ');
+ const normalizeCostName=name=>String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ');
  const normalizeCostUnit=unit=>String(unit||'g').trim().toLowerCase()==='pcs'?'pcs':String(unit||'g').trim().toLowerCase()==='ml'?'ml':'g';
  const ingredientCostKey=(name,unit)=>`${normalizeCostName(name)}|${normalizeCostUnit(unit)}`;
  const costs=()=>{try{return JSON.parse(localStorage.getItem(INGREDIENT_COSTS_KEY))||{}}catch{return{}}};
@@ -389,7 +389,7 @@
    const priceUnit=row.unit==='g'?'€/кг':row.unit==='ml'?'€/л':'€/шт.';
    const priceText=row.semi
     ?`<span class="raw-stock-price-auto">по сырью</span>`
-    :`<label class="raw-stock-price-edit"><input data-raw-ingredient-price="${row.key}" type="text" inputmode="decimal" autocomplete="off" value="${price>0?price.toFixed(2):''}" placeholder="0,00"><small>${priceUnit}</small></label>`;
+    :`<label class="raw-stock-price-edit"><input data-raw-ingredient-price="${row.key}" data-panora-no-draft="1" data-direct-price="1" type="text" inputmode="decimal" autocomplete="off" value="${price>0?price.toFixed(2):''}" placeholder="0,00"><small>${priceUnit}</small></label>`;
    const needLabel=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
    const needText=required>0.0005?`<button type="button" class="raw-stock-need-link" data-raw-need="${row.key}" title="Показать, откуда взялась потребность">${needLabel}<small>Расшифровка</small></button>`:'—';
    const afterText=needsInventory
@@ -767,7 +767,7 @@
     <td>${isArchive?`<span class="purchase-readonly-value">${niceQty(row.stock,row.unit)}</span>`:`<input data-cost-stock="${index}" type="number" min="0" step="0.01" value="${row.stock}"> ${row.unit}`}</td>
     <td>${isArchive?`<span class="purchase-readonly-value">${isSemi?'по сырью':`${row.margin}%`}</span>`:isSemi?'<span class="purchase-auto-mark">по сырью</span>':`<input data-cost-margin="${index}" type="number" min="0" step="0.1" value="${row.margin}">%`}</td>
     <td><strong>${isSemi?`${isArchive?'Нужно было приготовить':'Приготовить'} ${niceQty(needToMake,row.unit)}`:niceQty(buy,row.unit)}</strong></td>
-    <td>${isSemi?`<span class="purchase-auto-mark">авто</span>`:isArchive?`<span class="purchase-readonly-value">${row.price.toFixed(2)} €</span>`:`<input class="ingredient-price" data-ingredient-price="${row.key}" type="text" inputmode="decimal" autocomplete="off" value="${row.price.toFixed(2)}">`}</td>
+    <td>${isSemi?`<span class="purchase-auto-mark">авто</span>`:isArchive?`<span class="purchase-readonly-value">${row.price.toFixed(2)} €</span>`:`<input class="ingredient-price" data-ingredient-price="${row.key}" data-panora-no-draft="1" data-direct-price="1" type="text" inputmode="decimal" autocomplete="off" value="${row.price.toFixed(2)}">`}</td>
     <td><strong>${isSemi?euroCost(usedCost):euroCost(buyCost)}</strong><small>${isSemi?'себестоимость полуфабриката':isArchive?'расчётная сумма':`использовано ${euroCost(usedCost)}`}</small></td>
    </tr>`;
   }).join(''):'<tr><td colspan="7">В выбранном периоде нет хлеба к выпечке.</td></tr>';
@@ -956,6 +956,7 @@
  window.addEventListener('panora:order-cycle-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:raw-stock-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
+ window.addEventListener('panora:ingredient-costs-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:purchase-selection-changed',()=>{if(!window.panoraMoneyEditing?.active)renderRawStock()});
  window.addEventListener('panora:bake-completions-changed',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});
  window.addEventListener('panora:bake-completions-cloud-updated',()=>{if(!window.panoraMoneyEditing?.active){renderPurchase();renderRawStock()}});

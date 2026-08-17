@@ -19,7 +19,7 @@
   const numeric=value=>Number(String(value??'').replace(',','.').trim())||0;
   const round=(value,digits=2)=>{const p=10**digits;return Math.round((Number(value)||0)*p)/p};
   const display=value=>String(round(value,2)).replace('.',',');
-  const costKey=(name,unit)=>`${String(name||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/\s+/g,' ')}|${String(unit||'').trim().toLowerCase()}`;
+  const costKey=(name,unit)=>`${String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ')}|${String(unit||'').trim().toLowerCase()}`;
   const ingredientPrice=(prices,name,unit)=>Number(prices[costKey(name,unit)] ?? prices[`${name}|${unit}`] ?? 0);
   const priceUnitLabel=unit=>unit==='g'?'€/кг':unit==='ml'?'€/л':'€/шт.';
   const readIngredientPrices=()=>window.panoraIngredientCosts?.read?.()||(()=>{try{return JSON.parse(localStorage.getItem('panora-ingredient-costs')||'{}')||{}}catch{return{}}})();
@@ -202,7 +202,7 @@
 
       <section class="recipe-price-settings">
         <div class="recipe-price-copy"><strong data-role="priceLabel">${L().purchasePrice}</strong><small data-role="priceState">${L().priceMissing}</small></div>
-        <label class="recipe-price-input"><input data-role="purchasePrice" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00"><span data-role="priceUnit">${priceUnitLabel(unit)}</span></label>
+        <label class="recipe-price-input"><input data-role="purchasePrice" data-panora-no-draft="1" data-direct-price="1" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00"><span data-role="priceUnit">${priceUnitLabel(unit)}</span></label>
       </section>
 
       <section class="recipe-semi-settings">
@@ -270,8 +270,11 @@
           input.value=saved>0?saved.toFixed(2):'';
           refreshRowPrice(row);
           updateCard(card);
+          const priceState=row.querySelector('[data-role="priceState"]');
+          if(priceState){priceState.textContent=`${L().priceSaved} ✓`;priceState.classList.remove('missing')}
           if(typeof renderPurchase==='function')renderPurchase();
           window.panoraRawStock?.render?.();
+          setTimeout(()=>{if(document.body.contains(row)&&document.activeElement!==input)refreshRowPrice(row)},1400);
         };
         input.addEventListener('blur',commit);
         input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();input.blur()}});

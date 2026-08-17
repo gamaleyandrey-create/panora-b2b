@@ -1,0 +1,32 @@
+Panora 6.50 — revision/stability release
+
+Orders
+- bakery cannot create an empty order;
+- manual bakery orders use the same per-product tier rule as partner checkout: below threshold retail price, from threshold partner wholesale price;
+- cloud order sync no longer deletes/rebuilds order_items for normal cloud orders;
+- order_items are written only for explicitly local/manual new orders;
+- partner checkout no longer falls back to unsafe two-step header + items creation if panora_create_order RPC is unavailable;
+- truly empty submitted/confirmed orphan orders are verified against order_items and automatically cancelled, never auto-filled;
+- obsolete global 12-piece order minimum text/validation removed.
+
+Ingredient prices
+- purchase-price inputs are excluded from generic form drafts;
+- local edited ingredient prices are not overwritten by a stale cloud refresh while a save is pending;
+- Recipe, Purchasing, Raw Materials and Finance refresh together after a price change;
+- visible “price saved” feedback added in Recipe;
+- ingredient-name normalization is aligned across Recipe/Purchasing/Finance;
+- raw_material_prices remains the single cloud source of ingredient purchase prices.
+
+Local storage
+- generic form-draft backups are bounded: max 3 per form and max 20 total;
+- old backup keys are pruned automatically;
+- draft write retries after pruning instead of continuously filling browser storage.
+
+Texts / cleanup
+- raw-material text now says consumption happens only after “Выпечка завершена”;
+- partner order/archive texts use 5 days in RU/EN/ES;
+- old physical product-delete cloud method removed;
+- product wholesale threshold fallback fixed to 8 everywhere;
+- retail/admin displayed build bumped to 6500.
+
+Finance historical COGS snapshot is intentionally NOT changed in this release; it requires a separate accounting migration.
