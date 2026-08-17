@@ -1,0 +1,11 @@
+Panora 6.48
+
+Bakery cloud orders flicker fix:
+- when Supabase cloud mode is ready, admin-status-sync never overwrites the live orders array from localStorage;
+- storage/focus/visibility/BroadcastChannel refreshes keep the last successful cloud orders snapshot;
+- local panora-orders is used only as startup/offline fallback before cloud is ready;
+- a transient cloud request failure leaves the last successful order list on screen instead of showing zero orders;
+- focus/pageshow can request a cloud order refresh without replacing the current snapshot;
+- no order, cart, inventory, payment or Supabase data is deleted;
+- 6.47 localStorage quota protection remains active;
+- B2B 1–7 retail / 8+ wholesale pricing and Partner Push remain unchanged.
