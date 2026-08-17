@@ -25,7 +25,28 @@ let movements=read('panora-stock-movements',[]);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], t=k=>TEXT[lang][k]||k;
 const adminEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function read(key,fallback){try{return JSON.parse(localStorage.getItem(key))||structuredClone(fallback)}catch{return structuredClone(fallback)}}
-function store(key,value){localStorage.setItem(key,JSON.stringify(value));const saveState=$('#saveState');if(saveState){const online=navigator.onLine&&window.panoraCloud?.ready;saveState.textContent=online?(lang==='ru'?'Сохраняем…':lang==='es'?'Guardando…':'Saving…'):(lang==='ru'?'Сохранено на устройстве · отправим при подключении':lang==='es'?'Guardado en el dispositivo · se enviará al conectar':'Saved on device · will send when online');saveState.dataset.syncState=online?'syncing':'local'}if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes'){localStorage.setItem('panora-recipes-version','cloud-2');window.panoraCloud?.queueRecipes();window.dispatchEvent(new CustomEvent('panora:recipes-changed'))}}
+const PANORA_STORAGE_BACKUP_KEY='panora-cloud-backups-v286';
+function isStorageQuotaError(error){return error?.name==='QuotaExceededError'||error?.code===22||/quota/i.test(String(error?.message||error||''))}
+function releaseNonCriticalStorage(){
+ try{
+  const backups=JSON.parse(localStorage.getItem(PANORA_STORAGE_BACKUP_KEY)||'[]');
+  if(Array.isArray(backups)&&backups.length>1)localStorage.setItem(PANORA_STORAGE_BACKUP_KEY,JSON.stringify(backups.slice(0,1)));
+  else if(Array.isArray(backups)&&backups.length===1){const raw=JSON.stringify(backups[0]);if(raw.length>250000)localStorage.removeItem(PANORA_STORAGE_BACKUP_KEY)}
+ }catch{try{localStorage.removeItem(PANORA_STORAGE_BACKUP_KEY)}catch{}}
+}
+function setLocalStorageSafely(key,payload){
+ try{localStorage.setItem(key,payload);return true}catch(error){
+  if(!isStorageQuotaError(error))throw error;
+  releaseNonCriticalStorage();
+  try{localStorage.setItem(key,payload);return true}catch(retryError){
+   if(!isStorageQuotaError(retryError))throw retryError;
+   console.warn('Panora local cache quota · write skipped',key,retryError);
+   window.dispatchEvent(new CustomEvent('panora:storage-quota',{detail:{key}}));
+   return false;
+  }
+ }
+}
+function store(key,value){const cached=setLocalStorageSafely(key,JSON.stringify(value));const saveState=$('#saveState');if(saveState){const online=navigator.onLine&&window.panoraCloud?.ready;if(!cached&&key==='panora-production-plans'){saveState.textContent=online?(lang==='ru'?'Локальный кэш заполнен · сохраняем в облако':lang==='es'?'Caché local llena · guardando en la nube':'Local cache full · saving to cloud'):(lang==='ru'?'Локальный кэш заполнен · подключитесь для сохранения в облако':lang==='es'?'Caché local llena · conéctese para guardar en la nube':'Local cache full · connect to save to cloud');saveState.dataset.syncState=online?'syncing':'local'}else{saveState.textContent=online?(lang==='ru'?'Сохраняем…':lang==='es'?'Guardando…':'Saving…'):(lang==='ru'?'Сохранено на устройстве · отправим при подключении':lang==='es'?'Guardado en el dispositivo · se enviará al conectar':'Saved on device · will send when online');saveState.dataset.syncState=online?'syncing':'local'}}if(key==='panora-production-plans')window.panoraCloud?.queuePlans();if(key==='panora-recipes'){setLocalStorageSafely('panora-recipes-version','cloud-2');window.panoraCloud?.queueRecipes();window.dispatchEvent(new CustomEvent('panora:recipes-changed'))}}
 function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 function iso(d){const date=new Date(d),year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`}
 function fmt(d,opts={day:'numeric',month:'short'}){return new Intl.DateTimeFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',opts).format(new Date(d+'T12:00:00'))}

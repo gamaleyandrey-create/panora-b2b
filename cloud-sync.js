@@ -10,6 +10,9 @@
   let revisions=readObject(revisionKey),conflicts=readObject(conflictKey),accepted=readObject(acceptedKey),baselines=readObject(baselineKey);
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+  const isQuotaError=error=>error?.name==='QuotaExceededError'||error?.code===22||/quota/i.test(String(error?.message||error||''));
+  const releaseStorageQuota=()=>{try{const backups=readBackups();if(backups.length>1)localStorage.setItem(backupKey,JSON.stringify(backups.slice(0,1)));else if(backups.length===1&&JSON.stringify(backups[0]).length>250000)localStorage.removeItem(backupKey)}catch{try{localStorage.removeItem(backupKey)}catch{}}};
+  const safeLocalSet=(key,value,{quotaIsWarning=true}={})=>{try{localStorage.setItem(key,value);return true}catch(error){if(!isQuotaError(error))throw error;releaseStorageQuota();try{localStorage.setItem(key,value);return true}catch(retry){if(!isQuotaError(retry))throw retry;if(quotaIsWarning){console.warn('Panora localStorage quota · cache write skipped',key);window.dispatchEvent(new CustomEvent('panora:storage-quota',{detail:{key}}))}return false}}};
   const backupSectionNames={products:'Товары',recipes:'Рецептуры',restaurants:'Партнёры',plans:'План производства'};
   const backupReasonNames={'conflict-cloud':'Перед применением облачной версии',sync:'Перед синхронизацией','before-restore':'Перед восстановлением снимка',imported:'Импортировано с другого устройства'};
   const parseBackupSection=raw=>{try{return JSON.parse(raw)}catch{return null}};
@@ -34,7 +37,12 @@
     sections.forEach(section=>{const key=sectionKeys[section];if(key&&localStorage.getItem(key)!=null)data[section]=localStorage.getItem(key)});
     if(!Object.keys(data).length)return null;
     const snapshot={id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,at:new Date().toISOString(),reason,source:'automatic',integrity:'local',data};
-    const backups=[snapshot,...readBackups()].slice(0,10);localStorage.setItem(backupKey,JSON.stringify(backups));
+    const backups=[snapshot,...readBackups()].slice(0,3);
+    if(!safeLocalSet(backupKey,JSON.stringify(backups),{quotaIsWarning:false})){
+      // Automatic reserves are expendable cache. Keep sync operational even when storage is full.
+      try{localStorage.removeItem(backupKey)}catch{}
+      safeLocalSet(backupKey,JSON.stringify([snapshot]),{quotaIsWarning:false});
+    }
     audit('sync.backup_created',`Резерв: ${Object.keys(data).join(', ')}`);return snapshot;
   };
   // v283-v322 inferred a product edit from durable queue flags. A flag could
@@ -111,8 +119,8 @@
   };
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
-  const markPending=section=>{pending[section]=true;localStorage.setItem(pendingKey,JSON.stringify(pending));showPending()};
-  const clearPending=section=>{delete pending[section];Object.keys(pending).length?localStorage.setItem(pendingKey,JSON.stringify(pending)):localStorage.removeItem(pendingKey)};
+  const markPending=section=>{pending[section]=true;safeLocalSet(pendingKey,JSON.stringify(pending));showPending()};
+  const clearPending=section=>{delete pending[section];if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
   let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
@@ -968,12 +976,12 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
-  const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);localStorage.setItem(baselineKey,JSON.stringify(baselines))};
+  const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
   async function applyCloudPlans(remote){
     applyingCloud++;
     try{
       plans=Array.isArray(remote)?remote:[];
-      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+      safeLocalSet('panora-production-plans',JSON.stringify(plans));
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
       if(typeof renderAll==='function')renderAll();
@@ -988,7 +996,7 @@ window.panoraRecalculateBalances=recalculateBalances;
 
     if(remoteSig===localSig){
       plans=remote.length?remote:local;
-      localStorage.setItem('panora-production-plans',JSON.stringify(plans));
+      safeLocalSet('panora-production-plans',JSON.stringify(plans));
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
       return;
@@ -1251,8 +1259,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       const size=Object.values(snapshot.data).reduce((total,raw)=>total+new Blob([raw]).size,0);
       const preview=`Проверка завершена.\n\nДата снимка: ${new Date(snapshot.at).toLocaleString('ru-RU')}\nРазделы: ${sections}\nОбъём данных: ${(size/1024).toFixed(1)} КБ\n${integrity}\n\nДобавить снимок в историю?`;
       if(!confirm(preview)){audit('sync.backup_import_cancelled','Импорт отменён после предварительного просмотра');return}
-      const backups=[snapshot,...readBackups()].slice(0,10);
-      localStorage.setItem(backupKey,JSON.stringify(backups));audit('sync.backup_imported',`Импортирован резерв: ${Object.keys(snapshot.data).join(', ')}`);renderBackupHistory();
+      const backups=[snapshot,...readBackups()].slice(0,3);
+      safeLocalSet(backupKey,JSON.stringify(backups));audit('sync.backup_imported',`Импортирован резерв: ${Object.keys(snapshot.data).join(', ')}`);renderBackupHistory();
       if(confirm('Резерв проверен и добавлен в историю. Восстановить его сейчас?'))await restoreBackup(snapshot);
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
