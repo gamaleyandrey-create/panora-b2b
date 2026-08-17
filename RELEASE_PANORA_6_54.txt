@@ -1,0 +1,11 @@
+Panora 6.54 — partner Push profile stability
+
+- clicking “Включить Push” no longer changes or clears the four partner notification checkboxes;
+- current notification checkbox state is snapshotted before the browser permission dialog and preserved through any background refresh;
+- Push controls explicitly prevent form submission/propagation;
+- Push status now verifies both the browser subscription and the server partner_push_subscriptions row;
+- profile shows “Push включён…” only when this device is registered on the server;
+- registration is verified immediately after enabling Push;
+- detailed step/error text stays visible instead of being lost during profile re-render;
+- Test Push is disabled until server registration is confirmed;
+- existing 6.53 immutable order-number, messages and B2B Push logic remains unchanged.

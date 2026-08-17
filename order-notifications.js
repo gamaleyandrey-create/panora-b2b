@@ -42,8 +42,9 @@
  if(button){if(!('Notification'in window)){button.hidden=true}else{
    const label=()=>{
      const permission=Notification.permission;
-     const active=permission==='granted'&&pref();
-     button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Уведомления включены</span>':permission==='granted'?'Уведомления выключены':'Включить уведомления';
+     const serverReady=localStorage.getItem('panora-admin-webpush-registered')==='1';
+     const active=permission==='granted'&&pref()&&serverReady;
+     button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Push включён</span>':permission==='granted'&&pref()?'<span>Подключить Push</span>':permission==='granted'?'Уведомления выключены':'Включить уведомления';
      button.classList.toggle('notifications-active',active);
      button.classList.toggle('notifications-off',permission==='granted'&&!active);
      button.setAttribute('aria-pressed',active?'true':'false');
@@ -51,13 +52,13 @@
    };
    label();ensureSoundButton();
    button.onclick=async()=>{
-     if(Notification.permission!=='granted'){
-       const result=await Notification.requestPermission();
-       if(result==='granted'){
-         localStorage.setItem(PREF_KEY,'1');
-         if(localStorage.getItem(SOUND_KEY)===null)dispatchSound(true);
-         new Notification('Panora',{body:'Уведомления о новых заказах включены.',icon:'icon.svg'});
-       }
+     if(Notification.permission!=='granted'||localStorage.getItem('panora-admin-webpush-registered')!=='1'){
+       localStorage.setItem(PREF_KEY,'1');
+       if(localStorage.getItem(SOUND_KEY)===null)dispatchSound(true);
+       try{
+         const ok=await window.panoraAdminWebPush?.enable?.();
+         if(ok&&Notification.permission==='granted')new Notification('Panora',{body:'Push о новых заказах подключён.',icon:'icon.svg',tag:'panora-admin-push-ready'});
+       }catch(error){console.warn('Panora admin Web Push',error)}
        label();ensureSoundButton();return;
      }
      const enabled=!pref();
@@ -65,6 +66,7 @@
      label();
    };
  }}
+ window.addEventListener('panora:admin-webpush-state',()=>{label?.();ensureSoundButton()});
  window.addEventListener('storage',event=>{
    if(event.key==='panora-orders')announce();
    if(event.key===SOUND_KEY)ensureSoundButton();

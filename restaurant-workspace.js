@@ -33,7 +33,7 @@
       phone: "Телефон",
       address: "Адрес доставки",
       partnerType: "Тип партнёра", restaurant: "Ресторан", shop: "Магазин", hotel: "Отель", cafe: "Кафе", catering: "Кейтеринг", other: "Другое",
-      restaurantName: "Название партнёра", email: "Email для входа", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Мессенджеры", messengersHint: "Добавьте удобные способы связи. Пустые необязательные поля можно не заполнять.", telegramHint: "Имя пользователя, например @panora", whatsappHint: "Номер с кодом страны, например +34 600 000 000", otherMessengers: "Другие мессенджеры", addMessenger: "Добавить мессенджер", messengerName: "Название", messengerContact: "Номер или имя пользователя", removeMessenger: "Удалить", incompleteMessenger: "Укажите и название мессенджера, и контакт либо удалите пустую строку.", invalidPhone: "Проверьте номер телефона", invalidTelegram: "Используйте имя вида @username или ссылку", invalidTaxId: "Проверьте NIF / CIF", saveError: "Не удалось сохранить. Данные остались в форме — проверьте поля и повторите.", billingDetails: "Реквизиты", billingHint: "Данные для накладных и счетов.", legalName: "Юридическое название", taxId: "NIF / CIF", billingAddress: "Адрес для счетов", language: "Язык сообщений", contactPerson: "Контактное лицо", deliveryComment: "Комментарий для доставки", receivingHours: "Время приёмки", receivingDays: "Дни приёмки", notifications: "Уведомления", notifyOrder: "Подтверждение заказа", notifyShipment: "Отгрузка", notifyInvoice: "Новая накладная", notifyPayment: "Оплата", pushDevice:"Push на этом устройстве", pushDeviceHint:"Получать подтверждения, отгрузки и сообщения даже когда Panora закрыта.", pushEnable:"Включить Push", pushTest:"Тест Push", pushReady:"Push включён на этом устройстве ✓", pushError:"Не удалось включить Push", profileData: "Данные партнёра", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
+      restaurantName: "Название партнёра", email: "Email для входа", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Мессенджеры", messengersHint: "Добавьте удобные способы связи. Пустые необязательные поля можно не заполнять.", telegramHint: "Имя пользователя, например @panora", whatsappHint: "Номер с кодом страны, например +34 600 000 000", otherMessengers: "Другие мессенджеры", addMessenger: "Добавить мессенджер", messengerName: "Название", messengerContact: "Номер или имя пользователя", removeMessenger: "Удалить", incompleteMessenger: "Укажите и название мессенджера, и контакт либо удалите пустую строку.", invalidPhone: "Проверьте номер телефона", invalidTelegram: "Используйте имя вида @username или ссылку", invalidTaxId: "Проверьте NIF / CIF", saveError: "Не удалось сохранить. Данные остались в форме — проверьте поля и повторите.", billingDetails: "Реквизиты", billingHint: "Данные для накладных и счетов.", legalName: "Юридическое название", taxId: "NIF / CIF", billingAddress: "Адрес для счетов", language: "Язык сообщений", contactPerson: "Контактное лицо", deliveryComment: "Комментарий для доставки", receivingHours: "Время приёмки", receivingDays: "Дни приёмки", notifications: "Уведомления", notifyOrder: "Подтверждение заказа", notifyShipment: "Отгрузка", notifyInvoice: "Новая накладная", notifyPayment: "Оплата", pushDevice:"Push на этом устройстве", pushDeviceHint:"Получать подтверждения, отгрузки и сообщения даже когда Panora закрыта.", pushEnable:"Включить Push", pushTest:"Тест Push", pushReady:"Push включён на этом устройстве ✓", pushNotReady:"Push не подключён — нажмите «Включить Push»", pushConnecting:"Подключаем Push…", pushServerMissing:"Браузер подписан, но сервер ещё не видит это устройство.", pushError:"Не удалось включить Push", profileData: "Данные партнёра", profileHint: "Эти данные подставляются в заказ и накладные.", saveProfile: "Сохранить изменения", savingProfile: "Сохраняем…", profileSaved: "Профиль сохранён", required: "Обязательное поле", emailLocked: "Email для входа меняет менеджер Panora.", accountAccess: "Доступ к кабинету",
       finance: "Баланс и оплаты",
       deliveredTotal: "Поставлено",
       paidTotal: "Оплачено",
@@ -88,7 +88,7 @@
       phone: "Phone",
       address: "Delivery address",
       partnerType: "Partner type", restaurant: "Restaurant", shop: "Shop", hotel: "Hotel", cafe: "Cafe", catering: "Catering", other: "Other",
-      restaurantName: "Partner name", email: "Sign-in email", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Messengers", messengersHint: "Add the contact methods you prefer. Optional fields may be left empty.", telegramHint: "Username, for example @panora", whatsappHint: "Number with country code, for example +34 600 000 000", otherMessengers: "Other messengers", addMessenger: "Add messenger", messengerName: "Name", messengerContact: "Number or username", removeMessenger: "Remove", incompleteMessenger: "Enter both the messenger name and contact, or remove the empty row.", invalidPhone: "Check the phone number", invalidTelegram: "Use @username or a link", invalidTaxId: "Check the NIF / CIF", saveError: "Could not save. Your entries remain in the form — check the fields and try again.", billingDetails: "Billing details", billingHint: "Details used on delivery notes and invoices.", legalName: "Legal name", taxId: "NIF / CIF", billingAddress: "Billing address", language: "Message language", contactPerson: "Contact person", deliveryComment: "Delivery note", receivingHours: "Receiving hours", receivingDays: "Receiving days", notifications: "Notifications", notifyOrder: "Order confirmation", notifyShipment: "Shipment", notifyInvoice: "New delivery note", notifyPayment: "Payment", pushDevice:"Push on this device", pushDeviceHint:"Receive confirmations, shipments and messages even when Panora is closed.", pushEnable:"Enable Push", pushTest:"Test Push", pushReady:"Push is enabled on this device ✓", pushError:"Could not enable Push", profileData: "Partner details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
+      restaurantName: "Partner name", email: "Sign-in email", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Messengers", messengersHint: "Add the contact methods you prefer. Optional fields may be left empty.", telegramHint: "Username, for example @panora", whatsappHint: "Number with country code, for example +34 600 000 000", otherMessengers: "Other messengers", addMessenger: "Add messenger", messengerName: "Name", messengerContact: "Number or username", removeMessenger: "Remove", incompleteMessenger: "Enter both the messenger name and contact, or remove the empty row.", invalidPhone: "Check the phone number", invalidTelegram: "Use @username or a link", invalidTaxId: "Check the NIF / CIF", saveError: "Could not save. Your entries remain in the form — check the fields and try again.", billingDetails: "Billing details", billingHint: "Details used on delivery notes and invoices.", legalName: "Legal name", taxId: "NIF / CIF", billingAddress: "Billing address", language: "Message language", contactPerson: "Contact person", deliveryComment: "Delivery note", receivingHours: "Receiving hours", receivingDays: "Receiving days", notifications: "Notifications", notifyOrder: "Order confirmation", notifyShipment: "Shipment", notifyInvoice: "New delivery note", notifyPayment: "Payment", pushDevice:"Push on this device", pushDeviceHint:"Receive confirmations, shipments and messages even when Panora is closed.", pushEnable:"Enable Push", pushTest:"Test Push", pushReady:"Push is enabled on this device ✓", pushNotReady:"Push is not connected — click Enable Push", pushConnecting:"Connecting Push…", pushServerMissing:"The browser is subscribed, but the server does not see this device yet.", pushError:"Could not enable Push", profileData: "Partner details", profileHint: "These details are used in orders and delivery notes.", saveProfile: "Save changes", savingProfile: "Saving…", profileSaved: "Profile saved", required: "Required field", emailLocked: "Your Panora manager changes the sign-in email.", accountAccess: "Account access",
       finance: "Balance and payments",
       deliveredTotal: "Delivered",
       paidTotal: "Paid",
@@ -133,7 +133,7 @@
       phone: "Teléfono",
       address: "Dirección de entrega",
       partnerType: "Tipo de socio", restaurant: "Restaurante", shop: "Tienda", hotel: "Hotel", cafe: "Cafetería", catering: "Catering", other: "Otro",
-      restaurantName: "Nombre del socio", email: "Email de acceso", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Mensajería", messengersHint: "Añade las formas de contacto que prefieras. Los campos opcionales pueden quedar vacíos.", telegramHint: "Usuario, por ejemplo @panora", whatsappHint: "Número con prefijo, por ejemplo +34 600 000 000", otherMessengers: "Otros mensajeros", addMessenger: "Añadir mensajero", messengerName: "Nombre", messengerContact: "Número o usuario", removeMessenger: "Eliminar", incompleteMessenger: "Indica el nombre y el contacto, o elimina la fila vacía.", invalidPhone: "Revisa el número de teléfono", invalidTelegram: "Usa @usuario o un enlace", invalidTaxId: "Revisa el NIF / CIF", saveError: "No se pudo guardar. Los datos siguen en el formulario; revísalos e inténtalo de nuevo.", billingDetails: "Datos fiscales", billingHint: "Datos para albaranes y facturas.", legalName: "Razón social", taxId: "NIF / CIF", billingAddress: "Dirección de facturación", language: "Idioma de mensajes", contactPerson: "Persona de contacto", deliveryComment: "Comentario de entrega", receivingHours: "Horario de recepción", receivingDays: "Días de recepción", notifications: "Notificaciones", notifyOrder: "Confirmación del pedido", notifyShipment: "Envío", notifyInvoice: "Nuevo albarán", notifyPayment: "Pago", pushDevice:"Push en este dispositivo", pushDeviceHint:"Recibe confirmaciones, envíos y mensajes incluso con Panora cerrada.", pushEnable:"Activar Push", pushTest:"Probar Push", pushReady:"Push activado en este dispositivo ✓", pushError:"No se pudo activar Push", profileData: "Datos del socio", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
+      restaurantName: "Nombre del socio", email: "Email de acceso", telegram: "Telegram", whatsapp: "WhatsApp", messengers: "Mensajería", messengersHint: "Añade las formas de contacto que prefieras. Los campos opcionales pueden quedar vacíos.", telegramHint: "Usuario, por ejemplo @panora", whatsappHint: "Número con prefijo, por ejemplo +34 600 000 000", otherMessengers: "Otros mensajeros", addMessenger: "Añadir mensajero", messengerName: "Nombre", messengerContact: "Número o usuario", removeMessenger: "Eliminar", incompleteMessenger: "Indica el nombre y el contacto, o elimina la fila vacía.", invalidPhone: "Revisa el número de teléfono", invalidTelegram: "Usa @usuario o un enlace", invalidTaxId: "Revisa el NIF / CIF", saveError: "No se pudo guardar. Los datos siguen en el formulario; revísalos e inténtalo de nuevo.", billingDetails: "Datos fiscales", billingHint: "Datos para albaranes y facturas.", legalName: "Razón social", taxId: "NIF / CIF", billingAddress: "Dirección de facturación", language: "Idioma de mensajes", contactPerson: "Persona de contacto", deliveryComment: "Comentario de entrega", receivingHours: "Horario de recepción", receivingDays: "Días de recepción", notifications: "Notificaciones", notifyOrder: "Confirmación del pedido", notifyShipment: "Envío", notifyInvoice: "Nuevo albarán", notifyPayment: "Pago", pushDevice:"Push en este dispositivo", pushDeviceHint:"Recibe confirmaciones, envíos y mensajes incluso con Panora cerrada.", pushEnable:"Activar Push", pushTest:"Probar Push", pushReady:"Push activado en este dispositivo ✓", pushNotReady:"Push no está conectado — pulsa Activar Push", pushConnecting:"Conectando Push…", pushServerMissing:"El navegador está suscrito, pero el servidor aún no ve este dispositivo.", pushError:"No se pudo activar Push", profileData: "Datos del socio", profileHint: "Estos datos se usan en pedidos y albaranes.", saveProfile: "Guardar cambios", savingProfile: "Guardando…", profileSaved: "Perfil guardado", required: "Campo obligatorio", emailLocked: "El responsable de Panora cambia el email de acceso.", accountAccess: "Acceso a la cuenta",
       finance: "Saldo y pagos",
       deliveredTotal: "Entregado",
       paidTotal: "Pagado",
@@ -171,6 +171,26 @@
     );
   const pushParams=new URLSearchParams(location.search);
   let activeTab = pushParams.get("panoraPush")==="orders"?"orders":"home";
+  let partnerPushUiBusy=false;
+  const PARTNER_NOTIFY_FIELDS=["notifyOrder","notifyShipment","notifyInvoice","notifyPayment"];
+  const snapshotPartnerNotificationPrefs=form=>{
+    const snapshot={};
+    PARTNER_NOTIFY_FIELDS.forEach(name=>{
+      const input=form?.elements?.[name];
+      const value=Boolean(input?.checked);
+      snapshot[name]=value;
+      if(account)account[name]=value;
+    });
+    return snapshot;
+  };
+  const restorePartnerNotificationPrefs=(form,snapshot)=>{
+    if(!form||!snapshot)return;
+    PARTNER_NOTIFY_FIELDS.forEach(name=>{
+      const input=form.elements?.[name];
+      if(input)input.checked=Boolean(snapshot[name]);
+      if(account)account[name]=Boolean(snapshot[name]);
+    });
+  };
   let orderToReveal = pushParams.get("order")||"";
   let orderView = "active";
   let orderStatusFilter = "all";
@@ -1224,15 +1244,71 @@
       messengerList?.lastElementChild?.querySelector("input")?.focus();
     });
     const pushState=profileForm?.querySelector("[data-rw-partner-push-state]");
+    const pushTestButton=profileForm?.querySelector("[data-rw-partner-push-test]");
+    const applyPushState=info=>{
+      if(!pushState)return;
+      if(info?.active){
+        pushState.textContent=t("pushReady");
+        pushState.className="success";
+        if(pushTestButton)pushTestButton.disabled=false;
+      }else{
+        pushState.textContent=info?.browser&&!info?.server?t("pushServerMissing"):t("pushNotReady");
+        pushState.className=info?.browser&&!info?.server?"error":"";
+        if(pushTestButton)pushTestButton.disabled=true;
+      }
+    };
+    if(pushState&&window.panoraPartnerPush?.status){
+      if(pushTestButton)pushTestButton.disabled=true;
+      window.panoraPartnerPush.status().then(applyPushState).catch(()=>applyPushState({active:false}));
+    }
     profileForm?.querySelector("[data-rw-partner-push-enable]")?.addEventListener("click",async(event)=>{
-      const button=event.currentTarget;button.disabled=true;if(pushState)pushState.textContent="";
-      try{if(!window.panoraPartnerPush?.enable)throw new Error(t("pushError"));await window.panoraPartnerPush.enable();if(pushState){pushState.textContent=t("pushReady");pushState.className="success"}}
-      catch(error){if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}}finally{button.disabled=false}
+      event.preventDefault();
+      event.stopPropagation();
+      const button=event.currentTarget;
+      const snapshot=snapshotPartnerNotificationPrefs(profileForm);
+      partnerPushUiBusy=true;
+      button.disabled=true;
+      if(pushTestButton)pushTestButton.disabled=true;
+      if(pushState){pushState.textContent=t("pushConnecting");pushState.className=""}
+      try{
+        if(!window.panoraPartnerPush?.enable)throw new Error(t("pushError"));
+        await window.panoraPartnerPush.enable();
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        const info=await window.panoraPartnerPush.status?.();
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        applyPushState(info||{active:true});
+      }catch(error){
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}
+      }finally{
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        partnerPushUiBusy=false;
+        button.disabled=false;
+      }
     });
     profileForm?.querySelector("[data-rw-partner-push-test]")?.addEventListener("click",async(event)=>{
-      const button=event.currentTarget;button.disabled=true;if(pushState)pushState.textContent="";
-      try{if(!window.panoraPartnerPush?.test)throw new Error(t("pushError"));await window.panoraPartnerPush.test();if(pushState){pushState.textContent=lang==="ru"?"Тест Push отправлен":lang==="es"?"Push de prueba enviado":"Test Push sent";pushState.className="success"}}
-      catch(error){if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}}finally{button.disabled=false}
+      event.preventDefault();
+      event.stopPropagation();
+      const button=event.currentTarget;
+      const snapshot=snapshotPartnerNotificationPrefs(profileForm);
+      partnerPushUiBusy=true;
+      button.disabled=true;
+      if(pushState)pushState.textContent="";
+      try{
+        const status=await window.panoraPartnerPush?.status?.();
+        if(!status?.active)throw new Error(t("pushNotReady"));
+        if(!window.panoraPartnerPush?.test)throw new Error(t("pushError"));
+        await window.panoraPartnerPush.test();
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        if(pushState){pushState.textContent=lang==="ru"?"Тест Push отправлен":lang==="es"?"Push de prueba enviado":"Test Push sent";pushState.className="success"}
+      }catch(error){
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}
+      }finally{
+        restorePartnerNotificationPrefs(profileForm,snapshot);
+        partnerPushUiBusy=false;
+        button.disabled=false;
+      }
     });
     if (profileForm) profileForm.onsubmit = async (event) => {
       event.preventDefault();
@@ -1742,7 +1818,7 @@
   };
   let lastBackgroundRender=0;
   const backgroundWorkspaceRender=()=>{
-    if(!account||openFilterMenu||workspaceInputFocused())return;
+    if(!account||openFilterMenu||workspaceInputFocused()||partnerPushUiBusy)return;
     if(activeTab==="new"||activeTab==="profile")return;
     const now=Date.now(); if(now-lastBackgroundRender<1200)return; lastBackgroundRender=now;
     renderAccountModal();
@@ -1754,4 +1830,17 @@
   window.addEventListener("panora:pricing-refresh", backgroundWorkspaceRender);
   window.addEventListener("panora:retail-catalog-updated", backgroundWorkspaceRender);
   window.addEventListener("panora:partner-data-updated", backgroundWorkspaceRender);
+  window.addEventListener("panora:partner-push-state",event=>{
+    const modal=document.querySelector("#profileModal.restaurant-workspace");
+    const state=modal?.querySelector("[data-rw-partner-push-state]");
+    const test=modal?.querySelector("[data-rw-partner-push-test]");
+    if(state){
+      const active=Boolean(event.detail?.active);
+      state.textContent=active?t("pushReady"):(event.detail?.reason?`${t("pushError")}: ${event.detail.reason}`:t("pushNotReady"));
+      state.className=active?"success":"error";
+      if(test)test.disabled=!active;
+      return;
+    }
+    backgroundWorkspaceRender();
+  });
 })();

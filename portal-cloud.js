@@ -303,7 +303,7 @@
       const active=document.activeElement;
       const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
       if(!editingWorkspace)renderAccountModal();
-      renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -484,7 +484,67 @@
     return true;
   };
   const partnerPushTest=async()=>{await api('rpc/panora_partner_test_push',{method:'POST',body:'{}'});return true};
-  window.panoraPartnerPush={enable:partnerPushEnable,test:partnerPushTest,config:partnerPushConfig};
+  const partnerPushStatus=async()=>{
+    if(!account||!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return{active:false,browser:false,server:false,reason:'unsupported'};
+    if(Notification.permission!=='granted')return{active:false,browser:false,server:false,reason:Notification.permission};
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(!sub)return{active:false,browser:false,server:false,reason:'no_subscription'};
+    try{
+      const rows=await api('rpc/panora_partner_push_status',{method:'POST',body:JSON.stringify({p_endpoint:sub.endpoint})});
+      const row=Array.isArray(rows)?rows[0]:rows;
+      const server=Boolean(row?.active ?? row);
+      return{active:server,browser:true,server,reason:server?'ready':'not_registered',endpoint:sub.endpoint};
+    }catch(error){
+      return{active:false,browser:true,server:false,reason:'status_error',error:String(error?.message||error),endpoint:sub.endpoint};
+    }
+  };
+  let partnerPushRepairBusy=false,partnerPushRepairAt=0;
+  const partnerPushRepairRegistration=async()=>{
+    if(partnerPushRepairBusy||Date.now()-partnerPushRepairAt<30000)return false;
+    partnerPushRepairAt=Date.now();
+    if(!account||Notification?.permission!=='granted'||!('serviceWorker'in navigator)||!('PushManager'in window))return false;
+    partnerPushRepairBusy=true;
+    try{
+      const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+      if(!sub)return false;
+      const config=await partnerPushConfig();
+      if(!config?.enabled||!config?.vapid_public_key)return false;
+      const json=sub.toJSON();
+      await api('rpc/panora_partner_register_push',{method:'POST',body:JSON.stringify({p_endpoint:json.endpoint,p_p256dh:json.keys?.p256dh||'',p_auth:json.keys?.auth||'',p_user_agent:navigator.userAgent})});
+      const verified=await partnerPushStatus();
+      if(!verified.active)throw new Error(verified.error||verified.reason||'server_registration_failed');
+      localStorage.setItem('panora-partner-webpush-registered','1');
+      window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:true}}));
+      return true;
+    }catch(error){
+      localStorage.removeItem('panora-partner-webpush-registered');
+      window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:false,error:String(error?.message||error)}}));
+      return false;
+    }finally{partnerPushRepairBusy=false}
+  };
+  window.panoraPartnerPush={
+    enable:async()=>{
+      await partnerPushEnable();
+      const verified=await partnerPushStatus();
+      if(!verified.active){
+        localStorage.removeItem('panora-partner-webpush-registered');
+        const reason=verified.error||verified.reason||'server_registration_failed';
+        window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:false,reason}}));
+        throw new Error(labels(
+          `Браузер разрешил Push, но устройство не зарегистрировано на сервере: ${reason}`,
+          `The browser allowed Push, but this device is not registered on the server: ${reason}`,
+          `El navegador permitió Push, pero el dispositivo no está registrado en el servidor: ${reason}`
+        ));
+      }
+      localStorage.setItem('panora-partner-webpush-registered','1');
+      window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:true}}));
+      return verified;
+    },
+    test:partnerPushTest,
+    config:partnerPushConfig,
+    status:partnerPushStatus,
+    repair:partnerPushRepairRegistration
+  };
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
