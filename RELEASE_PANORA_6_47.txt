@@ -1,0 +1,12 @@
+Panora 6.47
+
+Orders local-cache quota hardening (partner + bakery):
+- all partner writes of panora-orders are routed through the bounded panora-portal-orders cache;
+- all bakery writes of panora-orders use a quota-safe bounded cache;
+- working orders remain locally available; only the most recent 20 archived orders are cached;
+- full history remains in Supabase and is loaded from cloud;
+- cloud status/order actions do not fail merely because localStorage is full;
+- QuotaExceededError is not treated as a cloud synchronization failure;
+- cart, auth/session, messages, inventory movements and cloud data are untouched;
+- B2B 1–7 retail / 8+ wholesale pricing rule remains unchanged;
+- Partner Push from 6.44 remains intact.

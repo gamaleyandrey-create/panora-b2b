@@ -334,10 +334,7 @@ function restaurantCancelOrder(id) {
     );
     if (p) p.ordered = Math.max(0, Number(p.ordered || 0) - i.quantity);
   });
-  localStorage.setItem(
-    portalStorageKey("panora-orders"),
-    JSON.stringify(orders),
-  );
+  savePortalOrdersFallback(orders);
   localStorage.setItem("panora-production-plans", JSON.stringify(plans));
   renderAccountModal();
   renderProducts();
@@ -611,7 +608,7 @@ showShare = function (order) {
         status: "submitted",
       };
       orders.push(saved);
-      localStorage.setItem("panora-orders", JSON.stringify(orders));
+      savePortalOrdersFallback(orders);
       saved.items.forEach((i) => {
         const p = plans.find(
           (x) => x.bakeDate === saved.date && x.product === i.product,

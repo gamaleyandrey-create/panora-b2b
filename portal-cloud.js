@@ -75,7 +75,11 @@
   const privateKeys=new Set(['panora-restaurants','panora-orders','panora-delivery-notes','panora-payments']);
   const storageKey=key=>privateKeys.has(key)?`panora-portal-${key.slice(7)}`:key;
   const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(storageKey(key))||'null')??fallback}catch{return fallback}};
-  const write=(key,value)=>localStorage.setItem(storageKey(key),JSON.stringify(value));
+  const write=(key,value)=>{
+    if(key==='panora-orders')return savePortalOrdersCache(value);
+    localStorage.setItem(storageKey(key),JSON.stringify(value));
+    return true;
+  };
   const saveSession=value=>{session=value;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
   const labels=(ru,en,es)=>lang==='es'?es:lang==='en'?en:ru;
   let loginCooldownTimer=0,loginCooldownUntil=0;
@@ -289,7 +293,7 @@
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
       const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=recoverZeroOrderPrices(preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents)),Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices);
-      write('panora-restaurants',[own]);write('panora-orders',orders);
+      write('panora-restaurants',[own]);savePortalOrdersCache(orders);
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
@@ -324,7 +328,7 @@
         const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
         const eventRows=changed.length?await fetchStatusEvents():[];
         const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
-        write('panora-orders',enriched);
+        savePortalOrdersCache(enriched);
         const active=document.activeElement;
         const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
         if(!editingWorkspace)renderAccountModal();
