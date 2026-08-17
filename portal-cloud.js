@@ -156,6 +156,20 @@
       return rows;
     }
   }
+  function recoverZeroOrderPrices(nextOrders,partnerPrices){
+    const fallback=partnerPrices&&typeof partnerPrices==='object'?partnerPrices:{};
+    return (nextOrders||[]).map(order=>{
+      if(!order?.items?.length)return order;
+      const prices={...(order.prices||{})};
+      let recovered=false;
+      for(const item of order.items){
+        const saved=Number(prices[item.product]);
+        const current=Number(fallback[item.product]);
+        if((!Number.isFinite(saved)||saved<=0)&&Number.isFinite(current)&&current>0){prices[item.product]=current;recovered=true}
+      }
+      return recovered?{...order,prices,_pricesRecoveredFromPartner:true}:order;
+    });
+  }
   function preserveKnownOrderItems(nextOrders){
     const previous=read('panora-orders')||[];
     const previousById=new Map(previous.map(order=>[String(order.id),order]));
@@ -209,7 +223,7 @@
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
-      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents));
+      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=recoverZeroOrderPrices(preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents)),Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices);
       write('panora-restaurants',[own]);write('panora-orders',orders);
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
@@ -230,7 +244,7 @@
     partnerOrdersLoading=(async()=>{
       const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
       const hydratedRows=await hydrateOrderRows(rows||[]);
-      const next=preserveKnownOrderItems(hydratedRows.map(mapOrder));
+      const next=recoverZeroOrderPrices(preserveKnownOrderItems(hydratedRows.map(mapOrder)),account?.prices||{});
       const previous=read('panora-orders')||[];
       const comparable=order=>({
         id:order.id,number:order.number,restaurantId:order.restaurantId,date:order.date,

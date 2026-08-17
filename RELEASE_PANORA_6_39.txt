@@ -1,0 +1,6 @@
+Panora 6.39 — B2B zero-price recovery
+- Positive historical order_items.unit_price remains authoritative and is never replaced.
+- Only missing/zero B2B snapshot prices fall back to the partner current wholesale price in UI.
+- Partner and bakery views use the same per-item fallback logic.
+- SQL repair supplied separately to restore only zero/missing unit_price rows in Supabase from restaurant_prices.
+- PWA build 6390.

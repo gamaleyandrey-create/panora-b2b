@@ -1,4 +1,5 @@
 let account = null;
+const portalOrderUnitPrice=(order,productId)=>{const saved=Number(order?.prices?.[productId]),fallback=Number(account?.prices?.[productId]);return Number.isFinite(saved)&&saved>0?saved:(Number.isFinite(fallback)&&fallback>0?fallback:0)};
 const modal = $("#profileModal");
 const portalPrivateKeys = new Set([
   "panora-restaurants",
@@ -26,7 +27,7 @@ const portalOrderTotal = (o) =>
     (sum, i) =>
       sum +
       Number(i.quantity || 0) *
-        Number((o.prices || account.prices)[i.product] || 0),
+        portalOrderUnitPrice(o,i.product),
     0,
   ) *
   (1 + Number(o.taxRate || 0) / 100);
@@ -505,7 +506,7 @@ function showOrderItemCosts() {
     items.forEach((line, itemIndex) => {
       const item = order.items[itemIndex];
       if (!item) return;
-      const unit = Number((order.prices || account.prices)[item.product] || 0),
+      const unit = portalOrderUnitPrice(order,item.product),
         subtotal =
           Number(item.quantity || 0) *
           unit *
