@@ -1,0 +1,6 @@
+Panora 6.41 — historical order product snapshots and product archive
+- Product removal is now soft archive: active=false + storefront hidden; database row, recipes, partner prices and history remain.
+- Archived products can be restored without recreating IDs.
+- B2B order_items support immutable product name/image snapshots.
+- Partner and bakery order views prefer the order snapshot when the live catalog product is unavailable.
+- PWA build 6410.

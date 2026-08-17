@@ -13,8 +13,8 @@
 
 .retail-chat{margin-top:14px}.retail-chat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.retail-chat-head h2{margin-bottom:4px}.retail-chat-head p{margin:0;color:#79847c;font-size:10px;line-height:1.45}.retail-chat-head span{font-size:9px;font-weight:800;color:#62816a}.customer-message-list{display:flex;flex-direction:column;gap:8px;max-height:350px;overflow:auto;margin-top:12px;padding:2px}.customer-message{max-width:82%;padding:9px 11px;border-radius:13px;background:#f1f3ef}.customer-message.customer{align-self:flex-end;background:#e8f1e9}.customer-message.bakery{align-self:flex-start}.customer-message span{display:block;font-size:9px;font-weight:800;color:#6c786f}.customer-message p{margin:4px 0 2px;white-space:pre-wrap;font-size:11px;line-height:1.45}.customer-message small{font-size:9px;color:#8a938c}.customer-message-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.customer-message-form textarea{min-height:54px;resize:vertical;border:1px solid #dfe5df;border-radius:11px;padding:10px 12px;font:11px Manrope,Arial,sans-serif}.fallback-note{margin-top:12px;color:#78827b;font-size:9.5px}.fallback-note:empty{display:none}@media(max-width:650px){.customer-message{max-width:92%}.customer-message-form{grid-template-columns:1fr}.customer-message-form .button{width:100%}}
 
-/* Panora 6.40 · order page mobile/network stabilization */
-/* Panora 6.40 · real Web Push opt-in */
+/* Panora 6.41 · order page mobile/network stabilization */
+/* Panora 6.41 · real Web Push opt-in */
 .order-net-state{display:none;margin:0 0 12px;padding:9px 12px;border-radius:11px;background:#f7e8e5;color:#8c433c;font-size:11px;font-weight:800}.order-net-state.is-visible{display:block}.message-state.is-error{color:#9c433d}.button:disabled{opacity:.58;cursor:wait}
 @media(max-width:700px){.topbar{height:64px;padding:0 14px}.wrap{width:calc(100% - 16px);margin:16px auto 44px}.hero{padding:22px 17px 20px}.content{padding:0 17px 24px}.hero-row{gap:10px}.order-number{font-size:15px}.grid{grid-template-columns:1fr}.button,.lang{min-height:44px}.message-compose textarea{font-size:16px;min-height:92px}.contact-actions,.fallback-actions{display:grid;grid-template-columns:1fr 1fr}.contact-actions .button,.fallback-actions .button{justify-content:center}}
 @media(max-width:420px){.brand span:last-child{display:none}.contact-actions,.fallback-actions{grid-template-columns:1fr}.hero h1{font-size:30px}}
@@ -42,9 +42,9 @@
    </div>
   </div>
  </section>
- <div class="footer">Panora · Bakery · build 6400</div>
+ <div class="footer">Panora · Bakery · build 6410</div>
 </main>
-<script src="supabase-config.js?v=6400"></script>
+<script src="supabase-config.js?v=6410"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -100,5 +100,5 @@
  $('#enablePushButton').addEventListener('click',enableCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();setInterval(()=>{if(!document.hidden)load({silent:true})},30000);
 })();
 </script>
-<script src="pwa-stable.js?v=6400"></script>
+<script src="pwa-stable.js?v=6410"></script>
 </body></html>

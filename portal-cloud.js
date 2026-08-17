@@ -132,7 +132,7 @@
   function mapOrder(row){
     let meta={};try{meta=JSON.parse(row.comment||'{}')}catch{meta={comment:row.comment||''}}
     const day=row.bake_days||{},items=row.order_items||[];
-    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity)})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
+    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity),nameSnapshot:x.product_names_snapshot||null,imageSnapshot:x.product_image_snapshot||''})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
   }
 
   async function hydrateOrderRows(orderRows){
@@ -143,7 +143,7 @@
     if(!needsFallback)return rows;
     try{
       const encoded=ids.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
-      const itemRows=await api(`order_items?order_id=in.(${encodeURIComponent(encoded)})&select=order_id,product_id,quantity,unit_price&order=order_id.asc,product_id.asc`);
+      const itemRows=await api(`order_items?order_id=in.(${encodeURIComponent(encoded)})&select=order_id,product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot&order=order_id.asc,product_id.asc`);
       const grouped=new Map();
       for(const item of itemRows||[]){const key=String(item.order_id||'');if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(item)}
       return rows.map(row=>{
@@ -218,7 +218,7 @@
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
+        api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
@@ -242,7 +242,7 @@
     if(partnerOrdersLoading)return partnerOrdersLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return [];
     partnerOrdersLoading=(async()=>{
-      const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc`);
+      const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`);
       const hydratedRows=await hydrateOrderRows(rows||[]);
       const next=recoverZeroOrderPrices(preserveKnownOrderItems(hydratedRows.map(mapOrder)),account?.prices||{});
       const previous=read('panora-orders')||[];
@@ -440,7 +440,7 @@
     for(const delay of [0,180,450,900]){
       if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
       try{
-        const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&select=id,order_number,restaurant_id,status,order_items(product_id,quantity,unit_price)&limit=1`);
+        const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&select=id,order_number,restaurant_id,status,order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&limit=1`);
         const row=rows?.[0];
         if(row?.id===id&&(!requireComplete||orderSnapshotMatches(row,items)))return row;
       }catch(error){if(delay===900)throw error}
@@ -466,7 +466,7 @@
       const rows=await api('orders',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,restaurant_id:account.id,bake_day_id:plan.bakeDayId,status:'submitted',comment:JSON.stringify({deliveryDate,taxRate:0,comment}),created_by:session.user.id})});
       created=rows?.[0];if(!created)throw new Error(labels('Supabase не вернул созданный заказ','Supabase did not return the created order','Supabase no devolvió el pedido creado'));
     }
-    const payload=items.map(item=>({order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item)}));
+    const payload=items.map(item=>{const product=PRODUCTS.find(p=>String(p.id)===String(item.product));return{order_id:id,product_id:item.product,quantity:item.quantity,unit_price:tierPriceForOrderItem(item),product_names_snapshot:product?.text?{ru:product.text.ru?.[0]||item.product,en:product.text.en?.[0]||product.text.ru?.[0]||item.product,es:product.text.es?.[0]||product.text.ru?.[0]||item.product}:null,product_image_snapshot:product?.image||null}});
     if(!payload.length)throw incompleteOrderError();
     await api('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
     const verified=await verifyCreatedOrder(id,items);

@@ -24,7 +24,7 @@
     @media(max-width:1050px){.layout{grid-template-columns:1fr}.cart{position:relative;top:auto}.product-image{height:220px}}
     @media(max-width:700px){.topbar{position:sticky;top:0;z-index:20;height:68px;padding:0 16px}.brand{font-size:20px}.mark{width:35px;height:35px}.location-chip{display:none}.top-actions{gap:6px}.lang{height:36px;min-width:68px;padding:0 10px}.hero{padding:36px 18px 36px}.hero h1{font-size:clamp(38px,12vw,46px)}.hero p{font-size:14px}.hero-points{gap:7px;margin-top:22px}.hero-points span{padding:7px 9px;font-size:10px}.layout{padding:24px 14px 70px;gap:18px}.section{margin-bottom:25px}.section-head{display:block}.section-head h2{font-size:26px}.mode-grid,.product-grid,.fulfillment-grid{grid-template-columns:1fr}.mode-card{min-height:92px;padding:16px}.date-strip,.slot-strip{margin-right:-14px;padding-right:14px;scroll-snap-type:x proximity}.date-button,.slot-button{scroll-snap-align:start}.date-button{min-width:126px}.product-image{height:210px}.product-body{padding:16px}.product-name{font-size:20px}.product-desc{min-height:0}.add{min-height:44px;padding:0 18px}.qty{height:44px}.qty button{width:44px}.cart{border-radius:16px;box-shadow:0 10px 34px rgba(29,56,41,.11)}.cart-head,.cart-summary{padding-left:16px;padding-right:16px}.cart-items{padding-left:16px;padding-right:16px;max-height:none}.cart-line{grid-template-columns:42px minmax(0,1fr) auto}.cart-thumb{width:42px;height:42px}.fulfillment{min-height:66px}.retail-contact-note{font-size:10px}.retail-closed{margin:24px 14px 54px;padding:28px 20px}.retail-closed h2{font-size:28px}.footer{display:block;padding:22px 16px}.footer span{display:block;margin-top:5px}.status-banner{font-size:10px}.checkout{position:sticky;bottom:8px;box-shadow:0 8px 26px rgba(29,56,41,.18)}dialog.checkout-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:18px}.dialog-head{padding:17px 16px 13px}.dialog-head h2{font-size:25px}.hold-card{margin:14px 16px 0}.checkout-form{padding:15px 16px 18px}.checkout-form input,.checkout-form textarea{font-size:16px}.form-grid{grid-template-columns:1fr}.success-panel{padding:25px 18px}}
   
-/* Panora 6.40 · retail UX/mobile stabilization */
+/* Panora 6.41 · retail UX/mobile stabilization */
 .panora-net-state{position:fixed;z-index:1200;left:50%;top:10px;transform:translateX(-50%);display:none;align-items:center;gap:7px;max-width:calc(100vw - 24px);padding:8px 12px;border-radius:999px;background:#7e3e38;color:#fff;font-size:11px;font-weight:800;box-shadow:0 8px 26px rgba(35,30,25,.18)}
 .panora-net-state.is-visible{display:flex}.panora-net-state.is-online{background:#315c42}
 .checkout.is-busy,.confirm-order.is-busy{cursor:wait;opacity:.68}
@@ -99,7 +99,7 @@
     </aside>
   </main>
 
-  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 6400</span></footer>
+  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 6410</span></footer>
 </div>
 
 <dialog class="checkout-dialog" id="retailCheckoutDialog">
@@ -127,9 +127,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=6400"></script>
-<script src="public-catalog-cloud-v48.js?v=6400"></script>
-<script src="pwa-stable.js?v=6400"></script>
+<script src="supabase-config.js?v=6410"></script>
+<script src="public-catalog-cloud-v48.js?v=6410"></script>
+<script src="pwa-stable.js?v=6410"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -211,7 +211,7 @@
 </script>
 
 <script>
-/* Panora 6.40 · storefront resilience layer */
+/* Panora 6.41 · storefront resilience layer */
 (()=>{
  const net=document.getElementById('panoraNetState'), form=document.getElementById('retailCustomerForm'), confirm=document.getElementById('retailConfirmOrder'), checkout=document.getElementById('retailCheckout');
  const lang=()=>document.getElementById('langSelect')?.value||'es';
