@@ -1091,6 +1091,7 @@ function recalculateBalances(){
 window.panoraFinanceAllocation=financeAllocation;
 window.panoraFinanceTimeline=financeTimeline;
 window.panoraRecalculateBalances=recalculateBalances;
+  const cutoffIso=value=>{const raw=String(value||'').trim();if(!raw)return null;const parsed=new Date(raw);return Number.isFinite(parsed.getTime())?parsed.toISOString():null};
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc');
@@ -1188,7 +1189,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const existing=await request('bake_days?select=id,bake_date');
     for(const day of existing||[]){if(!byDate.has(day.bake_date))await request(`bake_days?id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'})}
     for(const [date,items] of byDate){
-      const first=items[0],payload={bake_date:date,delivery_date:first.deliveryDate||date,cutoff_at:first.cutoff,accepting_orders:first.open!==false,updated_at:new Date().toISOString()};
+      const first=items[0],cutoff=cutoffIso(first.cutoff);if(!cutoff)throw new Error(`Некорректный срок приёма заказов для ${date}`);const payload={bake_date:date,delivery_date:first.deliveryDate||date,cutoff_at:cutoff,accepting_orders:first.open!==false,updated_at:new Date().toISOString()};
       const rows=await request('bake_days?on_conflict=bake_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
       const day=rows?.[0];if(!day)continue;
       await request(`bake_items?bake_day_id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'});

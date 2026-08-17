@@ -36,10 +36,10 @@ const cSave = (key, value) => {
   if (key === "panora-delivery-notes" || key === "panora-payments")
     window.panoraCloud?.queueFinance();
 };
-const commerceDateTimeValue = (date) =>
-  new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
+const commerceDateTimeValue = (date) => {
+  const parsed=new Date(date);
+  return Number.isFinite(parsed.getTime())?parsed.toISOString():'';
+};
 const orderDateLabel = (value, weekday = false) => {
   if (!value) return "—";
   const date = new Date(`${value}T12:00:00`),

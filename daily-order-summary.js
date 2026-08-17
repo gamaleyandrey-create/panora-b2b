@@ -4,7 +4,7 @@
   const openDays=new Set(),selectionKey='panora-purchase-selected-dates';
   const readSelected=()=>{try{return new Set(JSON.parse(localStorage.getItem(selectionKey)||'[]'))}catch{return new Set()}};
   let selectedDates=readSelected(),filter='active';
-  const today=()=>new Date().toISOString().slice(0,10);
+  const today=()=>{const d=new Date(),pad=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
   const text=()=>({
     ru:{title:'Сводный план производства',subtitle:'Общее количество по всем партнёрам. Отметьте даты для общего расчёта ингредиентов.',restaurants:'партнёров',new:'Новые',confirmed:'Подтверждено',total:'Всего к выпечке',details:'Партнёры и заказы',empty:'Нет дат в этом разделе',ingredients:'Ингредиенты за этот день',calculateSelected:'Рассчитать выбранные даты',selected:'Выбрано',days:'дн.',pcs:'шт.',cancelled:'Отменён',shipped:'Отгружен',active:'Активные',archive:'Архив',today:'Сегодня'},
     en:{title:'Consolidated bake plan',subtitle:'Total demand from all partners. Select dates for a combined ingredient calculation.',restaurants:'partners',new:'New',confirmed:'Confirmed',total:'Total to bake',details:'Partners and orders',empty:'No dates in this section',ingredients:'Ingredients for this day',calculateSelected:'Calculate selected dates',selected:'Selected',days:'days',pcs:'pcs',cancelled:'Cancelled',shipped:'Shipped',active:'Active',archive:'Archive',today:'Today'},
