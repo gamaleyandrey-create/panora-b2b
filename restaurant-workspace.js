@@ -203,7 +203,8 @@
   let openFilterMenu = "";
   const calendarMonth = { order:"", note:"", payment:"" };
 
-  const isoToday=()=>new Date().toISOString().slice(0,10);
+  const localDateKey=date=>{const d=new Date(date),pad=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+  const isoToday=()=>localDateKey(new Date());
   const normalizeIso=value=>String(value||"").slice(0,10);
   const dateInRange=(value,from,to)=>{
     const raw=normalizeIso(value);
@@ -1357,7 +1358,7 @@
       const scope=button.dataset.rwCalScope,key=button.dataset.rwCalQuick;
       const today=isoToday();let from="",to="";
       if(key==="today"){from=today;to=today}
-      else if(key==="week"){const d=new Date(`${today}T12:00:00`);d.setDate(d.getDate()-6);from=d.toISOString().slice(0,10);to=today}
+      else if(key==="week"){const d=new Date(`${today}T12:00:00`);d.setDate(d.getDate()-6);from=localDateKey(d);to=today}
       else if(key==="month"){from=`${today.slice(0,7)}-01`;to=today}
       else if(key==="year"){from=`${today.slice(0,4)}-01-01`;to=today}
       setRange(scope,from,to);calendarMonth[scope]=monthKey(to||from||today);renderAccountModal();

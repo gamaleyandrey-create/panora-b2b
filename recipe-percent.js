@@ -65,7 +65,8 @@
     const price=ingredientPrice(prices,item?.name||'',unit);
     return {cost:price>0?qty/baseFactor*price:0,priced:price>0};
   };
-  const productionPieces=pid=>typeof plans==='undefined'?0:plans.filter(plan=>plan.product===pid&&plan.bakeDate>=new Date().toISOString().slice(0,10)).reduce((sum,plan)=>sum+Math.max(Number(plan.planned)||0,Number(plan.ordered)||0),0);
+  const localToday=()=>{const d=new Date(),pad=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+  const productionPieces=pid=>typeof plans==='undefined'?0:plans.filter(plan=>plan.product===pid&&plan.bakeDate>=localToday()).reduce((sum,plan)=>sum+Math.max(Number(plan.planned)||0,Number(plan.ordered)||0),0);
   const flourTotal=card=>[...card.querySelectorAll('.recipe-percent-row')].reduce((sum,row)=>{
     const name=row.querySelector('[data-role="name"]')?.value||'';
     const unit=row.querySelector('[data-role="unit"]')?.value||'';

@@ -1,0 +1,14 @@
+Panora 6.52 — bake calendar/date consistency
+
+- bakery calendar is the only source of partner bake dates; invented Wednesday/Saturday fallback dates are removed;
+- no calendar rows => partner catalogue/order UI shows no available bake dates and checkout is blocked;
+- date-only values use local YYYY-MM-DD logic instead of UTC toISOString slicing in bake/order views;
+- bakery plan cutoff entered in datetime-local is converted to a real ISO timestamp with timezone before storage/cloud sync;
+- Supabase cutoff_at always receives an offset-aware ISO timestamp;
+- cutoff is displayed in Europe/Madrid bakery time for partners/reminders;
+- delivery date is validated not to be earlier than bake date;
+- cutoff must be a valid timestamp and must occur before the end of the bake day;
+- production summary, partner history quick filters and recipe future-plan calculations use local dates;
+- auto-created production-plan cutoffs are stored as absolute ISO timestamps;
+- partner hero copy no longer claims a fixed “2 times per week” schedule;
+- SQL migration corrects future open legacy cutoff_at values that were previously interpreted as UTC wall-clock, once only.
