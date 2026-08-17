@@ -222,3 +222,65 @@
   body:not(.admin-page) #productGrid .product-image{height:202px!important}
   body:not(.admin-page) .restaurant-workspace .rw-head h2{font-size:24px!important}
 }
+
+
+/* Panora 6.55 — cart/photo/mobile overflow review */
+@media(max-width:720px){
+  body:not(.admin-page) .drawer{
+    height:100dvh!important;
+    max-height:100dvh!important;
+    padding-bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  }
+  body:not(.admin-page) .cart-item{
+    grid-template-columns:58px minmax(0,1fr) auto!important;
+    gap:11px!important;
+    min-width:0!important;
+  }
+  body:not(.admin-page) .cart-item>div:nth-child(2){
+    min-width:0!important;
+  }
+  body:not(.admin-page) .cart-item-name{
+    max-width:100%!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+    line-height:1.25!important;
+  }
+  body:not(.admin-page) .cart-item>strong{
+    min-width:0!important;
+    max-width:88px!important;
+    text-align:right!important;
+    overflow-wrap:anywhere!important;
+  }
+  body:not(.admin-page) .cart-thumb{
+    width:58px!important;
+    height:58px!important;
+    border-radius:12px!important;
+  }
+  body:not(.admin-page) .cart-thumb img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+  }
+  body:not(.admin-page) .bake-dates{
+    scroll-snap-type:x proximity;
+    overscroll-behavior-x:contain;
+  }
+  body:not(.admin-page) .bake-date{
+    scroll-snap-align:start;
+  }
+}
+@media(max-width:390px){
+  body:not(.admin-page) .cart-item{
+    grid-template-columns:52px minmax(0,1fr)!important;
+  }
+  body:not(.admin-page) .cart-thumb{
+    width:52px!important;
+    height:52px!important;
+  }
+  body:not(.admin-page) .cart-item>strong{
+    grid-column:2!important;
+    justify-self:start!important;
+    max-width:none!important;
+    text-align:left!important;
+  }
+}

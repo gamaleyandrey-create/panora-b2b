@@ -134,3 +134,47 @@
   .recipe-price-input{width:100%}
   .recipe-price-input input{width:100%!important;min-height:48px}
 }
+
+
+/* Panora 6.55 — recipe editing above mobile bakery nav */
+@media(max-width:700px){
+  body.admin-page .recipe-actions{
+    bottom:calc(82px + env(safe-area-inset-bottom))!important;
+  }
+  body.admin-page .recipe-price-settings{
+    gap:9px!important;
+    padding:11px!important;
+  }
+  body.admin-page .recipe-price-input{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    min-width:0!important;
+  }
+  body.admin-page .recipe-price-input input{
+    min-width:0!important;
+    font-size:16px!important;
+  }
+  body.admin-page .recipe-semi-fields input,
+  body.admin-page .recipe-semi-fields select{
+    min-height:48px!important;
+    font-size:16px!important;
+  }
+}
+@media(max-width:390px){
+  body.admin-page .recipe-tech-summary{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .recipe-semi-fields{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .recipe-semi-fields label:first-child{
+    grid-column:auto!important;
+  }
+  body.admin-page .recipe-product-weight{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .recipe-product-weight input{
+    width:100%!important;
+  }
+}

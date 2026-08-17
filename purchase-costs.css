@@ -418,3 +418,121 @@
 .raw-stock-price-edit small{white-space:nowrap;color:#6c786f;font-size:11px;font-weight:700}
 .raw-stock-price-auto{color:#6f7b72;font-size:12px}
 @media(max-width:700px){.raw-stock-price-edit{width:100%}.raw-stock-price-edit input{width:100%;min-height:44px}}
+
+
+/* Panora 6.55 — Raw Materials mobile cards, no wide horizontal table */
+@media(max-width:720px){
+  body.admin-page .raw-stock-table-wrap:has(.raw-stock-balance-table),
+  body.admin-page .raw-stock-table-wrap:has(.raw-stock-movement-table){
+    overflow:visible!important;
+    box-shadow:none!important;
+    border:0!important;
+    background:transparent!important;
+  }
+
+  body.admin-page .raw-stock-balance-table,
+  body.admin-page .raw-stock-balance-table tbody,
+  body.admin-page .raw-stock-movement-table,
+  body.admin-page .raw-stock-movement-table tbody{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body.admin-page .raw-stock-balance-table thead,
+  body.admin-page .raw-stock-movement-table thead{
+    display:none!important;
+  }
+
+  body.admin-page .raw-stock-balance-table tr,
+  body.admin-page .raw-stock-movement-table tr{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0 0 10px!important;
+    padding:12px!important;
+    border:1px solid #dde5dd!important;
+    border-radius:14px!important;
+    background:#fff!important;
+  }
+  body.admin-page .raw-stock-balance-table tr.raw-stock-negative-row{
+    border-color:#ecc9c5!important;
+    background:#fff8f7!important;
+  }
+  body.admin-page .raw-stock-balance-table tr.raw-stock-semi-row{
+    background:#fbfcf8!important;
+  }
+
+  body.admin-page .raw-stock-balance-table td,
+  body.admin-page .raw-stock-movement-table td{
+    display:grid!important;
+    grid-template-columns:112px minmax(0,1fr)!important;
+    align-items:start!important;
+    gap:8px!important;
+    width:100%!important;
+    min-width:0!important;
+    padding:8px 0!important;
+    border:0!important;
+    border-bottom:1px solid #edf0ec!important;
+    background:transparent!important;
+    overflow-wrap:anywhere!important;
+  }
+  body.admin-page .raw-stock-balance-table td:last-child,
+  body.admin-page .raw-stock-movement-table td:last-child{
+    border-bottom:0!important;
+  }
+  body.admin-page .raw-stock-balance-table td:first-child{
+    display:block!important;
+    padding-top:0!important;
+  }
+  body.admin-page .raw-stock-balance-table td:first-child strong{
+    font-size:16px!important;
+    line-height:1.25!important;
+  }
+
+  body.admin-page .raw-stock-balance-table td:nth-child(2)::before{content:"Остаток"}
+  body.admin-page .raw-stock-balance-table td:nth-child(3)::before{content:"Нужно"}
+  body.admin-page .raw-stock-balance-table td:nth-child(4)::before{content:"После выпечки"}
+  body.admin-page .raw-stock-balance-table td:nth-child(5)::before{content:"Цена"}
+  body.admin-page .raw-stock-balance-table td:nth-child(6)::before{content:"Стоимость"}
+  body.admin-page .raw-stock-balance-table td:nth-child(7)::before{content:"Статус"}
+
+  body.admin-page .raw-stock-movement-table td:nth-child(1)::before{content:"Дата"}
+  body.admin-page .raw-stock-movement-table td:nth-child(2)::before{content:"Ингредиент"}
+  body.admin-page .raw-stock-movement-table td:nth-child(3)::before{content:"Операция"}
+  body.admin-page .raw-stock-movement-table td:nth-child(4)::before{content:"Количество"}
+  body.admin-page .raw-stock-movement-table td:nth-child(5)::before{content:"Примечание"}
+
+  body.admin-page .raw-stock-balance-table td::before,
+  body.admin-page .raw-stock-movement-table td::before{
+    color:#768179!important;
+    font-size:10px!important;
+    font-weight:800!important;
+    line-height:1.35!important;
+  }
+
+  body.admin-page .raw-stock-price-edit{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+  body.admin-page .raw-stock-price-edit input{
+    width:100%!important;
+    min-width:0!important;
+    min-height:46px!important;
+    font-size:16px!important;
+  }
+  body.admin-page .raw-stock-need-link{
+    width:100%!important;
+    min-width:0!important;
+  }
+  body.admin-page .raw-stock-status{
+    max-width:100%!important;
+    white-space:normal!important;
+    text-align:left!important;
+  }
+  body.admin-page .raw-stock-movement-table .finance-row-action{
+    width:100%!important;
+    min-height:42px!important;
+  }
+}

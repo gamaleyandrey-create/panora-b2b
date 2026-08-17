@@ -1,0 +1,24 @@
+Panora 6.55 — full mobile revision
+
+Partner mobile
+- cart rows with real product photos no longer squeeze/overflow on narrow phones;
+- checkout/cart/profile inputs use 16px mobile font to avoid iOS focus zoom;
+- partner Push block is touch-safe, stacks on narrow screens and keeps all notification checkboxes visible;
+- order-message dialog uses 100dvh, safe-area padding and a sticky composer above the mobile keyboard/navigation;
+- unread message badges and message buttons remain visible/touchable;
+- long PN/order/product text wraps safely;
+- if selected products have no common open bake date, checkout is blocked instead of silently falling back to another date.
+
+Bakery mobile
+- Raw Materials balance and movement tables become readable mobile cards instead of 820px horizontal tables;
+- purchase-price fields remain editable inside those cards;
+- “Выпечка завершена” table becomes mobile cards with full-width numeric controls;
+- recipe purchase-price/semi-finished controls fit 360–390px screens;
+- recipe Save bar stays above the bakery bottom navigation and safe area;
+- date/datetime/price fields use 16px mobile controls;
+- message dialogs and admin message buttons are keyboard/safe-area friendly;
+- temporary server-number orders display PN-… instead of PN-null/PN-0000 in local notifications.
+
+General
+- changed mobile assets are cache-busted to build 6550 on every HTML entry point;
+- desktop layout and business workflows are unchanged.
