@@ -92,15 +92,15 @@ const orderPricingState = (o) => {
     return {valid:false, reason:"empty", subtotal:null, total:null, invalidItems:[]};
   }
   const restaurantPrices = restaurant(o.restaurantId)?.prices || {};
-  const snapshotPrices = o.prices && typeof o.prices === "object" ? o.prices : null;
-  const priceSource = snapshotPrices || restaurantPrices;
+  const snapshotPrices = o.prices && typeof o.prices === "object" ? o.prices : {};
   const invalidItems = [];
   let subtotal = 0;
 
   items.forEach((item) => {
     const qty = Number(item?.quantity);
-    const hasPrice = Object.prototype.hasOwnProperty.call(priceSource, item?.product);
-    const price = hasPrice ? Number(priceSource[item.product]) : NaN;
+    const saved = Number(snapshotPrices[item?.product]);
+    const fallback = Number(restaurantPrices[item?.product]);
+    const price = Number.isFinite(saved) && saved > 0 ? saved : (Number.isFinite(fallback) && fallback > 0 ? fallback : NaN);
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
       invalidItems.push({
         product:item?.product,

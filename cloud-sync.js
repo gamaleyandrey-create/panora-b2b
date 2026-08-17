@@ -645,8 +645,9 @@
   const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
   const parseOrderMeta=value=>{try{return JSON.parse(value||'{}')}catch{return{comment:value||''}}};
   const rowOrder=row=>{
-    const meta=parseOrderMeta(row.comment),day=row.bake_days||{},items=(row.order_items||[]).map(item=>({product:item.product_id,quantity:Number(item.quantity)}));
-    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:Object.fromEntries((row.order_items||[]).map(item=>[item.product_id,Number(item.unit_price)])),taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
+    const meta=parseOrderMeta(row.comment),day=row.bake_days||{},rawItems=row.order_items||[],items=rawItems.map(item=>({product:item.product_id,quantity:Number(item.quantity)})),partnerPrices=restaurant(row.restaurant_id)?.prices||{};
+    const orderPrices=Object.fromEntries(rawItems.map(item=>{const saved=Number(item.unit_price),fallback=Number(partnerPrices[item.product_id]);return[item.product_id,(Number.isFinite(saved)&&saved>0)?saved:(Number.isFinite(fallback)&&fallback>0?fallback:saved)]}));
+    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:orderPrices,taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   };
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
