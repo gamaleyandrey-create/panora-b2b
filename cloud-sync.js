@@ -645,14 +645,14 @@
   const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
   const parseOrderMeta=value=>{try{return JSON.parse(value||'{}')}catch{return{comment:value||''}}};
   const rowOrder=row=>{
-    const meta=parseOrderMeta(row.comment),day=row.bake_days||{},rawItems=row.order_items||[],items=rawItems.map(item=>({product:item.product_id,quantity:Number(item.quantity)})),partnerPrices=restaurant(row.restaurant_id)?.prices||{};
+    const meta=parseOrderMeta(row.comment),day=row.bake_days||{},rawItems=row.order_items||[],items=rawItems.map(item=>({product:item.product_id,quantity:Number(item.quantity),nameSnapshot:item.product_names_snapshot||null,imageSnapshot:item.product_image_snapshot||''})),partnerPrices=restaurant(row.restaurant_id)?.prices||{};
     const orderPrices=Object.fromEntries(rawItems.map(item=>{const saved=Number(item.unit_price),fallback=Number(partnerPrices[item.product_id]);return[item.product_id,(Number.isFinite(saved)&&saved>0)?saved:(Number.isFinite(fallback)&&fallback>0?fallback:saved)]}));
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:orderPrices,taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   };
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
-    loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price)&order=order_number.asc');const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);localStorage.setItem('panora-orders',afterOrders);if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
+    loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);localStorage.setItem('panora-orders',afterOrders);if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
   }
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
     if(!ready)throw new Error('Облако ещё загружается');
@@ -740,7 +740,7 @@
       await request('orders?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
       for(const order of valid){
         await request(`order_items?order_id=eq.${encodeURIComponent(order.id)}`,{method:'DELETE'});
-        const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>({order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0)}));
+        const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>{const product=(typeof productRegistry!=='undefined'?productRegistry:[]).find(p=>String(p.id)===String(item.product));return{order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0),product_names_snapshot:item.nameSnapshot||product?.names||null,product_image_snapshot:item.imageSnapshot||product?.image||null}});
         if(items.length)await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
       }
     }
