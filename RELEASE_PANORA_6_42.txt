@@ -1,0 +1,7 @@
+Panora 6.42 — B2B cart availability and minimum-order consistency
+- Checkout sanitizes archived/unavailable products before submit.
+- Minimum 12 pieces is calculated from the exact payload sent to Supabase.
+- Archived products are automatically removed from unfinished carts.
+- Historical orders remain untouched.
+- Friendly unavailable-product error replaces misleading minimum-order error.
+- PWA build 6420.

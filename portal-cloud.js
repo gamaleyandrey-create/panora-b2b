@@ -455,7 +455,37 @@
     ));
     error.code='PANORA_ORDER_INCOMPLETE';return error;
   };
+  const activeProductMap=()=>new Map((PRODUCTS||[]).filter(p=>p&&p.active!==false&&p.storefrontVisible!==false).map(p=>[String(p.id),p]));
+  function validateCheckoutItems(items){
+    const active=activeProductMap(),valid=[],unavailable=[];
+    for(const item of items||[]){
+      const product=String(item?.product||'').trim(),quantity=Math.trunc(Number(item?.quantity)||0);
+      if(!product||quantity<=0)continue;
+      if(!active.has(product)){unavailable.push(product);continue}
+      valid.push({product,quantity});
+    }
+    const count=valid.reduce((sum,item)=>sum+item.quantity,0);
+    return{items:valid,count,unavailable:[...new Set(unavailable)]};
+  }
+  function unavailableCartError(){
+    const error=new Error(labels(
+      'Один из товаров в корзине больше недоступен. Корзина обновлена — проверьте состав заказа.',
+      'One of the products in your cart is no longer available. The cart was refreshed — please review your order.',
+      'Uno de los productos de la cesta ya no está disponible. La cesta se ha actualizado; revisa el pedido.'
+    ));
+    error.code='PANORA_CART_PRODUCT_UNAVAILABLE';return error;
+  }
+  function purgeUnavailableCart(productIds){
+    let changed=false;
+    for(const id of productIds||[]){if(Object.prototype.hasOwnProperty.call(cart,id)){delete cart[id];changed=true}}
+    if(changed){localStorage.setItem('panora-cart',JSON.stringify(cart));renderCart?.();renderProducts?.()}
+    return changed;
+  }
   async function createOrderDirect(id,date,deliveryDate,items,comment){
+    const checked=validateCheckoutItems(items);
+    if(checked.unavailable.length){purgeUnavailableCart(checked.unavailable);throw unavailableCartError()}
+    if(checked.count<MIN_PIECES)throw new Error(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
+    items=checked.items;
     const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
     if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
     let created=await verifyCreatedOrder(id,items,{requireComplete:false}).catch(()=>null);
@@ -543,7 +573,8 @@
     form.email.value=String(form.email.value||account.email||'').trim();
     const fulfillment=form.fulfillment.value||'delivery';
     form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account.address):account.address)||'').trim();
-    const data=new FormData(form),summary=cartData(),items=summary.rows.map(p=>({product:p.id,quantity:Number(p.quantityPieces)})).filter(i=>i.quantity>0),count=items.reduce((s,i)=>s+i.quantity,0),date=String(data.get('date')||selectedBakeDate||'');
+    const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,date=String(data.get('date')||selectedBakeDate||'');
+    if(checkedItems.unavailable.length){purgeUnavailableCart(checkedItems.unavailable);return showToast(unavailableCartError().message)}
     const missing=[];
     if(!form.restaurant.value)missing.push(labels('название партнёра','partner name','nombre del socio'));
     if(!form.contact.value)missing.push(labels('контактное лицо','contact person','persona de contacto'));
@@ -607,6 +638,12 @@
         clearBrokenSession(error);
         showToast(labels('Сессия истекла. Войдите снова, корзина сохранена.','Session expired. Sign in again; your cart is saved.','La sesión ha caducado. Inicia sesión de nuevo; el carrito está guardado.'));
       }else{
+        const message=String(error?.message||'');
+        if(/Product unavailable|Unknown product|inactive product/i.test(message)){
+          const checked=validateCheckoutItems(rawItems);purgeUnavailableCart(checked.unavailable);showToast(unavailableCartError().message);
+        }else if(/Minimum order is 12 pieces/i.test(message)){
+          showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт. Доступных товаров сейчас: ${count} шт.`,`Minimum order is ${MIN_PIECES} pcs. Available items now: ${count}.`,`Pedido mínimo: ${MIN_PIECES} uds. Artículos disponibles ahora: ${count}.`));
+        }
         state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);
         showToast(lastState.text);
       }
