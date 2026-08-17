@@ -8,7 +8,7 @@
   const money=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' €';
   const pct=value=>`${new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:1}).format(Number(value)||0)}%`;
   const parse=value=>{const n=Number(String(value??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?n:0};
-  const normalize=value=>String(value||'').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/\s+/g,' ');
+  const normalize=value=>String(value||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ');
   const factor=unit=>unit==='g'||unit==='ml'?1000:1;
   const productLabel=id=>{
     const list=read('panora-products',[]);

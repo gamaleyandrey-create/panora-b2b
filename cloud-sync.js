@@ -482,22 +482,13 @@
     productDirty=false;clearPending('products');rememberRevision('products',verified);saveProductBaseline(localProducts());status('Технологическая карта сохранена ✓');
     return confirmed.tech_card;
   }
-  async function deleteProductConfirmed(productId){
-    if(!productId)throw new Error('Не удалось определить товар');
-    if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите.');
-    if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
-    status('Удаление товара…');
-    await request(`products?id=eq.${encodeURIComponent(productId)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
-    const rows=await request(`products?id=eq.${encodeURIComponent(productId)}&select=id`);
-    if(rows?.length)throw new Error('Supabase не подтвердил удаление товара');
-    productDirty=false;status('Товар удалён ✓');return true;
-  }
   const ingredientCostParts=key=>{
     const value=String(key||''),split=value.lastIndexOf('|');
     return split>0?{name:value.slice(0,split),unit:value.slice(split+1)||'g'}:{name:value,unit:'g'};
   };
   async function loadIngredientCosts(){
     if(!ready)return false;
+    if(pending.ingredientCosts||ingredientCostsSaving)return true;
     const rows=await request('raw_material_prices?select=ingredient_key,ingredient_name,unit,purchase_price,updated_at&order=ingredient_key.asc');
     const local=JSON.parse(localStorage.getItem(ingredientCostsKey)||'{}')||{};
     if(Array.isArray(rows)&&rows.length){
@@ -728,10 +719,60 @@
     const orderPrices=Object.fromEntries(rawItems.map(item=>{const saved=Number(item.unit_price),fallback=Number(partnerPrices[item.product_id]);return[item.product_id,(Number.isFinite(saved)&&saved>0)?saved:(Number.isFinite(fallback)&&fallback>0?fallback:saved)]}));
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:orderPrices,taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   };
+  async function hydrateAdminOrderRows(orderRows){
+    const rows=Array.isArray(orderRows)?orderRows:[];
+    const missing=rows.filter(row=>!Array.isArray(row?.order_items)||row.order_items.length===0);
+    if(!missing.length)return rows;
+    const ids=missing.map(row=>String(row.id||'')).filter(Boolean);
+    if(!ids.length)return rows;
+    try{
+      const encoded=ids.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
+      const itemRows=await request(`order_items?order_id=in.(${encodeURIComponent(encoded)})&select=order_id,product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot&order=order_id.asc,product_id.asc`);
+      const grouped=new Map();
+      for(const item of itemRows||[]){
+        const key=String(item.order_id||'');
+        if(!grouped.has(key))grouped.set(key,[]);
+        grouped.get(key).push(item);
+      }
+      return rows.map(row=>{
+        const direct=grouped.get(String(row.id||''))||[];
+        return direct.length?{...row,order_items:direct}:row;
+      });
+    }catch(error){
+      console.warn('Panora admin order item hydration',error);
+      return rows;
+    }
+  }
+  async function repairTrueOrphanOrders(orderRows){
+    const rows=Array.isArray(orderRows)?orderRows:[];
+    const orphans=rows.filter(row=>
+      ['submitted','confirmed'].includes(String(row?.status||'')) &&
+      (!Array.isArray(row?.order_items)||row.order_items.length===0)
+    );
+    for(const row of orphans){
+      try{
+        await request(`orders?id=eq.${encodeURIComponent(row.id)}`,{
+          method:'PATCH',
+          headers:{Prefer:'return=minimal'},
+          body:JSON.stringify({
+            status:'cancelled',
+            cancelled_reason:'Panora 6.50 repair: order has no items',
+            updated_at:new Date().toISOString()
+          })
+        });
+        row.status='cancelled';
+        row.cancelled_reason='Panora 6.50 repair: order has no items';
+        audit?.('order.orphan.repaired',`PN-${row.order_number||row.id} · пустой заказ переведён в отменённые`,'warning');
+      }catch(error){
+        console.warn('Panora orphan order repair',row?.id,error);
+      }
+    }
+    return rows;
+  }
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
-    loadingOrders=(async()=>{const rows=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);
+    loadingOrders=(async()=>{const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');const hydrated=await hydrateAdminOrderRows(fetched||[]);const rows=await repairTrueOrphanOrders(hydrated);const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);
 const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   ? window.panoraSaveOrdersCache(orders)
   : safeLocalSet('panora-orders',afterOrders,{quotaIsWarning:false});if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded)await repairMissingDeliveryNotes();if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
@@ -820,11 +861,14 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     if(valid.length){
       const payload=valid.map(order=>({id:order.id,order_number:Number(order.number)||undefined,restaurant_id:order.restaurantId,bake_day_id:days.get(order.date),status:order.status||'submitted',comment:orderMeta(order),cancelled_reason:order.cancellationReason||null,created_by:session.user?.id||null,updated_at:new Date().toISOString()}));
       await request('orders?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
-      for(const order of valid){
-        await request(`order_items?order_id=eq.${encodeURIComponent(order.id)}`,{method:'DELETE'});
+      const itemSyncOrders=valid.filter(order=>order?._itemSyncRequired===true);
+      for(const order of itemSyncOrders){
         const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>{const product=(typeof productRegistry!=='undefined'?productRegistry:[]).find(p=>String(p.id)===String(item.product));return{order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0),product_names_snapshot:item.nameSnapshot||product?.names||null,product_image_snapshot:item.imageSnapshot||product?.image||null}});
-        if(items.length)await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
+        if(!items.length)throw new Error(`Пустой заказ не может быть сохранён: ${order.number||order.id}`);
+        await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
+        order._itemSyncRequired=false;
       }
+      if(itemSyncOrders.length)window.panoraSaveOrdersCache?.(orders);
     }
     status('Облако ✓');})().finally(()=>savingOrders=null);return savingOrders
   }
@@ -1427,7 +1471,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{

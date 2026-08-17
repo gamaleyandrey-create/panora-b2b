@@ -84,6 +84,17 @@ const commerceProducts = () => {
     : saved;
   return registry.filter((product) => product && product.active !== false && !product.deletedAt);
 };
+const manualOrderUnitPrice=(r,productId,quantity)=>{
+  const product=commerceProducts().find(item=>String(item.id)===String(productId));
+  const retail=Math.max(0,Number(product?.basePrice||0));
+  const threshold=Math.max(1,Number(product?.wholesaleMinQty||8));
+  const wholesale=Math.max(0,Number(adminPartnerPrice(r?.id,productId,r?.prices?.[productId]??retail)));
+  return Number(quantity||0)>=threshold?(wholesale||retail):retail;
+};
+const manualOrderPriceMap=(r,items)=>Object.fromEntries(
+  (items||[]).map(item=>[item.product,manualOrderUnitPrice(r,item.product,item.quantity)])
+);
+
 const commerceProductLabel = (id) => {
   const product = commerceProducts().find((entry) => entry.id === id);
   return product?.names?.[lang] || product?.names?.ru || product?.name ||
@@ -864,9 +875,9 @@ const showReminderConfirm=(card,key,channel)=>{
   }
 };
 const reminderCopy = {
-  ru: (r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${reminderPrettyDate(p.bakeDate,'ru',false)} можно оформить до ${reminderPrettyCutoff(p.cutoff,'ru')}. Минимальный заказ — 12 шт.`,
-  en: (r,p)=>`Hello, ${r.name}! A reminder that your Panora order for the ${reminderPrettyDate(p.bakeDate,'en',false)} bake must be placed by ${reminderPrettyCutoff(p.cutoff,'en')}. Minimum order: 12 pcs.`,
-  es: (r,p)=>`¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${reminderPrettyDate(p.bakeDate,'es',false)} debe realizarse antes del ${reminderPrettyCutoff(p.cutoff,'es')}. Pedido mínimo: 12 uds.`,
+  ru: (r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${reminderPrettyDate(p.bakeDate,'ru',false)} можно оформить до ${reminderPrettyCutoff(p.cutoff,'ru')}. Для каждой позиции количество ниже оптового порога идёт по розничной цене, от порога — по цене партнёра.`,
+  en: (r,p)=>`Hello, ${r.name}! A reminder that your Panora order for the ${reminderPrettyDate(p.bakeDate,'en',false)} bake must be placed by ${reminderPrettyCutoff(p.cutoff,'en')}. Each product below its wholesale threshold uses retail price; from the threshold the partner price applies.`,
+  es: (r,p)=>`¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${reminderPrettyDate(p.bakeDate,'es',false)} debe realizarse antes del ${reminderPrettyCutoff(p.cutoff,'es')}. Cada producto por debajo de su umbral mayorista usa el precio minorista; desde el umbral se aplica el precio de socio.`,
 };
 const cleanPhone = (value) => String(value || "").replace(/\D/g, "");
 const reminderSendWindow = () => {
@@ -1108,14 +1119,12 @@ document.querySelector("#saveOrder").onclick = (e) => {
   const f = new FormData(document.querySelector("#orderForm")),
     plain = Number(f.get("plain")),
     pumpkin = Number(f.get("pumpkin"));
-  if (plain + pumpkin < 12) {
-    alert("Минимальный заказ — 12 шт.");
-    return;
-  }
   const items = [];
   if (plain) items.push({ product: "plain", quantity: plain });
   if (pumpkin) items.push({ product: "pumpkin", quantity: pumpkin });
+  if(!items.length){alert("Добавьте хотя бы одну позицию в заказ.");return}
   const r = restaurant(f.get("restaurant"));
+  const prices=manualOrderPriceMap(r,items);
   orders.push({
     id: crypto.randomUUID(),
     number: (orders.at(-1)?.number || 0) + 1,
@@ -1123,9 +1132,10 @@ document.querySelector("#saveOrder").onclick = (e) => {
     date: f.get("date"),
     deliveryDate: f.get("date"),
     items,
-    prices: structuredClone(r.prices),
+    prices,
     taxRate: Number(bakerySettings.taxRate),
     status: "confirmed",
+    _itemSyncRequired:true,
   });
   cSave("panora-orders", orders);
   syncPlansFromOrders();

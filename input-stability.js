@@ -8,6 +8,8 @@
   const LOCAL_PREFIX = "panora-form-draft-v3258:";
   const DEVICE_KEY = "panora-form-device-v312";
   const SEND_DELAY = 900;
+  const BACKUPS_PER_FORM = 3;
+  const BACKUPS_TOTAL = 20;
   const SKIP_TYPES = new Set(["password", "file", "hidden", "submit", "button", "reset", "image"]);
   // Direct partner prices have their own explicit-save draft model.
   // Exclude them from the generic form-draft engine, otherwise an old form draft
@@ -97,10 +99,51 @@
   };
   const scope = (form) => `${location.pathname}|${role()}|${userId()}|${formId(form)}`;
   const localKey = (form) => LOCAL_PREFIX + scope(form);
+  const backupPrefix = (form) => `${localKey(form)}:backup:`;
+  const backupStamp = key => Number(String(key||'').split(':backup:').pop()) || 0;
+  const allBackupKeys = () => {
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(key?.startsWith(LOCAL_PREFIX)&&key.includes(':backup:'))keys.push(key);
+    }
+    return keys.sort((a,b)=>backupStamp(b)-backupStamp(a));
+  };
+  const pruneBackups = (form=null) => {
+    try{
+      if(form){
+        const prefix=backupPrefix(form);
+        allBackupKeys().filter(key=>key.startsWith(prefix)).slice(BACKUPS_PER_FORM).forEach(key=>localStorage.removeItem(key));
+      }
+      allBackupKeys().slice(BACKUPS_TOTAL).forEach(key=>localStorage.removeItem(key));
+    }catch{}
+  };
+  const writeBackup = (form,draft) => {
+    if(!draft?.fields||!Object.keys(draft.fields).length)return false;
+    pruneBackups(form);
+    const key=`${backupPrefix(form)}${Date.now()}`;
+    try{
+      localStorage.setItem(key,JSON.stringify(draft));
+      pruneBackups(form);
+      return true;
+    }catch{
+      pruneBackups();
+      try{
+        localStorage.setItem(key,JSON.stringify(draft));
+        pruneBackups(form);
+        return true;
+      }catch{return false}
+    }
+  };
   const readDraft = (form) => json(localStorage.getItem(localKey(form)), { version: VERSION, fields: {}, seq: 0, serverVersion: 0, dirty: false });
   const writeDraft = (form, draft) => {
-    try { localStorage.setItem(localKey(form), JSON.stringify(draft)); }
-    catch { announce("Не сохранено", "error"); }
+    const payload=JSON.stringify(draft);
+    try { localStorage.setItem(localKey(form), payload); }
+    catch {
+      pruneBackups(form);
+      try { localStorage.setItem(localKey(form), payload); }
+      catch { announce("Не сохранено", "error"); }
+    }
   };
   const valueOf = (field) => {
     if (field.type === "checkbox" || field.type === "radio") return { checked: field.checked, value: field.value };
@@ -205,9 +248,7 @@
     const key = scope(form), draft = readDraft(form);
     committedScopes.add(key);
     clearTimeout(timers.get(key)); timers.delete(key);
-    if (draft?.fields && Object.keys(draft.fields).length) {
-      localStorage.setItem(`${localKey(form)}:backup:${Date.now()}`, JSON.stringify(draft));
-    }
+    if (draft?.fields && Object.keys(draft.fields).length) writeBackup(form,draft);
     if (userId() !== "anonymous" && navigator.onLine) {
       try {
         await api("rpc/panora_clear_form_draft", { method: "POST", body: JSON.stringify({ p_form_key: key }) });
@@ -246,7 +287,7 @@
     };
     cloud.onclick = async () => {
       const key = scope(form), current = readDraft(form);
-      localStorage.setItem(`${localKey(form)}:backup:${Date.now()}`, JSON.stringify(current));
+      writeBackup(form,current);
       cloud.disabled = true; keep.disabled = true;
       try {
         const rows = await api(`panora_form_drafts?form_key=eq.${encodeURIComponent(key)}&select=payload,version,updated_at&limit=1`);
@@ -274,7 +315,7 @@
   document.addEventListener("reset", event => { const form = event.target; setTimeout(() => discard(form)); }, true);
   document.addEventListener("submit", event => { const form = event.target; form.dataset.panoraSubmitting = "true"; }, true);
   window.addEventListener("online", () => allContainers().forEach(form => { restoreForm(form); scheduleRemote(form); }));
-  window.addEventListener("pageshow", restoreAll);
+  window.addEventListener("pageshow",()=>{pruneBackups();restoreAll()});
   document.addEventListener("visibilitychange", () => { if (!document.hidden) restoreAll(); });
   new MutationObserver(() => {
     if (mutationQueued) return;
@@ -299,6 +340,7 @@
     async confirmSaved(formOrSelector) { const form = typeof formOrSelector === "string" ? document.querySelector(formOrSelector) : formOrSelector; if (form) { await discardConfirmed(form); announce("Сохранено", "synced"); } },
     flush: () => Promise.all(allContainers().map(pushRemote))
   };
+  pruneBackups();
   restoreAll();
   allContainers().forEach(pullRemote);
 })();
