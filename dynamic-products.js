@@ -25,6 +25,14 @@
    }
 
    const rebuilt=managed.map(toCatalogProduct);
+   try{
+    if(rebuilt.length){
+    const validIds=new Set(rebuilt.map(p=>String(p.id))),savedCart=JSON.parse(localStorage.getItem('panora-cart')||'{}');
+    let changed=false;
+    for(const id of Object.keys(savedCart||{})){if(!validIds.has(String(id))){delete savedCart[id];changed=true}}
+    if(changed){cart={...savedCart};localStorage.setItem('panora-cart',JSON.stringify(savedCart));window.dispatchEvent(new CustomEvent('panora:cart-sanitized',{detail:{source:'catalog'}}))}
+    }
+   }catch(error){console.warn('Panora cart sanitize',error)}
    if(rebuilt.length){
     PRODUCTS.splice(0,PRODUCTS.length,...rebuilt);
    }else{
