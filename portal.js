@@ -526,10 +526,10 @@ function enforceDateConfirmation() {
     count = cartData().count;
   if (!count) confirmBox.checked = false;
   button.disabled = false;
-  button.classList.toggle("needs-minimum", count < MIN_PIECES);
+  button.classList.remove("needs-minimum");
   button.classList.toggle(
     "needs-date-confirmation",
-    count >= MIN_PIECES && !confirmBox.checked,
+    !confirmBox.checked,
   );
 }
 const baseRenderCart = renderCart;
@@ -744,16 +744,6 @@ function openCheckoutForAccount() {
 const originalCheckout = $("#checkoutButton").onclick;
 $("#checkoutButton").onclick = () => {
   const count = cartData().count;
-  if (count < MIN_PIECES) {
-    showToast(
-      lang === "ru"
-        ? `Минимальный заказ — ${MIN_PIECES} шт. Сейчас выбрано: ${count}.`
-        : lang === "es"
-          ? `Pedido mínimo: ${MIN_PIECES} uds. Seleccionado: ${count}.`
-          : `Minimum order: ${MIN_PIECES} pcs. Selected: ${count}.`,
-    );
-    return;
-  }
   if (!$("#confirmDeliveryDate").checked) {
     showToast(
       lang === "ru"

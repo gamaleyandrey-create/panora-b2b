@@ -228,8 +228,8 @@
       write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
-      const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||12))]));
-      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||12)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
+      const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
+      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
       account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));
       const active=document.activeElement;
       const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
@@ -313,7 +313,7 @@
         api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),
         api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
-      const ruleMap=new Map((rules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||12))]));
+      const ruleMap=new Map((rules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const directPrices=Object.fromEntries((prices||[]).map(item=>[item.product_id,Number(item.price)]));
       const nextPrices=Object.keys(rpcPrices).length?rpcPrices:directPrices;
@@ -325,7 +325,7 @@
       }
       let productChanged=false;
       if(products?.length){
-        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||12)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
+        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
         const before=localStorage.getItem('panora-partner-products')||'[]',after=JSON.stringify(nextProducts);
         productChanged=before!==after;
         if(productChanged)localStorage.setItem('panora-partner-products',after);
@@ -428,7 +428,7 @@
   const tierPriceForOrderItem=(item)=>{
     const managed=(()=>{try{return JSON.parse(localStorage.getItem('panora-public-products')||'[]')}catch{return[]}})();
     const product=(managed||[]).find(p=>String(p.id)===String(item.product))||{};
-    const min=Math.max(1,Number(product.wholesaleMinQty||12));
+    const min=Math.max(1,Number(product.wholesaleMinQty||8));
     const retail=Number(product.basePrice||0);
     const wholesale=Number(account?.prices?.[item.product] ?? retail);
     return Number(item.quantity)>=min?wholesale:retail;
@@ -502,7 +502,6 @@
   async function createOrderDirect(id,date,deliveryDate,items,comment){
     const checked=validateCheckoutItems(items);
     if(checked.unavailable.length){purgeUnavailableCart(checked.unavailable);throw unavailableCartError()}
-    if(checked.count<MIN_PIECES)throw new Error(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
     items=checked.items;
     const plan=productionPlans().find(p=>p.bakeDate===date&&p.bakeDayId);
     if(!plan?.bakeDayId)throw new Error(labels('День выпечки не найден в облаке','Bake day was not found in the cloud','No se encontró el día de horneado'));
@@ -600,7 +599,6 @@
     if(fulfillment==='delivery'&&!form.address.value)missing.push(labels('адрес доставки','delivery address','dirección de entrega'));
     if(!date)missing.push(labels('дату поставки','delivery date','fecha de entrega'));
     if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
-    if(count<MIN_PIECES)return showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
     const nextPhone=String(form.phone.value||'').trim(),nextAddress=String(form.address.value||'').trim();
@@ -659,8 +657,6 @@
         const message=String(error?.message||'');
         if(/Product unavailable|Unknown product|inactive product/i.test(message)){
           const checked=validateCheckoutItems(rawItems);purgeUnavailableCart(checked.unavailable);showToast(unavailableCartError().message);
-        }else if(/Minimum order is 12 pieces/i.test(message)){
-          showToast(labels(`Минимальный заказ — ${MIN_PIECES} шт. Доступных товаров сейчас: ${count} шт.`,`Minimum order is ${MIN_PIECES} pcs. Available items now: ${count}.`,`Pedido mínimo: ${MIN_PIECES} uds. Artículos disponibles ahora: ${count}.`));
         }
         state('error',labels('Заказ не создан: ','Order failed: ','Error del pedido: ')+error.message);
         showToast(lastState.text);

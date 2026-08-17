@@ -50,7 +50,7 @@
     gallery:Array.isArray(mediaMap.get(String(p.id))?.gallery_urls)?mediaMap.get(String(p.id)).gallery_urls.filter(Boolean).slice(0,6):[],
     weight:Number(p.weight_g||0),
     basePrice:Number(p.retail_price||0),
-    wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||12)),
+    wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||8)),
     image:p.image_url||'icon.svg',
     names:{ru:p.name_ru||p.id,en:p.name_en||p.name_ru||p.id,es:p.name_es||p.name_ru||p.id},
     descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}

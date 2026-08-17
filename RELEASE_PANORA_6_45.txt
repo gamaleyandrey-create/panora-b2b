@@ -1,0 +1,10 @@
+Panora 6.45
+
+B2B tier pricing restored:
+- no global 12-piece minimum for partner orders;
+- each product is priced independently;
+- quantity below the product wholesale threshold uses retail/base price;
+- quantity at or above the threshold uses the partner wholesale price;
+- unavailable/archived product validation remains;
+- order snapshots and Partner Push 6.44 remain intact;
+- default wholesale threshold fallback is 8 pcs.

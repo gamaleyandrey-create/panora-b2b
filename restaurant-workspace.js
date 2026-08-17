@@ -572,7 +572,7 @@
       const name=itemName(id);
       const retailPrice=Number(product.retailPrice ?? product.basePrice ?? product.price ?? 0);
       const wholesalePrice=Number(account?.prices?.[id] ?? product.wholesalePrice ?? product.price ?? retailPrice);
-      const wholesaleMinQty=Math.max(1,Number(product.wholesaleMinQty||12));
+      const wholesaleMinQty=Math.max(1,Number(product.wholesaleMinQty||8));
       const image=product.image||"icon.svg";
       const gallery=[image,...(Array.isArray(product.gallery)?product.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
       return {id,name,retailPrice,wholesalePrice,wholesaleMinQty,image,gallery};
