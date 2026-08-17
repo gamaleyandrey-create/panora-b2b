@@ -296,6 +296,17 @@
     typeof portalProduct === "function"
       ? portalProduct(id)
       : PRODUCTS.find((product) => product.id === id)?.text?.[lang]?.[0] || id;
+  const orderItemUnitPrice = (order, productId) => {
+    const snapshot = Number(order?.prices?.[productId]);
+    if (Number.isFinite(snapshot) && snapshot > 0) return snapshot;
+    const partner = Number(account?.prices?.[productId]);
+    if (Number.isFinite(partner) && partner > 0) return partner;
+    try {
+      const restaurantPrice = Number(restaurant?.(order?.restaurantId)?.prices?.[productId]);
+      if (Number.isFinite(restaurantPrice) && restaurantPrice > 0) return restaurantPrice;
+    } catch {}
+    return 0;
+  };
   const orderTotal = (order) =>
     typeof portalOrderTotal === "function"
       ? portalOrderTotal(order)

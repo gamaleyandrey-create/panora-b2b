@@ -1,0 +1,5 @@
+Panora 6.40 — B2B price rendering hotfix
+- Fixes ReferenceError: orderItemUnitPrice is not defined in partner workspace.
+- Partner order cards use saved positive order price first, then current partner price fallback.
+- No database schema changes.
+- PWA build 6400.
