@@ -1,0 +1,9 @@
+Panora 6.43 — localStorage quota resilience for production plans
+
+- Production plan writes no longer surface a false cloud synchronization error when browser localStorage is full.
+- On QuotaExceededError Panora first removes old automatic cloud backups and retries the local write.
+- Automatic cloud backup history is capped more tightly so it cannot grow without bound.
+- If the plan cache still cannot be written locally, the in-memory plan remains active and cloud synchronization continues; a reload restores the authoritative plan from Supabase.
+- Cloud plan hydration uses quota-safe local cache writes and never treats a cache quota problem as a cloud failure.
+- Critical order/cart/session/raw-material local data is not deleted by this recovery.
+- PWA build 6430.
