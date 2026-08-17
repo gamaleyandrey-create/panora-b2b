@@ -1,6 +1,29 @@
 (function(){
- const costs=()=>{try{return JSON.parse(localStorage.getItem('panora-ingredient-costs'))||{}}catch{return{}}};
- const saveCosts=value=>localStorage.setItem('panora-ingredient-costs',JSON.stringify(value));
+ const INGREDIENT_COSTS_KEY='panora-ingredient-costs';
+ const normalizeCostName=name=>String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/\s+/g,' ');
+ const normalizeCostUnit=unit=>String(unit||'g').trim().toLowerCase()==='pcs'?'pcs':String(unit||'g').trim().toLowerCase()==='ml'?'ml':'g';
+ const ingredientCostKey=(name,unit)=>`${normalizeCostName(name)}|${normalizeCostUnit(unit)}`;
+ const costs=()=>{try{return JSON.parse(localStorage.getItem(INGREDIENT_COSTS_KEY))||{}}catch{return{}}};
+ const saveCosts=value=>{
+  const next=value&&typeof value==='object'?value:{};
+  const payload=JSON.stringify(next);
+  if(typeof setLocalStorageSafely==='function')setLocalStorageSafely(INGREDIENT_COSTS_KEY,payload);
+  else localStorage.setItem(INGREDIENT_COSTS_KEY,payload);
+  window.panoraCloud?.queueIngredientCosts?.();
+  window.dispatchEvent(new CustomEvent('panora:ingredient-costs-changed',{detail:{prices:next}}));
+  return next;
+ };
+ window.panoraIngredientCosts={
+  read:costs,
+  save:saveCosts,
+  key:ingredientCostKey,
+  get:(name,unit)=>Number(costs()[ingredientCostKey(name,unit)]||0),
+  set:(name,unit,price)=>{
+   const map=costs(),key=ingredientCostKey(name,unit),value=Math.max(0,Number(price)||0);
+   map[key]=value;saveCosts(map);return value;
+  },
+  unitLabel:unit=>normalizeCostUnit(unit)==='g'?'€/кг':normalizeCostUnit(unit)==='ml'?'€/л':'€/шт.'
+ };
  const euroCost=value=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' €';
  const factor=unit=>unit==='g'||unit==='ml'?1000:1;
  const filter=$('#costBakeFilter');if(!filter)return;
@@ -363,7 +386,10 @@
       :shortage>0.0005
         ?`<button type="button" class="raw-stock-status warning action" data-raw-receive="${row.key}" title="Добавить приход этого сырья">Не хватает ${niceQty(shortage,row.unit)} · приход</button>`
         :required>0.0005?'<span class="raw-stock-status ok">Хватает</span>':'<span class="raw-stock-status neutral">Нет потребности</span>';
-   const priceText=row.semi?'по сырью':price>0?`${price.toFixed(2)} € / ${row.unit==='g'?'кг':row.unit==='ml'?'л':'шт.'}`:'—';
+   const priceUnit=row.unit==='g'?'€/кг':row.unit==='ml'?'€/л':'€/шт.';
+   const priceText=row.semi
+    ?`<span class="raw-stock-price-auto">по сырью</span>`
+    :`<label class="raw-stock-price-edit"><input data-raw-ingredient-price="${row.key}" type="text" inputmode="decimal" autocomplete="off" value="${price>0?price.toFixed(2):''}" placeholder="0,00"><small>${priceUnit}</small></label>`;
    const needLabel=row.semi?`${niceQty(required,row.unit)} <small>полуфабрикат</small>`:niceQty(required,row.unit);
    const needText=required>0.0005?`<button type="button" class="raw-stock-need-link" data-raw-need="${row.key}" title="Показать, откуда взялась потребность">${needLabel}<small>Расшифровка</small></button>`:'—';
    const afterText=needsInventory
@@ -405,6 +431,20 @@
    return `<tr class="${event.virtual?'raw-stock-auto-row':''}"><td>${fmt(event.date,{day:'numeric',month:'short',year:'numeric'})}${event.future?' <small>будущее</small>':''}</td><td><strong>${event.name}</strong></td><td><span class="raw-stock-operation ${event.virtual?'auto':''}">${rawMovementLabel(event.type)}</span></td><td class="${delta<0?'raw-stock-negative':'raw-stock-positive'}"><strong>${quantity}</strong></td><td>${event.note||'—'}</td><td>${action}</td></tr>`;
   }).join(''):'<tr><td colspan="6">Движений в этом разделе пока нет.</td></tr>';
 
+  root.querySelectorAll('[data-raw-ingredient-price]').forEach(input=>{
+   const commit=()=>{
+    const map=costs(),value=window.panoraParseDecimal?.(input.value);
+    if(value===null){input.value=Number(map[input.dataset.rawIngredientPrice]||0)>0?Number(map[input.dataset.rawIngredientPrice]).toFixed(2):'';return}
+    map[input.dataset.rawIngredientPrice]=Math.max(0,value);
+    input.value=value>0?value.toFixed(2):'';
+    saveCosts(map);
+    renderRawStock();
+    if(typeof renderPurchase==='function')renderPurchase();
+   };
+   input.onblur=commit;
+   input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();input.blur()}};
+   input.onfocus=()=>requestAnimationFrame(()=>input.select());
+  });
   root.querySelectorAll('[data-raw-delete]').forEach(button=>button.onclick=()=>{
    if(!confirm('Удалить это движение сырья?'))return;
    const now=new Date().toISOString(),id=String(button.dataset.rawDelete);
@@ -749,7 +789,6 @@
     const value=window.panoraParseDecimal?.(input.value);
     if(value===null){input.value=Number(priceMap[input.dataset.ingredientPrice]||0).toFixed(2);return}
     priceMap[input.dataset.ingredientPrice]=value;input.value=value.toFixed(2);saveCosts(priceMap);
-    window.dispatchEvent(new CustomEvent('panora:ingredient-costs-changed'));
     setTimeout(()=>{if(!window.panoraMoneyEditing?.active)renderPurchase()},0);
    };
    input.onblur=commit;input.onchange=null;input.onfocus=()=>requestAnimationFrame(()=>input.select());

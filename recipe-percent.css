@@ -109,3 +109,28 @@
   .recipe-semi-fields{grid-template-columns:1fr 1fr;margin-left:0}
   .recipe-semi-fields label:first-child{grid-column:1/-1}
 }
+
+/* Panora 6.49 — one purchase price per raw material */
+.recipe-price-settings{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:9px 11px;
+  border:1px solid #dfe5de;
+  border-radius:9px;
+  background:#f8faf7;
+}
+.recipe-price-copy{display:grid;gap:2px}
+.recipe-price-copy strong{font-size:12px;color:#31523d}
+.recipe-price-copy small{font-size:11px;color:#758078}
+.recipe-price-copy small.missing{color:#a05b2b;font-weight:750}
+.recipe-price-input{display:flex;align-items:center;gap:7px;min-width:170px}
+.recipe-price-input input{width:92px!important;text-align:right}
+.recipe-price-input span{font-size:12px;font-weight:750;color:#53645a;white-space:nowrap}
+@media(max-width:700px){
+  .recipe-price-settings{align-items:flex-start;flex-direction:column}
+  .recipe-price-input{width:100%}
+  .recipe-price-input input{width:100%!important;min-height:48px}
+}

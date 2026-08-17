@@ -1,0 +1,12 @@
+Panora 6.49
+
+Unified raw-material purchase prices:
+- every ingredient has one purchase price for the whole system;
+- the same price feeds Recipe cost, Purchasing, Raw Materials stock value and Finance;
+- new recipe ingredients immediately show “Цена не указана” until a purchase price is entered;
+- purchase price can be entered directly in the recipe editor, in Purchasing or in Raw Materials — all edit the same value;
+- g is priced per kg, ml per liter, pcs per piece;
+- semi-finished ingredients use the purchase price of their source raw material;
+- ingredient prices are synchronized through Supabase raw_material_prices for multi-device work;
+- existing local panora-ingredient-costs values are migrated to cloud on first sync if the cloud table is empty;
+- no recipe quantity, stock movement or historical bake snapshot is rewritten.
