@@ -101,6 +101,7 @@ const manualOrderPriceMap=(r,items)=>Object.fromEntries(
   (items||[]).map(item=>[item.product,manualOrderUnitPrice(r,item.product,item.quantity)])
 );
 
+const commerceOrderNumber = (order) => Number(order?.number)>0 ? `PN-${String(Number(order.number)).padStart(4,"0")}` : "PN-…";
 const commerceProductLabel = (id) => {
   const product = commerceProducts().find((entry) => entry.id === id);
   return product?.names?.[lang] || product?.names?.ru || product?.name ||
@@ -577,7 +578,7 @@ function renderOrders() {
             ? orderLine(o,i)
             : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
           return `<tr data-order-id="${commerceEscape(o.id)}" class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
-            <td class="order-mobile-number" data-label="Заказ"><strong>PN-${String(o.number).padStart(4, "0")}</strong></td>
+            <td class="order-mobile-number" data-label="Заказ"><strong>${commerceOrderNumber(o)}</strong></td>
             <td class="order-mobile-dates" data-label="Даты"><div class="order-dates">
               <span class="order-date-line"><em>Выпечка</em><strong class="date-desktop">${orderDateLabel(o.date, true)}</strong><strong class="date-mobile">${orderCompactDate(o.date)}</strong></span>
               <span class="order-date-line"><em>Доставка</em><strong class="date-desktop">${orderDateLabel(o.deliveryDate || o.date)}</strong><strong class="date-mobile">${orderCompactDate(o.deliveryDate || o.date)}</strong></span>
@@ -587,7 +588,7 @@ function renderOrders() {
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
             <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
-            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="PN-${String(o.number).padStart(4, "0")}">✉ Сообщения</button></td>
+            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Сообщения</button></td>
           </tr>`;
         })
         .join("")
@@ -1133,7 +1134,7 @@ document.querySelector("#saveOrder").onclick = (e) => {
   const prices=manualOrderPriceMap(r,items);
   orders.push({
     id: crypto.randomUUID(),
-    number: (orders.at(-1)?.number || 0) + 1,
+    number: null,
     restaurantId: r.id,
     date: f.get("date"),
     deliveryDate: f.get("date"),
@@ -1141,6 +1142,7 @@ document.querySelector("#saveOrder").onclick = (e) => {
     prices,
     taxRate: Number(bakerySettings.taxRate),
     status: "confirmed",
+    _serverNumberPending:true,
     _itemSyncRequired:true,
   });
   cSave("panora-orders", orders);
@@ -1189,7 +1191,7 @@ function openShipment(id) {
   form.paymentDueDate.value = "";
   form.traysDelivered.value = "";
   form.traysReturned.value = "";
-  summary.innerHTML = `<strong>PN-${String(o.number).padStart(4, "0")} · ${commerceEscape(r.name)}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${commerceProductLabel(i.product)}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
+  summary.innerHTML = `<strong>${commerceOrderNumber(o)} · ${commerceEscape(r.name)}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${commerceProductLabel(i.product)}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
   const update = () => {
     let subtotal = 0;
     summary.querySelectorAll("[data-shipment-quantity]").forEach((input) => {

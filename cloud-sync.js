@@ -864,16 +864,38 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     if(missing){await savePlansNow();days=await bakeDayMap()}
     const valid=orders.filter(order=>days.has(order.date)&&restaurants.some(r=>r.id===order.restaurantId));
     if(valid.length){
-      const payload=valid.map(order=>({id:order.id,order_number:Number(order.number)||undefined,restaurant_id:order.restaurantId,bake_day_id:days.get(order.date),status:order.status||'submitted',comment:orderMeta(order),cancelled_reason:order.cancellationReason||null,created_by:session.user?.id||null,updated_at:new Date().toISOString()}));
+      const payload=valid.map(order=>{
+        const row={id:order.id,restaurant_id:order.restaurantId,bake_day_id:days.get(order.date),status:order.status||'submitted',comment:orderMeta(order),cancelled_reason:order.cancellationReason||null,updated_at:new Date().toISOString()};
+        if(order?._itemSyncRequired===true)row.created_by=session.user?.id||null;
+        return row;
+      });
       await request('orders?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
       const itemSyncOrders=valid.filter(order=>order?._itemSyncRequired===true);
       for(const order of itemSyncOrders){
         const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>{const product=(typeof productRegistry!=='undefined'?productRegistry:[]).find(p=>String(p.id)===String(item.product));return{order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0),product_names_snapshot:item.nameSnapshot||product?.names||null,product_image_snapshot:item.imageSnapshot||product?.image||null}});
         if(!items.length)throw new Error(`Пустой заказ не может быть сохранён: ${order.number||order.id}`);
         await request('order_items?on_conflict=order_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items)});
-        order._itemSyncRequired=false;
       }
-      if(itemSyncOrders.length)window.panoraSaveOrdersCache?.(orders);
+      if(itemSyncOrders.length){
+        const ids=itemSyncOrders.map(order=>String(order.id||'')).filter(Boolean);
+        if(ids.length){
+          const quoted=ids.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
+          const serverRows=await request(`orders?id=in.(${encodeURIComponent(quoted)})&select=id,order_number,status,created_at`);
+          const byId=new Map((serverRows||[]).map(row=>[String(row.id),row]));
+          itemSyncOrders.forEach(order=>{
+            const server=byId.get(String(order.id));
+            if(server){
+              order.number=Number(server.order_number);
+              order.createdAt=server.created_at||order.createdAt;
+              order.status=server.status||order.status;
+              order._serverNumberPending=false;
+              order._itemSyncRequired=false;
+            }
+          });
+        }
+        window.panoraSaveOrdersCache?.(orders);
+        window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length,source:'server-number'}}));
+      }
     }
     status('Облако ✓');})().finally(()=>savingOrders=null);return savingOrders
   }
