@@ -398,6 +398,24 @@
     markRead:orderId=>api('rpc/panora_mark_order_messages_read',{method:'POST',body:JSON.stringify({p_order_id:orderId})}),
     unread:()=>api('rpc/panora_order_message_unread_counts',{method:'POST',body:'{}'})
   };
+  const partnerPushB64ToBytes=value=>{const pad='='.repeat((4-String(value||'').length%4)%4),base64=(String(value||'')+pad).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64);return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))};
+  const partnerPushConfig=async()=>{const rows=await api('rpc/panora_partner_push_config',{method:'POST',body:'{}'});return Array.isArray(rows)?rows[0]:rows};
+  const partnerPushEnable=async()=>{
+    if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
+    if(!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error(labels('Этот браузер не поддерживает Web Push','This browser does not support Web Push','Este navegador no admite Web Push'));
+    const config=await partnerPushConfig();
+    if(!config?.enabled)throw new Error(labels('Push для партнёров пока выключен','Partner Push is currently disabled','Las notificaciones Push para socios están desactivadas'));
+    if(!config?.vapid_public_key)throw new Error(labels('VAPID public key не настроен','VAPID public key is not configured','La clave pública VAPID no está configurada'));
+    const permission=await Notification.requestPermission();
+    if(permission!=='granted')throw new Error(labels('Разрешение на уведомления не предоставлено','Notification permission was not granted','No se concedió permiso para notificaciones'));
+    const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:partnerPushB64ToBytes(config.vapid_public_key)});
+    const json=sub.toJSON();
+    await api('rpc/panora_partner_register_push',{method:'POST',body:JSON.stringify({p_endpoint:json.endpoint,p_p256dh:json.keys?.p256dh||'',p_auth:json.keys?.auth||'',p_user_agent:navigator.userAgent})});
+    return true;
+  };
+  const partnerPushTest=async()=>{await api('rpc/panora_partner_test_push',{method:'POST',body:'{}'});return true};
+  window.panoraPartnerPush={enable:partnerPushEnable,test:partnerPushTest,config:partnerPushConfig};
   window.panoraRestaurantProfile={save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));

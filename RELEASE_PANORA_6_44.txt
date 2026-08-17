@@ -1,0 +1,10 @@
+Panora 6.44 — B2B partner Web Push
+
+- Added browser Push subscription for authenticated B2B partners.
+- Partner receives Push when bakery confirms, ships or cancels an order.
+- Bakery receives Push when a partner creates a new B2B order.
+- Order messages now produce Push to the opposite side: partner ↔ bakery.
+- Push click opens the partner Orders section and targets the related order.
+- Existing retail Web Push remains unchanged and uses the same VAPID secrets.
+- No secret keys are stored in the app or GitHub package.
+- PWA build 6440.

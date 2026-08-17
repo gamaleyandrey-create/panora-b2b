@@ -1642,3 +1642,8 @@
 
 /* Panora 6.38 · never hide a missing B2B order composition */
 .rw-order-items-error{margin:12px 0;padding:12px 14px;border:1px solid #e3c4bb;border-radius:12px;background:#fff5f1;color:#713a31;display:grid;gap:4px}.rw-order-items-error strong{font-size:13px}.rw-order-items-error span{font-size:11px;line-height:1.45}
+
+/* Panora 6.44 · partner Web Push */
+.rw-partner-push{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--line,#dfe6df);border-radius:18px;background:rgba(244,248,244,.72)}
+.rw-partner-push>div:first-child{display:flex;flex-direction:column;gap:4px}.rw-partner-push small{color:var(--muted,#6f7a72);line-height:1.4}.rw-partner-push-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.rw-partner-push p{margin:0;min-width:160px;font-size:13px}.rw-partner-push p.success{color:#2f6b46}.rw-partner-push p.error{color:#b7473b}
+@media (max-width:720px){.rw-partner-push{align-items:stretch;flex-direction:column}.rw-partner-push-actions{justify-content:stretch}.rw-partner-push-actions .button{flex:1 1 140px}.rw-partner-push p{min-width:0}}
