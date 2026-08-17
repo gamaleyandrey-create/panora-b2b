@@ -43,10 +43,6 @@
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     const count=cartData().count;
-    if(count<MIN_PIECES){
-      showToast(message(`Минимальный заказ — ${MIN_PIECES} шт.`,`Minimum order is ${MIN_PIECES} pcs.`,`Pedido mínimo: ${MIN_PIECES} uds.`));
-      return;
-    }
     const confirmed=document.querySelector('#confirmDeliveryDate');
     if(confirmed&&!confirmed.checked){
       showToast(message('Сначала подтвердите выбранную дату поставки','First confirm the selected delivery date','Primero confirma la fecha de entrega'));
