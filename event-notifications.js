@@ -90,7 +90,7 @@
    sessionStorage.setItem(`panora-toast-last:${key}`,String(now));
    const el=toast(title,text,type,icon,options);if(el)el.dataset.key=key;return el;
  }
- function orderNo(o){return `PN-${String(o.number||0).padStart(4,'0')}`}
+ function orderNo(o){return Number(o?.number)>0?`PN-${String(Number(o.number)).padStart(4,'0')}`:'PN-…'}
  function partnerName(id){try{const rows=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');return rows.find(x=>x.id===id)?.name||'Партнёр'}catch{return'Партнёр'}}
  function statusText(status){return({submitted:'отправлен в пекарню',confirmed:'подтверждён',processing:'в работе',shipped:'отгружен',completed:'выполнен',cancelled:'отменён'})[status]||`статус: ${status}`}
  function typeFor(status){return status==='cancelled'?'error':(['confirmed','shipped','completed'].includes(status)?'success':'order')}

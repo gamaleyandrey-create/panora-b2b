@@ -1531,3 +1531,82 @@ body.admin-page .stock-product-main b{
 .bake-completion-board{margin:0 0 16px}.bake-completion-board:empty{display:none}.bake-completion-board-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin:4px 0 9px}.bake-completion-board-head h3{margin:0!important;font-size:20px!important}.bake-completion-board-head p{margin:3px 0 0;color:#758078;font-size:11px;line-height:1.4}.bake-completion-day-list{display:grid;gap:8px}.bake-completion-day{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(240px,1.6fr) auto;align-items:center;gap:12px;padding:12px 13px;border:1px solid #dfe5de;border-radius:14px;background:#fff}.bake-completion-day>div:first-child strong,.bake-completion-day>div:first-child span{display:block}.bake-completion-day>div:first-child strong{color:#294435;font-size:13px}.bake-completion-day>div:first-child span{margin-top:3px;color:#7b857e;font-size:10px}.bake-completion-day.completed{border-color:#cddbcf;background:#f4f8f2}.bake-completion-day.completed:not(.legacy)>div:first-child span{color:#356348;font-weight:800}.bake-completion-day.legacy{background:#faf8ef;border-color:#e3ddc8}.bake-completion-day.future{background:#fafbf9}.bake-completion-day-metrics{display:flex;gap:7px;flex-wrap:wrap}.bake-completion-day-metrics span{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;border-radius:999px;background:#f0f3ef;color:#667269;font-size:10px}.bake-completion-day-metrics b{color:#2f4e3b;font-size:11px}.bake-completion-day button{min-height:38px;padding:0 12px!important;white-space:nowrap}.plan-card.bake-is-completed{border-color:#ceddce!important;background:#f6faf4!important}.plan-card .status.completed{background:#e3efe2!important;color:#315f42!important}.plan-card button:disabled,.plan-card input:disabled{opacity:.55;cursor:not-allowed}
 .bake-completion-dialog{width:min(780px,calc(100% - 22px));max-height:92dvh;overflow:auto}.bake-completion-dialog form{position:relative;display:grid;gap:12px;padding:24px}.bake-completion-dialog h3{margin:0!important}.bake-completion-date{margin:-4px 0 0;color:#50665a;font-weight:800}.bake-completion-table-wrap{overflow-x:auto;border:1px solid #e0e5df;border-radius:12px}.bake-completion-table{width:100%;min-width:650px;border-collapse:collapse}.bake-completion-table th{padding:8px 10px;background:#f4f6f2;font-size:10px!important;white-space:nowrap}.bake-completion-table td{padding:9px 10px!important;vertical-align:middle}.bake-completion-table td:first-child strong,.bake-completion-table td:first-child small{display:block}.bake-completion-table td:first-child small{margin-top:3px;color:#7b857e;font-size:9.5px}.bake-completion-table input{width:92px!important;min-height:40px!important;text-align:center}.bake-completion-diff{display:block;margin-top:3px;font-size:9px}.bake-completion-diff.negative{color:#a4463e}.bake-completion-diff.positive{color:#34704a}.bake-completion-diff.zero{color:#7a857d}.bake-completion-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.bake-completion-summary span{padding:9px 10px;border-radius:10px;background:#f2f5f0;color:#6c776f;font-size:10px}.bake-completion-summary strong{display:block;margin-top:3px;color:#2e503b;font-size:14px}
 @media(max-width:720px){body.admin-page .bake-completion-board{margin-bottom:12px}body.admin-page .bake-completion-day{grid-template-columns:1fr!important;gap:8px!important;padding:11px!important}body.admin-page .bake-completion-day-metrics{gap:5px}body.admin-page .bake-completion-day button{width:100%!important}body.admin-page .bake-completion-dialog{width:calc(100% - 12px)!important;margin:auto 6px!important}body.admin-page .bake-completion-dialog form{padding:18px 12px 12px!important}body.admin-page .bake-completion-table-wrap{margin:0 -2px}body.admin-page .bake-completion-table{min-width:610px}body.admin-page .bake-completion-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Panora 6.55 — recent bakery workflows on mobile */
+@media(max-width:720px){
+  body.admin-page .bake-completion-table-wrap{
+    overflow:visible!important;
+    border:0!important;
+    margin:0!important;
+  }
+  body.admin-page .bake-completion-table,
+  body.admin-page .bake-completion-table tbody{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  body.admin-page .bake-completion-table thead{
+    display:none!important;
+  }
+  body.admin-page .bake-completion-table tr{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:0 10px!important;
+    width:100%!important;
+    margin-bottom:10px!important;
+    padding:11px!important;
+    border:1px solid #dfe5df!important;
+    border-radius:14px!important;
+    background:#fff!important;
+  }
+  body.admin-page .bake-completion-table td{
+    display:grid!important;
+    gap:5px!important;
+    width:100%!important;
+    min-width:0!important;
+    padding:8px 0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  body.admin-page .bake-completion-table td:first-child{
+    grid-column:1/-1!important;
+    border-bottom:1px solid #edf0ec!important;
+    padding-top:0!important;
+    padding-bottom:10px!important;
+  }
+  body.admin-page .bake-completion-table td:nth-child(2)::before{content:"Заказано"}
+  body.admin-page .bake-completion-table td:nth-child(3)::before{content:"Выпечено всего"}
+  body.admin-page .bake-completion-table td:nth-child(4)::before{content:"Брак"}
+  body.admin-page .bake-completion-table td:nth-child(5)::before{content:"На склад"}
+  body.admin-page .bake-completion-table td::before{
+    color:#768179!important;
+    font-size:10px!important;
+    font-weight:800!important;
+  }
+  body.admin-page .bake-completion-table input{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    font-size:16px!important;
+  }
+  body.admin-page .bake-completion-summary{
+    grid-template-columns:1fr 1fr!important;
+  }
+  body.admin-page .raw-stock-summary strong{
+    overflow-wrap:anywhere!important;
+  }
+}
+
+@media(max-width:390px){
+  body.admin-page .bake-completion-table tr{
+    grid-template-columns:1fr!important;
+  }
+  body.admin-page .bake-completion-table td:first-child{
+    grid-column:auto!important;
+  }
+  body.admin-page .bake-completion-summary,
+  body.admin-page .raw-stock-summary{
+    grid-template-columns:1fr!important;
+  }
+}
