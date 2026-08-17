@@ -1,0 +1,11 @@
+Panora 6.51
+
+Finance local-cache quota fix:
+- delivery notes and payments no longer write unbounded arrays directly to localStorage;
+- delivery-note cache keeps recent full notes and compact historical notes;
+- payment cache is bounded and quota-safe;
+- full delivery-note/payment history remains in Supabase;
+- local cache failure never turns a successful cloud order status update into “Не удалось подтвердить заказ”;
+- order status refresh is performed once after cloud PATCH and verified from Supabase;
+- finance repair errors are isolated from the orders screen;
+- no orders, delivery notes, payments or Supabase records are deleted.
