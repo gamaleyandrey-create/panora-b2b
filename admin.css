@@ -304,5 +304,5 @@
  .retail-order-card{scroll-margin-top:76px}
 }
 
-/* Panora 6.37 · server Push controls */
+/* Panora 6.38 · server Push controls */
 .retail-push-test-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 4px}.retail-push-test-row span{font-size:10px;color:#66736b;font-weight:700}.retail-push-server-grid{margin-bottom:8px}@media(max-width:700px){.retail-push-test-row{display:grid;grid-template-columns:1fr}.retail-push-test-row .secondary{width:100%;min-height:44px}}

@@ -36,7 +36,7 @@ function productName(id){return PRODUCTS[id]?.[lang]||id}
 /* Panora 6.33 — retail order event journal and notification preferences. */
 /* Panora 6.36 — in-app retail messages + fallback messenger contacts. */
 /* Panora 6.36 — notification center + Web Push subscription foundation. */
-/* Panora 6.37 — server Web Push sender integration. */
+/* Panora 6.38 — server Web Push sender integration. */
 const RETAIL_SETTINGS_KEY='panora-retail-settings-v623';
 const RETAIL_SETTINGS_LEGACY_KEYS=['panora-retail-settings-v622','panora-retail-settings-v619'];
 const RETAIL_PRODUCT_SETTINGS_KEY='panora-retail-product-settings-v623';
@@ -632,7 +632,7 @@ bindRetailFoundation();
 $('#printPurchase').onclick=()=>window.print();applyLanguage();
 
 
-/* Panora 6.37 — retail notification center and browser Push subscription. */
+/* Panora 6.38 — retail notification center and browser Push subscription. */
 let retailNotificationLastSeen=Number(localStorage.getItem('panora-retail-notification-last-seen')||0);
 function retailPushB64ToBytes(value){const pad='='.repeat((4-value.length%4)%4),base=(value+pad).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function retailLoadNotificationsCloud(){try{return await retailAdminApi('retail_notifications?audience=eq.admin&select=id,order_id,kind,title,body,href,created_at,read_at&order=created_at.desc&limit=100')}catch{return[]}}
@@ -648,7 +648,7 @@ async function retailSendTestPush(){
   const rows=await retailAdminApi('rpc/panora_retail_test_push',{method:'POST',body:JSON.stringify({})});
   if(state)state.textContent='Тестовое уведомление создано · ожидаем Push';
   setTimeout(()=>retailRenderNotificationCenter({showBrowser:false}),800);
- }catch(error){if(state)state.textContent=`Тест Push: ${error.message||'ошибка · выполните SQL 6.37'}`}
+ }catch(error){if(state)state.textContent=`Тест Push: ${error.message||'ошибка · выполните SQL 6.38'}`}
  finally{if(button)button.disabled=false}
 }
 function initRetailNotificationCenter(){const open=$('#retailNotificationCenter'),dialog=$('#retailNotificationsDialog'),close=$('#retailNotificationsClose'),enable=$('#retailEnableAdminPush');if(open)open.addEventListener('click',async()=>{if(dialog&&!dialog.open)dialog.showModal();await retailRenderNotificationCenter();await retailMarkAdminNotificationsRead()});if(close)close.addEventListener('click',()=>dialog?.close());if(enable)enable.addEventListener('click',retailEnableAdminPush);const test=$('#retailTestPush');if(test)test.addEventListener('click',retailSendTestPush);const run=()=>retailRenderNotificationCenter({showBrowser:true});window.addEventListener('panora:authenticated',run);setTimeout(run,1200);setInterval(()=>{if(!document.hidden&&window.panoraSupabaseSession?.access_token)run()},20000)}
