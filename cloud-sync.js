@@ -4,6 +4,8 @@
   const revisionKey='panora-cloud-revisions-v285',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317',baselineKey='panora-cloud-baselines-v323',backupKey='panora-cloud-backups-v286',syncSchemaKey='panora-cloud-sync-schema';
   const restaurantBaselineKey='panora-cloud-restaurants-baseline-v415';
   const adminRestaurantPricesKey='panora-admin-restaurant-prices-v420';
+  const ingredientCostsKey='panora-ingredient-costs';
+  let ingredientCostTimer=0,ingredientCostsSaving=null;
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
   let pending=readPending();
@@ -490,6 +492,75 @@
     if(rows?.length)throw new Error('Supabase не подтвердил удаление товара');
     productDirty=false;status('Товар удалён ✓');return true;
   }
+  const ingredientCostParts=key=>{
+    const value=String(key||''),split=value.lastIndexOf('|');
+    return split>0?{name:value.slice(0,split),unit:value.slice(split+1)||'g'}:{name:value,unit:'g'};
+  };
+  async function loadIngredientCosts(){
+    if(!ready)return false;
+    const rows=await request('raw_material_prices?select=ingredient_key,ingredient_name,unit,purchase_price,updated_at&order=ingredient_key.asc');
+    const local=JSON.parse(localStorage.getItem(ingredientCostsKey)||'{}')||{};
+    if(Array.isArray(rows)&&rows.length){
+      const remote={};
+      rows.forEach(row=>{remote[String(row.ingredient_key||'')]=Math.max(0,Number(row.purchase_price||0))});
+      safeLocalSet(ingredientCostsKey,JSON.stringify(remote),{quotaIsWarning:false});
+      clearPending('ingredientCosts');
+      window.dispatchEvent(new CustomEvent('panora:ingredient-costs-changed',{detail:{prices:remote,source:'cloud'}}));
+      return true;
+    }
+    if(Object.keys(local).length){
+      markPending('ingredientCosts');
+      await saveIngredientCostsNow();
+      return true;
+    }
+    safeLocalSet(ingredientCostsKey,'{}',{quotaIsWarning:false});
+    return true;
+  }
+  async function saveIngredientCostsNow(){
+    if(!ready)return false;
+    if(ingredientCostsSaving)return ingredientCostsSaving;
+    ingredientCostsSaving=(async()=>{
+      const map=JSON.parse(localStorage.getItem(ingredientCostsKey)||'{}')||{};
+      const payload=Object.entries(map).map(([key,value])=>{
+        const part=ingredientCostParts(key);
+        return{
+          ingredient_key:String(key),
+          ingredient_name:part.name,
+          unit:['g','ml','pcs'].includes(part.unit)?part.unit:'g',
+          purchase_price:Math.max(0,Number(value)||0),
+          updated_at:new Date().toISOString(),
+          updated_by:session?.user?.id||null
+        };
+      });
+      if(payload.length){
+        await request('raw_material_prices?on_conflict=ingredient_key',{
+          method:'POST',
+          headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+          body:JSON.stringify(payload)
+        });
+      }
+      clearPending('ingredientCosts');
+      return true;
+    })().finally(()=>ingredientCostsSaving=null);
+    return ingredientCostsSaving;
+  }
+  function queueIngredientCosts(){
+    markPending('ingredientCosts');
+    clearTimeout(ingredientCostTimer);
+    if(!ready||!navigator.onLine)return;
+    ingredientCostTimer=setTimeout(()=>saveIngredientCostsNow().catch(error=>{
+      console.warn('Panora ingredient price save',error);
+      status('Ошибка синхронизации',true,error?.message||String(error));
+    }),250);
+  }
+  async function flushIngredientCosts(){
+    clearTimeout(ingredientCostTimer);ingredientCostTimer=0;
+    if(!ready)return false;
+    if(ingredientCostsSaving)await ingredientCostsSaving;
+    if(pending.ingredientCosts)await saveIngredientCostsNow();
+    return true;
+  }
+
   async function loadRecipes(){
     const rows=await request('recipe_items?select=*&order=product_id.asc,position.asc');
     const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
@@ -1300,13 +1371,14 @@ window.panoraRecalculateBalances=recalculateBalances;
     try{
       if(pending.products)await flushProducts();
       if(pending.recipes)await flushRecipes();
+      if(pending.ingredientCosts)await flushIngredientCosts();
       if(pending.restaurants)await saveRestaurantsNow();
       if(pending.plans)await savePlansNow();
       if(pending.orders){await saveOrdersNow();clearPending('orders')}
       if(pending.finance){await syncFinanceNow();clearPending('finance')}
       if(pending.rawStock)await syncRawStockNow();
       if(pending.bakeCompletions)await syncBakeCompletionsNow();
-      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadOrders();await loadPayments();await loadDeliveryNotes();await syncBakeCompletionsNow({quiet:true});await syncRawStockNow({quiet:true});await loadOperationEvents();
+      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadIngredientCosts();await loadOrders();await loadPayments();await loadDeliveryNotes();await syncBakeCompletionsNow({quiet:true});await syncRawStockNow({quiet:true});await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){
@@ -1321,7 +1393,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
+    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['цены сырья',loadIngredientCosts],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
@@ -1355,7 +1427,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,deleteProductConfirmed,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
@@ -1380,9 +1452,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready){refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion visibility refresh',error))}
+    if(!document.hidden&&ready){loadIngredientCosts().catch(error=>console.warn('Panora ingredient price visibility refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion visibility refresh',error))}
   });
   window.addEventListener('focus',()=>{
-    if(ready){refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion focus refresh',error))}
+    if(ready){loadIngredientCosts().catch(error=>console.warn('Panora ingredient price focus refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion focus refresh',error))}
   });
 })();
