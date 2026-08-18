@@ -898,24 +898,43 @@
     form.email.value=String(form.email.value||account.email||'').trim();
     const fulfillment=form.fulfillment.value||'delivery';
     form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account.address):account.address)||'').trim();
-    const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,cartBakeDate=String(document.querySelector('#cartDeliveryDate')?.value||''),date=String(data.get('date')||cartBakeDate||selectedBakeDate||'');
+    const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,cartBakeDate=String(document.querySelector('#cartDeliveryDate')?.value||''),formBakeDate=String(data.get('date')||''),storedBakeDate=String(selectedBakeDate||'');
     if(checkedItems.unavailable.length){purgeUnavailableCart(checkedItems.unavailable);return showToast(unavailableCartError().message)}
-    const validBakeDates=new Set(productionPlans().filter(p=>p.open!==false).map(p=>String(p.bakeDate||'')).filter(Boolean));
-    if(date&&validBakeDates.size&&!validBakeDates.has(date)){
-      const repaired=cartBakeDate&&validBakeDates.has(cartBakeDate)?cartBakeDate:[...validBakeDates].sort()[0]||'';
-      if(repaired){
-        selectedBakeDate=repaired;
-        try{localStorage.setItem('panora-bake-date',repaired)}catch{}
-        if(form.date&&[...form.date.options].some(option=>option.value===repaired)){form.date.disabled=false;form.date.value=repaired}
-      }
+    const productIds=[...new Set(items.map(item=>String(item.product||'')).filter(Boolean))];
+    const compatibleDates=typeof window.panoraCompatibleBakeDates==='function'
+      ?window.panoraCompatibleBakeDates(productIds,50)
+      :[];
+    const validBakeDates=new Set(compatibleDates.map(item=>dateValue(item.date)));
+    if(productIds.length&&!validBakeDates.size){
+      selectedBakeDate='';
+      try{localStorage.removeItem('panora-bake-date')}catch{}
+      try{syncCartDeliveryDate?.()}catch{}
+      return showToast(labels(
+        'Для выбранных товаров нет общего открытого дня выпечки.',
+        'There is no common open bake day for the selected products.',
+        'No hay un día de horneado abierto común para los productos seleccionados.'
+      ));
     }
-    const resolvedDate=String((date&&(!validBakeDates.size||validBakeDates.has(date)))?date:(cartBakeDate&&validBakeDates.has(cartBakeDate)?cartBakeDate:selectedBakeDate||''));
+    const resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
+    if(!resolvedDate&&productIds.length){
+      try{syncCartDeliveryDate?.()}catch{}
+      return showToast(labels(
+        'Выберите доступный день выпечки для всех товаров заказа.',
+        'Choose an available bake day for all products in the order.',
+        'Elige un día de horneado disponible para todos los productos del pedido.'
+      ));
+    }
+    if(resolvedDate){
+      selectedBakeDate=resolvedDate;
+      try{localStorage.setItem('panora-bake-date',resolvedDate)}catch{}
+      if(form.date&&[...form.date.options].some(option=>option.value===resolvedDate)){form.date.disabled=false;form.date.value=resolvedDate}
+    }
     const missing=[];
     if(!form.restaurant.value)missing.push(labels('название партнёра','partner name','nombre del socio'));
     if(!form.contact.value)missing.push(labels('контактное лицо','contact person','persona de contacto'));
     if(!form.phone.value)missing.push(labels('телефон','phone','teléfono'));
     if(fulfillment==='delivery'&&!form.address.value)missing.push(labels('адрес доставки','delivery address','dirección de entrega'));
-    if(!resolvedDate)missing.push(labels('дату поставки','delivery date','fecha de entrega'));
+    if(!resolvedDate)missing.push(labels('день выпечки','bake day','día de horneado'));
     if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
@@ -934,7 +953,7 @@
         }
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
-      const plan=productionPlans().find(p=>p.bakeDate===resolvedDate),deliveryDate=plan?.deliveryDate||resolvedDate,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(resolvedDate,items,comment),id=orderAttempt(account.id,fingerprint);
+      const plan=productionPlans().find(p=>p.open!==false&&p.bakeDate===resolvedDate&&productIds.includes(String(p.product||''))),deliveryDate=plan?.deliveryDate||resolvedDate,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(resolvedDate,items,comment),id=orderAttempt(account.id,fingerprint);
       const created=await createOrderWithRecovery(id,resolvedDate,deliveryDate,items,comment);
       if(!created)throw new Error('Order was not created');
       try{

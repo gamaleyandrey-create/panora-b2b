@@ -1,0 +1,26 @@
+Panora 6.64 — partner orders only on real bake days
+
+Includes all fixes through 6.63.
+
+Partner date rules
+- partner order date is always a real open BAKE date from the bakery bake_days calendar;
+- a date is available only when EVERY product currently in the cart is scheduled in bake_items for that bake day;
+- ordering cutoff must still be open for every selected product/day;
+- the mobile Partner → New Order date selector recalculates immediately when product quantities change;
+- if selected products have no common bake day, checkout is disabled and Panora shows “Нет общего дня выпечки”;
+- cart and checkout date selectors are the same compatible bake-date list;
+- labels explicitly distinguish “Выпечка” from “Поставка”;
+- checkout never silently moves an invalid date to another arbitrary day;
+- the final submit validates the complete cart again immediately before calling Supabase.
+
+Server hardening (new SQL)
+- panora_create_order accepts only bake_days.accepting_orders=true;
+- cutoff_at must still be in the future;
+- bake_date must not be in the past in Europe/Madrid;
+- every ordered product must exist in bake_items for the selected bake_day;
+- delivery date stored on the order comes from bake_days.delivery_date, not from a client-supplied arbitrary date.
+
+Requires:
+- SUPABASE_PANORA_6_64_PARTNER_BAKE_DAY_GUARD.sql
+
+No Edge Function changes. Panora 6.60 communication/Push migration remains unchanged.
