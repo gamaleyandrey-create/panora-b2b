@@ -3,8 +3,18 @@
  const PREF_KEY='panora-admin-notifications-enabled',SOUND_KEY='panora-event-sound-v332';
  const pref=()=>localStorage.getItem(PREF_KEY)!=='0';
  const soundPref=()=>localStorage.getItem(SOUND_KEY)==='1';
- let known=new Set(cRead('panora-orders',[]).map(order=>order.id));
- function update(){const current=cRead('panora-orders',[]),count=current.filter(order=>order.status==='submitted').length;badges.forEach(badge=>{badge.textContent=count;badge.hidden=!count});return current}
+ const liveOrders=()=>{
+   try{
+     if(typeof orders!=='undefined'&&Array.isArray(orders))return orders;
+   }catch{}
+   return cRead('panora-orders',[]);
+ };
+ let known=new Set(liveOrders().map(order=>order.id));
+ function update(){
+   const current=liveOrders(),count=current.filter(order=>String(order?.status||'')==='submitted').length;
+   badges.forEach(badge=>{badge.textContent=String(count);badge.hidden=!count});
+   return current;
+ }
  const orderNumberLabel=order=>Number(order?.number)>0?`PN-${String(Number(order.number)).padStart(4,'0')}`:'PN-…';
  function announce(){const current=update(),fresh=current.filter(order=>order.status==='submitted'&&!known.has(order.id));fresh.forEach(order=>{known.add(order.id);if(pref()&&'Notification'in window&&Notification.permission==='granted'){const client=restaurant(order.restaurantId);new Notification('Panora · Новый заказ',{body:`${client?.name||'Партнёр'} · ${orderNumberLabel(order)}`,icon:'icon.svg',tag:`panora-order-${order.id}`})}});current.forEach(order=>known.add(order.id))}
  function dispatchSound(enabled){
@@ -64,6 +74,9 @@
    };
  }
  window.addEventListener('panora:admin-webpush-state',()=>{renderPushButton();ensureSoundButton()});
+ window.addEventListener('panora:orders-updated',()=>announce());
+ window.addEventListener('panora:order-status-local',()=>update());
+ window.addEventListener('panora:order-cycle-updated',()=>update());
  window.addEventListener('storage',event=>{
    if(event.key==='panora-orders')announce();
    if(event.key===SOUND_KEY)ensureSoundButton();

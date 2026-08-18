@@ -1,0 +1,29 @@
+Panora 6.71 — fix confirmation enum error + mobile bakery new-order badge
+
+Fixes the screenshot error:
+  invalid input value for enum order_status: "processing"
+
+Root cause
+- the Panora 6.70 server guard compared an enum column directly with the
+  legacy compatibility value "processing";
+- this database enum does not contain "processing", so PostgreSQL tried to
+  cast that literal to order_status and rejected the confirmation UPDATE.
+
+Server repair
+- replaces the status guard with TEXT comparisons (`old.status::text`,
+  `new.status::text`);
+- only real current B2B statuses are protected: submitted, confirmed,
+  shipped, cancelled;
+- confirmed -> submitted is silently blocked;
+- shipped/cancelled remain terminal;
+- no invalid enum literal is evaluated.
+
+Mobile bakery badge
+- the bottom “Заказы” red badge now reads the live cloud-hydrated `orders`
+  array first, instead of depending only on localStorage;
+- this fixes “0” while a new order is already visible in the mobile order list;
+- the badge refreshes on panora:orders-updated and panora:order-status-local;
+- it still counts NEW/submitted orders only and drops immediately after confirmation.
+
+No Edge Function changes.
+Panora 6.69 event_key repair and Panora 6.64 bake-day guard remain required.
