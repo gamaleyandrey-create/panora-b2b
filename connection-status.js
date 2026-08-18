@@ -78,9 +78,13 @@
     if(!navigator.onLine){render('offline',labels.offline);return}
     const source=document.querySelector('#saveState,[data-form-save-state]');
     if(source){
-      const state=classify(source.textContent,source.dataset.syncState);
+      let state=classify(source.textContent,source.dataset.syncState);
+      const detail=String(source.title||'');
+      const cacheQuotaOnly=state==='error'&&/(?:localstorage|setitem[^\n]*storage|storage[^\n]*quota|exceeded the quota)/i.test(detail);
+      if(cacheQuotaOnly)state='synced';
       let text=source.textContent?.trim()||labels[state];
-      if(state==='error') text=labels.error;
+      if(cacheQuotaOnly)text=labels.synced;
+      else if(state==='error') text=labels.error;
       const pending=Number(window.panoraCloud?.pendingCount||0);
       if(state==='local'&&pending>0)text='Сохранено на устройстве · отправим при подключении';
       if(state==='pending'&&pending>0)text='Отправляем изменения…';
@@ -112,6 +116,7 @@
     render(s,d.text||labels[s]);
   });
   window.addEventListener('panora:partner-orders-updated',()=>render('synced',labels.synced));
+  window.addEventListener('panora:storage-quota',()=>render('synced',labels.synced,'Локальный кэш сокращён. Данные в облаке сохранены.'));
 
   function observe(){
     const source=document.querySelector('#saveState,[data-form-save-state]');

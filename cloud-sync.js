@@ -13,7 +13,20 @@
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
   const readBackups=()=>{try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const isQuotaError=error=>error?.name==='QuotaExceededError'||error?.code===22||/quota/i.test(String(error?.message||error||''));
-  const releaseStorageQuota=()=>{try{const backups=readBackups();if(backups.length>1)localStorage.setItem(backupKey,JSON.stringify(backups.slice(0,1)));else if(backups.length===1&&JSON.stringify(backups[0]).length>250000)localStorage.removeItem(backupKey)}catch{try{localStorage.removeItem(backupKey)}catch{}}};
+  const releaseStorageQuota=()=>{
+    try{
+      const backups=readBackups();
+      if(backups.length>1)localStorage.setItem(backupKey,JSON.stringify(backups.slice(0,1)));
+      else if(backups.length===1&&JSON.stringify(backups[0]).length>250000)localStorage.removeItem(backupKey);
+    }catch{try{localStorage.removeItem(backupKey)}catch{}}
+    // Only cloud-rebuildable / expendable caches are pruned here.
+    // NEVER remove panora-raw-stock-movements or panora-bake-completions.
+    try{
+      const auditRows=JSON.parse(localStorage.getItem('panora-audit-v333')||'[]');
+      if(Array.isArray(auditRows)&&auditRows.length>80)localStorage.setItem('panora-audit-v333',JSON.stringify(auditRows.slice(0,80)));
+    }catch{try{localStorage.removeItem('panora-audit-v333')}catch{}}
+    ['panora-portal-orders','panora-portal-delivery-notes','panora-portal-payments'].forEach(key=>{try{localStorage.removeItem(key)}catch{}});
+  };
   const safeLocalSet=(key,value,{quotaIsWarning=true}={})=>{try{localStorage.setItem(key,value);return true}catch(error){if(!isQuotaError(error))throw error;releaseStorageQuota();try{localStorage.setItem(key,value);return true}catch(retry){if(!isQuotaError(retry))throw retry;if(quotaIsWarning){console.warn('Panora localStorage quota · cache write skipped',key);window.dispatchEvent(new CustomEvent('panora:storage-quota',{detail:{key}}))}return false}}};
   const cacheDeliveryNotesLocal=()=>typeof window.panoraSaveDeliveryNotesCache==='function'
     ? window.panoraSaveDeliveryNotesCache(deliveryNotes)
@@ -271,8 +284,8 @@
     const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     const current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     if(JSON.stringify(canonical)!==JSON.stringify(current)){
-      localStorage.setItem(rawStockKey,JSON.stringify(canonical));
-      window.dispatchEvent(new CustomEvent('panora:raw-stock-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}));
+      const cached=safeLocalSet(rawStockKey,JSON.stringify(canonical),{quotaIsWarning:false});
+      if(cached)window.dispatchEvent(new CustomEvent('panora:raw-stock-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}));
     }
     clearPending('rawStock');rawStockState('Облако ✓','synced');return true;
   }
@@ -284,7 +297,7 @@
   const bakeCompletionToCloud=item=>({id:String(item.id),bake_date:String(item.date||'').slice(0,10),items:Array.isArray(item.items)?item.items:[],note:item.note||null,source:item.source||'actual',device_id:item.deviceId||null,created_at:item.createdAt||new Date().toISOString(),updated_at:item.updatedAt||item.createdAt||new Date().toISOString(),deleted_at:item.deletedAt||null});
   const bakeCompletionFromCloud=row=>({id:String(row.id),date:row.bake_date,items:Array.isArray(row.items)?row.items:[],note:row.note||'',source:row.source||'actual',deviceId:row.device_id||'',createdAt:row.created_at||'',updatedAt:row.updated_at||row.created_at||'',deletedAt:row.deleted_at||''});
   function mergeBakeCompletions(remoteRows,localRows){const remote=new Map((remoteRows||[]).map(row=>[String(row.id),bakeCompletionFromCloud(row)])),merged=new Map(remote),outgoing=[];(localRows||[]).forEach(local=>{if(!local?.id)return;const id=String(local.id),cloud=merged.get(id),localAt=bakeCompletionTime(local),cloudAt=bakeCompletionTime(cloud);if(!cloud){merged.set(id,local);outgoing.push(local);return}if(localAt>cloudAt){merged.set(id,local);outgoing.push(local)}});return{merged:[...merged.values()],outgoing}}
-  async function syncBakeCompletionsNow({quiet=false}={}){if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}const remoteRows=await request('bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at&order=bake_date.asc'),localRows=readBakeCompletionLocal(),{merged,outgoing}=mergeBakeCompletions(remoteRows,localRows);if(outgoing.length)await request('bake_completions?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(bakeCompletionToCloud))});const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));if(JSON.stringify(canonical)!==JSON.stringify(current)){localStorage.setItem(bakeCompletionKey,JSON.stringify(canonical));window.dispatchEvent(new CustomEvent('panora:bake-completions-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}))}clearPending('bakeCompletions');if(!quiet)status('Облако ✓');return true}
+  async function syncBakeCompletionsNow({quiet=false}={}){if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}const remoteRows=await request('bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at&order=bake_date.asc'),localRows=readBakeCompletionLocal(),{merged,outgoing}=mergeBakeCompletions(remoteRows,localRows);if(outgoing.length)await request('bake_completions?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(bakeCompletionToCloud))});const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));if(JSON.stringify(canonical)!==JSON.stringify(current)){const cached=safeLocalSet(bakeCompletionKey,JSON.stringify(canonical),{quotaIsWarning:false});if(cached)window.dispatchEvent(new CustomEvent('panora:bake-completions-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}))}clearPending('bakeCompletions');if(!quiet)status('Облако ✓');return true}
 
   async function acquireTechCardLock(productId){
     if(!productId)throw new Error('Не удалось определить технологическую карту');
@@ -567,7 +580,7 @@
       await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       const remote={};
       rows.forEach(row=>{const pos=Number(row.position||0),localItem=local?.[row.product_id]?.[pos]||{};(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0),sourceIngredientName:row.source_ingredient_name??localItem.sourceIngredientName??'',sourceUnit:row.source_unit??localItem.sourceUnit??'g',sourceYieldPct:Number(row.source_yield_pct??localItem.sourceYieldPct??0)})});
-      recipes=remote;if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();localStorage.setItem('panora-recipes',JSON.stringify(recipes));localStorage.setItem('panora-recipes-version','cloud-2');window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
+      recipes=remote;if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();safeLocalSet('panora-recipes',JSON.stringify(recipes),{quotaIsWarning:false});safeLocalSet('panora-recipes-version','cloud-2',{quotaIsWarning:false});window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
       if(typeof renderAll==='function')renderAll();
     }else if(Object.keys(local).length){recipes=local;ready=true;recipeDirty=true;recipeRevision++;await flushRecipes()}
   }
@@ -623,7 +636,7 @@
 
     // Store the exact Supabase map every time. No early return:
     // DOM/local cache may be stale even when this map is already current.
-    localStorage.setItem(adminRestaurantPricesKey,JSON.stringify(remoteMap));
+    safeLocalSet(adminRestaurantPricesKey,JSON.stringify(remoteMap),{quotaIsWarning:false});
 
     let localChanged=false;
     const next=(local||[]).map(r=>{
@@ -636,7 +649,7 @@
     });
     if(localChanged){
       restaurants=next;
-      localStorage.setItem('panora-restaurants',JSON.stringify(next));
+      safeLocalSet('panora-restaurants',JSON.stringify(next),{quotaIsWarning:false});
       writeRestaurantBaseline(next);
       clearPending('restaurants');
     }else if(Array.isArray(next)){
@@ -668,7 +681,7 @@
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     if(rows?.length){
       restaurants=rows.map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
-      localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+      safeLocalSet('panora-restaurants',JSON.stringify(restaurants),{quotaIsWarning:false});
       writeRestaurantBaseline(restaurants);
       clearPending('restaurants');
       await refreshRestaurantPricesDirect();
@@ -690,7 +703,7 @@
     if(before===after)return false;
 
     restaurants=mapped;
-    localStorage.setItem('panora-restaurants',JSON.stringify(restaurants));
+    safeLocalSet('panora-restaurants',JSON.stringify(restaurants),{quotaIsWarning:false});
     clearPending('restaurants');
     rememberRevision('restaurants',rows);
     window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:'cloud-authoritative',count:restaurants.length}}));
