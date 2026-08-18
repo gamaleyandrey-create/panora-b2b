@@ -79,8 +79,8 @@
     const source=document.querySelector('#saveState,[data-form-save-state]');
     if(source){
       let state=classify(source.textContent,source.dataset.syncState);
-      const detail=String(source.title||'');
-      const cacheQuotaOnly=state==='error'&&/(?:localstorage|setitem[^\n]*storage|storage[^\n]*quota|exceeded the quota)/i.test(detail);
+      const detail=`${String(source.title||'')} ${String(source.textContent||'')}`;
+      const cacheQuotaOnly=state==='error'&&/(?:localstorage|setitem[^\n]*storage|storage[^\n]*quota|exceeded the quota|quotaexceedederror)/i.test(detail);
       if(cacheQuotaOnly)state='synced';
       let text=source.textContent?.trim()||labels[state];
       if(cacheQuotaOnly)text=labels.synced;
