@@ -206,6 +206,4 @@ applyLanguage();toggleFulfillment();
 
 
 
-window.addEventListener('panora:pricing-refresh',()=>{try{restoreAccount?.();refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
-window.addEventListener('panora:retail-price-changed',()=>{try{refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
-window.addEventListener('panora:wholesale-price-changed',()=>{try{restoreAccount?.();refreshRestaurantProducts?.();renderProducts?.();renderCart?.()}catch(_){}});
+// Panora 6.62: dynamic-products.js owns catalogue/price refreshes.

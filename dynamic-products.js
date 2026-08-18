@@ -7,11 +7,16 @@
   const en=p.names?.en||ru,es=p.names?.es||ru;
   const retailPrice=Number(p.basePrice??fallback.retailPrice??fallback.price??0),wholesalePrice=Number(account&&account.prices?.[p.id]!=null?account.prices[p.id]:retailPrice),wholesaleMinQty=Math.max(1,Number(p.wholesaleMinQty||fallback.wholesaleMinQty||8));return{id:p.id,category:String(p.category||fallback.category||'Хлеб'),gallery:Array.isArray(p.gallery)?p.gallery.filter(Boolean).slice(0,6):[],price:wholesalePrice,retailPrice,wholesalePrice,wholesaleMinQty,pieces:wholesaleMinQty,weight:Number(p.weight||fallback.weight||600),image:p.image||fallback.image||'icon.svg',bg:fallback.bg||'#e9dfca',text:{ru:[ru,p.descriptions?.ru||fallback.text?.ru?.[1]||'',ru],en:[en,p.descriptions?.en||fallback.text?.en?.[1]||'',en],es:[es,p.descriptions?.es||fallback.text?.es?.[1]||'',es]}};
  }
- let lastCatalogSignature='';
+ let lastCatalogSignature='',lastVisualSignature='',lastWorkspaceSignature='';
+ const stablePrices=value=>Object.entries(value||{}).map(([id,price])=>[String(id),Number(price||0)]).sort((a,b)=>a[0].localeCompare(b[0]));
  const catalogSignature=list=>JSON.stringify((list||[]).map(p=>({
   id:String(p.id),active:p.active!==false&&p.storefrontVisible!==false,price:Number(p.price||0),retailPrice:Number(p.retailPrice||0),
   wholesalePrice:Number(p.wholesalePrice||0),wholesaleMinQty:Number(p.wholesaleMinQty||0),
   weight:Number(p.weight||0),image:String(p.image||''),category:String(p.category||''),gallery:Array.isArray(p.gallery)?p.gallery:[],names:p.text||p.names||{},descriptions:p.descriptions||{}
+ })));
+ const visualSignature=list=>JSON.stringify((list||[]).map(p=>({
+  id:String(p.id),image:String(p.image||''),gallery:Array.isArray(p.gallery)?p.gallery:[],
+  category:String(p.category||''),weight:Number(p.weight||0),names:p.text||p.names||{},descriptions:p.descriptions||{}
  })));
  function refreshRestaurantProducts(){
   try{
@@ -42,13 +47,32 @@
    }
 
    const nextSignature=catalogSignature(PRODUCTS);
+   const nextVisual=visualSignature(PRODUCTS);
+   const nextWorkspace=JSON.stringify({
+     products:nextVisual,
+     prices:stablePrices(account?.prices||{})
+   });
    if(nextSignature!==lastCatalogSignature){
+    const visualChanged=nextVisual!==lastVisualSignature;
     lastCatalogSignature=nextSignature;
-    renderCategories?.();
-    renderProducts?.();
+    if(visualChanged){
+      lastVisualSignature=nextVisual;
+      renderCategories?.();
+      renderProducts?.();
+    }else{
+      PRODUCTS.forEach(product=>{try{updateProductTierUI?.(product.id,Number(cart?.[product.id]||0))}catch(_){}})
+    }
+    renderCart?.();
    }
-   renderCart?.();
-   try{renderAccountModal?.()}catch(_){}
+   if(nextWorkspace!==lastWorkspaceSignature){
+    lastWorkspaceSignature=nextWorkspace;
+    try{
+      const active=document.activeElement;
+      const protectedTab=Boolean(document.querySelector('#profileModal.restaurant-workspace.open')&&
+        (document.querySelector('[data-rw-tab="new"].active')||document.querySelector('[data-rw-tab="profile"].active')));
+      if(!protectedTab&&!active?.closest?.('#profileModal.restaurant-workspace input,#profileModal.restaurant-workspace textarea,#profileModal.restaurant-workspace select'))renderAccountModal?.();
+    }catch(_){}
+   }
   }catch(error){console.warn('Panora pricing refresh failed',error)}
  }
  window.refreshRestaurantProducts=refreshRestaurantProducts;
