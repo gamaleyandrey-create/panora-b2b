@@ -798,14 +798,18 @@ function openCheckoutForAccount() {
   updateMobileCheckoutSummary();
   try{syncDateSelect?.();syncCartDeliveryDate?.()}catch{}
   const cartDate=String($("#cartDeliveryDate")?.value||"");
-  const formValues=[...form.date.options].map(option=>String(option.value||"")).filter(Boolean);
+  const formValues=[...(form.date?.options||[])].map(option=>String(option.value||"")).filter(Boolean);
   let resolved=String(selectedBakeDate||"");
-  if(!formValues.includes(resolved))resolved=formValues.includes(cartDate)?cartDate:(formValues[0]||"");
+  if(!formValues.includes(resolved))resolved=formValues.includes(cartDate)?cartDate:"";
+  // Panora 6.66: checkout has no visible date control. It can only carry
+  // forward a date already validated and selected on the first step.
   if(resolved){
     selectedBakeDate=resolved;
     try{localStorage.setItem("panora-bake-date",resolved)}catch{}
     form.date.disabled=false;
     form.date.value=resolved;
+  }else if(form.date){
+    form.date.value="";
   }
   originalCheckout();
 }

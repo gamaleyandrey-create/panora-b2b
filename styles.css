@@ -164,3 +164,9 @@ body.panora-partner-authenticated .product-card .product-tag{display:none!import
  .product-slide-arrow{display:none!important}
  .product-slide-dots{bottom:9px!important}
 }
+
+
+/* Panora 6.66 — final checkout uses the date already confirmed on step one */
+#checkoutForm [data-checkout-bake-date-shadow]{display:none!important}
+#checkoutForm .checkout-time-row{grid-template-columns:minmax(0,1fr)!important}
+#checkoutForm .checkout-time-row>label{grid-column:1/-1!important}

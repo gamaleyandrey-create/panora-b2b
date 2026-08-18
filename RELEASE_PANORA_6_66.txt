@@ -1,0 +1,13 @@
+Panora 6.66 — remove duplicate date from partner final confirmation
+
+Partner checkout
+- the second/final order-confirmation form no longer shows a duplicate date field;
+- the bake date is chosen only on the first order step / cart;
+- the selected bake date is carried into checkout through the existing hidden backing select;
+- the final form still submits exactly the already-confirmed bake date;
+- changing the date remains possible only on the first step, where product/day compatibility is checked;
+- the delivery interval remains visible and now uses the full row width.
+
+This preserves the Panora 6.64 rule: partner orders can only be submitted for a common open bakery bake day.
+
+No SQL required. Panora 6.64 server bake-day guard remains required.
