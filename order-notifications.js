@@ -15,6 +15,7 @@
    badges.forEach(badge=>{badge.textContent=String(count);badge.hidden=!count});
    return current;
  }
+ window.panoraRefreshNewOrderBadge=update;
  const orderNumberLabel=order=>Number(order?.number)>0?`PN-${String(Number(order.number)).padStart(4,'0')}`:'PN-…';
  function announce(){const current=update(),fresh=current.filter(order=>order.status==='submitted'&&!known.has(order.id));fresh.forEach(order=>{known.add(order.id);if(pref()&&'Notification'in window&&Notification.permission==='granted'){const client=restaurant(order.restaurantId);new Notification('Panora · Новый заказ',{body:`${client?.name||'Партнёр'} · ${orderNumberLabel(order)}`,icon:'icon.svg',tag:`panora-order-${order.id}`})}});current.forEach(order=>known.add(order.id))}
  function dispatchSound(enabled){
@@ -83,5 +84,7 @@
  });
  if('BroadcastChannel'in window){const channel=new BroadcastChannel('panora-order-alerts');channel.onmessage=announce}
  const rows=document.querySelector('#orderRows');if(rows)new MutationObserver(update).observe(rows,{childList:true,subtree:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
+ setInterval(()=>{if(!document.hidden)update()},2000);
  update();
 })();

@@ -1,0 +1,10 @@
+Panora 6.72 — force-repair stale 6.70 status trigger + mobile badge hardening
+
+- fixes persistent PostgreSQL enum error: order_status "processing";
+- SQL explicitly drops the stale 6.70 trigger and function, then recreates a text-only guard;
+- diagnostics report any remaining order trigger function containing the legacy processing literal;
+- bakery mobile New Orders badge uses live cloud orders and refreshes every 2 seconds while visible;
+- confirmation error is shortened and points directly to SQL 6.72 when the stale trigger is detected.
+
+No Edge Function changes.
+Panora 6.69 event_key repair and Panora 6.64 bake-day guard remain required.
