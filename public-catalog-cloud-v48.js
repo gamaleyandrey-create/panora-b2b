@@ -57,14 +57,14 @@
    })).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
    const before=localStorage.getItem('panora-public-products')||'[]';
    const after=JSON.stringify(next);
-   if(before!==after){
+   const previous=(()=>{try{return JSON.parse(before)||[]}catch{return[]}})()
+     .slice().sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
+   const previousCanonical=JSON.stringify(previous);
+   if(previousCanonical!==after){
     let cached=true;
     try{localStorage.setItem('panora-public-products',after)}catch(error){cached=false;console.warn('Panora public catalog cache',error)}
     // The live catalogue is already in memory/Supabase. Dispatch only for a
     // real semantic catalogue change; storage failure must not create a loop.
-    const previous=(()=>{try{return JSON.parse(before)||[]}catch{return[]}})()
-      .slice().sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
-    const previousCanonical=JSON.stringify(previous);
     if(previousCanonical!==after){
       window.dispatchEvent(new CustomEvent('panora:public-products-changed',{detail:{source:'public-retail-cloud',cached}}));
       window.dispatchEvent(new CustomEvent('panora:retail-catalog-updated',{detail:{count:next.length,cached}}));

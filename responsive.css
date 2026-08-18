@@ -195,3 +195,21 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
     backface-visibility:hidden!important;
   }
 }
+
+
+/* Panora 6.63 — preserve composited product image layer during cloud polling */
+@media(max-width:720px){
+  body:not(.admin-page) .product-image.product-slider,
+  body:not(.admin-page) .rw-new-product-photo,
+  body:not(.admin-page) .rw-profile-price-photo{
+    contain:paint;
+    transform:translateZ(0);
+  }
+  body:not(.admin-page) .product-image.product-slider>img,
+  body:not(.admin-page) .rw-new-product-photo>img,
+  body:not(.admin-page) .rw-profile-price-photo>img{
+    visibility:visible!important;
+    opacity:1!important;
+    will-change:auto!important;
+  }
+}

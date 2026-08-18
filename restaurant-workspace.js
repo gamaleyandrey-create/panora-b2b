@@ -1881,13 +1881,11 @@
     const now=Date.now(); if(now-lastBackgroundRender<1200)return; lastBackgroundRender=now;
     renderAccountModal();
   };
+  // Panora 6.63: connection/polling status is not a reason to rebuild the
+  // cabinet. Actual order changes are rendered by portal-cloud.js and actual
+  // catalogue/price changes are handled by dynamic-products.js.
   window.addEventListener("online", backgroundWorkspaceRender);
   window.addEventListener("offline", backgroundWorkspaceRender);
-  window.addEventListener("panora:restaurant-sync", backgroundWorkspaceRender);
-  window.addEventListener("panora:partner-pricing-updated", backgroundWorkspaceRender);
-  window.addEventListener("panora:pricing-refresh", backgroundWorkspaceRender);
-  window.addEventListener("panora:retail-catalog-updated", backgroundWorkspaceRender);
-  window.addEventListener("panora:partner-data-updated", backgroundWorkspaceRender);
   window.addEventListener("panora:partner-push-state",event=>{
     const modal=document.querySelector("#profileModal.restaurant-workspace");
     const state=modal?.querySelector("[data-rw-partner-push-state]");

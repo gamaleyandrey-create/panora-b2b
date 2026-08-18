@@ -1,0 +1,23 @@
+Panora 6.63 — partner mobile no-blink hard fix
+
+Includes:
+- 6.60 messages/Push communication update;
+- 6.61 mobile bake/delivery-date checkout fix;
+- 6.62 catalogue comparison stabilization.
+
+Root causes removed:
+- the 10-second full partner cloud refresh no longer calls destructive applyAccount()/renderProducts()/renderAccountModal() when the partner is already hydrated;
+- the 2-second order sync status event no longer rebuilds the cabinet;
+- the 10-second partner-data event no longer rebuilds the cabinet;
+- nested order items are canonicalized for polling comparison, so Supabase item-order differences cannot look like order changes;
+- identical localStorage values are not rewritten, preventing cross-tab storage refresh storms;
+- order/note/payment caches skip identical writes;
+- partner product cache is written and signalled only when its canonical visual/product data really changed;
+- logged-in partner catalogue prefers panora-partner-products over the public guest cache;
+- background pricing/catal​og events no longer have a second workspace rebuild path.
+
+Result:
+- existing product <img> nodes remain mounted while normal 2s / 2.5s / 3s / 10s cloud polling continues;
+- main storefront and partner cabinet no longer flash product photos during idle synchronization.
+
+No SQL required beyond the already-required Panora 6.60 communication/Push migration.

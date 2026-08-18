@@ -210,27 +210,34 @@ function restoreAccount() {
   if (account) applyAccount();
   else localStorage.removeItem("panora-account-id");
 }
-function applyAccount() {
+function syncAccountChrome() {
+  if(!account)return;
   SHOW_PRICES = true;
   if(account?.language)window.panoraSetLanguage?.(account.language);
-  PRODUCTS.find((p) => p.id === "plain").price = Number(account.prices.plain);
-  PRODUCTS.find((p) => p.id === "pumpkin").price = Number(
-    account.prices.pumpkin,
-  );
+  const plain=PRODUCTS.find((p) => p.id === "plain");
+  const pumpkin=PRODUCTS.find((p) => p.id === "pumpkin");
+  if(plain&&account?.prices?.plain!=null)plain.price=Number(account.prices.plain);
+  if(pumpkin&&account?.prices?.pumpkin!=null)pumpkin.price=Number(account.prices.pumpkin);
   const f = $("#checkoutForm");
-  f.restaurant.value = account.name;
-  f.restaurant.readOnly = true;
-  f.email.value = account.email;
-  f.email.readOnly = true;
-  const checkoutIsBeingEdited = f.contains(document.activeElement);
-  if (!checkoutIsBeingEdited && !String(f.phone.value || "").trim())
-    f.phone.value = account.phone || "";
-  if (!checkoutIsBeingEdited && !String(f.address.value || "").trim())
-    f.address.value = account.address || "";
+  if(f){
+    f.restaurant.value = account.name;
+    f.restaurant.readOnly = true;
+    f.email.value = account.email;
+    f.email.readOnly = true;
+    const checkoutIsBeingEdited = f.contains(document.activeElement);
+    if (!checkoutIsBeingEdited && !String(f.phone.value || "").trim())
+      f.phone.value = account.phone || "";
+    if (!checkoutIsBeingEdited && !String(f.address.value || "").trim())
+      f.address.value = account.address || "";
+  }
+  updateCheckoutAccess();
+}
+window.panoraSyncAccountChrome=syncAccountChrome;
+function applyAccount() {
+  syncAccountChrome();
   renderProducts();
   renderCart();
   renderAccountModal();
-  updateCheckoutAccess();
 }
 function portalCurrentProductPrice(product) {
   if (!product) return 0;

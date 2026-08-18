@@ -84,8 +84,10 @@
       .slice(0,PORTAL_NOTES_CACHE_LIMIT)
       .map(compactPortalNoteForCache);
     const key='panora-portal-delivery-notes';
+    const serialized=JSON.stringify(source);
     try{
-      localStorage.setItem(key,JSON.stringify(source));
+      if(localStorage.getItem(key)===serialized)return true;
+      localStorage.setItem(key,serialized);
       return true;
     }catch(error){
       if(!isPortalStorageQuotaError(error))throw error;
@@ -108,8 +110,10 @@
       .sort((a,b)=>String(b?.receivedAt||b?.date||'').localeCompare(String(a?.receivedAt||a?.date||'')))
       .slice(0,PORTAL_PAYMENTS_CACHE_LIMIT);
     const key='panora-portal-payments';
+    const serialized=JSON.stringify(source);
     try{
-      localStorage.setItem(key,JSON.stringify(source));
+      if(localStorage.getItem(key)===serialized)return true;
+      localStorage.setItem(key,serialized);
       return true;
     }catch(error){
       if(!isPortalStorageQuotaError(error))throw error;
@@ -147,8 +151,10 @@
     }
     archived.sort((a,b)=>String(b?.created_at||b?.createdAt||"").localeCompare(String(a?.created_at||a?.createdAt||"")));
     const compact=[...working,...archived.slice(0,PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT)];
+    const serialized=JSON.stringify(compact);
     try{
-      localStorage.setItem(PORTAL_ORDERS_CACHE_KEY,JSON.stringify(compact));
+      if(localStorage.getItem(PORTAL_ORDERS_CACHE_KEY)===serialized)return true;
+      localStorage.setItem(PORTAL_ORDERS_CACHE_KEY,serialized);
       return true;
     }catch(error){
       if(!isPortalStorageQuotaError(error))throw error;
@@ -182,13 +188,15 @@
     if(key==='panora-orders')return savePortalOrdersCache(value);
     if(key==='panora-delivery-notes')return savePortalNotesCache(value);
     if(key==='panora-payments')return savePortalPaymentsCache(value);
+    const targetKey=storageKey(key),serialized=JSON.stringify(value);
     try{
-      localStorage.setItem(storageKey(key),JSON.stringify(value));
+      if(localStorage.getItem(targetKey)===serialized)return true;
+      localStorage.setItem(targetKey,serialized);
       return true;
     }catch(error){
       if(!isPortalStorageQuotaError(error))throw error;
       releasePortalCacheQuota();
-      try{localStorage.setItem(storageKey(key),JSON.stringify(value));return true}
+      try{if(localStorage.getItem(targetKey)!==serialized)localStorage.setItem(targetKey,serialized);return true}
       catch(retry){if(!isPortalStorageQuotaError(retry))throw retry;return false}
     }
   };
@@ -403,6 +411,15 @@
     }
     loadPromise=(async()=>{
       const uid=session?.user?.id;if(!uid)return;
+      const hadAccount=Boolean(account?.id);
+      const previousAccountSnapshot=account?JSON.stringify({
+        id:account.id,name:account.name,email:account.email,phone:account.phone,address:account.address,
+        language:account.language,prices:Object.entries(account.prices||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))
+      }):'';
+      const previousPartnerProducts=(()=>{try{
+        const rows=JSON.parse(localStorage.getItem('panora-partner-products')||'[]');
+        return JSON.stringify((Array.isArray(rows)?rows:[]).slice().sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||''))));
+      }catch{return'[]'}})();
       const profiles=await api(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`),profile=profiles?.[0];
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
@@ -427,12 +444,28 @@
       write('panora-payments',mappedPayments);
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
-      if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
-      account=own;localStorage.setItem('panora-account-id',own.id);applyAccount();window.dispatchEvent(new CustomEvent('panora:products-changed'));
-      const active=document.activeElement;
-      const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
-      if(!editingWorkspace)renderAccountModal();
-      renderCart();window.dispatchEvent(new CustomEvent('panora:partner-data-updated'));startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      const partnerProducts=(products||[]).map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))
+        .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+      const partnerProductsSerialized=JSON.stringify(partnerProducts);
+      const productsChanged=partnerProducts.length&&previousPartnerProducts!==partnerProductsSerialized;
+      if(productsChanged){try{localStorage.setItem('panora-partner-products',partnerProductsSerialized)}catch(error){console.warn('Panora partner product cache',error)}}
+      const nextAccountSnapshot=JSON.stringify({
+        id:own.id,name:own.name,email:own.email,phone:own.phone,address:own.address,
+        language:own.language,prices:Object.entries(own.prices||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))
+      });
+      const accountChanged=previousAccountSnapshot!==nextAccountSnapshot;
+      account=own;
+      try{localStorage.setItem('panora-account-id',own.id)}catch{}
+      if(!hadAccount){
+        applyAccount();
+      }else{
+        window.panoraSyncAccountChrome?.();
+        if(productsChanged||accountChanged)refreshRestaurantProducts?.();
+      }
+      if(productsChanged)window.dispatchEvent(new CustomEvent('panora:products-changed',{detail:{source:'partner-load'}}));
+      renderCart();
+      if(!hadAccount||accountChanged)window.dispatchEvent(new CustomEvent('panora:partner-data-updated',{detail:{accountChanged,productsChanged}}));
+      startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -446,7 +479,15 @@
       const previous=read('panora-orders')||[];
       const comparable=order=>({
         id:order.id,number:order.number,restaurantId:order.restaurantId,date:order.date,
-        deliveryDate:order.deliveryDate,items:order.items,prices:order.prices,taxRate:order.taxRate,
+        deliveryDate:order.deliveryDate,
+        items:(order.items||[]).map(item=>({
+          product:String(item.product||''),quantity:Number(item.quantity||0),
+          unitPrice:Number(item.unitPrice||item.unit_price||0),
+          nameSnapshot:item.nameSnapshot||item.product_names_snapshot||null,
+          imageSnapshot:item.imageSnapshot||item.product_image_snapshot||''
+        })).sort((a,b)=>a.product.localeCompare(b.product)),
+        prices:Object.entries(order.prices||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
+        taxRate:order.taxRate,
         status:order.status,comment:order.comment||'',cancellationReason:order.cancellationReason||'',
         createdAt:order.createdAt
       });
