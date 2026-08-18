@@ -25,6 +25,10 @@
     form.phone.value=String(form.phone.value||(typeof checkoutContactValue==='function'?checkoutContactValue('phone',account?.phone):account?.phone)||'').trim();
     form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account?.address):account?.address)||'').trim();
     if(form.date)form.date.value=selectedBakeDate||document.querySelector('#cartDeliveryDate')?.value||'';
+    if(form.fulfillment&&!['delivery','pickup'].includes(String(form.fulfillment.value||''))){
+      form.fulfillment.value='delivery';
+      if(!form.fulfillment.value&&form.fulfillment.options.length)form.fulfillment.selectedIndex=0;
+    }
     if(typeof toggleFulfillment==='function')toggleFulfillment();
     if(typeof updateMobileCheckoutSummary==='function')updateMobileCheckoutSummary();
     const needsPhone=!String(form.phone.value||'').trim();
