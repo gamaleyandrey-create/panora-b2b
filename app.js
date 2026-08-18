@@ -104,10 +104,68 @@ const dateValue=d=>{const x=new Date(d),pad=v=>String(v).padStart(2,'0');return 
 const localToday=()=>dateValue(new Date());
 const cutoffDate=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d:null};
 function getBakeDates(count=4){const plans=productionPlans(),now=new Date(),today=localToday(),scheduled=plans.filter(p=>{const cutoff=cutoffDate(p.cutoff);return p.open!==false&&String(p.bakeDate||'')>=today&&cutoff&&cutoff>now});const grouped=new Map();scheduled.forEach(p=>{const key=String(p.bakeDate||'');if(!key)return;const cutoff=cutoffDate(p.cutoff);if(!grouped.has(key))grouped.set(key,{date:new Date(`${key}T12:00:00`),cutoff,deliveryDate:p.deliveryDate||key});else if(cutoff<grouped.get(key).cutoff)grouped.get(key).cutoff=cutoff});return [...grouped.values()].sort((a,b)=>dateValue(a.date).localeCompare(dateValue(b.date))).slice(0,count)}
+function compatibleBakeDatesForProducts(productIds,count=12){
+ const ids=[...new Set((productIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+ const allDates=getBakeDates(count);
+ if(!ids.length)return allDates;
+ const plans=productionPlans(),now=new Date();
+ return allDates.filter(({date})=>{
+  const bakeDate=dateValue(date);
+  return ids.every(id=>plans.some(plan=>{
+   const cutoff=cutoffDate(plan.cutoff);
+   return plan.open!==false&&String(plan.product||'')===id&&String(plan.bakeDate||'')===bakeDate&&cutoff&&cutoff>now;
+  }));
+ });
+}
+window.panoraCompatibleBakeDates=compatibleBakeDatesForProducts;
+function bakeDeliveryOptionLabel(date,deliveryDate){
+ const bake=dateValue(date),delivery=String(deliveryDate||bake).slice(0,10);
+ const bakeText=formatDate(new Date(`${bake}T12:00:00`),false);
+ const deliveryText=formatDate(new Date(`${delivery}T12:00:00`),false);
+ if(delivery===bake)return lang==='ru'?`Выпечка и поставка: ${bakeText}`:lang==='es'?`Horneado y entrega: ${bakeText}`:`Bake & delivery: ${bakeText}`;
+ return lang==='ru'?`Выпечка: ${bakeText} · Поставка: ${deliveryText}`:lang==='es'?`Horneado: ${bakeText} · Entrega: ${deliveryText}`:`Bake: ${bakeText} · Delivery: ${deliveryText}`;
+}
 const formatDate=(d,weekday=true)=>new Intl.DateTimeFormat(I18N[lang].locale,{weekday:weekday?'long':undefined,day:'numeric',month:'long'}).format(d);
 const formatCutoff=(d,withDate=true)=>new Intl.DateTimeFormat(I18N[lang].locale,{timeZone:PANORA_BAKERY_TIME_ZONE,day:withDate?'numeric':undefined,month:withDate?'short':undefined,hour:'2-digit',minute:'2-digit'}).format(d);
 function renderBakeDates(){const dates=getBakeDates(),bakeDates=$('#bakeDates');if(!dates.length){selectedBakeDate='';localStorage.removeItem('panora-bake-date');if(bakeDates)bakeDates.innerHTML=`<article class="bake-date bake-date-info"><strong>${I18N[lang].calendar.noDates}</strong></article>`;if($('#nextBakeHero'))$('#nextBakeHero').textContent='—';if($('#cutoffHero'))$('#cutoffHero').textContent='—';syncDateSelect();renderProducts();renderCart();return}if(!dates.some(x=>dateValue(x.date)===selectedBakeDate))selectedBakeDate=dateValue(dates[0].date);localStorage.setItem('panora-bake-date',selectedBakeDate);if(bakeDates)bakeDates.innerHTML=dates.map(({date,cutoff,deliveryDate})=>`<article class="bake-date bake-date-info"><strong>${formatDate(date)}</strong><span>${lang==='ru'?'Доставка':lang==='es'?'Entrega':'Delivery'}: ${formatDate(new Date((deliveryDate||dateValue(date))+'T12:00:00'),false)}</span><span>${tr('calendar.orderUntil')} ${formatCutoff(cutoff)}</span></article>`).join('');$('#nextBakeHero').textContent=formatDate(dates[0].date);$('#cutoffHero').textContent=formatCutoff(dates[0].cutoff);syncDateSelect()}
-function syncCartDeliveryDate(){const s=$('#cartDeliveryDate');if(!s)return;const selectedProducts=Object.keys(cart).filter(id=>cart[id]>0),plans=productionPlans(),allDates=getBakeDates(),compatible=selectedProducts.length&&plans.length?allDates.filter(({date})=>selectedProducts.every(id=>plans.some(p=>p.open!==false&&p.product===id&&p.bakeDate===dateValue(date)&&cutoffDate(p.cutoff)>new Date()))):allDates,dates=selectedProducts.length&&plans.length?compatible:allDates;if(!dates.length){selectedBakeDate='';localStorage.removeItem('panora-bake-date');const emptyText=selectedProducts.length&&allDates.length?I18N[lang].calendar.noCommonDate:I18N[lang].calendar.noDates;s.innerHTML=`<option value="">${emptyText}</option>`;s.disabled=true;const checkoutDate=$('#deliveryDate');if(checkoutDate){checkoutDate.innerHTML=s.innerHTML;checkoutDate.disabled=true}return}s.disabled=false;if(!dates.some(({date})=>dateValue(date)===selectedBakeDate))selectedBakeDate=dateValue(dates[0].date);localStorage.setItem('panora-bake-date',selectedBakeDate);s.innerHTML=dates.map(({date,deliveryDate})=>`<option value="${dateValue(date)}" ${dateValue(date)===selectedBakeDate?'selected':''}>${formatDate(new Date((deliveryDate||dateValue(date))+'T12:00:00'))}</option>`).join('');const checkoutDate=$('#deliveryDate');if(checkoutDate&&[...checkoutDate.options].some(o=>o.value===selectedBakeDate)){checkoutDate.disabled=false;checkoutDate.value=selectedBakeDate}s.onchange=()=>{selectedBakeDate=s.value;localStorage.setItem('panora-bake-date',selectedBakeDate);if(checkoutDate)checkoutDate.value=selectedBakeDate;renderProducts();renderCart()}}
+function syncCartDeliveryDate(){
+ const s=$('#cartDeliveryDate');if(!s)return;
+ const selectedProducts=Object.keys(cart).filter(id=>Number(cart[id]||0)>0);
+ const allDates=getBakeDates(12),dates=compatibleBakeDatesForProducts(selectedProducts,12);
+ if(!dates.length){
+  selectedBakeDate='';
+  localStorage.removeItem('panora-bake-date');
+  const emptyText=selectedProducts.length&&allDates.length?I18N[lang].calendar.noCommonDate:I18N[lang].calendar.noDates;
+  s.innerHTML=`<option value="">${emptyText}</option>`;s.disabled=true;
+  const checkoutDate=$('#deliveryDate');
+  if(checkoutDate){checkoutDate.innerHTML=s.innerHTML;checkoutDate.disabled=true;checkoutDate.value=''}
+  return;
+ }
+ s.disabled=false;
+ if(!dates.some(({date})=>dateValue(date)===selectedBakeDate))selectedBakeDate=dateValue(dates[0].date);
+ localStorage.setItem('panora-bake-date',selectedBakeDate);
+ s.innerHTML=dates.map(({date,deliveryDate})=>`<option value="${dateValue(date)}" ${dateValue(date)===selectedBakeDate?'selected':''}>${bakeDeliveryOptionLabel(date,deliveryDate)}</option>`).join('');
+ const checkoutDate=$('#deliveryDate');
+ if(checkoutDate){
+  checkoutDate.innerHTML=s.innerHTML;
+  checkoutDate.disabled=false;
+  checkoutDate.value=selectedBakeDate;
+  checkoutDate.onchange=()=>{
+   if(!dates.some(({date})=>dateValue(date)===checkoutDate.value))return;
+   selectedBakeDate=checkoutDate.value;
+   localStorage.setItem('panora-bake-date',selectedBakeDate);
+   s.value=selectedBakeDate;
+   renderProducts();renderCart();
+  };
+ }
+ s.onchange=()=>{
+  if(!dates.some(({date})=>dateValue(date)===s.value))return;
+  selectedBakeDate=s.value;
+  localStorage.setItem('panora-bake-date',selectedBakeDate);
+  if(checkoutDate)checkoutDate.value=selectedBakeDate;
+  renderProducts();renderCart();
+ };
+}
 function syncDateSelect(){const s=$('#deliveryDate'),dates=getBakeDates();if(!dates.length){s.innerHTML=`<option value="">${I18N[lang].calendar.noDates}</option>`;s.disabled=true;syncCartDeliveryDate();return}s.disabled=false;s.innerHTML=dates.map(({date})=>`<option value="${dateValue(date)}" ${dateValue(date)===selectedBakeDate?'selected':''}>${formatDate(date)}</option>`).join('');s.onchange=()=>{selectedBakeDate=s.value;localStorage.setItem('panora-bake-date',selectedBakeDate);renderBakeDates();renderProducts()};syncCartDeliveryDate()}
 function renderCategories(){const cats=['all',...new Set(PRODUCTS.map(p=>String(p.category||'Хлеб')).filter(Boolean))];if(activeCategory!=='all'&&!cats.includes(activeCategory))activeCategory='all';$('#categoryChips').innerHTML=cats.map(c=>`<button class="chip ${c===activeCategory?'active':''}" data-category="${c}">${c==='all'?tr('catalog.all'):c}</button>`).join('');document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{activeCategory=b.dataset.category;renderCategories();renderProducts()})}
 function piecesLabel(qty){return lang==='ru'?`${qty} шт.`:lang==='es'?`${qty} uds.`:`${qty} pcs`}
