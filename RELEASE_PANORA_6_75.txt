@@ -1,0 +1,28 @@
+Panora 6.75 — mobile bakery order buttons cannot be eaten by background polling
+
+Fixes symptom:
+- tapping “Подтвердить заказ” / “Отгрузить заказ” on mobile can appear to do nothing.
+
+Root cause
+- admin cloud polling reloads orders + delivery notes every 2 seconds;
+- loadOrders(), loadDeliveryNotes(), repairMissingDeliveryNotes() and loadPayments()
+  could rebuild the whole Orders DOM even when the visible data had not changed;
+- on mobile Safari a DOM replacement between touch/pointer down and the generated
+  click can cancel the click entirely.
+
+Interaction hardening
+- pointer/touch down on B2B order actions creates a short interaction lock;
+- background cloud refreshes may update in-memory data during the lock, but do not
+  rebuild the order DOM;
+- explicit user actions still render immediately after completion;
+- loadOrders renders only for a semantic order change;
+- loadDeliveryNotes renders only for a semantic delivery-note change;
+- repairMissingDeliveryNotes renders only when it actually repairs/creates something;
+- loadPayments renders only for a semantic payment change;
+- idle 2-second cloud polling remains fully active.
+
+Server status path
+- Panora 6.74 authoritative panora_admin_set_order_status RPC remains the status writer.
+
+No new SQL in 6.75.
+No Edge Function changes.
