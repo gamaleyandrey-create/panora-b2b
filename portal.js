@@ -1,6 +1,7 @@
 const PORTAL_ORDERS_LOCAL_CACHE_KEY="panora-portal-orders";
 function savePortalOrdersFallback(rows){
   const all=Array.isArray(rows)?rows:[];
+  window.panoraPortalSetRuntime?.("panora-orders",all);
   const archivedStatus=new Set(["delivered","cancelled","canceled","closed","archived"]);
   const working=[],archived=[];
   for(const row of all){
@@ -28,6 +29,25 @@ function savePortalOrdersFallback(rows){
   }
 }
 
+const portalRuntimeStore = window.panoraPortalRuntimeStore || (window.panoraPortalRuntimeStore={
+  restaurants:null,
+  orders:null,
+  deliveryNotes:null,
+  payments:null
+});
+const portalRuntimeSlot=key=>({
+  "panora-restaurants":"restaurants",
+  "panora-orders":"orders",
+  "panora-delivery-notes":"deliveryNotes",
+  "panora-payments":"payments"
+}[key]||null);
+const portalSetRuntime=(key,value)=>{
+  const slot=portalRuntimeSlot(key);
+  if(slot)portalRuntimeStore[slot]=Array.isArray(value)?value:[];
+  return value;
+};
+window.panoraPortalSetRuntime=portalSetRuntime;
+
 let account = null;
 const portalOrderUnitPrice=(order,productId)=>{const saved=Number(order?.prices?.[productId]),fallback=Number(account?.prices?.[productId]);return Number.isFinite(saved)&&saved>0?saved:(Number.isFinite(fallback)&&fallback>0?fallback:0)};
 const modal = $("#profileModal");
@@ -40,8 +60,12 @@ const portalPrivateKeys = new Set([
 const portalStorageKey = (key) =>
   portalPrivateKeys.has(key) ? `panora-portal-${key.slice(7)}` : key;
 const portalRead = (key, fallback = []) => {
+  const slot=portalRuntimeSlot(key);
+  if(slot&&Array.isArray(portalRuntimeStore[slot]))return portalRuntimeStore[slot];
   try {
-    return JSON.parse(localStorage.getItem(portalStorageKey(key))) || fallback;
+    const value=JSON.parse(localStorage.getItem(portalStorageKey(key)));
+    if(slot&&Array.isArray(value))portalRuntimeStore[slot]=value;
+    return value || fallback;
   } catch {
     return fallback;
   }

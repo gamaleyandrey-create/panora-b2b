@@ -298,11 +298,17 @@
     <button type="button" class="rw-remove-messenger" data-rw-remove-messenger aria-label="${t("removeMessenger")}" title="${t("removeMessenger")}">×</button>
   </div>`;
 
-  const ownOrders = () =>
-    portalOrders()
-      .filter((order) => order.restaurantId === account?.id)
+  const ownOrders = () => {
+    const rows=portalOrders();
+    const accountId=String(account?.id||'').trim();
+    return (Array.isArray(rows)?rows:[])
+      .filter(order=>{
+        const restaurantId=String(order?.restaurantId||'').trim();
+        return !accountId||!restaurantId||restaurantId===accountId;
+      })
       .slice()
-      .sort((a, b) => Number(b.number) - Number(a.number));
+      .sort((a,b)=>(Number(b.number)||0)-(Number(a.number)||0));
+  };
   const ownNotes = () =>
     portalNotes()
       .filter((note) => note.restaurantId === account?.id)

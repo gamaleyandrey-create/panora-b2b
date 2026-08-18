@@ -77,6 +77,7 @@
   }
 
   function savePortalNotesCache(rows){
+    setPortalRuntime('panora-delivery-notes',Array.isArray(rows)?rows:[]);
     const source=(Array.isArray(rows)?rows:[])
       .slice()
       .sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||'')))
@@ -101,6 +102,7 @@
   }
 
   function savePortalPaymentsCache(rows){
+    setPortalRuntime('panora-payments',Array.isArray(rows)?rows:[]);
     const source=(Array.isArray(rows)?rows:[])
       .slice()
       .sort((a,b)=>String(b?.receivedAt||b?.date||'').localeCompare(String(a?.receivedAt||a?.date||'')))
@@ -137,6 +139,7 @@
 
   function savePortalOrdersCache(rows){
     const source=Array.isArray(rows)?rows:[];
+    setPortalRuntime('panora-orders',source);
     const working=[];
     const archived=[];
     for(const row of source){
@@ -169,8 +172,13 @@
   let session=null,refreshPromise=null,loadPromise=null,submitting=false,lastState={type:'ok',text:'Соединение установлено'};
   const privateKeys=new Set(['panora-restaurants','panora-orders','panora-delivery-notes','panora-payments']);
   const storageKey=key=>privateKeys.has(key)?`panora-portal-${key.slice(7)}`:key;
+  const setPortalRuntime=(key,value)=>{
+    try{window.panoraPortalSetRuntime?.(key,value)}catch{}
+    return value;
+  };
   const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(storageKey(key))||'null')??fallback}catch{return fallback}};
   const write=(key,value)=>{
+    setPortalRuntime(key,value);
     if(key==='panora-orders')return savePortalOrdersCache(value);
     if(key==='panora-delivery-notes')return savePortalNotesCache(value);
     if(key==='panora-payments')return savePortalPaymentsCache(value);
@@ -409,9 +417,14 @@
       const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:initialOrders.find(o=>o.id===n.order_id)?.items||[],prices:initialOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
       const notesByOrder=new Map(mappedNotes.map(note=>[String(note.orderId),note]));
       const orders=initialOrders.map(order=>archiveMetaForOrder(order,notesByOrder.get(String(order.id))));
+      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      setPortalRuntime('panora-restaurants',[own]);
+      setPortalRuntime('panora-orders',orders);
+      setPortalRuntime('panora-delivery-notes',mappedNotes);
+      setPortalRuntime('panora-payments',mappedPayments);
       write('panora-restaurants',[own]);savePortalOrdersCache(orders);
       write('panora-delivery-notes',mappedNotes);
-      write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
+      write('panora-payments',mappedPayments);
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
       if(products?.length)localStorage.setItem('panora-partner-products',JSON.stringify(products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))));
@@ -439,11 +452,12 @@
       });
       const before=JSON.stringify(previous.map(comparable));
       const after=JSON.stringify(next.map(comparable));
+      const previousById=new Map(previous.map(order=>[order.id,order.status]));
+      const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
+      const eventRows=changed.length?await fetchStatusEvents():[];
+      const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
+      setPortalRuntime('panora-orders',enriched);
       if(before!==after){
-        const previousById=new Map(previous.map(order=>[order.id,order.status]));
-        const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
-        const eventRows=changed.length?await fetchStatusEvents():[];
-        const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
         savePortalOrdersCache(enriched);
         const active=document.activeElement;
         const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
@@ -452,9 +466,13 @@
         if(changed.some(change=>change.status==='shipped')){
           setTimeout(()=>loadAll(true).catch(()=>{}),80);
         }
+      }else if(!(read('panora-orders')||[]).length&&enriched.length){
+        // Runtime has live cloud data even if the offline cache is absent.
+        try{renderAccountModal(true)}catch{}
+        window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:enriched.length,changed:[],source:'live-runtime'}}));
       }
       state('ok',labels('Синхронизировано','Synced','Sincronizado'));
-      return next;
+      return enriched;
     })().finally(()=>partnerOrdersLoading=null);
     return partnerOrdersLoading;
   }

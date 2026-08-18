@@ -1,0 +1,18 @@
+Panora 6.59 — partner mobile live-data runtime
+
+Critical mobile partner fix
+- partner orders, delivery notes, payments and partner card now have an in-memory live store;
+- the UI reads the live Supabase result first and localStorage only as an offline fallback;
+- a full/blocked mobile localStorage can no longer make “Мои заказы” show 0 after Supabase returned orders;
+- successful cloud loads populate the live store before any cache write is attempted;
+- fast 2-second order polling updates the live store on every response, even when local cache write is skipped;
+- the Working/Archive split uses the same live order/note data returned by Supabase;
+- restaurant id comparison is normalized as strings instead of strict raw-value comparison;
+- stale/empty mobile order cache is automatically replaced by live data after sign-in/focus/online refresh;
+- cache quota remains non-fatal: local offline cache can be absent while the current online UI stays correct.
+
+Bakery mobile
+- localStorage quota remains a local-cache warning only; cloud status is not downgraded after a successful server operation.
+- no raw-material movement or bake-completion facts are deleted.
+
+No SQL required.
