@@ -1,0 +1,18 @@
+Panora 6.57 — mobile parity for all current workflows
+
+- all current 6.49–6.56 business logic is shared by desktop and mobile; this release finishes the mobile presentation layer around it;
+- immutable server PN numbers, order messages and B2B Push states are readable and touch-safe on phones;
+- Panora system messages have a dedicated centered mobile style;
+- partner order cards wrap long product names, quantities, prices, dates and actions without horizontal overflow;
+- partner profile/Push block keeps notification preferences visible and usable at 360–430 px;
+- product photos in cart remain square and text/price never squeeze them off-screen;
+- no-common-bake-date state is visible in mobile cart/checkout;
+- Raw Materials, purchase prices, shortage/status controls and movement history stay card-based on phones;
+- Recipe purchase price + semi-finished source/yield + live semi-finished cost fit narrow screens;
+- recipe source cost metrics stack cleanly on 360–430 px;
+- Bake completion cards and inputs stay above the bakery mobile bottom navigation;
+- admin order action buttons/messages are full-width and status/PN text cannot overflow;
+- mobile forms use 16 px controls to avoid iOS focus zoom and dialogs use dynamic viewport/safe-area spacing;
+- all HTML entry points are cache-busted to build 6570.
+
+No database migration is required.

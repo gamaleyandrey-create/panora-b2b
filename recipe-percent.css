@@ -249,3 +249,24 @@
   .recipe-semi-cost{grid-template-columns:1fr!important}
   .recipe-semi-cost>div:last-child{grid-column:auto}
 }
+
+
+/* Panora 6.57 — 6.56 semi-finished costing on phones */
+@media(max-width:700px){
+  body.admin-page .recipe-percent-row{min-width:0!important;overflow:hidden!important}
+  body.admin-page .recipe-price-settings,body.admin-page .recipe-semi-settings,body.admin-page .recipe-semi-fields,body.admin-page .recipe-semi-cost{min-width:0!important;max-width:100%!important}
+  body.admin-page .recipe-price-copy,body.admin-page .recipe-price-input{min-width:0!important}
+  body.admin-page .recipe-semi-toggle{align-items:flex-start!important}
+  body.admin-page .recipe-semi-toggle span{min-width:0!important}
+  body.admin-page .recipe-semi-toggle strong,body.admin-page .recipe-semi-toggle small{overflow-wrap:anywhere!important}
+  body.admin-page .recipe-semi-cost>div{min-width:0!important}
+  body.admin-page .recipe-semi-cost strong{font-size:15px!important}
+  body.admin-page .recipe-actions{bottom:calc(84px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:430px){
+  body.admin-page .recipe-price-settings{display:grid!important;grid-template-columns:1fr!important}
+  body.admin-page .recipe-price-input{width:100%!important;grid-template-columns:minmax(0,1fr) auto!important}
+  body.admin-page .recipe-semi-fields{grid-template-columns:1fr!important}
+  body.admin-page .recipe-semi-cost{grid-template-columns:1fr!important;padding:8px!important}
+  body.admin-page .recipe-semi-cost>div:not(.recipe-semi-cost-state){padding:8px!important}
+}

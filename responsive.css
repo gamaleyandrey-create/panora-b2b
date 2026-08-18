@@ -169,3 +169,15 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
     overflow-wrap:anywhere;
   }
 }
+
+
+/* Panora 6.57 — final shared mobile parity */
+@media(max-width:720px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden!important}
+  *,*::before,*::after{box-sizing:border-box}
+  input,select,textarea{font-size:16px!important;max-width:100%}
+  button,a,[role="button"]{touch-action:manipulation}
+  dialog{max-width:calc(100vw - 8px)!important;max-height:calc(100dvh - 8px)!important}
+  .page-head,.view-header,.rw-head{min-width:0}
+  .page-head h1,.page-head h2,.view-header h1,.rw-head h2{overflow-wrap:anywhere}
+}

@@ -536,3 +536,18 @@
     min-height:42px!important;
   }
 }
+
+
+/* Panora 6.57 — latest Raw Materials / price logic on phones */
+@media(max-width:720px){
+  body.admin-page .raw-stock-summary{min-width:0!important}
+  body.admin-page .raw-stock-summary>div{min-width:0!important}
+  body.admin-page .raw-stock-summary strong,body.admin-page .raw-stock-summary small{overflow-wrap:anywhere!important}
+  body.admin-page .raw-stock-balance-table tr,body.admin-page .raw-stock-movement-table tr{min-width:0!important;max-width:100%!important}
+  body.admin-page .raw-stock-balance-table td,body.admin-page .raw-stock-movement-table td{min-width:0!important}
+  body.admin-page .raw-stock-price-edit{min-width:0!important}
+  body.admin-page .raw-stock-price-edit input{min-width:0!important;font-size:16px!important}
+  body.admin-page .raw-stock-status,body.admin-page .raw-stock-need-link{max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
+  body.admin-page .purchase-date-options{scroll-snap-type:x proximity!important;overscroll-behavior-x:contain!important}
+  body.admin-page .purchase-date-option{scroll-snap-align:start!important}
+}

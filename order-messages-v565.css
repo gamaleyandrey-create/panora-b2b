@@ -70,3 +70,18 @@
     width:100%!important;
   }
 }
+
+
+/* Panora 6.57 — system messages + phone keyboard */
+.order-message.system{justify-self:center;max-width:92%;background:#f1f5ef;border-color:#d7e1d7;color:#486052;text-align:center}
+.order-message.system header{justify-content:center;gap:7px;flex-wrap:wrap}.order-message.system header strong{color:#315b42}.order-message.system p{margin-top:5px}
+@media(max-width:640px){
+  .order-message-dialog{inset:4px!important;width:calc(100vw - 8px)!important;height:calc(100dvh - 8px)!important;max-height:calc(100dvh - 8px)!important;margin:0!important}
+  .order-message-shell{height:100%!important;max-height:none!important}
+  .order-message-head{min-width:0}.order-message-head>div{min-width:0}.order-message-head h3,.order-message-head span{overflow-wrap:anywhere}
+  .order-message-list{min-width:0;min-height:0!important}
+  .order-message{min-width:0;max-width:94%!important}.order-message.system{max-width:100%!important}
+  .order-message-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))!important}
+  .order-message-form textarea{font-size:16px!important}
+  .admin-order-message-button,.rw-order-message-button{min-height:46px!important;white-space:normal!important;text-align:center!important}
+}

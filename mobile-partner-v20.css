@@ -284,3 +284,13 @@
     text-align:left!important;
   }
 }
+
+
+/* Panora 6.57 — mobile cart parity with product photos and date rules */
+@media(max-width:720px){
+  body:not(.admin-page) .cart-item{min-width:0!important;max-width:100%!important}
+  body:not(.admin-page) .cart-thumb{flex:0 0 auto!important;overflow:hidden!important}
+  body:not(.admin-page) .cart-thumb img{display:block!important;object-fit:cover!important}
+  body:not(.admin-page) #cartDeliveryDate:disabled,body:not(.admin-page) #deliveryDate:disabled{opacity:1!important;color:#8b4c20!important;background:#fff7ec!important;border-color:#ebd5bc!important}
+  body:not(.admin-page) .drawer .button,body:not(.admin-page) .modal .button{min-height:48px!important}
+}

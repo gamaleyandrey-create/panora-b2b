@@ -1725,3 +1725,34 @@
     grid-template-columns:1fr!important;
   }
 }
+
+
+/* Panora 6.57 — partner mobile parity for orders, Push and current prices */
+@media(max-width:720px){
+  .restaurant-workspace{padding-left:12px!important;padding-right:12px!important;padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+  .rw-order,.rw-current-order,.rw-profile,.rw-prices{min-width:0!important;max-width:100%!important}
+  .rw-order header{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}
+  .rw-order header>span,.rw-order li>span{min-width:0!important}
+  .rw-order header strong,.rw-order header b,.rw-order li>span,.rw-order li>span:first-child{overflow-wrap:anywhere!important}
+  .rw-order li{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:10px!important}
+  .rw-order li strong{white-space:normal!important;text-align:right!important;min-width:0!important}
+  .rw-order li strong small{white-space:normal!important}
+  .rw-order footer{display:grid!important;grid-template-columns:1fr!important;align-items:stretch!important;gap:9px!important}
+  .rw-order footer>*{max-width:100%!important}
+  .rw-order-footer-actions{display:grid!important;grid-template-columns:1fr!important;width:100%!important}
+  .rw-order-message-button,.rw-cancel{width:100%!important;min-height:46px!important}
+  .rw-order-status{max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
+  .rw-summary-card strong,.rw-current-order-total,.rw-current-order>b{white-space:normal!important;overflow-wrap:anywhere!important}
+  .rw-notification-settings{grid-template-columns:1fr!important}
+  .rw-notification-settings label{min-width:0!important}
+  .rw-partner-push{min-width:0!important}
+  .rw-partner-push>div,.rw-partner-push-actions{min-width:0!important;width:100%!important}
+  .rw-partner-push-actions{grid-template-columns:1fr 1fr!important}
+  .rw-partner-push-actions .button{white-space:normal!important;min-height:48px!important}
+  .rw-partner-push p{max-width:100%!important;overflow-wrap:anywhere!important}
+}
+@media(max-width:390px){
+  .rw-order header,.rw-order li{grid-template-columns:1fr!important}
+  .rw-order li strong{text-align:left!important}
+  .rw-partner-push-actions{grid-template-columns:1fr!important}
+}

@@ -50,7 +50,7 @@
     root.innerHTML=list.length?list.map(row=>{
       const mine=row.sender_role===ownRole();
       const role=row.sender_role==="admin"?t("bakery"):row.sender_role==="restaurant"?t("partner"):"Panora";
-      return `<article class="order-message ${mine?"mine":"other"}"><header><strong>${esc(row.sender_name||role)}</strong><span>${esc(role)} · ${esc(dateText(row.created_at))}</span></header><p>${esc(row.body).replace(/\n/g,"<br>")}</p></article>`;
+      const system=row.sender_role==="system";return `<article class="order-message ${system?"system":mine?"mine":"other"}"><header><strong>${esc(row.sender_name||role)}</strong><span>${esc(role)} · ${esc(dateText(row.created_at))}</span></header><p>${esc(row.body).replace(/\n/g,"<br>")}</p></article>`;
     }).join(""):`<p class="order-message-empty">${t("empty")}</p>`;
     requestAnimationFrame(()=>{root.scrollTop=root.scrollHeight});
   };
