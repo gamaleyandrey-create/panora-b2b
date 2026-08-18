@@ -1,0 +1,29 @@
+Panora 6.73 — shipment status is finalized atomically
+
+Fixes mobile bakery symptom:
+- after “Отгрузить заказ” the card must never return to “Подтвердить заказ”.
+
+Root cause protection
+- a delivery note could be created successfully while the order row still reloaded
+  as submitted/confirmed;
+- the UI treated the presence of the note as shipment success even if the order
+  status itself was not actually shipped.
+
+App hardening
+- shipOrderAtomic now verifies BOTH results:
+  1) delivery note exists;
+  2) order status is shipped;
+- if the RPC created the delivery note but did not persist shipped status,
+  Panora immediately performs an explicit status PATCH to shipped and reloads;
+- shipment is not reported as successful until the cloud order is verified shipped;
+- after success the mobile New Orders badge is refreshed immediately.
+
+Server hardening (new SQL)
+- delivery_notes becomes an authoritative shipment fact:
+  inserting a delivery note forces its order to shipped;
+- shipped status is already terminal under the 6.72 monotonic status guard,
+  so stale devices cannot reopen it;
+- existing non-cancelled orders that already have a delivery note are backfilled to shipped.
+
+No Edge Function changes.
+Panora 6.69 event_key repair, 6.64 bake-day guard and 6.72 status trigger repair remain required.
