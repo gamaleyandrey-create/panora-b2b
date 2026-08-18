@@ -178,3 +178,74 @@
     width:100%!important;
   }
 }
+
+
+/* Panora 6.56 — semi-finished cost/readability */
+.recipe-percent-row.is-semi .recipe-price-settings{
+  border-color:#c7d9ca;
+  background:#f7fbf6;
+}
+.recipe-percent-row.is-semi .recipe-price-copy small{
+  max-width:640px;
+  overflow-wrap:anywhere;
+}
+.recipe-semi-fields{
+  grid-template-columns:minmax(0,1.45fr) minmax(90px,.42fr) minmax(150px,.62fr)!important;
+  align-items:end;
+}
+.recipe-semi-fields label{min-width:0}
+.recipe-semi-fields input,.recipe-semi-fields select{
+  min-width:0!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+}
+.recipe-semi-cost{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-top:2px;
+  padding:10px;
+  border:1px solid #c9ddcc;
+  border-radius:10px;
+  background:#eef6ed;
+}
+.recipe-semi-cost[hidden]{display:none!important}
+.recipe-semi-cost-state{
+  grid-column:1/-1;
+  padding:0 2px 8px;
+  border-bottom:1px solid #d6e4d6;
+  color:#52695a;
+  font-size:11px;
+  font-weight:750;
+  overflow-wrap:anywhere;
+}
+.recipe-semi-cost-state.missing{color:#9a5a2f}
+.recipe-semi-cost>div:not(.recipe-semi-cost-state){
+  display:grid;
+  gap:3px;
+  min-width:0;
+  padding:8px 9px;
+  border-radius:8px;
+  background:rgba(255,255,255,.72);
+}
+.recipe-semi-cost small{color:#66756b;font-size:10px;font-weight:750;line-height:1.3}
+.recipe-semi-cost strong{color:#28563a;font-size:16px;line-height:1.2;overflow-wrap:anywhere}
+.recipe-semi-cost span{color:#78827b;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+.recipe-semi-example{margin-top:1px}
+@media(max-width:760px){
+  .recipe-semi-fields{
+    grid-template-columns:minmax(0,1fr) minmax(92px,.36fr)!important;
+    gap:9px!important;
+  }
+  .recipe-semi-fields label:first-child{grid-column:1/-1!important}
+  .recipe-semi-fields label:nth-child(3){grid-column:1/-1!important}
+  .recipe-semi-cost{grid-template-columns:1fr 1fr!important}
+  .recipe-semi-cost>div:last-child{grid-column:1/-1}
+}
+@media(max-width:430px){
+  .recipe-semi-fields{grid-template-columns:1fr!important}
+  .recipe-semi-fields label,.recipe-semi-fields label:first-child,.recipe-semi-fields label:nth-child(3){grid-column:auto!important}
+  .recipe-semi-cost{grid-template-columns:1fr!important}
+  .recipe-semi-cost>div:last-child{grid-column:auto}
+}

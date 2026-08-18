@@ -1,0 +1,11 @@
+Panora 6.56 — semi-finished recipe cost and layout
+
+- semi-finished ingredient editor layout no longer overflows wide/tablet or narrow mobile screens;
+- “Выход готового продукта, %” shortened to a compact “Выход, %”;
+- source-price block is visually tied to the semi-finished ingredient and names the selected source raw material;
+- live raw-material semi-finished cost is shown from source purchase price and yield;
+- live source quantity required for the recipe amount is shown;
+- live contribution of the semi-finished ingredient to one bread cost is shown;
+- recipe total cost now uses the currently edited source/yield fields immediately, without waiting for recipe save;
+- example: source 1.89 €/kg and 75% yield => semi-finished cost 2.52 €/kg; 91 g in recipe => 121.33 g source and about 0.23 € per bread;
+- no database schema changes.
