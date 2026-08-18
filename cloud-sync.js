@@ -791,10 +791,30 @@
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
-    loadingOrders=(async()=>{const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');const hydrated=await hydrateAdminOrderRows(fetched||[]);const rows=await repairTrueOrphanOrders(hydrated);const beforeOrders=localStorage.getItem('panora-orders')||'[]';orders=(rows||[]).map(rowOrder);const afterOrders=JSON.stringify(orders);
-const ordersCached=typeof window.panoraSaveOrdersCache==='function'
-  ? window.panoraSaveOrdersCache(orders)
-  : safeLocalSet('panora-orders',afterOrders,{quotaIsWarning:false});if(beforeOrders!==afterOrders)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));syncPlansFromOrders();if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}if(typeof renderCommerce==='function')renderCommerce();if(typeof renderAll==='function')renderAll();status(`Облако ✓ · ${rows?.length||0} заказов`)})().finally(()=>loadingOrders=null);return loadingOrders
+    loadingOrders=(async()=>{
+      const beforeSignature=orderUiSignature(typeof orders!=='undefined'?orders:[]);
+      const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');
+      const hydrated=await hydrateAdminOrderRows(fetched||[]);
+      const rows=await repairTrueOrphanOrders(hydrated);
+      orders=(rows||[]).map(rowOrder);
+      const afterOrders=JSON.stringify(orders);
+      const afterSignature=orderUiSignature(orders);
+      const changed=beforeSignature!==afterSignature;
+
+      if(typeof window.panoraSaveOrdersCache==='function')window.panoraSaveOrdersCache(orders);
+      else safeLocalSet('panora-orders',afterOrders,{quotaIsWarning:false});
+
+      if(changed)window.dispatchEvent(new CustomEvent('panora:orders-updated',{detail:{count:orders.length}}));
+      syncPlansFromOrders();
+      if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}
+
+      if(changed&&!adminOrderInteractionActive()){
+        if(typeof renderCommerce==='function')renderCommerce();
+        if(typeof renderAll==='function')renderAll();
+      }
+      status(`Облако ✓ · ${rows?.length||0} заказов`);
+    })().finally(()=>loadingOrders=null);
+    return loadingOrders;
   }
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
     if(!ready)throw new Error('Облако ещё загружается');
@@ -967,6 +987,28 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     }
     status('Облако ✓');})().finally(()=>savingOrders=null);return savingOrders
   }
+  const adminOrderInteractionActive=()=>Date.now()<Number(window.panoraAdminOrderInteractionUntil||0);
+  const stableJson=value=>JSON.stringify(value);
+  const orderUiSignature=list=>stableJson((list||[]).map(order=>({
+    id:String(order?.id||''),number:Number(order?.number||0),restaurantId:String(order?.restaurantId||''),
+    date:String(order?.date||''),deliveryDate:String(order?.deliveryDate||''),status:String(order?.status||''),
+    comment:String(order?.comment||''),cancellationReason:String(order?.cancellationReason||''),
+    items:(order?.items||[]).map(item=>({product:String(item?.product||''),quantity:Number(item?.quantity||0)}))
+      .sort((a,b)=>a.product.localeCompare(b.product)),
+    prices:Object.entries(order?.prices||{}).map(([id,price])=>[String(id),Number(price||0)]).sort((a,b)=>a[0].localeCompare(b[0]))
+  })).sort((a,b)=>a.id.localeCompare(b.id)));
+  const noteUiSignature=list=>stableJson((list||[]).map(note=>({
+    id:String(note?.id||''),orderId:String(note?.orderId||''),number:Number(note?.number||0),
+    date:String(note?.date||''),total:Number(note?.total||0),paid:Number(note?.paid||0),
+    customerConfirmedAt:String(note?.customerConfirmedAt||''),customerReceiver:String(note?.customerReceiver||''),
+    traysDelivered:Number(note?.traysDelivered||0),traysReturned:Number(note?.traysReturned||0),
+    trayBalanceAfter:Number(note?.trayBalanceAfter||0)
+  })).sort((a,b)=>a.id.localeCompare(b.id)));
+  const paymentUiSignature=list=>stableJson((list||[]).map(payment=>({
+    id:String(payment?.id||''),restaurantId:String(payment?.restaurantId||''),deliveryNoteId:String(payment?.deliveryNoteId||''),
+    amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),
+    receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||'')
+  })).sort((a,b)=>a.id.localeCompare(b.id)));
   const localDate=value=>String(value||'').slice(0,10);
   const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,traysDelivered:Number(row.trays_delivered||0),traysReturned:Number(row.trays_returned||0),trayBalanceAfter:Number(row.tray_balance_after||0),customerTraysReceived:row.customer_trays_received==null?null:Number(row.customer_trays_received),customerTraysReturned:row.customer_trays_returned==null?null:Number(row.customer_trays_returned),qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null}};
   const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,total:subtotal+tax,paid:0,balanceAfter:0,recovered:true}};
@@ -985,13 +1027,15 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
         if(index>=0)deliveryNotes[index]=restored;else deliveryNotes.push(restored);
       }
       for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
+      const changed=noteUiSignature(deliveryNotes)!==noteUiSignature(JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]'));
       recalculateBalances();cacheDeliveryNotesLocal();
-      if(typeof renderCommerce==='function')renderCommerce();
+      if((missing.length||changed)&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce();
       return missing.length;
     })().finally(()=>repairingFinance=null);
     return repairingFinance;
   }
   async function loadDeliveryNotes(){
+    const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
     const rows=await request('delivery_notes?select=*&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
@@ -1001,7 +1045,8 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     if(window.panoraHandleSessionError?.(error)) return;
     console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
     ready=true;await repairMissingDeliveryNotes();
-    if(typeof renderCommerce==='function')renderCommerce()
+    const changed=beforeSignature!==noteUiSignature(deliveryNotes);
+    if(changed&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce()
   }
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;
@@ -1025,10 +1070,14 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     return payment;
   }
   async function loadPayments(){
+    const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
     const rows=await request('payments?select=*&order=received_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
-    if(rows?.length){payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();if(typeof renderCommerce==='function')renderCommerce()}
-    else if(local.length){payments=local;ready=true;await savePaymentsNow()}
+    if(rows?.length){
+      payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();
+      const changed=beforeSignature!==paymentUiSignature(payments);
+      if(changed&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce();
+    }else if(local.length){payments=local;ready=true;await savePaymentsNow()}
   }
   async function savePaymentsNow(){
     if(!ready||typeof payments==='undefined')return;

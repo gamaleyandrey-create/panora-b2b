@@ -442,6 +442,23 @@ function orderActions(o) {
 const orderIsArchived=o=>['shipped','cancelled'].includes(String(o?.status||''));
 const orderArchiveMatches=o=>orderArchiveView==='archive'?orderIsArchived(o):!orderIsArchived(o);
 
+
+// Panora 6.75 — mobile Safari can cancel a click when the 2-second cloud poll
+// replaces the order card between pointerdown and click. Freeze background
+// order repaint briefly while the user is touching an order action.
+(function installPanoraOrderInteractionLock(){
+  if(window.panoraOrderInteractionLockInstalled)return;
+  window.panoraOrderInteractionLockInstalled=true;
+  const lock=event=>{
+    if(!event.target?.closest?.(
+      '[data-confirm],[data-ship],[data-cancel-order],[data-note],[data-delivery-qr],[data-order-messages]'
+    ))return;
+    window.panoraAdminOrderInteractionUntil=Date.now()+2500;
+  };
+  document.addEventListener('pointerdown',lock,true);
+  document.addEventListener('touchstart',lock,{capture:true,passive:true});
+})();
+
 function renderOrders() {
   const body = document.querySelector("#orderRows");
   if(!body)return;
@@ -613,6 +630,7 @@ function renderOrders() {
   setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),0);
 }
 async function confirmOrder(id) {
+  window.panoraAdminOrderInteractionUntil=Date.now()+10000;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status !== "submitted") return;
   const button=document.querySelector(`[data-confirm="${CSS.escape(id)}"]`);
@@ -643,6 +661,7 @@ async function confirmOrder(id) {
   }
 }
 async function cancelOrder(id) {
+  window.panoraAdminOrderInteractionUntil=Date.now()+10000;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status === "shipped" || o.status === "cancelled") return;
   if (!confirm("Отменить заказ и вернуть количество в свободный план?")) return;
@@ -1181,6 +1200,7 @@ function traysAtRestaurant(restaurantId) {
     );
 }
 function openShipment(id) {
+  window.panoraAdminOrderInteractionUntil=Date.now()+3000;
   const o = orders.find((x) => x.id === id);
   if (!o) return;
   const pricing = orderPricingState(o);
