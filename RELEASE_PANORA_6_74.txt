@@ -1,0 +1,8 @@
+Panora 6.74 — authoritative bakery status RPC
+
+Fixes “Supabase не подтвердил изменение статуса заказа”.
+Bakery confirm/cancel/shipment status writes use a SECURITY DEFINER RPC instead
+of direct REST PATCH on public.orders. The RPC verifies admin, locks the row,
+applies valid monotonic transitions and returns the persisted status.
+
+No Edge Function changes.
