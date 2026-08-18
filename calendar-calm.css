@@ -26,3 +26,5 @@
 @media(max-width:900px){
  .bake-calendar{padding:10px!important}.calendar-grid{gap:6px!important}.calendar-day{height:58px!important;min-height:58px!important}.calendar-day>em{height:42px!important}.calendar-day .weekday-name{display:block!important;color:#728078!important;font-size:9px!important;font-weight:650!important;line-height:1.1!important}.calendar-day .date-name{font-size:14px!important;line-height:1.2!important}.calendar-day>em{gap:3px!important}.calendar-day.has-bake{height:auto!important;min-height:112px!important}.calendar-day.has-bake>em{height:auto!important;min-height:35px!important}.calendar-day.has-bake .date-name{line-height:1.15!important}
 }
+
+.calendar-grid .calendar-empty.calendar-filtered{height:0!important;min-height:0!important;padding:0!important;margin:0!important}

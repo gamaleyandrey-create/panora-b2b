@@ -2,3 +2,24 @@
 .calendar-actions{display:flex;justify-content:flex-end;margin:-10px 0 22px}
 .calendar-actions .cancel-bake-button{min-height:48px;padding:0 22px}
 @media(max-width:520px){.calendar-actions{margin-top:-8px}.calendar-actions .cancel-bake-button{width:100%}}
+
+
+/* Panora 6.65 — active bake calendar / history */
+.bake-calendar-modebar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.bake-calendar-tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:11px;background:#f7f8f5}
+.bake-calendar-tabs button{min-height:38px;padding:0 13px!important;border:0!important;border-radius:8px!important;background:transparent!important;color:var(--muted);font-weight:700}
+.bake-calendar-tabs button.active{background:#fff!important;color:var(--green)!important;box-shadow:0 1px 5px rgba(35,58,43,.11)}
+#calendarModeHint{color:var(--muted);font-size:12px;font-weight:650}
+.bake-calendar header button:disabled{opacity:.38;cursor:not-allowed}
+.calendar-filtered{min-height:0!important;background:transparent!important;border:0!important}
+.calendar-day.history-readonly{cursor:default!important;opacity:.8;background:#f5f4f0!important;border-style:dashed!important}
+.calendar-day.history-readonly:hover{border-color:var(--line)!important}
+.calendar-history-badge{display:inline-block!important;margin:2px 0 0!important;padding:3px 6px!important;border-radius:999px!important;background:#ece9e1!important;color:#726d63!important;font-size:9px!important;font-weight:800!important;text-transform:uppercase}
+.plan-card.plan-history-readonly{background:#faf9f6!important;opacity:.88}
+.plan-card .status.history{background:#ece9e1!important;color:#6d695f!important}
+@media(max-width:850px){
+ .bake-calendar-modebar{align-items:stretch;flex-direction:column}
+ .bake-calendar-tabs{display:grid;grid-template-columns:1fr 1fr;width:100%}
+ .bake-calendar-tabs button{width:100%}
+ #calendarModeHint{padding-left:2px}
+}
