@@ -799,15 +799,30 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
     if(!ready)throw new Error('Облако ещё загружается');
     if(loadingOrders)await loadingOrders;
-    // Finish any already-running manual-order CREATE queue first. A status
-    // PATCH must always be the last writer for this explicit user action.
     if(savingOrders)await savingOrders;
     clearTimeout(orderTimer);orderTimer=0;
-    await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:nextStatus,cancelled_reason:cancelledReason,updated_at:new Date().toISOString()})});
+    let result;
+    try{
+      result=await request('rpc/panora_admin_set_order_status',{
+        method:'POST',
+        headers:{Prefer:'return=representation'},
+        body:JSON.stringify({p_order_id:id,p_status:String(nextStatus||''),p_reason:cancelledReason||null})
+      });
+    }catch(error){
+      const raw=String(error?.message||error||'');
+      if(/panora_admin_set_order_status|PGRST202|does not exist/i.test(raw))
+        throw new Error('На сервере не установлен RPC статусов Panora 6.74. Выполните SQL 6.74.');
+      throw error;
+    }
+    const returned=Array.isArray(result)?result[0]:result;
+    if(returned?.status&&String(returned.status)!==String(nextStatus))
+      throw new Error(`Сервер сохранил статус «${returned.status}» вместо «${nextStatus}»`);
     await loadOrders();
     window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
-    const saved=orders.find(order=>order.id===id);
-    if(!saved||saved.status!==nextStatus)throw new Error('Supabase не подтвердил изменение статуса заказа');
+    const saved=orders.find(order=>String(order.id)===String(id));
+    if(!saved||String(saved.status)!==String(nextStatus))
+      throw new Error(`Supabase вернул статус «${saved?.status||'не найден'}» вместо «${nextStatus}»`);
+    window.panoraRefreshNewOrderBadge?.();
     return saved;
   }
   async function shipOrderAtomic({orderId,items,paymentAmount=0,paymentMethod='Наличные',paymentDueDate=null,traysDelivered=0,traysReturned=0,trayBalanceAfter=0}){
@@ -854,10 +869,10 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
       // Panora 6.73: a delivery note without status=shipped is NOT a completed
       // shipment. Repair the server row explicitly, then verify it again.
       if(order?.status!=='shipped'){
-        await request(`orders?id=eq.${encodeURIComponent(orderId)}`,{
-          method:'PATCH',
+        await request('rpc/panora_admin_set_order_status',{
+          method:'POST',
           headers:{Prefer:'return=representation'},
-          body:JSON.stringify({status:'shipped',updated_at:new Date().toISOString()})
+          body:JSON.stringify({p_order_id:orderId,p_status:'shipped',p_reason:null})
         });
         await loadOrders();
         order=orders.find(entry=>entry.id===orderId);
@@ -880,11 +895,11 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
           if(recovered){
             let order=orders.find(entry=>entry.id===orderId);
             if(order?.status!=='shipped'){
-              await request(`orders?id=eq.${encodeURIComponent(orderId)}`,{
-                method:'PATCH',
-                headers:{Prefer:'return=representation'},
-                body:JSON.stringify({status:'shipped',updated_at:new Date().toISOString()})
-              });
+              await request('rpc/panora_admin_set_order_status',{
+          method:'POST',
+          headers:{Prefer:'return=representation'},
+          body:JSON.stringify({p_order_id:orderId,p_status:'shipped',p_reason:null})
+        });
               await loadOrders();
               order=orders.find(entry=>entry.id===orderId);
             }

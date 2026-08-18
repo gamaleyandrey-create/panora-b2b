@@ -633,9 +633,12 @@ async function confirmOrder(id) {
     if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Подтвердить заказ"}
     const raw=String(error?.message||error||"");
     const staleProcessing=/order_status[\s\S]*processing|processing[\s\S]*order_status/i.test(raw);
-    const message=staleProcessing
-      ?"На сервере остался старый триггер статуса Panora 6.70. Выполните SQL Panora 6.72 и повторите подтверждение."
-      :raw.replace(/^\s*\{[\s\S]*?"message"\s*:\s*"([^"]+)"[\s\S]*\}\s*$/,'$1').slice(0,500);
+    const missingRpc=/RPC статусов Panora 6\.74|panora_admin_set_order_status|PGRST202/i.test(raw);
+    const message=missingRpc
+      ?"Выполните SQL Panora 6.74 в Supabase и повторите действие."
+      :staleProcessing
+        ?"Повторно выполните SQL Panora 6.72, затем SQL 6.74."
+        :raw.replace(/^\s*\{[\s\S]*?"message"\s*:\s*"([^"]+)"[\s\S]*\}\s*$/,'$1').slice(0,500);
     alert(`Не удалось подтвердить заказ:\n${message}`);
   }
 }
