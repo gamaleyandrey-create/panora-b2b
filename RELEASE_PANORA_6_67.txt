@@ -1,0 +1,22 @@
+Panora 6.67 — partner mobile cart stability + single bake-date step
+
+Includes all fixes through 6.66.
+
+Mobile partner cart
+- product photos no longer blink during 10-second partner cloud refreshes;
+- cart DOM is rebuilt only when the cart's visible content actually changes;
+- background cloud hydration no longer calls renderCart() unconditionally;
+- cart thumbnails are eager-loaded and existing <img> nodes stay mounted on no-op sync cycles;
+- the duplicate date selector and date-confirmation checkbox are hidden on mobile;
+- mobile checkout uses the bake date already selected/validated on the first “Новый заказ” step;
+- desktop keeps the date selector, but its wording is now “День выпечки”, not “Дата поставки”;
+- confirmation wording is also “Подтверждаю день выпечки”.
+
+Partner ↔ bakery interaction static audit
+- partner submit still goes through panora_create_order;
+- Panora 6.64 common-open-bake-day client guard remains active;
+- bakery cloud order/item flow remains unchanged;
+- B2B message/push code paths from 6.60 remain present;
+- no SQL or Edge Function changes in 6.67.
+
+Panora 6.64 server bake-day guard remains required.

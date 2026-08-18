@@ -816,18 +816,20 @@ function openCheckoutForAccount() {
 const originalCheckout = $("#checkoutButton").onclick;
 $("#checkoutButton").onclick = () => {
   const count = cartData().count;
+  const mobile=window.matchMedia?.('(max-width:720px)')?.matches;
+  const dateSelect=$("#cartDeliveryDate");
+  const dateReady=Boolean(dateSelect?.value&&!dateSelect?.disabled);
+  if(mobile&&dateReady)$("#confirmDeliveryDate").checked=true;
   if (!$("#confirmDeliveryDate").checked) {
     showToast(
       lang === "ru"
-        ? "Сначала подтвердите выбранную дату поставки"
+        ? "Сначала выберите и подтвердите день выпечки"
         : lang === "es"
-          ? "Primero confirma la fecha de entrega"
-          : "First confirm the selected delivery date",
+          ? "Primero elige y confirma el día de horneado"
+          : "First choose and confirm the bake day",
     );
     const box = $("#confirmDeliveryDate");
-    box
-      .closest("label")
-      .scrollIntoView({ behavior: "smooth", block: "center" });
+    box.closest("label")?.scrollIntoView({ behavior: "smooth", block: "center" });
     box.focus();
     return;
   }

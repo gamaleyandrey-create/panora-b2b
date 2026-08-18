@@ -213,3 +213,17 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
     will-change:auto!important;
   }
 }
+
+
+/* Panora 6.67 — mobile partner selects bake day only on the first New Order step */
+@media(max-width:720px){
+  #cartDrawer .cart-delivery-date,
+  #cartDrawer .cart-date-confirm{
+    display:none!important;
+  }
+  #cartDrawer .cart-thumb img{
+    opacity:1!important;
+    transition:none!important;
+    animation:none!important;
+  }
+}

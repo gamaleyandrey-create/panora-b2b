@@ -463,7 +463,8 @@
         if(productsChanged||accountChanged)refreshRestaurantProducts?.();
       }
       if(productsChanged)window.dispatchEvent(new CustomEvent('panora:products-changed',{detail:{source:'partner-load'}}));
-      renderCart();
+      // Panora 6.67: a no-op cloud hydration must not replace cart <img> nodes.
+      if(!hadAccount||productsChanged||accountChanged)renderCart();
       if(!hadAccount||accountChanged)window.dispatchEvent(new CustomEvent('panora:partner-data-updated',{detail:{accountChanged,productsChanged}}));
       startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
