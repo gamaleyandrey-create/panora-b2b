@@ -628,9 +628,15 @@ async function confirmOrder(id) {
     window.panoraDataChannel?.postMessage({ type: "order-confirmed", id });
     window.dispatchEvent(new CustomEvent('panora:order-cycle-updated',{detail:{id,status:'confirmed'}}));
     renderCommerce();
+    window.panoraRefreshNewOrderBadge?.();
   } catch (error) {
     if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Подтвердить заказ"}
-    alert(`Не удалось подтвердить заказ: ${error.message}`);
+    const raw=String(error?.message||error||"");
+    const staleProcessing=/order_status[\s\S]*processing|processing[\s\S]*order_status/i.test(raw);
+    const message=staleProcessing
+      ?"На сервере остался старый триггер статуса Panora 6.70. Выполните SQL Panora 6.72 и повторите подтверждение."
+      :raw.replace(/^\s*\{[\s\S]*?"message"\s*:\s*"([^"]+)"[\s\S]*\}\s*$/,'$1').slice(0,500);
+    alert(`Не удалось подтвердить заказ:\n${message}`);
   }
 }
 async function cancelOrder(id) {
