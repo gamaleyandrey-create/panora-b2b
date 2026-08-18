@@ -799,6 +799,9 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   async function updateOrderStatus(id,nextStatus,cancelledReason=null){
     if(!ready)throw new Error('Облако ещё загружается');
     if(loadingOrders)await loadingOrders;
+    // Finish any already-running manual-order CREATE queue first. A status
+    // PATCH must always be the last writer for this explicit user action.
+    if(savingOrders)await savingOrders;
     clearTimeout(orderTimer);orderTimer=0;
     await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:nextStatus,cancelled_reason:cancelledReason,updated_at:new Date().toISOString()})});
     await loadOrders();
@@ -872,18 +875,26 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
   async function saveOrdersNow(){
     if(!ready||typeof orders==='undefined')return;if(savingOrders)return savingOrders;
     savingOrders=(async()=>{status('Синхронизация…');
+    // Panora 6.70: this queue is only for explicitly new/manual orders.
+    // Existing cloud orders are authoritative and MUST NOT be upserted from
+    // local cache, especially not their status.
+    let itemSyncOrders=(orders||[]).filter(order=>order?._itemSyncRequired===true);
     let days=await bakeDayMap();
-    const missing=orders.some(order=>!days.has(order.date));
+    const missing=itemSyncOrders.some(order=>!days.has(order.date));
     if(missing){await savePlansNow();days=await bakeDayMap()}
-    const valid=orders.filter(order=>days.has(order.date)&&restaurants.some(r=>r.id===order.restaurantId));
-    if(valid.length){
-      const payload=valid.map(order=>{
-        const row={id:order.id,restaurant_id:order.restaurantId,bake_day_id:days.get(order.date),status:order.status||'submitted',comment:orderMeta(order),cancelled_reason:order.cancellationReason||null,updated_at:new Date().toISOString()};
-        if(order?._itemSyncRequired===true)row.created_by=session.user?.id||null;
-        return row;
-      });
+    itemSyncOrders=itemSyncOrders.filter(order=>days.has(order.date)&&restaurants.some(r=>r.id===order.restaurantId));
+    if(itemSyncOrders.length){
+      const payload=itemSyncOrders.map(order=>({
+        id:order.id,
+        restaurant_id:order.restaurantId,
+        bake_day_id:days.get(order.date),
+        status:order.status||'confirmed',
+        comment:orderMeta(order),
+        cancelled_reason:order.cancellationReason||null,
+        created_by:session.user?.id||null,
+        updated_at:new Date().toISOString()
+      }));
       await request('orders?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
-      const itemSyncOrders=valid.filter(order=>order?._itemSyncRequired===true);
       for(const order of itemSyncOrders){
         const items=(order.items||[]).filter(item=>Number(item.quantity)>0).map(item=>{const product=(typeof productRegistry!=='undefined'?productRegistry:[]).find(p=>String(p.id)===String(item.product));return{order_id:order.id,product_id:item.product,quantity:Number(item.quantity),unit_price:Number((order.prices||{})[item.product]??restaurant(order.restaurantId)?.prices?.[item.product]??0),product_names_snapshot:item.nameSnapshot||product?.names||null,product_image_snapshot:item.imageSnapshot||product?.image||null}});
         if(!items.length)throw new Error(`Пустой заказ не может быть сохранён: ${order.number||order.id}`);
