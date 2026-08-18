@@ -44,8 +44,12 @@
     event.stopImmediatePropagation?.();
     const count=cartData().count;
     const confirmed=document.querySelector('#confirmDeliveryDate');
+    const mobile=window.matchMedia?.('(max-width:720px)')?.matches;
+    const bakeSelect=document.querySelector('#cartDeliveryDate');
+    const dateReady=Boolean(bakeSelect?.value&&!bakeSelect?.disabled);
+    if(mobile&&confirmed&&dateReady)confirmed.checked=true;
     if(confirmed&&!confirmed.checked){
-      showToast(message('Сначала подтвердите выбранную дату поставки','First confirm the selected delivery date','Primero confirma la fecha de entrega'));
+      showToast(message('Сначала выберите и подтвердите день выпечки','First choose and confirm the bake day','Primero elige y confirma el día de horneado'));
       confirmed.closest('label')?.scrollIntoView({behavior:'smooth',block:'center'});
       return;
     }

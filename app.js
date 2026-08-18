@@ -18,9 +18,12 @@ I18N.es.catalog.privateNote='Los precios personalizados están disponibles despu
 I18N.ru.cart.deliveryDate='Дата поставки';
 I18N.en.cart.deliveryDate='Delivery date';
 I18N.es.cart.deliveryDate='Fecha de entrega';
-I18N.ru.cart.confirmDeliveryDate='Подтверждаю дату поставки';
-I18N.en.cart.confirmDeliveryDate='I confirm the delivery date';
-I18N.es.cart.confirmDeliveryDate='Confirmo la fecha de entrega';
+I18N.ru.cart.confirmDeliveryDate='Подтверждаю день выпечки';
+I18N.en.cart.confirmDeliveryDate='I confirm the bake day';
+I18N.es.cart.confirmDeliveryDate='Confirmo el día de horneado';
+I18N.ru.cart.deliveryDate='День выпечки';
+I18N.en.cart.deliveryDate='Bake day';
+I18N.es.cart.deliveryDate='Día de horneado';
 I18N.ru.profile.kicker='Покупатель';
 I18N.en.profile.kicker='Customer';
 I18N.es.profile.kicker='Cliente';
@@ -228,13 +231,25 @@ function bindQty(){
 function setQty(id,qty){qty=Math.min(qty,catalogAvailablePieces(id));if(qty>0)cart[id]=qty;else delete cart[id];localStorage.setItem('panora-cart',JSON.stringify(cart));document.querySelectorAll('[data-qty-select]').forEach(select=>{if(select.dataset.qtySelect===id&&Number(select.value)!==qty)select.value=String(qty)});updateProductTierUI(id,qty);syncCartDeliveryDate();renderCart();if(qty>0)showToast(tr('cart.added'))}
 function changeQty(id,delta){cart[id]=Math.max(0,(cart[id]||0)+delta);if(!cart[id])delete cart[id];localStorage.setItem('panora-cart',JSON.stringify(cart));renderProducts();renderCart();if(delta>0)showToast(tr('cart.added'))}
 function cartData(){const rows=PRODUCTS.filter(p=>cart[p.id]).map(p=>{const quantityPieces=Number(cart[p.id]||0),unitPrice=effectiveUnitPrice(p,quantityPieces);return{...p,quantityPieces,unitPrice,total:unitPrice*quantityPieces}});return{rows,total:rows.reduce((s,p)=>s+p.total,0),count:rows.reduce((s,p)=>s+p.quantityPieces,0)}}
+let lastCartDomSignature='';
 function renderCart(){
  const{rows,total,count}=cartData();
- ['cartTotal','subtotal','summaryTotal','checkoutTotal'].forEach(id=>$('#'+id).textContent=SHOW_PRICES?money(total):'—');
+ ['cartTotal','subtotal','summaryTotal','checkoutTotal'].forEach(id=>{const el=$('#'+id);if(el)el.textContent=SHOW_PRICES?money(total):'—'});
  $('#cartCount').textContent=count;$('#cartButton').classList.toggle('visible',count>0);$('#cartEmpty').style.display=count?'none':'block';$('#cartSummary').style.display=count?'block':'none';
- $('#cartItems').innerHTML=rows.map(p=>{const warning=tierWarningText(p,p.quantityPieces),min=wholesaleMinQty(p),wholesale=account&&p.quantityPieces>=min,image=primaryProductImage(p);return `<div class="cart-item"><div class="cart-thumb"><img src="${image}" alt="${pText(p)[0]}" loading="lazy" decoding="async"></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)} · ${wholesale?(lang==='ru'?'оптовая цена':lang==='es'?'precio mayorista':'wholesale price'):(lang==='ru'?'розничная цена':lang==='es'?'precio minorista':'retail price')} ${money(p.unitPrice)}/шт.</small>${qtyControl(p.id,p.quantityPieces)}${warning?`<p class="cart-tier-warning">${warning}</p>`:""}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`}).join('');
- $('#cartItems').querySelectorAll('.cart-thumb img').forEach(img=>img.addEventListener('error',()=>{if(img.dataset.fallback==='1')return;img.dataset.fallback='1';img.src='icon.svg'}));
- bindQty();
+ const signature=JSON.stringify({
+  lang,showPrices:SHOW_PRICES,accountId:account?.id||'',
+  rows:rows.map(p=>({
+   id:String(p.id),qty:Number(p.quantityPieces||0),unit:Number(p.unitPrice||0),total:Number(p.total||0),
+   image:String(primaryProductImage(p)||''),name:String(pText(p)[0]||''),min:Number(wholesaleMinQty(p)||0),
+   warning:String(tierWarningText(p,p.quantityPieces)||'')
+  }))
+ });
+ if(signature!==lastCartDomSignature){
+  lastCartDomSignature=signature;
+  $('#cartItems').innerHTML=rows.map(p=>{const warning=tierWarningText(p,p.quantityPieces),min=wholesaleMinQty(p),wholesale=account&&p.quantityPieces>=min,image=primaryProductImage(p);return `<div class="cart-item" data-cart-product="${p.id}"><div class="cart-thumb"><img src="${image}" alt="${pText(p)[0]}" loading="eager" decoding="async"></div><div><div class="cart-item-name">${pText(p)[0]}</div><small>${piecesLabel(p.quantityPieces)} · ${wholesale?(lang==='ru'?'оптовая цена':lang==='es'?'precio mayorista':'wholesale price'):(lang==='ru'?'розничная цена':lang==='es'?'precio minorista':'retail price')} ${money(p.unitPrice)}/шт.</small>${qtyControl(p.id,p.quantityPieces)}${warning?`<p class="cart-tier-warning">${warning}</p>`:""}</div><strong>${SHOW_PRICES?money(p.total):''}</strong></div>`}).join('');
+  $('#cartItems').querySelectorAll('.cart-thumb img').forEach(img=>img.addEventListener('error',()=>{if(img.dataset.fallback==='1')return;img.dataset.fallback='1';img.src='icon.svg'}));
+  bindQty();
+ }
  $('#minimumHint').style.display='none';
  $('#checkoutButton').disabled=count<1||!getBakeDates().length
 }
