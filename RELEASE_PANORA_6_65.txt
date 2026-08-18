@@ -1,0 +1,20 @@
+Panora 6.65 — bakery bake calendar active/history split
+
+Includes all fixes through 6.64.
+
+Bakery bake calendar
+- the normal “Календарь выпечки” is now a working calendar: today + future only;
+- past bake dates are NOT deleted from Supabase/local history;
+- past dates automatically move to a read-only “Прошедшие” mode after the bakery day changes;
+- “Сегодня / Будущие” returns to the working calendar;
+- the active calendar cannot navigate into months earlier than the current bakery month;
+- past cells inside the current month are hidden from the working view;
+- history mode shows only dates before today and does not allow editing/cancelling schedule from the calendar;
+- historical cards are marked “Только просмотр”;
+- summaries in the calendar follow the current mode (active vs history);
+- the plan list under the calendar follows the same active/history mode;
+- bakery-local “today” is resolved in Europe/Madrid, not UTC.
+
+No data is physically removed. Old bake_days, orders, production facts, raw-material movements and documents remain available for accounting/history.
+
+No SQL required. Panora 6.64 server bake-day guard remains required.
