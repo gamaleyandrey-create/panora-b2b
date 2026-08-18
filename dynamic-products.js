@@ -1,6 +1,14 @@
 (()=>{
  const builtInFallbacks=new Map(PRODUCTS.filter(p=>['plain','pumpkin'].includes(p.id)).map(p=>[p.id,{...p}]));
- function readManaged(){try{return JSON.parse(localStorage.getItem('panora-public-products')||localStorage.getItem('panora-partner-products')||localStorage.getItem('panora-products')||'[]')}catch{return[]}}
+ function readManaged(){
+  try{
+   const partnerActive=Boolean(account?.id||localStorage.getItem('panora-account-id'));
+   const raw=partnerActive
+    ?(localStorage.getItem('panora-partner-products')||localStorage.getItem('panora-public-products')||localStorage.getItem('panora-products')||'[]')
+    :(localStorage.getItem('panora-public-products')||localStorage.getItem('panora-products')||localStorage.getItem('panora-partner-products')||'[]');
+   return JSON.parse(raw);
+  }catch{return[]}
+ }
  function toCatalogProduct(p){
   const fallback=builtInFallbacks.get(p.id)||{};
   const ru=p.names?.ru||fallback.text?.ru?.[0]||p.id;
