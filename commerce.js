@@ -1419,6 +1419,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     shipmentDialog.close();
     renderCommerce();
     renderStock();
+    window.panoraRefreshNewOrderBadge?.();
     window.dispatchEvent(new CustomEvent('panora:order-cycle-updated',{detail:{id:o.id,status:'shipped'}}));
     printNote(o.id);
     return true;

@@ -849,7 +849,25 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
     await loadOrders();await loadPayments();await loadDeliveryNotes();
       const note=deliveryNotes.find(entry=>entry.orderId===orderId);
       if(!note)throw new Error('Supabase не вернул созданную накладную');
-      const order=orders.find(entry=>entry.id===orderId);
+
+      let order=orders.find(entry=>entry.id===orderId);
+      // Panora 6.73: a delivery note without status=shipped is NOT a completed
+      // shipment. Repair the server row explicitly, then verify it again.
+      if(order?.status!=='shipped'){
+        await request(`orders?id=eq.${encodeURIComponent(orderId)}`,{
+          method:'PATCH',
+          headers:{Prefer:'return=representation'},
+          body:JSON.stringify({status:'shipped',updated_at:new Date().toISOString()})
+        });
+        await loadOrders();
+        order=orders.find(entry=>entry.id===orderId);
+      }
+      if(!order||order.status!=='shipped'){
+        throw new Error('Supabase создал накладную, но не подтвердил статус «Отгружен»');
+      }
+      window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id:orderId,nextStatus:'shipped'}}));
+      window.dispatchEvent(new CustomEvent('panora:order-cycle-updated',{detail:{id:orderId,status:'shipped'}}));
+      window.panoraRefreshNewOrderBadge?.();
       audit('shipment.completed',`${order?.number||orderId} · накладная ${note.number||note.noteNumber||''}`);
       return note;
     }catch(error){
@@ -860,7 +878,18 @@ const ordersCached=typeof window.panoraSaveOrdersCache==='function'
           await loadOrders();await loadPayments();await loadDeliveryNotes();
           const recovered=deliveryNotes.find(entry=>entry.orderId===orderId);
           if(recovered){
-            const order=orders.find(entry=>entry.id===orderId);
+            let order=orders.find(entry=>entry.id===orderId);
+            if(order?.status!=='shipped'){
+              await request(`orders?id=eq.${encodeURIComponent(orderId)}`,{
+                method:'PATCH',
+                headers:{Prefer:'return=representation'},
+                body:JSON.stringify({status:'shipped',updated_at:new Date().toISOString()})
+              });
+              await loadOrders();
+              order=orders.find(entry=>entry.id===orderId);
+            }
+            if(order?.status!=='shipped')throw new Error('Накладная существует, но заказ не переведён в «Отгружен»');
+            window.panoraRefreshNewOrderBadge?.();
             audit('shipment.recovered',`${order?.number||orderId} · накладная ${recovered.number||existing[0].note_number}`,'warning');
             status('Облако ✓');
             return recovered;
