@@ -54,13 +54,21 @@
     image:p.image_url||'icon.svg',
     names:{ru:p.name_ru||p.id,en:p.name_en||p.name_ru||p.id,es:p.name_es||p.name_ru||p.id},
     descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}
-   }));
+   })).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
    const before=localStorage.getItem('panora-public-products')||'[]';
    const after=JSON.stringify(next);
    if(before!==after){
-    localStorage.setItem('panora-public-products',after);
-    window.dispatchEvent(new CustomEvent('panora:public-products-changed',{detail:{source:'public-retail-cloud'}}));
-    window.dispatchEvent(new CustomEvent('panora:retail-catalog-updated',{detail:{count:next.length}}));
+    let cached=true;
+    try{localStorage.setItem('panora-public-products',after)}catch(error){cached=false;console.warn('Panora public catalog cache',error)}
+    // The live catalogue is already in memory/Supabase. Dispatch only for a
+    // real semantic catalogue change; storage failure must not create a loop.
+    const previous=(()=>{try{return JSON.parse(before)||[]}catch{return[]}})()
+      .slice().sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
+    const previousCanonical=JSON.stringify(previous);
+    if(previousCanonical!==after){
+      window.dispatchEvent(new CustomEvent('panora:public-products-changed',{detail:{source:'public-retail-cloud',cached}}));
+      window.dispatchEvent(new CustomEvent('panora:retail-catalog-updated',{detail:{count:next.length,cached}}));
+    }
    }
    return next;
   })().finally(()=>loading=null);

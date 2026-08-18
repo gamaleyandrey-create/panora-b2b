@@ -181,3 +181,17 @@ html{-webkit-text-size-adjust:100%}img{max-width:100%}button,input,select,textar
   .page-head,.view-header,.rw-head{min-width:0}
   .page-head h1,.page-head h2,.view-header h1,.rw-head h2{overflow-wrap:anywhere}
 }
+
+
+/* Panora 6.62 — keep loaded product photos visually stable on mobile */
+@media(max-width:720px){
+  body:not(.admin-page) .product-slider>img,
+  body:not(.admin-page) .rw-new-product-photo img,
+  body:not(.admin-page) .rw-profile-price-photo img{
+    opacity:1!important;
+    transition:none!important;
+    animation:none!important;
+    transform:none!important;
+    backface-visibility:hidden!important;
+  }
+}

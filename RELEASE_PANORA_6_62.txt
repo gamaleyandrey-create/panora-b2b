@@ -1,0 +1,19 @@
+Panora 6.62 — partner mobile product-photo stability
+
+Includes the 6.61 mobile bake/delivery-date checkout fix.
+
+Partner storefront / cabinet
+- product photos no longer blink during background cloud polling on mobile;
+- public-catalog rows are canonicalized by product id before change detection, so changing Supabase row order does not look like a product change;
+- partner catalog/prices are canonicalized before comparison, preventing false “price/product changed” events every 2.5 seconds;
+- background pricing refresh no longer directly rebuilds the entire partner cabinet;
+- the New Order and Profile tabs are protected from background workspace rebuilds while they are open;
+- catalog DOM is rebuilt only when visual product data actually changes;
+- price-only changes update price/tier text without replacing product <img> nodes;
+- cart/workspace renders are skipped when there is no meaningful catalog change;
+- duplicate legacy pricing listeners that rebuilt storefront/workspace are removed;
+- mobile product images have no opacity transition.
+
+Result: normal background polling continues, but existing image DOM nodes stay mounted and loaded.
+
+No SQL required beyond the already-required Panora 6.60 communication/Push migration.

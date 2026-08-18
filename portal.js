@@ -789,7 +789,17 @@ function openCheckoutForAccount() {
   const form = $("#checkoutForm");
   restoreCheckoutProfile();
   updateMobileCheckoutSummary();
-  form.date.value = selectedBakeDate;
+  try{syncDateSelect?.();syncCartDeliveryDate?.()}catch{}
+  const cartDate=String($("#cartDeliveryDate")?.value||"");
+  const formValues=[...form.date.options].map(option=>String(option.value||"")).filter(Boolean);
+  let resolved=String(selectedBakeDate||"");
+  if(!formValues.includes(resolved))resolved=formValues.includes(cartDate)?cartDate:(formValues[0]||"");
+  if(resolved){
+    selectedBakeDate=resolved;
+    try{localStorage.setItem("panora-bake-date",resolved)}catch{}
+    form.date.disabled=false;
+    form.date.value=resolved;
+  }
   originalCheckout();
 }
 const originalCheckout = $("#checkoutButton").onclick;
@@ -982,9 +992,5 @@ showOrderItemCosts();
 updateCheckoutAccess();
 renderCart();
 
-window.addEventListener("panora:partner-pricing-updated", () => {
-  try { renderAccountModal(); } catch {}
-});
-window.addEventListener("panora:pricing-refresh", () => {
-  try { renderAccountModal(); } catch {}
-});
+// Panora 6.62: restaurant-workspace/dynamic-products handle pricing refresh
+// without rebuilding product images during background polling.

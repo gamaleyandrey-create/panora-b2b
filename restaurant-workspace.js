@@ -624,11 +624,20 @@
     try{
       if(typeof getBakeDates==="function"){
         return getBakeDates(6).map(item=>{
-          const value=typeof dateValue==="function"?dateValue(item.date):String(item.deliveryDate||"");
-          const delivery=item.deliveryDate||value;
-          const label=localDate(delivery||value);
-          return {value:delivery||value,label};
-        }).filter(item=>item.value);
+          const bakeDate=typeof dateValue==="function"?dateValue(item.date):String(item.date||"").slice(0,10);
+          const deliveryDate=String(item.deliveryDate||bakeDate||"").slice(0,10);
+          if(!bakeDate)return null;
+          const bakeLabel=localDate(bakeDate);
+          const deliveryLabel=localDate(deliveryDate||bakeDate);
+          const label=deliveryDate&&deliveryDate!==bakeDate
+            ?(lang==="ru"
+              ?`Выпечка: ${bakeLabel} · Поставка: ${deliveryLabel}`
+              :lang==="es"
+                ?`Horneado: ${bakeLabel} · Entrega: ${deliveryLabel}`
+                :`Bake: ${bakeLabel} · Delivery: ${deliveryLabel}`)
+            :deliveryLabel;
+          return {value:bakeDate,bakeDate,deliveryDate,label};
+        }).filter(Boolean);
       }
     }catch{}
     return [];
@@ -639,7 +648,8 @@
     const options=newOrderDeliveryOptions();
     const count=cartCount();
     const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
-    const chosen=String(localStorage.getItem("panora-bake-date")||"");
+    const storedChosen=String(localStorage.getItem("panora-bake-date")||"");
+    const chosen=options.some(option=>option.value===storedChosen)?storedChosen:(options[0]?.value||"");
     return `<section class="rw-new-order-page">
       <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. Дату поставки подтвердите ниже.":lang==="es"?"Elige el pan y la cantidad. Confirma la fecha de entrega abajo.":"Choose bread and quantity. Confirm the delivery date below."}</p></div></header>
       <div class="rw-new-product-grid">
@@ -671,7 +681,7 @@
       <aside class="rw-new-cart">
         <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong data-rw-new-count>${count} ${t("pieces")}</strong></div>
         <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
-        <label><span>${t("delivery")}</span><select data-rw-new-date data-panora-no-draft="1" data-rw-stable-select="date">
+        <label><span>${lang==="ru"?"День выпечки / поставка":lang==="es"?"Horneado / entrega":"Bake / delivery"}</span><select data-rw-new-date data-panora-no-draft="1" data-rw-stable-select="date">
           ${options.length?options.map(option=>`<option value="${esc(option.value)}"${option.value===chosen?" selected":""}>${esc(option.label)}</option>`).join(""):`<option value="">${lang==="ru"?"Выберите дату в календаре":lang==="es"?"Elige una fecha":"Choose a date"}</option>`}
         </select></label>
         <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Перейти к оформлению":lang==="es"?"Continuar":"Continue"}</button>
@@ -1630,12 +1640,22 @@
       };
     });
     const newDate=modal.querySelector("[data-rw-new-date]");
-    if(newDate)newDate.onchange=()=>{
+    if(newDate){
+      const validValues=[...newDate.options].map(option=>option.value).filter(Boolean);
+      if(!validValues.includes(newDate.value)&&validValues.length)newDate.value=validValues[0];
       if(newDate.value){
         localStorage.setItem("panora-bake-date",newDate.value);
         try{selectedBakeDate=newDate.value;syncCartDeliveryDate?.()}catch{}
       }
-    };
+      newDate.onchange=()=>{
+        if(newDate.value){
+          localStorage.setItem("panora-bake-date",newDate.value);
+          try{selectedBakeDate=newDate.value;syncCartDeliveryDate?.()}catch{}
+          const confirmBox=document.querySelector("#confirmDeliveryDate");
+          if(confirmBox){confirmBox.checked=true;try{enforceDateConfirmation?.()}catch{}}
+        }
+      };
+    }
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
@@ -1643,6 +1663,8 @@
         if(date){
           localStorage.setItem("panora-bake-date",date);
           try{selectedBakeDate=date;syncCartDeliveryDate?.()}catch{}
+          const confirmBox=document.querySelector("#confirmDeliveryDate");
+          if(confirmBox){confirmBox.checked=true;try{enforceDateConfirmation?.()}catch{}}
         }
         closePanels();
         try{renderProducts();renderCart();openPanel(document.querySelector("#cartDrawer"))}catch{}

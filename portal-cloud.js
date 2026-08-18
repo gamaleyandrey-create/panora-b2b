@@ -517,27 +517,33 @@
         api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       const ruleMap=new Map((rules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
-      const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
-      const directPrices=Object.fromEntries((prices||[]).map(item=>[item.product_id,Number(item.price)]));
+      const stablePriceObject=entries=>Object.fromEntries(
+        (entries||[]).map(([id,value])=>[String(id),Number(value||0)])
+          .sort((a,b)=>a[0].localeCompare(b[0]))
+      );
+      const rpcPrices=stablePriceObject((products||[]).map(item=>[item.id,item.price]));
+      const directPrices=stablePriceObject((prices||[]).map(item=>[item.product_id,item.price]));
       const nextPrices=Object.keys(rpcPrices).length?rpcPrices:directPrices;
-      const priceChanged=JSON.stringify(account.prices||{})!==JSON.stringify(nextPrices);
+      const currentPrices=stablePriceObject(Object.entries(account.prices||{}));
+      const priceChanged=JSON.stringify(currentPrices)!==JSON.stringify(nextPrices);
       if(priceChanged){
         account={...account,prices:nextPrices};
         write('panora-restaurants',[account]);
-        try{renderAccountModal()}catch{}
       }
       let productChanged=false;
       if(products?.length){
-        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}));
-        const before=localStorage.getItem('panora-partner-products')||'[]',after=JSON.stringify(nextProducts);
-        productChanged=before!==after;
-        if(productChanged)localStorage.setItem('panora-partner-products',after);
+        const nextProducts=products.map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))
+          .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+        const beforeRaw=localStorage.getItem('panora-partner-products')||'[]';
+        const before=(()=>{try{return JSON.parse(beforeRaw)||[]}catch{return[]}})()
+          .slice().sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
+        const after=JSON.stringify(nextProducts);
+        productChanged=JSON.stringify(before)!==after;
+        if(productChanged){try{localStorage.setItem('panora-partner-products',after)}catch(error){console.warn('Panora partner product cache',error)}}
       }
       if(priceChanged||productChanged){
         if(typeof refreshRestaurantProducts==='function')refreshRestaurantProducts();
         else applyAccount();
-        renderAccountModal();
-        renderCart();
         window.dispatchEvent(new CustomEvent('panora:partner-pricing-updated',{detail:{priceChanged,productChanged,productCount:products?.length||0}}));
       }
       return {priceChanged,productCount:products?.length||0};
@@ -851,14 +857,24 @@
     form.email.value=String(form.email.value||account.email||'').trim();
     const fulfillment=form.fulfillment.value||'delivery';
     form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account.address):account.address)||'').trim();
-    const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,date=String(data.get('date')||selectedBakeDate||'');
+    const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,cartBakeDate=String(document.querySelector('#cartDeliveryDate')?.value||''),date=String(data.get('date')||cartBakeDate||selectedBakeDate||'');
     if(checkedItems.unavailable.length){purgeUnavailableCart(checkedItems.unavailable);return showToast(unavailableCartError().message)}
+    const validBakeDates=new Set(productionPlans().filter(p=>p.open!==false).map(p=>String(p.bakeDate||'')).filter(Boolean));
+    if(date&&validBakeDates.size&&!validBakeDates.has(date)){
+      const repaired=cartBakeDate&&validBakeDates.has(cartBakeDate)?cartBakeDate:[...validBakeDates].sort()[0]||'';
+      if(repaired){
+        selectedBakeDate=repaired;
+        try{localStorage.setItem('panora-bake-date',repaired)}catch{}
+        if(form.date&&[...form.date.options].some(option=>option.value===repaired)){form.date.disabled=false;form.date.value=repaired}
+      }
+    }
+    const resolvedDate=String((date&&(!validBakeDates.size||validBakeDates.has(date)))?date:(cartBakeDate&&validBakeDates.has(cartBakeDate)?cartBakeDate:selectedBakeDate||''));
     const missing=[];
     if(!form.restaurant.value)missing.push(labels('название партнёра','partner name','nombre del socio'));
     if(!form.contact.value)missing.push(labels('контактное лицо','contact person','persona de contacto'));
     if(!form.phone.value)missing.push(labels('телефон','phone','teléfono'));
     if(fulfillment==='delivery'&&!form.address.value)missing.push(labels('адрес доставки','delivery address','dirección de entrega'));
-    if(!date)missing.push(labels('дату поставки','delivery date','fecha de entrega'));
+    if(!resolvedDate)missing.push(labels('дату поставки','delivery date','fecha de entrega'));
     if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
@@ -877,8 +893,8 @@
         }
         state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
       }
-      const plan=productionPlans().find(p=>p.bakeDate===date),deliveryDate=plan?.deliveryDate||date,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(date,items,comment),id=orderAttempt(account.id,fingerprint);
-      const created=await createOrderWithRecovery(id,date,deliveryDate,items,comment);
+      const plan=productionPlans().find(p=>p.bakeDate===resolvedDate),deliveryDate=plan?.deliveryDate||resolvedDate,comment=String(data.get('comment')||''),fingerprint=orderFingerprint(resolvedDate,items,comment),id=orderAttempt(account.id,fingerprint);
+      const created=await createOrderWithRecovery(id,resolvedDate,deliveryDate,items,comment);
       if(!created)throw new Error('Order was not created');
       try{
         await api('rpc/panora_apply_order_tier_prices',{method:'POST',body:JSON.stringify({p_order_id:id})});

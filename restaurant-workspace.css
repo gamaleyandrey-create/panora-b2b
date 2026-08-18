@@ -1769,3 +1769,18 @@
   .rw-partner-push-actions{grid-template-columns:1fr!important}
   .rw-partner-push-actions [data-rw-partner-push-disable]{grid-column:auto}
 }
+
+
+/* Panora 6.61 — partner mobile bake/delivery selector */
+@media(max-width:720px){
+  .rw-new-cart [data-rw-new-date]{
+    width:100%!important;
+    min-width:0!important;
+    min-height:50px!important;
+    font-size:16px!important;
+    white-space:normal!important;
+  }
+  .rw-new-cart>label>span{
+    line-height:1.25!important;
+  }
+}
