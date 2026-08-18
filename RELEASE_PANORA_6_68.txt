@@ -1,0 +1,27 @@
+Panora 6.68 — unified communication + simpler partner mobile checkout
+
+Partner mobile checkout
+- normal partner mobile order flow is reduced from 3 confirmation screens to 2:
+  1) “Новый заказ” — products + common open bake day;
+  2) final checkout — contact/receiving details + submit.
+- the intermediate cart drawer is no longer opened automatically on mobile;
+- the cart remains available from the cart icon as an optional review/edit screen;
+- desktop behavior is unchanged;
+- the selected bake day is carried directly into final checkout and remains protected by the Panora 6.64 common-bake-day guard.
+
+Unified Messages + Push
+- messages remain the durable order communication history;
+- Push is only the notification layer and can be enabled/disabled from the same communication dialog;
+- B2B partner ↔ bakery order chat is renamed “Связь по заказу”;
+- B2B communication dialog shows device Push status and one enable/disable control;
+- partner uses existing verified panoraPartnerPush API;
+- bakery/admin uses existing verified panoraAdminWebPush API;
+- B2B “Сообщения” action buttons are renamed “Связь”;
+- retail customer page merges the separate Push card into the same “Связь с пекарней” card as messages;
+- retail system messages are shown as Panora, not as bakery messages;
+- retail bakery/admin chat is renamed “Связь” and includes bakery-device Push state + toggle;
+- ordinary messages continue to work even when Push is disabled.
+
+No SQL changes.
+No Edge Function changes.
+Panora 6.60 Push infrastructure and Panora 6.64 bake-day server guard remain required.
