@@ -1,0 +1,29 @@
+Panora 6.70 — confirmed B2B order cannot fall back to “new”
+
+Fixes both mobile symptoms:
+- Bakery: “Подтвердить заказ” changes to “Отгрузить заказ”, then a few seconds later incorrectly returns to “Подтвердить заказ”.
+- Partner: confirmation appears in “Связь”, but the order can still visually return/remain “Новый / ожидает подтверждения”.
+
+Root cause
+- the generic admin queued order synchronizer still upserted ALL locally cached B2B orders, including their status;
+- a stale local `submitted` snapshot could therefore overwrite an already confirmed cloud order;
+- the normal 2-second partner poll / admin refresh then faithfully reloaded the regressed server status.
+
+App hardening
+- generic saveOrdersNow() is now CREATE/repair-only;
+- it uploads only explicitly new/manual orders with `_itemSyncRequired=true`;
+- it never rewrites the status of an existing cloud B2B order from local cache;
+- existing status changes are performed only by explicit updateOrderStatus() / panora_ship_order;
+- updateOrderStatus waits for an already-running order save before changing status, eliminating a write race;
+- the partner client promotes a regressed row status from authoritative server status-history events when such an event exists.
+
+Server hardening (new SQL)
+- BEFORE UPDATE guard on public.orders makes B2B status monotonic;
+- confirmed cannot regress to submitted;
+- shipped cannot reopen/regress;
+- cancelled cannot reopen;
+- stale old browser tabs are handled silently: the previous server status is retained instead of returning an error;
+- legitimate forward transitions remain unchanged.
+
+No Edge Function changes.
+Panora 6.69 event_key repair and Panora 6.64 bake-day guard remain required.

@@ -393,7 +393,22 @@
       const list=grouped.get(String(event.orderId))||[];
       list.push(event);grouped.set(String(event.orderId),list);
     });
-    return (orders||[]).map(order=>({...order,statusHistory:(grouped.get(String(order.id))||[]).sort((a,b)=>String(a.occurredAt).localeCompare(String(b.occurredAt)))}));
+    const rank=status=>({submitted:0,confirmed:1,processing:1,shipped:2,completed:3,paid:3}[String(status||'')]??-1);
+    return (orders||[]).map(order=>{
+      const statusHistory=(grouped.get(String(order.id))||[]).sort((a,b)=>String(a.occurredAt).localeCompare(String(b.occurredAt)));
+      let status=String(order.status||'submitted');
+      // Cancellation is explicit/terminal. Otherwise server history is strong
+      // evidence that a stale row must not visually move backwards.
+      if(status!=='cancelled'){
+        const cancelledEvent=[...statusHistory].reverse().find(event=>event.status==='cancelled');
+        if(cancelledEvent)status='cancelled';
+        else{
+          const highest=statusHistory.reduce((best,event)=>rank(event.status)>rank(best)?event.status:best,status);
+          if(rank(highest)>rank(status))status=highest;
+        }
+      }
+      return {...order,status,statusHistory};
+    });
   };
   async function fetchStatusEvents(){
     try{return await api('order_status_events?select=id,order_id,status,occurred_at,actor_role,actor_name,actor_user_id,source&order=occurred_at.asc')}
@@ -493,12 +508,14 @@
         createdAt:order.createdAt
       });
       const before=JSON.stringify(previous.map(comparable));
-      const after=JSON.stringify(next.map(comparable));
+      let after='';
       const previousById=new Map(previous.map(order=>[order.id,order.status]));
-      const changed=next.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
-      const eventRows=changed.length?await fetchStatusEvents():[];
-      const enriched=changed.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
+      const rawChanged=next.filter(order=>previousById.get(order.id)!==order.status);
+      const eventRows=rawChanged.length?await fetchStatusEvents():[];
+      const enriched=rawChanged.length?attachStatusHistory(next,eventRows):next.map(order=>({...order,statusHistory:previous.find(old=>old.id===order.id)?.statusHistory||[]}));
+      const changed=enriched.filter(order=>previousById.get(order.id)!==order.status).map(order=>({id:order.id,status:order.status}));
       setPortalRuntime('panora-orders',enriched);
+      after=JSON.stringify(enriched.map(comparable));
       if(before!==after){
         savePortalOrdersCache(enriched);
         const active=document.activeElement;
