@@ -150,13 +150,9 @@ function syncCartDeliveryDate(){
   checkoutDate.innerHTML=s.innerHTML;
   checkoutDate.disabled=false;
   checkoutDate.value=selectedBakeDate;
-  checkoutDate.onchange=()=>{
-   if(!dates.some(({date})=>dateValue(date)===checkoutDate.value))return;
-   selectedBakeDate=checkoutDate.value;
-   localStorage.setItem('panora-bake-date',selectedBakeDate);
-   s.value=selectedBakeDate;
-   renderProducts();renderCart();
-  };
+  // Hidden backing field only. The customer-facing date is controlled
+  // exclusively by #cartDeliveryDate on the first confirmation step.
+  checkoutDate.onchange=null;
  }
  s.onchange=()=>{
   if(!dates.some(({date})=>dateValue(date)===s.value))return;
