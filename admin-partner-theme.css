@@ -1610,3 +1610,17 @@ body.admin-page .stock-product-main b{
     grid-template-columns:1fr!important;
   }
 }
+
+
+/* Panora 6.57 — bakery mobile parity loaded last */
+@media(max-width:720px){
+  body.admin-page #orderRows tr{min-width:0!important;max-width:100%!important}
+  body.admin-page #orderRows td,body.admin-page #orderRows .order-items,body.admin-page #orderRows .order-items>*{min-width:0!important;max-width:100%!important}
+  body.admin-page #orderRows .order-mobile-number strong,body.admin-page #orderRows .order-mobile-items,body.admin-page #orderRows .order-mobile-total{overflow-wrap:anywhere!important}
+  body.admin-page #orderRows .tag[class*="order-status-"]{max-width:100%!important;min-width:0!important;white-space:normal!important;text-align:center!important}
+  body.admin-page #orderRows .order-action-cell{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}
+  body.admin-page #orderRows .order-action-cell>button,body.admin-page #orderRows .order-action-cell .button,body.admin-page #orderRows .order-flow-actions,body.admin-page #orderRows .admin-order-message-button{width:100%!important;max-width:100%!important;min-width:0!important;min-height:46px!important;margin-left:0!important;margin-right:0!important}
+  body.admin-page .bake-completion-dialog{max-height:calc(100dvh - 8px)!important}
+  body.admin-page .bake-completion-dialog form{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+  body.admin-page .bake-completion-table input{font-size:16px!important}
+}
