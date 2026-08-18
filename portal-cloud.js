@@ -3,7 +3,9 @@
   let partnerOrderPoll=0,partnerOrdersLoading=null;
   'use strict';
   const PORTAL_ORDERS_CACHE_KEY="panora-portal-orders";
-  const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=20;
+  const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=250;
+  const PORTAL_NOTES_CACHE_LIMIT=250;
+  const PORTAL_PAYMENTS_CACHE_LIMIT=350;
 
   function isPortalStorageQuotaError(error){
     const name=String(error?.name||"");
@@ -41,6 +43,98 @@
     return copy;
   }
 
+  function releasePortalCacheQuota(){
+    const expendable=[
+      'panora-cloud-backups-v286',
+      'panora-audit-v333',
+      'panora-portal-delivery-notes',
+      'panora-portal-payments'
+    ];
+    for(const key of expendable){
+      try{
+        if(key==='panora-audit-v333'){
+          const rows=JSON.parse(localStorage.getItem(key)||'[]');
+          if(Array.isArray(rows)&&rows.length>80){
+            localStorage.setItem(key,JSON.stringify(rows.slice(0,80)));
+            continue;
+          }
+        }
+        localStorage.removeItem(key);
+      }catch{}
+    }
+  }
+
+  function compactPortalNoteForCache(note){
+    const copy={...(note||{})};
+    if(copy.offlineProof){
+      copy.offlineProof={
+        receivedAt:copy.offlineProof.receivedAt||'',
+        receiver:copy.offlineProof.receiver||'',
+        pending:Boolean(copy.offlineProof.pending)
+      };
+    }
+    return copy;
+  }
+
+  function savePortalNotesCache(rows){
+    const source=(Array.isArray(rows)?rows:[])
+      .slice()
+      .sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||'')))
+      .slice(0,PORTAL_NOTES_CACHE_LIMIT)
+      .map(compactPortalNoteForCache);
+    const key='panora-portal-delivery-notes';
+    try{
+      localStorage.setItem(key,JSON.stringify(source));
+      return true;
+    }catch(error){
+      if(!isPortalStorageQuotaError(error))throw error;
+      releasePortalCacheQuota();
+      try{
+        localStorage.setItem(key,JSON.stringify(source.slice(0,80)));
+        return true;
+      }catch(retry){
+        if(!isPortalStorageQuotaError(retry))throw retry;
+        try{localStorage.removeItem(key)}catch(_){}
+        return false;
+      }
+    }
+  }
+
+  function savePortalPaymentsCache(rows){
+    const source=(Array.isArray(rows)?rows:[])
+      .slice()
+      .sort((a,b)=>String(b?.receivedAt||b?.date||'').localeCompare(String(a?.receivedAt||a?.date||'')))
+      .slice(0,PORTAL_PAYMENTS_CACHE_LIMIT);
+    const key='panora-portal-payments';
+    try{
+      localStorage.setItem(key,JSON.stringify(source));
+      return true;
+    }catch(error){
+      if(!isPortalStorageQuotaError(error))throw error;
+      releasePortalCacheQuota();
+      try{
+        localStorage.setItem(key,JSON.stringify(source.slice(0,120)));
+        return true;
+      }catch(retry){
+        if(!isPortalStorageQuotaError(retry))throw retry;
+        try{localStorage.removeItem(key)}catch(_){}
+        return false;
+      }
+    }
+  }
+
+  const archiveMetaForOrder=(order,note)=>{
+    const confirmedAt=note?.customerConfirmedAt||note?.offlineProof?.receivedAt||order?.deliveryConfirmedAt||null;
+    let reference=confirmedAt||order?.archiveReferenceAt||null;
+    if(!reference&&['completed','paid'].includes(String(order?.status||''))&&(order?.deliveryDate||order?.date)){
+      reference=`${String(order.deliveryDate||order.date).slice(0,10)}T23:59:59`;
+    }
+    const when=reference?new Date(reference):null;
+    const archived=String(order?.status||'')==='cancelled' ||
+      Boolean(when&&!Number.isNaN(when.getTime())&&Date.now()-when.getTime()>=5*24*60*60*1000);
+    return {...order,deliveryConfirmedAt:confirmedAt,archiveReferenceAt:reference,archived};
+  };
+
   function savePortalOrdersCache(rows){
     const source=Array.isArray(rows)?rows:[];
     const working=[];
@@ -55,6 +149,7 @@
       return true;
     }catch(error){
       if(!isPortalStorageQuotaError(error))throw error;
+      releasePortalCacheQuota();
       try{
         localStorage.removeItem(PORTAL_ORDERS_CACHE_KEY);
         localStorage.setItem(PORTAL_ORDERS_CACHE_KEY,JSON.stringify(working));
@@ -77,8 +172,17 @@
   const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(storageKey(key))||'null')??fallback}catch{return fallback}};
   const write=(key,value)=>{
     if(key==='panora-orders')return savePortalOrdersCache(value);
-    localStorage.setItem(storageKey(key),JSON.stringify(value));
-    return true;
+    if(key==='panora-delivery-notes')return savePortalNotesCache(value);
+    if(key==='panora-payments')return savePortalPaymentsCache(value);
+    try{
+      localStorage.setItem(storageKey(key),JSON.stringify(value));
+      return true;
+    }catch(error){
+      if(!isPortalStorageQuotaError(error))throw error;
+      releasePortalCacheQuota();
+      try{localStorage.setItem(storageKey(key),JSON.stringify(value));return true}
+      catch(retry){if(!isPortalStorageQuotaError(retry))throw retry;return false}
+    }
   };
   const saveSession=value=>{session=value;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
   const labels=(ru,en,es)=>lang==='es'?es:lang==='en'?en:ru;
@@ -243,10 +347,18 @@
     const previous=read('panora-orders')||[];
     const previousById=new Map(previous.map(order=>[String(order.id),order]));
     return (nextOrders||[]).map(order=>{
-      if(order.items?.length)return order;
       const old=previousById.get(String(order.id));
-      if(old?.items?.length)return {...order,items:old.items,prices:old.prices||order.prices,_itemsRecoveredFromCache:true};
-      return order;
+      let next=order;
+      if(!order.items?.length&&old?.items?.length)next={...next,items:old.items,prices:old.prices||order.prices,_itemsRecoveredFromCache:true};
+      if(old){
+        next={
+          ...next,
+          deliveryConfirmedAt:old.deliveryConfirmedAt||null,
+          archiveReferenceAt:old.archiveReferenceAt||null,
+          archived:Boolean(old.archived)
+        };
+      }
+      return next;
     });
   }
   const mapStatusEvent=row=>({
@@ -292,9 +404,13 @@
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
-      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices},orders=recoverZeroOrderPrices(preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents)),Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices);
+      const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices};
+      const initialOrders=recoverZeroOrderPrices(preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents)),Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices);
+      const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:initialOrders.find(o=>o.id===n.order_id)?.items||[],prices:initialOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
+      const notesByOrder=new Map(mappedNotes.map(note=>[String(note.orderId),note]));
+      const orders=initialOrders.map(order=>archiveMetaForOrder(order,notesByOrder.get(String(order.id))));
       write('panora-restaurants',[own]);savePortalOrdersCache(orders);
-      write('panora-delivery-notes',(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:orders.find(o=>o.id===n.order_id)?.items||[],prices:orders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',signature:n.offline_signature||'',pending:false}:null})));
+      write('panora-delivery-notes',mappedNotes);
       write('panora-payments',(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status!=='cancelled',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,recordedBy:p.recorded_by||p.confirmed_by||null})));
       write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
       const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));

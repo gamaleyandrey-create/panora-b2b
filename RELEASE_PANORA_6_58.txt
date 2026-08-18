@@ -1,0 +1,22 @@
+Panora 6.58 — mobile sync + partner working/archive parity
+
+Partner mobile
+- Working/Archive no longer depends on a large local delivery-note cache.
+- delivery confirmation/archive metadata is attached to each order from the same Supabase response used on desktop.
+- shipped orders confirmed more than 5 days ago move to Archive on mobile exactly like desktop.
+- recent delivered orders remain in Working for 5 days.
+- cancelled orders remain archived.
+- partner order cache keeps up to 250 compact archive orders instead of accidentally retaining archived shipped orders as Working.
+- delivery-note cache is quota-safe and strips large synced offline signatures that are not needed in the partner UI.
+- payment cache is quota-safe.
+- a local-cache quota problem can no longer abort partner cloud loading and leave all historical orders in Working.
+
+Bakery mobile
+- legacy #saveState is hidden again on mobile; only the unified cloud/sync indicator is visible.
+- local cache quota is treated as a local cache warning, not a failed Supabase synchronization.
+- raw-material movements and bake-completion cloud loads use quota-safe cache writes; local movements are never deleted.
+- recipes, partner cache and ingredient prices use quota-safe writes during cloud startup.
+- expendable browser caches are pruned first when mobile localStorage is full.
+- the unified connection indicator ignores Storage/setItem quota-only errors after the cloud operation itself succeeded.
+
+No SQL required.

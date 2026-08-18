@@ -313,7 +313,7 @@
       .filter((payment) => payment.restaurantId === account?.id)
       .slice()
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  const orderNumber = (order) => `PN-${String(order.number).padStart(4, "0")}`;
+  const orderNumber = (order) => Number(order?.number)>0?`PN-${String(Number(order.number)).padStart(4, "0")}`:"PN-…";
   const noteNumber = (note) => `DN-${String(note.number).padStart(4, "0")}`;
   const itemName = (id) =>
     typeof portalProduct === "function"
@@ -354,11 +354,16 @@
     ownNotes().find((note) => String(note.orderId) === String(order.id)) || null;
 
   const confirmedDeliveryAt = (order) => {
+    if(order?.deliveryConfirmedAt)return order.deliveryConfirmedAt;
     const note = orderDeliveryNote(order);
     return note?.customerConfirmedAt || note?.offlineProof?.receivedAt || null;
   };
 
   const archiveReferenceDate = (order) => {
+    if(order?.archiveReferenceAt){
+      const cached=new Date(order.archiveReferenceAt);
+      if(!Number.isNaN(cached.getTime()))return cached;
+    }
     const confirmed = confirmedDeliveryAt(order);
     if (confirmed) return new Date(confirmed);
     // Legacy completed/paid orders may pre-date customer confirmation support.
@@ -368,6 +373,7 @@
   };
 
   const isArchivedOrder = (order) => {
+    if (order?.archived === true) return true;
     if (order.status === "cancelled") return true;
     const deliveredAt = archiveReferenceDate(order);
     if (!deliveredAt || Number.isNaN(deliveredAt.getTime())) return false;
