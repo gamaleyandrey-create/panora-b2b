@@ -730,7 +730,15 @@ function restoreCheckoutProfile() {
   fillEmpty("phone", checkoutContactValue("phone", account.phone));
   fillEmpty("email", saved.email || account.email);
   fillEmpty("address", checkoutContactValue("address", account.address));
-  if (saved.fulfillment) form.fulfillment.value = saved.fulfillment;
+  if(form.fulfillment){
+    const validFulfillment=["delivery","pickup"];
+    const requested=validFulfillment.includes(String(saved.fulfillment||""))?String(saved.fulfillment):"delivery";
+    form.fulfillment.value=requested;
+    if(!validFulfillment.includes(String(form.fulfillment.value||""))){
+      form.fulfillment.value="delivery";
+      if(!form.fulfillment.value&&form.fulfillment.options.length)form.fulfillment.selectedIndex=0;
+    }
+  }
   if (saved.time) form.time.value = saved.time;
   toggleFulfillment();
 }
@@ -795,6 +803,10 @@ let checkoutAfterLogin = false;
 function openCheckoutForAccount() {
   const form = $("#checkoutForm");
   restoreCheckoutProfile();
+  if(form.fulfillment&&!["delivery","pickup"].includes(String(form.fulfillment.value||""))){
+    form.fulfillment.value="delivery";
+    if(!form.fulfillment.value&&form.fulfillment.options.length)form.fulfillment.selectedIndex=0;
+  }
   updateMobileCheckoutSummary();
   try{syncDateSelect?.();syncCartDeliveryDate?.()}catch{}
   const cartDate=String($("#cartDeliveryDate")?.value||"");

@@ -1,0 +1,19 @@
+Panora 6.69 — B2B order creation repair + receiving-field normalization
+
+Server repair
+- fixes installations where public.b2b_notifications existed before Panora Push migrations
+  and therefore CREATE TABLE IF NOT EXISTS did not add event_key;
+- adds/backfills b2b_notifications.event_key and the required unique audience+event_key index;
+- repairs order_messages.event_key if needed;
+- ensures B2B order_messages accepts sender_role='system';
+- fixes the exact order-submit failure:
+  column "event_key" of relation "b2b_notifications" does not exist.
+
+Partner checkout
+- stale/legacy saved fulfillment values can no longer leave “Получение” blank;
+- final checkout normalizes fulfillment to delivery or pickup;
+- if the select has no valid value, delivery is selected explicitly;
+- normalization is applied both when opening checkout and before cloud validation.
+
+No Edge Function changes.
+Panora 6.64 bake-day server guard remains required.

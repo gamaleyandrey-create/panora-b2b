@@ -897,7 +897,8 @@
     form.contact.value=String(form.contact.value||account.name||'').trim();
     form.phone.value=String(form.phone.value||(typeof checkoutContactValue==='function'?checkoutContactValue('phone',account.phone):account.phone)||'').trim();
     form.email.value=String(form.email.value||account.email||'').trim();
-    const fulfillment=form.fulfillment.value||'delivery';
+    const fulfillment=['delivery','pickup'].includes(String(form.fulfillment?.value||''))?String(form.fulfillment.value):'delivery';
+    if(form.fulfillment&&form.fulfillment.value!==fulfillment)form.fulfillment.value=fulfillment;
     form.address.value=String(form.address.value||(typeof checkoutContactValue==='function'?checkoutContactValue('address',account.address):account.address)||'').trim();
     const data=new FormData(form),summary=cartData(),rawItems=summary.rows.map(p=>({product:p.id,quantity:Math.trunc(Number(p.quantityPieces)||0)})).filter(i=>i.quantity>0),checkedItems=validateCheckoutItems(rawItems),items=checkedItems.items,count=checkedItems.count,cartBakeDate=String(document.querySelector('#cartDeliveryDate')?.value||''),formBakeDate=String(data.get('date')||''),storedBakeDate=String(selectedBakeDate||'');
     if(checkedItems.unavailable.length){purgeUnavailableCart(checkedItems.unavailable);return showToast(unavailableCartError().message)}
