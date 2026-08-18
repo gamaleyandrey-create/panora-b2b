@@ -647,21 +647,31 @@
       await api('rpc/panora_partner_register_push',{method:'POST',body:JSON.stringify({p_endpoint:json.endpoint,p_p256dh:json.keys?.p256dh||'',p_auth:json.keys?.auth||'',p_user_agent:navigator.userAgent})});
       const verified=await partnerPushStatus();
       if(!verified.active)throw new Error(verified.error||verified.reason||'server_registration_failed');
-      localStorage.setItem('panora-partner-webpush-registered','1');
+      try{localStorage.setItem('panora-partner-webpush-registered','1')}catch{}
       window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:true}}));
       return true;
     }catch(error){
-      localStorage.removeItem('panora-partner-webpush-registered');
+      try{localStorage.removeItem('panora-partner-webpush-registered')}catch{}
       window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:false,error:String(error?.message||error)}}));
       return false;
     }finally{partnerPushRepairBusy=false}
   };
+  const partnerPushDisable=async()=>{
+    if(!account||!('serviceWorker'in navigator)||!('PushManager'in window))return false;
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(!sub){try{localStorage.removeItem('panora-partner-webpush-registered')}catch{}return true}
+    await api('rpc/panora_partner_disable_push',{method:'POST',body:JSON.stringify({p_endpoint:sub.endpoint})});
+    try{localStorage.removeItem('panora-partner-webpush-registered')}catch{}
+    window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:false,reason:'disabled'}}));
+    return true;
+  };
+
   window.panoraPartnerPush={
     enable:async()=>{
       await partnerPushEnable();
       const verified=await partnerPushStatus();
       if(!verified.active){
-        localStorage.removeItem('panora-partner-webpush-registered');
+        try{localStorage.removeItem('panora-partner-webpush-registered')}catch{}
         const reason=verified.error||verified.reason||'server_registration_failed';
         window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:false,reason}}));
         throw new Error(labels(
@@ -670,11 +680,12 @@
           `El navegador permitió Push, pero el dispositivo no está registrado en el servidor: ${reason}`
         ));
       }
-      localStorage.setItem('panora-partner-webpush-registered','1');
+      try{localStorage.setItem('panora-partner-webpush-registered','1')}catch{}
       window.dispatchEvent(new CustomEvent('panora:partner-push-state',{detail:{active:true}}));
       return verified;
     },
     test:partnerPushTest,
+    disable:partnerPushDisable,
     config:partnerPushConfig,
     status:partnerPushStatus,
     repair:partnerPushRepairRegistration

@@ -1,0 +1,37 @@
+Panora 6.60 — unified messages + Web Push
+
+B2B partner ↔ bakery
+- partner and bakery order chats refresh every 5 seconds;
+- unread badges refresh every 5 seconds;
+- system messages are read immediately by the side that caused the event and unread only for the opposite side;
+- partner Push has Enable / Test / Disable with server-side verification;
+- disabling Push only disables the Panora server registration, it does not unsubscribe the browser endpoint used by another Panora role.
+
+Retail customer ↔ bakery
+- customer chat refreshes every 5 seconds independently from the 30-second order-status refresh;
+- bakery's open retail chat refreshes every 5 seconds;
+- retail customer Push state is verified on the server and survives render/status refreshes;
+- retail customer can Enable / Disable Push from the order page;
+- an existing granted browser subscription is silently repaired on page load without a second permission prompt;
+- one browser subscription can be linked to several retail orders through retail_customer_push_orders;
+- Push clicks open the exact retail order URL;
+- new retail orders/messages and time-sensitive ready/delivery/cancel events bypass quiet hours.
+
+Same-device role safety
+- the same browser endpoint can be registered separately for bakery and retail-customer audiences without one role overwriting the other.
+
+Bakery Push UX
+- the top button is the single device Push state: Enable / Connected / Disable;
+- the Retail settings button uses the same global device control instead of a separate registration mechanism;
+- server registration is verified instead of trusting localStorage;
+- Test Push is available only while the current device is registered;
+- fixes the admin Push-state event handler scope bug.
+
+PWA / Push navigation
+- PWA build controller is aligned to 6600;
+- service-worker offline notification click fallback understands retail-order.html;
+- critical communication files are included in the service-worker core list.
+
+Requires:
+- SUPABASE_PANORA_6_60_COMMUNICATION_PUSH.sql
+- redeploy panora-retail-push Edge Function from PANORA_7_6.60_EDGE_FUNCTION.zip

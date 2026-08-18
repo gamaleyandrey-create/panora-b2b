@@ -1756,3 +1756,16 @@
   .rw-order li strong{text-align:left!important}
   .rw-partner-push-actions{grid-template-columns:1fr!important}
 }
+
+
+/* Panora 6.60 — partner Push device actions */
+.rw-partner-push-actions{align-items:center}
+.rw-partner-push-actions [data-rw-partner-push-disable]{border-color:#ead8d4;color:#8e4c45}
+@media(max-width:720px){
+  .rw-partner-push-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .rw-partner-push-actions [data-rw-partner-push-disable]{grid-column:1/-1}
+}
+@media(max-width:390px){
+  .rw-partner-push-actions{grid-template-columns:1fr!important}
+  .rw-partner-push-actions [data-rw-partner-push-disable]{grid-column:auto}
+}

@@ -40,34 +40,30 @@
    soundButton.onclick=()=>{dispatchSound(!soundPref());render()};
    render();return soundButton;
  }
- if(button){if(!('Notification'in window)){button.hidden=true}else{
-   const label=()=>{
-     const permission=Notification.permission;
-     const serverReady=localStorage.getItem('panora-admin-webpush-registered')==='1';
-     const active=permission==='granted'&&pref()&&serverReady;
-     button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Push включён</span>':permission==='granted'&&pref()?'<span>Подключить Push</span>':permission==='granted'?'Уведомления выключены':'Включить уведомления';
-     button.classList.toggle('notifications-active',active);
-     button.classList.toggle('notifications-off',permission==='granted'&&!active);
-     button.setAttribute('aria-pressed',active?'true':'false');
-     button.title=active?'Нажмите, чтобы выключить уведомления':'Нажмите, чтобы включить уведомления';
-   };
-   label();ensureSoundButton();
+ async function renderPushButton(){
+   if(!button)return;
+   if(!('Notification'in window)){button.hidden=true;return}
+   button.hidden=false;
+   let info={active:false,reason:Notification.permission};
+   try{info=await window.panoraAdminWebPush?.status?.()||info}catch{}
+   const active=Boolean(info.active);
+   button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Push подключён</span>':'<span>Включить Push</span>';
+   button.classList.toggle('notifications-active',active);
+   button.classList.toggle('notifications-off',!active);
+   button.setAttribute('aria-pressed',active?'true':'false');
+   button.title=active?'Отключить Push на этом устройстве':'Включить Push на этом устройстве';
+ }
+ if(button){
+   ensureSoundButton();
+   renderPushButton();
    button.onclick=async()=>{
-     if(Notification.permission!=='granted'||localStorage.getItem('panora-admin-webpush-registered')!=='1'){
-       localStorage.setItem(PREF_KEY,'1');
-       if(localStorage.getItem(SOUND_KEY)===null)dispatchSound(true);
-       try{
-         const ok=await window.panoraAdminWebPush?.enable?.();
-         if(ok&&Notification.permission==='granted')new Notification('Panora',{body:'Push о новых заказах подключён.',icon:'icon.svg',tag:'panora-admin-push-ready'});
-       }catch(error){console.warn('Panora admin Web Push',error)}
-       label();ensureSoundButton();return;
-     }
-     const enabled=!pref();
-     localStorage.setItem(PREF_KEY,enabled?'1':'0');
-     label();
+     button.disabled=true;
+     try{await window.panoraAdminWebPush?.toggle?.()}
+     catch(error){console.warn('Panora admin Web Push',error)}
+     finally{button.disabled=false;renderPushButton();ensureSoundButton()}
    };
- }}
- window.addEventListener('panora:admin-webpush-state',()=>{label?.();ensureSoundButton()});
+ }
+ window.addEventListener('panora:admin-webpush-state',()=>{renderPushButton();ensureSoundButton()});
  window.addEventListener('storage',event=>{
    if(event.key==='panora-orders')announce();
    if(event.key===SOUND_KEY)ensureSoundButton();

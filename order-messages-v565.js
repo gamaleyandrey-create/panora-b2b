@@ -142,6 +142,6 @@
   window.addEventListener("panora:authenticated",()=>setTimeout(()=>refreshUnread(),500));
   window.addEventListener("panora:partner-data-updated",()=>setTimeout(()=>refreshUnread(),500));
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshUnread()});
-  setInterval(()=>{if(!document.hidden)refreshUnread()},15000);
+  setInterval(()=>{if(!document.hidden)refreshUnread()},5000);
   setTimeout(()=>refreshUnread(),1200);
 })();
