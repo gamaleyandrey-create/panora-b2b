@@ -1,9 +1,9 @@
 
-/* Panora 6.86 — runtime health self-check */
+/* Panora 6.87 — runtime health self-check */
 (function(){
  async function run(){
-   const out={build:'6860',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false};
-   try{const k='panora-health-v6860';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
+   const out={build:'6870',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false};
+   try{const k='panora-health-v6870';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
    window.panoraStableHealth=out;
    window.dispatchEvent(new CustomEvent('panora:stable-health',{detail:out}));
    return out;
