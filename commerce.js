@@ -158,7 +158,7 @@ const shippedFor = (id) =>
   deliveryNotes
     .filter((n) => n.restaurantId === id)
     .reduce((s, n) => s + n.total, 0);
-const paymentConfirmed = (payment) => payment.confirmed !== false;
+const paymentConfirmed = (payment) => payment?.confirmed !== false && (!payment?.status || payment.status === "confirmed");
 const paidFor = (id) =>
   payments
     .filter((p) => p.restaurantId === id && paymentConfirmed(p))
@@ -637,7 +637,10 @@ async function confirmOrder(id) {
   if(button?.disabled)return;
   if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="Подтверждаем…"}
   try {
-    if (window.panoraCloud?.ready) {
+    const cloudConfigured=Boolean(window.PANORA_SUPABASE?.url&&window.PANORA_SUPABASE?.publishableKey);
+    if (cloudConfigured) {
+      if(!window.panoraCloud?.ready||typeof window.panoraCloud.updateOrderStatus!=="function")
+        throw new Error("Облако ещё загружается или недоступно. Статус заказа не изменён — повторите после восстановления соединения.");
       await window.panoraCloud.updateOrderStatus(id, "confirmed");
     } else {
       o.status = "confirmed";
@@ -666,7 +669,10 @@ async function cancelOrder(id) {
   if (!o || o.status === "shipped" || o.status === "cancelled") return;
   if (!confirm("Отменить заказ и вернуть количество в свободный план?")) return;
   try {
-    if (window.panoraCloud?.ready) {
+    const cloudConfigured=Boolean(window.PANORA_SUPABASE?.url&&window.PANORA_SUPABASE?.publishableKey);
+    if (cloudConfigured) {
+      if(!window.panoraCloud?.ready||typeof window.panoraCloud.updateOrderStatus!=="function")
+        throw new Error("Облако ещё загружается или недоступно. Заказ не отменён — повторите после восстановления соединения.");
       await window.panoraCloud.updateOrderStatus(
         id,
         "cancelled",

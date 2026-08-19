@@ -1,0 +1,14 @@
+Panora 6.77 — regression fixes
+
+Build: 6770
+Package series: 8
+
+Changes:
+- B2B confirm/cancel no longer pretend to succeed locally when Supabase is configured but not ready;
+- critical B2B status transitions now wait for server confirmation before changing the UI state;
+- pending B2B payments are no longer treated as confirmed when loaded from Supabase;
+- partner debt, paid totals and payment allocation exclude pending payments until confirmation;
+- pending payments remain visible in operation history and can still be explicitly confirmed.
+
+No retail workflow, mobile-layout or desktop-layout changes in 6.77.
+No new SQL in 6.77.
