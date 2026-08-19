@@ -1,0 +1,13 @@
+Panora 6.94 — advance-aware payment reminders at startup
+
+Build: 6940
+Package series: 8
+
+Changes:
+- B2B payment reminders calculate the real outstanding DN balance locally even before cloud-sync.js finishes loading;
+- an existing advance / overpayment is therefore deducted immediately from a newly created or cached DN reminder (for example 100 € DN - 30 € advance = 70 € reminder);
+- reminder state snapshots use the same local FIFO allocation instead of stale note.paid values;
+- persisted B2B return-credit payments are included in the pre-cloud fallback until the authoritative effective-return totals are available;
+- once cloud finance is ready, the same shared allocation remains authoritative.
+
+No layout redesign. No new SQL.

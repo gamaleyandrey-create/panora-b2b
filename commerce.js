@@ -724,11 +724,12 @@ function accountingAllocationFor(restaurantId) {
       Number(a.number || 0) - Number(b.number || 0) ||
       String(a.id || "").localeCompare(String(b.id || ""))
     );
+  const hasEffectiveReturnTotals=typeof window.panoraB2BEffectiveNoteTotal==='function';
   const confirmed = payments
     .filter((payment) =>
       payment.restaurantId === restaurantId &&
       paymentConfirmed(payment) &&
-      !paymentIsReturnCredit(payment) &&
+      (!hasEffectiveReturnTotals || !paymentIsReturnCredit(payment)) &&
       payment.status !== "cancelled" &&
       Number(payment.amount || 0) > 0
     )
@@ -985,10 +986,12 @@ const paymentReminderAllocationSnapshot=(restaurantId,{forceActiveId=null}={})=>
   const totalFor=note=>typeof window.panoraB2BEffectiveNoteTotal==='function'
     ? Math.max(0,Number(window.panoraB2BEffectiveNoteTotal(note)||0))
     : Math.max(0,Number(note?.total||0));
+  const hasEffectiveReturnTotals=typeof window.panoraB2BEffectiveNoteTotal==='function';
   const activePayments=payments
     .filter(payment=>{
       if(String(payment?.restaurantId||'')!==String(restaurantId||''))return false;
-      if(paymentIsReturnCredit(payment)||Number(payment?.amount||0)<=0)return false;
+      if(Number(payment?.amount||0)<=0)return false;
+      if(hasEffectiveReturnTotals&&paymentIsReturnCredit(payment))return false;
       const id=String(payment?.id||'');
       if(forceActiveId&&id===String(forceActiveId))return true;
       return paymentConfirmed(payment)&&payment?.status!=='cancelled';
@@ -1073,12 +1076,15 @@ function paymentReminderRows() {
       const r = restaurant(note.restaurantId);
       if (!r) return null;
       if(!allocationByRestaurant.has(r.id)){
-        allocationByRestaurant.set(r.id,window.panoraFinanceAllocation?.(r.id));
+        // Panora 6.94: reminders must be correct even before cloud-sync.js exposes
+        // panoraFinanceAllocation. The local allocator already understands linked
+        // payments, FIFO overflow and advances, so never fall back to stale note.paid.
+        allocationByRestaurant.set(r.id,accountingAllocationFor(r.id));
       }
       const allocation=allocationByRestaurant.get(r.id);
       if(!stateByRestaurant.has(r.id))stateByRestaurant.set(r.id,paymentReminderStates(r.id,allocation));
       const row=allocation?.notes?.find(item=>String(item.note.id)===String(note.id));
-      const balance=row?Number(row.due||0):Math.max(0,Number(note.total||0)-Number(note.paid||0));
+      const balance=row?Number(row.due||0):0;
       if (balance <= 0.005) return null;
       const days = Math.round(
         (new Date(`${note.paymentDueDate}T12:00:00`) -
@@ -1101,7 +1107,7 @@ function markReminder(key, channel, row=null) {
   const record={ sentAt: new Date().toISOString(), channel };
   if(row?.note){
     record.balance=Number(row.balance||0);
-    const allocation=window.panoraFinanceAllocation?.(row.r?.id);
+    const allocation=accountingAllocationFor(row.r?.id);
     const state=row.reminderState||paymentReminderStates(row.r?.id,allocation).get(String(row.note.id))||{version:0,reopenVersion:0};
     record.stateVersion=Number(state?.version||0);
   }
