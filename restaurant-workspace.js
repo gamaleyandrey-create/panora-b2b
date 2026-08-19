@@ -521,17 +521,17 @@
     return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
   }
   const partnerPaymentConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==="confirmed")&&payment?.disputeStatus!=="open";
+  const partnerReturnCreditPayment=payment=>/\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||""));
+  const partnerPaymentNoteText=payment=>String(payment?.note||"").replace(/\[panora:b2b-return-credit:[^\]]+\]\s*/g,"").trim();
   const partnerFinanceSummary=()=>{
-    const delivered=ownNotes().reduce((sum,note)=>sum+Number(note.total||0),0);
-    const paid=ownPayments()
-      .filter(payment=>partnerPaymentConfirmed(payment))
-      .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    return {
-      delivered,
-      paid,
-      debt:Math.max(0,delivered-paid),
-      advance:Math.max(0,paid-delivered)
-    };
+    const notes=ownNotes(),confirmed=ownPayments().filter(payment=>partnerPaymentConfirmed(payment));
+    const distribution=partnerPaymentDistribution(notes,confirmed);
+    const delivered=notes.reduce((sum,note)=>sum+Number(note.total||0),0);
+    const paid=confirmed.filter(payment=>!partnerReturnCreditPayment(payment)).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const debt=[...distribution.remainingByNote.values()].reduce((sum,value)=>sum+Math.max(0,Number(value||0)),0);
+    const advance=[...distribution.byPayment.values()].reduce((sum,row)=>sum+Math.max(0,Number(row.credit||0)),0);
+    const returns=confirmed.filter(partnerReturnCreditPayment).reduce((sum,payment)=>sum+Math.max(0,Number(payment.amount||0)),0);
+    return {delivered,paid,debt,advance,returns};
   };
 
   function homeHtml() {
@@ -774,9 +774,11 @@
       const total=Number(note.total||0);
       const debtItem=noteDebtMap.get(String(note.id));
       const due=debtItem?Number(debtItem.due||0):0;
+      const returnCredit=ownPayments().filter(payment=>partnerPaymentConfirmed(payment)&&partnerReturnCreditPayment(payment)&&String(payment.deliveryNoteId||"")===String(note.id)).reduce((sum,payment)=>sum+Math.max(0,Number(payment.amount||0)),0);
       return {
         total,
         paid:Math.max(0,total-due),
+        returnCredit,
         due:Math.max(0,due)
       };
     };
@@ -810,7 +812,7 @@
         const noteSearchText=noteNumber(note).toLowerCase();
         const noteSearchHidden=noteQuery&&!noteSearchText.includes(noteQuery.toLowerCase());
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search data-panora-no-draft="1"-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
-      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>{const qty=Number(item.quantity||0),priceSource=(order.prices&&Object.prototype.hasOwnProperty.call(order.prices,item.product))?order.prices:account.prices||{},unit=Number(priceSource[item.product]||0),line=qty*unit;return `<span class="rw-note-product-name">${esc(orderItemName(order,item))}</span><span class="rw-note-product-math"><b>${qty} ${t("pieces")}</b> × <b>${portalMoney(unit)}</b> = <strong>${portalMoney(line)}</strong></span>`}).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}${(()=>{const fin=notePaymentSummary(note);return `<small class="rw-note-payment-state"><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}: <b>${portalMoney(fin.total)}</b></span><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}: <b>${portalMoney(fin.paid)}</b></span><span>${lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due"}: <b>${portalMoney(fin.due)}</b></span></small>`})()}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
+      <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>{const qty=Number(item.quantity||0),priceSource=(order.prices&&Object.prototype.hasOwnProperty.call(order.prices,item.product))?order.prices:account.prices||{},unit=Number(priceSource[item.product]||0),line=qty*unit;return `<span class="rw-note-product-name">${esc(orderItemName(order,item))}</span><span class="rw-note-product-math"><b>${qty} ${t("pieces")}</b> × <b>${portalMoney(unit)}</b> = <strong>${portalMoney(line)}</strong></span>`}).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}${(()=>{const fin=notePaymentSummary(note);return `<small class="rw-note-payment-state"><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}: <b>${portalMoney(fin.total)}</b></span><span>${lang==="ru"?"Зачтено":lang==="es"?"Aplicado":"Applied"}: <b>${portalMoney(fin.paid)}</b></span>${fin.returnCredit>0.005?`<span>${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"}: <b>${portalMoney(fin.returnCredit)}</b></span>`:""}<span>${lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due"}: <b>${portalMoney(fin.due)}</b></span></small>`})()}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
       <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${lang==="ru"?"Распечатать накладную":lang==="es"?"Imprimir albarán":"Print delivery note"}</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
     </article>`;
@@ -842,7 +844,7 @@
 
     const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
     const payments=ownPayments().filter(payment=>partnerPaymentConfirmed(payment));
-    // Panora 6.88: use the same linked-payment + FIFO-overflow algorithm as the bakery.
+    // Panora 6.89: partner settlement includes linked payments, FIFO overflow and return credits.
     // A payment tied to one DN may exceed that DN; the excess must close the oldest
     // remaining debts before it becomes an advance.
     const distribution=partnerPaymentDistribution(notes,payments);
@@ -971,13 +973,17 @@
       notes = ownNotes();
 
     const confirmedPayments=payments.filter(payment=>partnerPaymentConfirmed(payment));
-    const disputedPayments=payments.filter(payment=>payment.status!=="cancelled"&&payment.disputeStatus==="open");
+    const cashPayments=confirmedPayments.filter(payment=>!partnerReturnCreditPayment(payment));
+    const returnCredits=confirmedPayments.filter(payment=>partnerReturnCreditPayment(payment));
+    const disputedPayments=payments.filter(payment=>!partnerReturnCreditPayment(payment)&&payment.status!=="cancelled"&&payment.disputeStatus==="open");
     const paymentDistribution=partnerPaymentDistribution(notes,confirmedPayments);
 
     const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
-    const paid = confirmedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+    const paid = cashPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     const pending = disputedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    const advance = Math.max(0,paid-delivered);
+    const debt=[...paymentDistribution.remainingByNote.values()].reduce((sum,value)=>sum+Math.max(0,Number(value||0)),0);
+    const advance=[...paymentDistribution.byPayment.values()].reduce((sum,row)=>sum+Math.max(0,Number(row.credit||0)),0);
+    const returnedGross=returnCredits.reduce((sum,payment)=>sum+Math.max(0,Number(payment.amount||0)),0);
 
     const debts=currentDebtItems();
     const debtById=new Map(debts.map(item=>[String(item.note.id),item]));
@@ -1010,22 +1016,24 @@
       ? sharedTimeline.map(event=>
           event.kind==="delivery"
             ? {date:event.date,kind:"delivery",amount:event.amount,label:noteNumber(event.note),note:event.note,sort:0,balanceAfter:event.balanceAfter}
-            : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
-                ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
-                : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
+            : event.kind==="return"
+              ? {date:event.date,kind:"return",amount:-event.amount,label:noteNumber(event.note),note:event.note,sort:.5,balanceAfter:event.balanceAfter}
+              : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
+                  ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
+                  : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
       : [
           ...notes.map(note=>({date:note.date,kind:"delivery",amount:Number(note.total||0),label:noteNumber(note),note,sort:0})),
           ...payments.filter(payment=>payment.status!=="cancelled").map(payment=>({
-            date:payment.date,kind:"payment",amount:-Number(payment.amount||0),
+            date:payment.date,kind:partnerReturnCreditPayment(payment)?"return":"payment",amount:-Number(payment.amount||0),
             label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),
-            payment,sort:1
+            payment,sort:partnerReturnCreditPayment(payment)?.5:1
           }))
         ].sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.sort-b.sort);
 
     if(!sharedTimeline){
       let running=0;
       operations.forEach(operation=>{
-        if(operation.kind==="delivery"||partnerPaymentConfirmed(operation.payment))running+=operation.amount;
+        if(operation.kind==="delivery"||operation.kind==="return"||partnerPaymentConfirmed(operation.payment))running+=operation.amount;
         operation.balanceAfter=Math.max(0,running);
       });
     }
@@ -1034,13 +1042,13 @@
     const filteredHistory=history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
 
     return `<section class="rw-finance">
-      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><button type="button" class="rw-finance-debt rw-finance-debt-button" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(Math.max(0,delivered-paid))}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}<i aria-hidden="true">${financeSummaryOpen?"⌃":"⌄"}</i></button></div></header>
+      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><button type="button" class="rw-finance-debt rw-finance-debt-button" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(debt)}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}<i aria-hidden="true">${financeSummaryOpen?"⌃":"⌄"}</i></button></div></header>
 
 
       ${(()=>{
         const now=Date.now();
         const disputable=payments.filter(payment=>{
-          if(!partnerPaymentConfirmed(payment)||payment.disputeStatus==="open")return false;
+          if(partnerReturnCreditPayment(payment)||!partnerPaymentConfirmed(payment)||payment.disputeStatus==="open")return false;
           const deadline=new Date(payment.disputeDeadline||"").getTime();
           return Number.isFinite(deadline)&&deadline>now;
         }).sort((a,b)=>String(b.receivedAt||b.date).localeCompare(String(a.receivedAt||a.date)));
@@ -1065,7 +1073,7 @@
         ${financeView==="active"?`
           <div class="rw-current-debts-head"><div><h4>${lang==="ru"?"Актуальные задолженности":lang==="es"?"Deudas actuales":"Current debts"}</h4></div><strong data-rw-debt-count>${debts.length}</strong></div>
           <div class="rw-finance-stats rw-finance-stats-4"${financeSummaryOpen?"":" hidden"}>
-            <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong></article>
+            <article><span>${t("deliveredTotal")}</span><strong>${portalMoney(delivered)}</strong>${returnedGross>0.005?`<small>${lang==="ru"?"Возвраты":lang==="es"?"Devoluciones":"Returns"}: ${portalMoney(returnedGross)}</small>`:""}</article>
             <article><span>${t("paidTotal")}</span><strong>${portalMoney(paid)}</strong></article>
             <article class="rw-finance-advance"><span>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}</span><strong>${portalMoney(advance)}</strong></article>
             <article><span>${t("pendingTotal")}</span><strong>${portalMoney(pending)}</strong></article>
@@ -1083,7 +1091,7 @@
             return `<article class="rw-debt-item${overdue?" overdue":""}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link" data-rw-debt-search data-panora-no-draft="1"-text="${esc(searchText)}" data-rw-debt-date="${esc(normalizeIso(note.date))}"${rangeMatch&&searchMatch?"":" hidden"}>
               <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small>${dueDate?`<small>${lang==="ru"?"Оплатить до":lang==="es"?"Pagar antes de":"Due"}: <b>${esc(localDate(dueDate))}</b></small>`:""}</div>
               <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(note.total)}</b></div>
-              <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
+              <div><span>${lang==="ru"?"Зачтено":lang==="es"?"Aplicado":"Applied"}</span><b>${portalMoney(paidAmount)}</b></div>
               <div class="rw-debt-due"><span>${overdue?(lang==="ru"?"Просрочено":lang==="es"?"Vencido":"Overdue"):(lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due")}</span><strong>${portalMoney(due)}</strong></div>
             </article>`;
           }).join("")}</div><div class="rw-no-debt" data-rw-debt-empty${filteredDebts.length?" hidden":""}>${lang==="ru"?"По выбранному фильтру задолженностей нет.":lang==="es"?"No hay deudas con este filtro.":"No debts match this filter."}</div>`:`<div class="rw-no-debt">${lang==="ru"?"Актуальной задолженности нет.":lang==="es"?"No hay deuda pendiente.":"No current debt."}</div>`}
@@ -1098,7 +1106,7 @@
           ${archivedFinance.length?`<div class="rw-finance-archive-list">${archivedFinance.map(({note,total,paidAmount,closedAt})=>`<article class="rw-finance-archive-item" data-rw-finance-archive-text="${esc(noteNumber(note).toLowerCase())}" data-rw-open-debt-note="${esc(note.id)}" tabindex="0" role="link">
             <div><strong>${esc(noteNumber(note))}</strong><small>${lang==="ru"?"Поставка":lang==="es"?"Entrega":"Delivery"}: ${esc(localDate(note.date))}</small></div>
             <div><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}</span><b>${portalMoney(total)}</b></div>
-            <div><span>${lang==="ru"?"Оплачено":lang==="es"?"Pagado":"Paid"}</span><b>${portalMoney(paidAmount)}</b></div>
+            <div><span>${lang==="ru"?"Зачтено":lang==="es"?"Aplicado":"Applied"}</span><b>${portalMoney(paidAmount)}</b></div>
             <div><span>${lang==="ru"?"Закрыто":lang==="es"?"Cerrado":"Closed"}</span><b>${esc(localDate(closedAt||note.date))}</b></div>
           </article>`).join("")}</div>`:`<div class="rw-no-debt">${lang==="ru"?"В архиве пока нет закрытых расчётов.":lang==="es"?"Todavía no hay pagos cerrados en el archivo.":"No closed settlements in the archive yet."}</div>`}
         `}
@@ -1116,11 +1124,12 @@
 
       ${filteredHistory.length
         ? `<div class="rw-finance-history">${filteredHistory.map(operation=>{
-            const searchText=`${operation.label||""} ${operation.payment?.method||""} ${operation.payment?.note||""} ${operation.kind==="payment"?t("payment"):t("delivery")}`.toLowerCase();
+            const operationKindLabel=operation.kind==="payment"?t("payment"):operation.kind==="return"?(lang==="ru"?"возврат товара":lang==="es"?"devolución":"goods return"):t("delivery");
+            const searchText=`${operation.label||""} ${operation.payment?.method||""} ${partnerPaymentNoteText(operation.payment)} ${operationKindLabel}`.toLowerCase();
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
             return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
-              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small>${operation.kind==="payment"?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
-              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
+              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
