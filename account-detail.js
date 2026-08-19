@@ -213,18 +213,118 @@
       }
     });
 
-    // Panora 6.99: expose the actual settlement moment for the bakery archive.
+    // Panora 7.00: expose the actual settlement moment for the bakery archive.
     // Reopened notes must return to the archive according to the latest real close,
     // not according to their old delivery date.
     byId.closedAtByNote=closedAtByNote;
     return byId;
   }
 
+  // Panora 7.00: historical payment allocation is immutable. Current FIFO may change
+  // after a later dispute/cancellation, but older payment rows must keep the allocation
+  // that was actually established at that point in time. Unused advance can still be
+  // applied later when a new DN appears or another payment is reversed.
+  function historicalPaymentDistributionFor(id) {
+    const notes = deliveryNotes
+      .filter(note => note.restaurantId === id)
+      .slice()
+      .sort((a,b) => String(a.date||"").localeCompare(String(b.date||"")) || Number(a.number||0)-Number(b.number||0) || String(a.id||"").localeCompare(String(b.id||"")));
+    const sourcePayments = payments.filter(payment => {
+      if(payment.restaurantId !== id || Number(payment.amount||0) <= 0)return false;
+      if(returnCreditPayment(payment))return true;
+      return Boolean(payment.confirmedAt)||["confirmed","cancelled"].includes(String(payment.status||""))||payment.disputeStatus==="open"||payment.confirmed===true;
+    });
+    const active=new Map(),existingNotes=[],history=new Map();
+    const confirmedClone=payment=>({...payment,confirmed:true,status:"confirmed",disputeStatus:"none"});
+    const historyRow=payment=>{
+      const key=String(payment.id||"");
+      if(!history.has(key))history.set(key,{rows:[],credit:Math.max(0,Number(payment.amount||0)),returnCredit:returnCreditPayment(payment),amount:Math.max(0,Number(payment.amount||0)),assignedByNote:new Map()});
+      return history.get(key);
+    };
+    const snapshotDistribution=()=>{
+      const remaining=new Map(existingNotes.map(note=>[String(note.id||note.number),Math.max(0,Number(note.total||0))]));
+      const noteById=new Map(existingNotes.map(note=>[String(note.id),note]));
+      const byPayment=new Map();
+      const sorted=[...active.values()].sort((a,b)=>String(a.receivedAt||a.date||"").localeCompare(String(b.receivedAt||b.date||""))||String(a.id||"").localeCompare(String(b.id||"")));
+      const pooled=[];
+      const take=(row,note,requested)=>{
+        if(!note||requested<=0)return 0;
+        const key=String(note.id||note.number),due=Math.max(0,Number(remaining.get(key)||0));
+        const used=Math.min(due,Math.max(0,Number(requested||0)));
+        if(used<=0.005)return 0;
+        remaining.set(key,Math.max(0,due-used));
+        row.rows.push({note,amount:used});
+        return used;
+      };
+      sorted.forEach(payment=>{
+        const key=String(payment.id||""),row={payment,rows:[],credit:0};
+        byPayment.set(key,row);
+        let left=Math.max(0,Number(payment.amount||0));
+        const linked=payment.deliveryNoteId?noteById.get(String(payment.deliveryNoteId)):null;
+        if(linked)left-=take(row,linked,left);
+        if(left>0.005)pooled.push({row,left});
+      });
+      pooled.forEach(pool=>{
+        let left=pool.left;
+        for(const note of existingNotes){if(left<=0.005)break;left-=take(pool.row,note,left);}
+        pool.row.credit=Math.max(0,left);
+      });
+      return byPayment;
+    };
+    const capture=eventDate=>{
+      const current=snapshotDistribution();
+      for(const [paymentId] of active){
+        const currentRow=current.get(String(paymentId));
+        if(!currentRow)continue;
+        const historical=historyRow(currentRow.payment);
+        let assigned=historical.rows.reduce((sum,item)=>sum+Number(item.amount||0),0);
+        let available=Math.max(0,historical.amount-assigned);
+        if(available<=0.005){historical.credit=0;continue;}
+        const currentByNote=new Map();
+        currentRow.rows.forEach(item=>{const key=String(item.note?.id||item.note?.number||"");currentByNote.set(key,(currentByNote.get(key)||0)+Number(item.amount||0));});
+        for(const item of currentRow.rows){
+          if(available<=0.005)break;
+          const noteKey=String(item.note?.id||item.note?.number||"");
+          const already=Number(historical.assignedByNote.get(noteKey)||0),currentAmount=Number(currentByNote.get(noteKey)||0);
+          const gain=Math.min(available,Math.max(0,currentAmount-already));
+          if(gain<=0.005)continue;
+          historical.rows.push({note:item.note,amount:gain,date:String(eventDate||currentRow.payment.receivedAt||currentRow.payment.date||"")});
+          historical.assignedByNote.set(noteKey,already+gain);
+          available-=gain;
+        }
+        assigned=historical.rows.reduce((sum,item)=>sum+Number(item.amount||0),0);
+        historical.credit=Math.max(0,historical.amount-assigned);
+      }
+    };
+    const events=[
+      ...notes.map(note=>({kind:"note",date:String(note.date||""),occurredAt:`${String(note.date||"")}T00:00:00`,note})),
+      ...sourcePayments.flatMap(payment=>{
+        const receivedAt=String(payment.receivedAt||`${payment.date||""}T12:00:00`);
+        const rows=[{kind:"payment",date:String(payment.date||receivedAt.slice(0,10)||""),occurredAt:receivedAt,payment}];
+        if(returnCreditPayment(payment))return rows;
+        const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
+        if(reversalType){
+          const stateAt=String(reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt)||receivedAt);
+          rows.push({kind:"reversal",date:stateAt.slice(0,10),occurredAt:stateAt,payment});
+        }
+        return rows;
+      })
+    ].sort((a,b)=>String(a.occurredAt||a.date).localeCompare(String(b.occurredAt||b.date))||({note:0,payment:1,reversal:2}[a.kind]-{note:0,payment:1,reversal:2}[b.kind])||String(a.payment?.id||a.note?.id||"").localeCompare(String(b.payment?.id||b.note?.id||"")));
+    events.forEach(event=>{
+      if(event.kind==="note"){existingNotes.push(event.note);existingNotes.sort((a,b)=>String(a.date||"").localeCompare(String(b.date||""))||Number(a.number||0)-Number(b.number||0)||String(a.id||"").localeCompare(String(b.id||"")));}
+      else if(event.kind==="payment"){active.set(String(event.payment.id||""),confirmedClone(event.payment));historyRow(event.payment);}
+      else if(event.kind==="reversal")active.delete(String(event.payment.id||""));
+      capture(event.date);
+    });
+    history.forEach(row=>delete row.assignedByNote);
+    return history;
+  }
+
   function paymentDistributionHtml(id, item) {
     if (!item?.id || item.amount >= 0 || item.className.includes("pending") || item.className.includes("cancelled") || item.className.includes("disputed")) return "";
     const payment = payments.find(row => String(row.id) === String(item.id));
     if (!payment) return "";
-    const distribution = paymentDistributionFor(id).get(String(item.id));
+    const distribution = historicalPaymentDistributionFor(id).get(String(item.id));
     if (!distribution) return "";
     const isReturnCredit=returnCreditPayment(payment);
     const targetId=String(payment.deliveryNoteId||"");
@@ -236,14 +336,14 @@
       `<div><span>${prettyDate(date)} · <button type="button" class="account-allocation-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button></span><strong>${euro(amount)}</strong></div>`
     );
     if (Number(distribution.credit || 0) > 0.005) {
-      rows.push(`<div class="payment-allocation-credit"><span>Осталось в авансе</span><strong>${euro(distribution.credit)}</strong></div>`);
+      rows.push(`<div class="payment-allocation-credit"><span>Не было зачтено в DN</span><strong>${euro(distribution.credit)}</strong></div>`);
     }
     if (!rows.length) {
-      rows.push(`<div class="payment-allocation-credit"><span>В аванс / переплату</span><strong>${euro(Math.abs(item.amount))}</strong></div>`);
+      rows.push(`<div class="payment-allocation-credit"><span>Не было зачтено в DN</span><strong>${euro(Math.abs(item.amount))}</strong></div>`);
     }
 
     return `<details class="payment-allocation">
-      <summary>${isReturnCredit?"Распределение кредита возврата":"Распределение платежа"}</summary>
+      <summary>${isReturnCredit?"История распределения кредита возврата":"История распределения платежа"}</summary>
       <div class="payment-allocation-rows">${rows.join("")}</div>
     </details>`;
   }
