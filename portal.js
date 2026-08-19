@@ -101,12 +101,16 @@ function portalNotes() {
 function portalPayments() {
   return portalRead("panora-payments");
 }
+const portalPaymentFinanciallyConfirmed = (payment) =>
+  payment?.confirmed !== false &&
+  (!payment?.status || payment.status === "confirmed") &&
+  payment?.disputeStatus !== "open";
 function accountDebt() {
   const shipped = portalNotes()
       .filter((n) => n.restaurantId === account.id)
       .reduce((s, n) => s + n.total, 0),
     paid = portalPayments()
-      .filter((p) => p.restaurantId === account.id && p.confirmed !== false)
+      .filter((p) => p.restaurantId === account.id && portalPaymentFinanciallyConfirmed(p))
       .reduce((s, p) => s + p.amount, 0);
   return shipped - paid;
 }
@@ -445,7 +449,7 @@ function portalPrintNote(note) {
     confirmedPayments = portalPayments().filter(
       (p) =>
         p.restaurantId === note.restaurantId &&
-        p.confirmed !== false &&
+        portalPaymentFinanciallyConfirmed(p) &&
         String(p.date) <= String(note.date),
     ),
     paidAll = confirmedPayments.reduce((s, p) => s + Number(p.amount || 0), 0),

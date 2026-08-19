@@ -842,24 +842,15 @@
 
     const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
     const payments=ownPayments().filter(payment=>partnerPaymentConfirmed(payment));
-
-    const allocated=new Map(notes.map(note=>[String(note.id),0]));
-    payments.filter(payment=>payment.deliveryNoteId).forEach(payment=>{
-      const key=String(payment.deliveryNoteId);
-      if(allocated.has(key))allocated.set(key,allocated.get(key)+Number(payment.amount||0));
-    });
-    let pool=payments.filter(payment=>!payment.deliveryNoteId).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
-    for(const note of notes){
-      if(pool<=0)break;
-      const key=String(note.id),already=allocated.get(key)||0;
-      const remaining=Math.max(0,Number(note.total||0)-already);
-      const used=Math.min(pool,remaining);
-      allocated.set(key,already+used);pool-=used;
-    }
+    // Panora 6.88: use the same linked-payment + FIFO-overflow algorithm as the bakery.
+    // A payment tied to one DN may exceed that DN; the excess must close the oldest
+    // remaining debts before it becomes an advance.
+    const distribution=partnerPaymentDistribution(notes,payments);
 
     return notes.map(note=>{
-      const paidAmount=Math.min(Number(note.total||0),allocated.get(String(note.id))||0);
-      const due=Math.max(0,Number(note.total||0)-paidAmount);
+      const total=Math.max(0,Number(note.total||0));
+      const due=Math.max(0,Number(distribution.remainingByNote.get(String(note.id))||0));
+      const paidAmount=Math.max(0,Math.min(total,total-due));
       const dueDate=note.paymentDueDate||"";
       const overdue=Boolean(dueDate&&dueDate<isoToday());
       return {note,paidAmount,due,dueDate,overdue};
