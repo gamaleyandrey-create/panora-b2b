@@ -138,6 +138,26 @@
   };
 
   function calculate(){
+    // Panora 7.02: Finance must use the cost captured with the factual bake, not
+    // today's ingredient price. This keeps closed periods immutable and lets a later
+    // physical return reverse exactly the COGS that belonged to the original bake.
+    const costBakeCompletions=(Array.isArray(read('panora-bake-completions',[]))?read('panora-bake-completions',[]):[])
+      .filter(row=>row&&!row.deletedAt).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+    const b2bOrders=Array.isArray(read('panora-orders',[]))?read('panora-orders',[]):[],b2bOrderById=new Map(b2bOrders.filter(Boolean).map(order=>[String(order.id||''),order]));
+    const historicalUnitRawCost=(product,date)=>{
+      const day=String(date||'').slice(0,10);let fallbackRecipe=null;
+      for(let i=costBakeCompletions.length-1;i>=0;i--){
+        const completion=costBakeCompletions[i];if(day&&String(completion?.date||'')>day)continue;
+        const item=(Array.isArray(completion?.items)?completion.items:[]).find(row=>String(row?.product||'')===String(product));if(!item)continue;
+        const snapshot=item.costSnapshot,unit=Number(snapshot?.unitRawCost);
+        if(snapshot?.complete===true&&Number.isFinite(unit)&&unit>=0)return unit;
+        if(!fallbackRecipe&&Array.isArray(item.recipeSnapshot)&&item.recipeSnapshot.length)fallbackRecipe=item.recipeSnapshot;
+      }
+      return fallbackRecipe?recipeUnitRawCost(fallbackRecipe,product):unitRawCost(product);
+    };
+    const noteCostDate=note=>{const order=b2bOrderById.get(String(note?.orderId||''));return String(order?.date||note?.date||'').slice(0,10)};
+    const noteUnitRawCost=(note,product)=>historicalUnitRawCost(product,noteCostDate(note));
+    const retailUnitRawCost=(order,product)=>historicalUnitRawCost(product,String(order?.bakeDate||order?.pickupDate||order?.completedAt||order?.createdAt||'').slice(0,10));
     const seenNotes=new Set();
     const allNotes=read('panora-delivery-notes',[])
       .slice()
@@ -158,7 +178,7 @@
       const itemNetTotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(pricesSnapshot[item.product]||0),0)||noteNet||1;
       items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const unitCogs=unitRawCost(item.product),itemCogs=unitCogs*qty;
+        const unitCogs=noteUnitRawCost(note,item.product),itemCogs=unitCogs*qty;
         const sourceGross=qty*Number(pricesSnapshot[item.product]||0);
         const itemNet=itemNetTotal>0?noteNet*(sourceGross/itemNetTotal):0;
         b2bCogs+=itemCogs;b2bPieces+=qty;
@@ -179,7 +199,7 @@
         (credit?.rows||[]).filter(row=>inPeriod(row?.movement?.date)).forEach(row=>{
           const gross=Math.max(0,Number(row.gross||0)),net=Math.max(0,Number(row.net||0)),tax=Math.max(0,Number(row.tax||0)),qty=Math.max(0,Number(row.quantity||0)),product=String(row.product||'');
           if(gross<=0||qty<=0||!product)return;
-          const itemCogs=unitRawCost(product)*qty;
+          const itemCogs=noteUnitRawCost(note,product)*qty;
           b2bReturnsGross+=gross;b2bReturnedPieces+=qty;b2bGrossRevenue-=gross;b2bRevenueNet-=net;b2bSalesVat-=tax;b2bCogs-=itemCogs;
           const p=productMap.get(product)||{product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
           p.revenue-=net;p.b2bRevenue-=net;p.cogs-=itemCogs;productMap.set(product,p);
@@ -217,7 +237,7 @@
       const grossBasis=x.itemGross||1;
       x.items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=unitRawCost(item.product)*qty;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailUnitRawCost(order,item.product)*qty;
         retailCogs+=itemCogs;retailPieces+=qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.pieces+=qty;p.retailPieces+=qty;p.revenue+=itemNet;p.retailRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
@@ -230,7 +250,7 @@
       const grossBasis=x.itemGross||1;
       x.items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=unitRawCost(item.product)*qty;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailUnitRawCost(order,item.product)*qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.revenue-=itemNet;p.retailRevenue-=itemNet;
         if(physicalReturn){retailCogs-=itemCogs;retailPieces=Math.max(0,retailPieces-qty);p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty}
@@ -261,7 +281,7 @@
     (Array.isArray(bakeCompletions)?bakeCompletions:[]).filter(row=>row&&!row.deletedAt&&inPeriod(row.date)).forEach(completion=>{
       (Array.isArray(completion.items)?completion.items:[]).forEach((item,index)=>{
         const product=String(item?.product||''),waste=Math.max(0,Number(item?.waste||0));if(!product||!waste)return;
-        const cost=recipeUnitRawCost(item?.recipeSnapshot,product)*waste;if(cost<=0)return;
+        const frozen=Number(item?.costSnapshot?.unitRawCost),unitCost=item?.costSnapshot?.complete===true&&Number.isFinite(frozen)?frozen:recipeUnitRawCost(item?.recipeSnapshot,product),cost=unitCost*waste;if(cost<=0)return;
         lossRows.push({id:`auto-loss:bake:${completion.id||completion.date}:${product}:${index}`,date:String(completion.date||''),category:'Производственные потери',description:`Брак при выпечке · ${productLabel(product)} · ${waste} шт.`,expenseType:'variable',grossAmount:cost,vatRate:0,vatDeductible:false,syntheticLoss:true,lossKind:'bake_waste'});
       });
     });
@@ -269,7 +289,7 @@
     (Array.isArray(finishedMovements)?finishedMovements:[]).filter(row=>row&&String(row.type||'')==='written_off'&&inPeriod(row.date)).forEach((movement,index)=>{
       const key=String(movement.id||`${movement.date}:${movement.product}:${movement.quantity}:${index}`);if(seenWriteOffs.has(key))return;seenWriteOffs.add(key);
       const product=String(movement.product||''),qty=Math.max(0,Number(movement.quantity||0));if(!product||!qty)return;
-      const cost=unitRawCost(product)*qty;if(cost<=0)return;
+      const cost=historicalUnitRawCost(product,movement.date)*qty;if(cost<=0)return;
       const note=String(movement.note||'').trim();
       lossRows.push({id:`auto-loss:stock:${key}`,date:String(movement.date||''),category:'Потери склада',description:`Списание готового хлеба · ${productLabel(product)} · ${qty} шт.${note?` · ${note}`:''}`,expenseType:'variable',grossAmount:cost,vatRate:0,vatDeductible:false,syntheticLoss:true,lossKind:'finished_write_off'});
     });
