@@ -592,7 +592,7 @@
       status('Синхронизация рецептур…');
       await guardSection('recipes','recipe_items');
       await request('recipe_items?id=not.is.null',{method:'DELETE'});
-      const payload=Object.entries(snapshot).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),source_ingredient_name:item.sourceIngredientName||null,source_unit:item.sourceUnit||null,source_yield_pct:Number(item.sourceYieldPct||0)||null,updated_at:new Date().toISOString()})));
+      const payload=Object.entries(snapshot).flatMap(([productId,items])=>(items||[]).map((item,position)=>({product_id:productId,position,ingredient_name:String(item.name||''),quantity:Number(item.qty||0),unit:item.unit||'g',stock:Number(item.stock||0),margin:Number(item.margin||0),source_ingredient_name:item.sourceIngredientName||null,source_unit:item.sourceUnit||null,source_yield_pct:Number(item.sourceYieldPct||0)||null})));
       if(payload.length){
         try{await request('recipe_items?on_conflict=product_id,position',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)})}
         catch(error){
@@ -618,7 +618,7 @@
   }
   const safeMessengerRows=value=>Array.isArray(value)?value.filter(item=>item&&item.name&&item.contact).slice(0,10).map(item=>({name:String(item.name).slice(0,40),contact:String(item.contact).slice(0,120)})):[];
   const normalizeCloudPartnerType=value=>{const raw=String(value??'').trim().toLowerCase(),aliases={restaurant:'restaurant','ресторан':'restaurant',restaurante:'restaurant',shop:'shop','магазин':'shop',tienda:'shop',hotel:'hotel','отель':'hotel',cafe:'cafe','кафе':'cafe','café':'cafe',catering:'catering','кейтеринг':'catering',cátering:'catering',other:'other','другое':'other',otro:'other'};return aliases[raw]||'restaurant'};
-  const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,whatsapp:r.whatsapp||null,telegram:r.telegram||null,extra_messengers:safeMessengerRows(r.extraMessengers),address:r.address||null,legal_name:r.legalName||null,tax_id:r.taxId||null,billing_address:r.billingAddress||null,language:r.language||'ru',partner_type:normalizeCloudPartnerType(r.partnerType),active:!r.deletedAt,updated_at:new Date().toISOString()});
+  const restaurantRow=r=>({id:r.id,name:r.name,email:r.email,phone:r.phone||null,whatsapp:r.whatsapp||null,telegram:r.telegram||null,extra_messengers:safeMessengerRows(r.extraMessengers),address:r.address||null,legal_name:r.legalName||null,tax_id:r.taxId||null,billing_address:r.billingAddress||null,language:r.language||'ru',partner_type:normalizeCloudPartnerType(r.partnerType),active:!r.deletedAt});
   const rowRestaurant=(row,local)=>({id:row.id,name:row.name,email:row.email,phone:row.phone||'',whatsapp:row.whatsapp||'',telegram:row.telegram||'',extraMessengers:safeMessengerRows(row.extra_messengers),address:row.address||'',legalName:row.legal_name||'',taxId:row.tax_id||'',billingAddress:row.billing_address||'',language:row.language||'ru',partnerType:normalizeCloudPartnerType(row.partner_type||local?.partnerType),accessCode:local?.accessCode||'',prices:Object.fromEntries((row.restaurant_prices||[]).map(item=>[item.product_id,Number(item.price)])),...(row.active?{}:{deletedAt:local?.deletedAt||row.updated_at})});
   async function refreshRestaurantPricesDirect(){
     if(!ready)return false;
@@ -716,7 +716,7 @@
     status('Синхронизация…');
     await guardSection('restaurants','restaurants');
     if(restaurants.length)await request('restaurants?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(restaurants.map(restaurantRow))});
-    const prices=restaurants.flatMap(r=>Object.entries(r.prices||{}).map(([product_id,price])=>({restaurant_id:r.id,product_id,price:Number(price),updated_at:new Date().toISOString()})));
+    const prices=restaurants.flatMap(r=>Object.entries(r.prices||{}).map(([product_id,price])=>({restaurant_id:r.id,product_id,price:Number(price)})));
     if(prices.length){
       const remotePrices=await request('restaurant_prices?select=restaurant_id,product_id');
       const existing=new Set((remotePrices||[]).map(row=>`${row.restaurant_id}:${row.product_id}`));
@@ -1006,11 +1006,11 @@
   })).sort((a,b)=>a.id.localeCompare(b.id)));
   const paymentUiSignature=list=>stableJson((list||[]).map(payment=>({
     id:String(payment?.id||''),restaurantId:String(payment?.restaurantId||''),deliveryNoteId:String(payment?.deliveryNoteId||''),
-    amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),
+    amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),disputeStatus:String(payment?.disputeStatus||'none'),
     receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||'')
   })).sort((a,b)=>a.id.localeCompare(b.id)));
   const localDate=value=>String(value||'').slice(0,10);
-  const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&p.confirmed!==false).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,traysDelivered:Number(row.trays_delivered||0),traysReturned:Number(row.trays_returned||0),trayBalanceAfter:Number(row.tray_balance_after||0),customerTraysReceived:row.customer_trays_received==null?null:Number(row.customer_trays_received),customerTraysReturned:row.customer_trays_returned==null?null:Number(row.customer_trays_returned),qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null}};
+  const rowNote=row=>{const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&paymentFinanciallyConfirmed(p)).reduce((sum,p)=>sum+Number(p.amount||0),0);return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:Number(row.total),taxRate:Number(order?.taxRate||0),tax:0,total:Number(row.total),paid,balanceAfter:0,traysDelivered:Number(row.trays_delivered||0),traysReturned:Number(row.trays_returned||0),trayBalanceAfter:Number(row.tray_balance_after||0),customerTraysReceived:row.customer_trays_received==null?null:Number(row.customer_trays_received),customerTraysReturned:row.customer_trays_returned==null?null:Number(row.customer_trays_returned),qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null}};
   const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,total:subtotal+tax,paid:0,balanceAfter:0,recovered:true}};
   const deliveryNoteRow=(note,{includeId=true}={})=>{note.qrToken ||= crypto.randomUUID();const row={order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),trays_delivered:Number(note.traysDelivered||0),trays_returned:Number(note.traysReturned||0),tray_balance_after:Number(note.trayBalanceAfter||0),customer_trays_received:note.customerTraysReceived==null?null:Number(note.customerTraysReceived),customer_trays_returned:note.customerTraysReturned==null?null:Number(note.customerTraysReturned),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null};if(includeId&&note.id)row.id=note.id;if(Number(note.number)>0)row.note_number=Number(note.number);return row};
   async function repairMissingDeliveryNotes(){
@@ -1058,7 +1058,8 @@
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     cacheDeliveryNotesLocal();status('Облако ✓');
   }
-  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,recordedBy:row.recorded_by||row.confirmed_by||null});
+  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,updatedAt:row.updated_at||null,recordedBy:row.recorded_by||row.confirmed_by||null});
+  const paymentFinanciallyConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==='confirmed')&&payment?.disputeStatus!=='open';
   function cachePayment(row){
     const payment=rowPayment(row);
     const index=payments.findIndex(item=>item.id===payment.id);
@@ -1110,6 +1111,20 @@
     status('Облако ✓');
     return cachePayment(row);
   }
+  async function resolvePaymentDisputeAtomic(paymentId,decision){
+    if(!ready)throw new Error('Облако ещё загружается.');
+    const mode=decision==='cancel'?'cancel':'keep';
+    const patch=mode==='cancel'
+      ? {status:'cancelled',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null}
+      : {status:'confirmed',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null};
+    const rows=await request(`payments?id=eq.${encodeURIComponent(paymentId)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(patch)});
+    const row=Array.isArray(rows)?rows[0]:rows;
+    if(!row?.id)throw new Error(mode==='cancel'?'Сервер не подтвердил отмену оплаты.':'Сервер не подтвердил снятие спора.');
+    const expectedStatus=mode==='cancel'?'cancelled':'confirmed';
+    if(String(row.status||'')!==expectedStatus||String(row.dispute_status||'none')==='open')throw new Error('Сервер вернул неподтверждённое состояние оплаты.');
+    status('Облако ✓');
+    return cachePayment(row);
+  }
 function b2bReturnNoteIdFromMovement(movement){
   const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):'';
 }
@@ -1151,8 +1166,7 @@ function financeAllocation(restaurantId){
   const confirmed=payments
     .filter(payment=>
       payment.restaurantId===restaurantId&&
-      payment.confirmed!==false&&
-      payment.status!=='cancelled'&&
+      paymentFinanciallyConfirmed(payment)&&
       Number(payment.amount||0)>0
     )
     .slice()
@@ -1216,7 +1230,7 @@ function financeTimeline(restaurantId){
       amount:Number(note.total||0)
     })),
     ...returnEvents,
-    ...payments.filter(payment=>payment.restaurantId===restaurantId&&payment.status!=='cancelled').map(payment=>{
+    ...payments.filter(payment=>payment.restaurantId===restaurantId).map(payment=>{
       const linkedNote=noteById.get(payment.deliveryNoteId);
       const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
       return{
@@ -1239,7 +1253,7 @@ function financeTimeline(restaurantId){
       event.note.balanceAfter=Math.max(0,running);
     }else if(event.kind==='return'){
       running-=event.amount;
-    }else if(event.payment.confirmed!==false){
+    }else if(paymentFinanciallyConfirmed(event.payment)){
       running-=event.amount;
       if(event.linkedNote&&event.date===String(event.linkedNote.date||'')){
         event.linkedNote.balanceAfter=Math.max(0,running);
@@ -1360,7 +1374,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const existing=await request('bake_days?select=id,bake_date');
     for(const day of existing||[]){if(!byDate.has(day.bake_date))await request(`bake_days?id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'})}
     for(const [date,items] of byDate){
-      const first=items[0],cutoff=cutoffIso(first.cutoff);if(!cutoff)throw new Error(`Некорректный срок приёма заказов для ${date}`);const payload={bake_date:date,delivery_date:first.deliveryDate||date,cutoff_at:cutoff,accepting_orders:first.open!==false,updated_at:new Date().toISOString()};
+      const first=items[0],cutoff=cutoffIso(first.cutoff);if(!cutoff)throw new Error(`Некорректный срок приёма заказов для ${date}`);const payload={bake_date:date,delivery_date:first.deliveryDate||date,cutoff_at:cutoff,accepting_orders:first.open!==false};
       const rows=await request('bake_days?on_conflict=bake_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
       const day=rows?.[0];if(!day)continue;
       await request(`bake_items?bake_day_id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'});
@@ -1386,7 +1400,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function flushRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=0;await saveRestaurantsNow();return true}
   async function saveRestaurantPriceConfirmed(restaurantId,productId,price){
     if(!ready)throw new Error('Облако ещё загружается');
-    const row={restaurant_id:restaurantId,product_id:productId,price:Number(price),updated_at:new Date().toISOString()};
+    const row={restaurant_id:restaurantId,product_id:productId,price:Number(price)};
     await request('restaurant_prices?on_conflict=restaurant_id,product_id',{
       method:'POST',
       headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
@@ -1648,7 +1662,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,resolvePaymentDisputeAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{

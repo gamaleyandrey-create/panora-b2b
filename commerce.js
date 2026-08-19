@@ -158,7 +158,7 @@ const shippedFor = (id) =>
   deliveryNotes
     .filter((n) => n.restaurantId === id)
     .reduce((s, n) => s + n.total, 0);
-const paymentConfirmed = (payment) => payment?.confirmed !== false && (!payment?.status || payment.status === "confirmed");
+const paymentConfirmed = (payment) => payment?.confirmed !== false && (!payment?.status || payment.status === "confirmed") && payment?.disputeStatus !== "open";
 const paidFor = (id) =>
   payments
     .filter((p) => p.restaurantId === id && paymentConfirmed(p))

@@ -68,11 +68,13 @@
       return window.panoraFinanceTimeline(id).slice().reverse().map((event) => {
         if(event.kind === "delivery")return {date:event.date,type:"Отгрузка",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:event.amount,className:"shipment",balanceAfter:event.balanceAfter};
         if(event.kind === "return")return {id:event.movement?.id,date:event.date,type:"Возврат по накладной",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:-event.amount,className:"return",balanceAfter:event.balanceAfter};
+        const disputed=event.payment?.disputeStatus === "open",cancelled=event.payment?.status === "cancelled";
         return {
           id: event.payment.id,date: event.date,
-          type: paymentConfirmed(event.payment) ? event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата" : "Ожидает подтверждения",
+          type: cancelled ? "Оплата отменена" : disputed ? "Оплата оспорена" : paymentConfirmed(event.payment) ? event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата" : "Ожидает подтверждения",
           number: event.payment.note || event.payment.method || "",amount: -event.amount,
-          className: paymentConfirmed(event.payment) ? "payment" : "payment pending",balanceAfter: event.balanceAfter
+          className: cancelled ? "payment cancelled" : disputed ? "payment disputed" : paymentConfirmed(event.payment) ? "payment" : "payment pending",balanceAfter: event.balanceAfter,
+          disputeReason:event.payment?.disputeReason||""
         };
       });
     }
@@ -93,14 +95,23 @@
         .map((payment) => ({
           id: payment.id,
           date: payment.date,
-          type: paymentConfirmed(payment)
-            ? payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
-            : "Ожидает подтверждения",
+          type: payment.status === "cancelled"
+            ? "Оплата отменена"
+            : payment.disputeStatus === "open"
+              ? "Оплата оспорена"
+              : paymentConfirmed(payment)
+              ? payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
+              : "Ожидает подтверждения",
           number: payment.note || payment.method || "",
           amount: -payment.amount,
-          className: paymentConfirmed(payment)
-            ? "payment"
-            : "payment pending",
+          className: payment.status === "cancelled"
+            ? "payment cancelled"
+            : payment.disputeStatus === "open"
+              ? "payment disputed"
+              : paymentConfirmed(payment)
+              ? "payment"
+              : "payment pending",
+          disputeReason: payment.disputeReason || "",
           sort: 1,
         })),
     ]
@@ -109,10 +120,7 @@
           String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
       )
       .map((item) => {
-        if (
-          item.className === "shipment" ||
-          !item.className.includes("pending")
-        )
+        if (item.className === "shipment" || item.className === "payment")
           running += Number(item.amount || 0);
         item.balanceAfter = running;
         return item;
@@ -211,6 +219,8 @@
 
   function operationAmountHtml(item) {
     const amount = euro(Math.abs(Number(item.amount || 0)));
+    if (item.className.includes("cancelled")) return `<b class="operation-amount-pending">Отменено ${amount}</b>`;
+    if (item.className.includes("disputed")) return `<b class="operation-amount-pending">В споре ${amount}</b>`;
     if (item.className.includes("pending")) return `<b class="operation-amount-pending">Ожидается ${amount}</b>`;
     if (item.className.includes("return")) return `<b class="operation-amount-payment">Кредит ${amount}</b>`;
     if (Number(item.amount || 0) < 0) return `<b class="operation-amount-payment">Оплата ${amount}</b>`;
@@ -335,7 +345,7 @@
 
     historyRoot.innerHTML = visible.length
       ? visible.map((item) =>
-          `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`
+          `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("disputed") ? `<small class="account-payment-dispute-reason">${item.disputeReason ? `Причина: ${String(item.disputeReason).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}` : "Партнёр оспорил оплату"}</small><div class="account-payment-dispute-actions"><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="keep">Оплата верна</button><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="cancel">Отменить оплату</button></div>` : item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`
         ).join("")
       : `<p class="empty-row">${historyTab==="archive"?"Архивных операций пока нет.":"Операций пока нет."}</p>`;
 
@@ -378,6 +388,29 @@
           }
         }),
     );
+
+    historyRoot.querySelectorAll("[data-resolve-payment-dispute]").forEach((button) => {
+      button.onclick = async () => {
+        const payment=payments.find(item=>String(item.id)===String(button.dataset.resolvePaymentDispute));
+        const decision=button.dataset.disputeDecision==='cancel'?'cancel':'keep';
+        if(!payment)return;
+        const question=decision==='cancel'
+          ? `Отменить спорную оплату ${euro(payment.amount)}? Сумма снова станет задолженностью.`
+          : `Подтвердить, что оплата ${euro(payment.amount)} верна? Спор будет закрыт и сумма снова погасит задолженность.`;
+        if(!confirm(question))return;
+        if(!window.panoraCloud?.ready||typeof window.panoraCloud.resolvePaymentDisputeAtomic!=="function")return alert("Облако ещё загружается. Подождите несколько секунд и повторите.");
+        const buttons=[...historyRoot.querySelectorAll(`[data-resolve-payment-dispute="${String(payment.id)}"]`)];
+        buttons.forEach(item=>item.disabled=true);
+        try{
+          await window.panoraCloud.resolvePaymentDisputeAtomic(payment.id,decision);
+          renderCommerce();
+          open(id);
+        }catch(error){
+          alert(`Решение по спору не сохранено: ${error.message||error}`);
+          open(id);
+        }
+      };
+    });
   }
 
   function open(id) {

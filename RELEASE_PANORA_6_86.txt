@@ -1,0 +1,15 @@
+Panora 6.86 — disputed-payment accounting hardening
+
+Build: 6860
+Package series: 8
+
+Changes:
+- an open B2B payment dispute no longer closes delivery-note debt or creates advance/credit;
+- disputed payments remain visible in history but are suspended from FIFO allocation and balance calculations;
+- overdue/payment reminders use the reopened debt produced by the shared finance allocation;
+- bakery account history now shows disputed payments explicitly;
+- bakery can resolve a dispute with server-confirmed actions: keep payment as valid or cancel it;
+- dispute decisions never change local debt until Supabase confirms the payment row state.
+
+No layout redesign in 6.86.
+No new SQL in 6.86.
