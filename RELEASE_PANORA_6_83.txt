@@ -1,0 +1,14 @@
+Panora 6.83 — production and finished-stock loss accounting
+
+Build: 6830
+Package series: 8
+
+Changes:
+- factual bake waste now appears automatically in Finance as a production loss valued at raw-material cost;
+- explicit finished-bread “Write-off / waste” stock movements now appear automatically as stock losses;
+- these losses reduce operating profit without contaminating sales COGS;
+- inventory and technical +/- corrections remain reconciliation entries and are not auto-expensed;
+- automatic loss rows are visible in the Finance expense table and cannot be edited or deleted there;
+- Finance refreshes immediately after bake-completion or finished-stock movement changes.
+
+No layout redesign. No new SQL.
