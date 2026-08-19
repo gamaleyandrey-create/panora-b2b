@@ -213,7 +213,7 @@
       }
     });
 
-    // Panora 6.98: expose the actual settlement moment for the bakery archive.
+    // Panora 6.99: expose the actual settlement moment for the bakery archive.
     // Reopened notes must return to the archive according to the latest real close,
     // not according to their old delivery date.
     byId.closedAtByNote=closedAtByNote;

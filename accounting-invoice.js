@@ -198,7 +198,8 @@
               item.confirmed !== false &&
               item.status !== "cancelled" &&
               item.disputeStatus !== "open" &&
-              !/\[panora:b2b-return-credit:[^\]]+\]/.test(String(item.note || "")),
+              !/\[panora:b2b-return-credit:[^\]]+\]/.test(String(item.note || "")) &&
+              String(item.date || item.receivedAt || "").slice(0, 10) === String(note.date || "").slice(0, 10),
           )
           .reduce((sum, item) => sum + Number(item.amount || 0), 0),
     );
