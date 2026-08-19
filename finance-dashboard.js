@@ -101,7 +101,7 @@
   const from=document.querySelector('#financeDateFrom'),to=document.querySelector('#financeDateTo');
   const today=new Date(),monthStart=new Date(today.getFullYear(),today.getMonth(),1);
   const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  // Panora 7.09: cloud event timestamps are UTC, but Finance periods are bakery-local calendar days.
+  // Panora 7.10: cloud event timestamps are UTC, but Finance periods are bakery-local calendar days.
   // A retail completion/refund at 00:30 Europe/Madrid can still be dated the previous day in UTC.
   const localEventDay=value=>{const raw=String(value||'');if(!raw)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;const parsed=new Date(raw);return Number.isNaN(parsed.getTime())?raw.slice(0,10):iso(parsed)};
   if(!from.value)from.value=iso(monthStart);if(!to.value)to.value=iso(today);

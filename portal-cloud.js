@@ -7,6 +7,16 @@
   const PORTAL_NOTES_CACHE_LIMIT=250;
   const PORTAL_PAYMENTS_CACHE_LIMIT=350;
 
+  // Panora 7.10: use the partner device's local calendar for UTC cloud timestamps.
+  // This keeps the partner history aligned with bakery Finance around local midnight.
+  function portalEconomicDate(value){
+    const raw=String(value||'');if(!raw)return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+    const parsed=new Date(raw);if(Number.isNaN(parsed.getTime()))return raw.slice(0,10);
+    const pad=n=>String(n).padStart(2,'0');
+    return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}`;
+  }
+
   function isPortalStorageQuotaError(error){
     const name=String(error?.name||"");
     const message=String(error?.message||error||"");
@@ -446,10 +456,10 @@
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
       const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices};
       const initialOrders=recoverZeroOrderPrices(preserveKnownOrderItems(attachStatusHistory(hydratedOrderRows.map(mapOrder),statusEvents)),Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices);
-      const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:String(n.delivered_at).slice(0,10),paymentDueDate:n.payment_due_date||'',items:initialOrders.find(o=>o.id===n.order_id)?.items||[],prices:initialOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
+      const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:initialOrders.find(o=>o.id===n.order_id)?.items||[],prices:initialOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
       const notesByOrder=new Map(mappedNotes.map(note=>[String(note.orderId),note]));
       const orders=initialOrders.map(order=>archiveMetaForOrder(order,notesByOrder.get(String(order.id))));
-      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:String(p.received_at).slice(0,10),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
       setPortalRuntime('panora-restaurants',[own]);
       setPortalRuntime('panora-orders',orders);
       setPortalRuntime('panora-delivery-notes',mappedNotes);
