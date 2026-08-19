@@ -1,0 +1,12 @@
+Panora 6.78 — regression fixes
+
+Build: 6780
+Package series: 8
+
+Changes:
+- fixed Purchasing raw-material demand across multiple selected bake dates: each date now independently uses real partner/retail orders when present and falls back to the production plan when that date has no real orders;
+- hardened retail order/payment status updates: server response and post-sync state must confirm the requested change;
+- paid retail orders can no longer be cancelled before their payment is marked Refunded, preventing a cancelled+paid inconsistent state.
+
+No mobile-layout or desktop-layout changes in 6.78.
+No new SQL in 6.78.
