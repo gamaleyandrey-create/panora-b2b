@@ -1,0 +1,12 @@
+Panora 6.95 — partner payment history and signed advance balance
+
+Build: 6950
+Package series: 8
+
+Changes:
+- cancelled B2B payments remain visible in the partner operation history instead of disappearing after the debt reopens;
+- cancelled and disputed payments stay excluded from the financial balance;
+- partner history preserves a signed running balance, so a real advance is shown as an advance instead of being clamped to zero;
+- partial advance + supplement + dispute/cancellation now tells one coherent story across bakery balance, partner balance, operation history and payment reminders.
+
+No layout redesign. No new SQL.

@@ -1076,7 +1076,7 @@ function paymentReminderRows() {
       const r = restaurant(note.restaurantId);
       if (!r) return null;
       if(!allocationByRestaurant.has(r.id)){
-        // Panora 6.94: reminders must be correct even before cloud-sync.js exposes
+        // Panora 6.95: reminders must be correct even before cloud-sync.js exposes
         // panoraFinanceAllocation. The local allocator already understands linked
         // payments, FIFO overflow and advances, so never fall back to stale note.paid.
         allocationByRestaurant.set(r.id,accountingAllocationFor(r.id));

@@ -167,7 +167,7 @@
         String(a.id || "").localeCompare(String(b.id || ""))
       );
 
-    // Panora 6.94: an advance can close a delivery note only when that note exists.
+    // Panora 6.95: an advance can close a delivery note only when that note exists.
     const settlementAppliedAt = (paymentDate, noteDate) => {
       const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
       const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
