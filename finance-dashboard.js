@@ -167,6 +167,36 @@
         if(seenNotes.has(key))return false;
         seenNotes.add(key);return true;
       });
+
+    /* Panora 7.04 — finished-goods FIFO cost layers.
+       A shipment must consume the actual older bake layers still on hand, not simply
+       inherit the cost of the latest bake before its date. The engine is rebuilt from
+       immutable bake snapshots + stock events, so mixed batches, returns and write-offs
+       keep the same historical COGS without adding a new SQL table. */
+    const allFinishedMovements=Array.isArray(read('panora-stock-movements',[]))?read('panora-stock-movements',[]):[];
+    const allRetailForCost=Array.isArray(retailOrders)?retailOrders:[];
+    const costLayers=new Map(),b2bSaleCost=new Map(),retailSaleCost=new Map(),returnMovementCost=new Map(),writeOffCost=new Map();
+    const layerList=product=>{const key=String(product||'');if(!costLayers.has(key))costLayers.set(key,[]);return costLayers.get(key)};
+    const layerQty=product=>layerList(product).reduce((sum,row)=>sum+Math.max(0,Number(row.qty||0)),0);
+    const addLayer=(product,qty,unitCost,source='')=>{qty=Math.max(0,Number(qty||0));unitCost=Math.max(0,Number(unitCost||0));if(qty<=0)return;const rows=layerList(product),last=rows[rows.length-1];if(last&&Math.abs(Number(last.unitCost)-unitCost)<1e-9&&String(last.source||'')===String(source||''))last.qty+=qty;else rows.push({qty,unitCost,source})};
+    const consumeLayers=(product,qty,fallbackUnitCost=0)=>{let remaining=Math.max(0,Number(qty||0)),cost=0;const rows=layerList(product),parts=[];while(remaining>1e-9&&rows.length){const row=rows[0],take=Math.min(remaining,Math.max(0,Number(row.qty||0)));if(take<=1e-9){rows.shift();continue}const unit=Math.max(0,Number(row.unitCost||0));row.qty-=take;remaining-=take;cost+=take*unit;parts.push({qty:take,unitCost:unit,source:row.source||''});if(row.qty<=1e-9)rows.shift()}if(remaining>1e-9){const unit=Math.max(0,Number(fallbackUnitCost||0));cost+=remaining*unit;parts.push({qty:remaining,unitCost:unit,source:'fallback'});remaining=0}return{cost,parts,unitCost:qty>0?cost/Math.max(0,Number(qty||0)):0}};
+    const frozenBakeUnitCost=(item,product,date)=>{const frozen=Number(item?.costSnapshot?.unitRawCost);return Number.isFinite(frozen)&&frozen>=0?frozen:historicalUnitRawCost(product,date)};
+    const b2bReturnNoteId=movement=>{const direct=String(movement?.b2bReturnNoteId||'');if(direct)return direct;const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):''};
+    const retailReturnOrderId=movement=>{const direct=String(movement?.retailOrderId||'');if(direct)return direct;const match=String(movement?.note||'').match(/\[panora:retail-return:([^:\]]+):/);return match?String(match[1]):''};
+    const stockInventoryTarget=movement=>{const match=String(movement?.note||'').match(/^Инвентаризация:\s*установлен остаток\s+(-?\d+(?:[.,]\d+)?)\s*шт\./i);if(!match)return null;const target=Number(String(match[1]).replace(',','.'));return Number.isFinite(target)?Math.max(0,target):null};
+    const costEventKey=(date,stamp,priority,id)=>`${String(date||'').slice(0,10)}\u0000${String(stamp||'')}\u0000${String(priority).padStart(2,'0')}\u0000${String(id||'')}`;
+    const costEvents=[];
+    const manualProducedByDayProduct=new Map();
+    allFinishedMovements.filter(m=>String(m?.type||'')==='produced').forEach(m=>{const key=`${String(m?.date||'').slice(0,10)}\u0000${String(m?.product||'')}`;manualProducedByDayProduct.set(key,(manualProducedByDayProduct.get(key)||0)+Math.max(0,Math.abs(Number(m?.quantity||0))))});
+    costBakeCompletions.forEach(completion=>(Array.isArray(completion?.items)?completion.items:[]).forEach((item,index)=>{const product=String(item?.product||''),good=Math.max(0,Number(item?.good??(Number(item?.produced||0)-Number(item?.waste||0))));if(!product||good<=0)return;const legacyManual=completion?.source==='legacy_inferred'?Number(manualProducedByDayProduct.get(`${String(completion?.date||'').slice(0,10)}\u0000${product}`)||0):0,qty=Math.max(0,good-legacyManual);if(qty<=0)return;costEvents.push({kind:'add',product,qty,unitCost:frozenBakeUnitCost(item,product,completion.date),source:`bake:${completion.id||completion.date}:${index}`,key:costEventKey(completion.date,`${String(completion.date||'').slice(0,10)}T00:00:00.000Z`,0,`bake:${completion.id||completion.date}:${index}`)})}));
+    const noteOrderIds=new Set(allNotes.map(note=>String(note?.orderId||'')).filter(Boolean));
+    allFinishedMovements.forEach((movement,index)=>{const product=String(movement?.product||''),type=String(movement?.type||''),qty=Math.max(0,Math.abs(Number(movement?.quantity||0)));if(!product||qty<=0)return;if(type==='shipped'&&movement?.orderId&&noteOrderIds.has(String(movement.orderId)))return;const date=String(movement?.date||'').slice(0,10),stamp=movement?.occurredAt||movement?.createdAt||`${date}T12:00:00.000Z`,id=String(movement?.id||`manual:${index}`),target=stockInventoryTarget(movement);if(target!==null){costEvents.push({kind:'inventory',product,target,fallback:historicalUnitRawCost(product,date),key:costEventKey(date,stamp,45,id),id});return}if(['produced','initial_balance','correction_plus'].includes(type)){costEvents.push({kind:'add',product,qty,unitCost:historicalUnitRawCost(product,date),source:`stock:${id}`,key:costEventKey(date,stamp,10,id)});return}if(type==='returned'){costEvents.push({kind:'return',product,qty,movement,b2bNoteId:b2bReturnNoteId(movement),retailOrderId:retailReturnOrderId(movement),fallback:historicalUnitRawCost(product,date),key:costEventKey(date,stamp,35,id),id});return}if(type==='written_off'){costEvents.push({kind:'writeoff',product,qty,fallback:historicalUnitRawCost(product,date),key:costEventKey(date,stamp,40,id),id});return}if(['correction_minus','shipped','retail_sold'].includes(type)){costEvents.push({kind:'consume',product,qty,fallback:historicalUnitRawCost(product,date),key:costEventKey(date,stamp,30,id),id})}});
+    allNotes.forEach(note=>{const grouped=new Map();(Array.isArray(note?.items)?note.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)grouped.set(product,(grouped.get(product)||0)+qty)});grouped.forEach((qty,product)=>costEvents.push({kind:'b2b-sale',product,qty,note,fallback:noteUnitRawCost(note,product),key:costEventKey(note?.date,note?.createdAt||note?.customerConfirmedAt||`${String(note?.date||'').slice(0,10)}T12:00:00.000Z`,20,`b2b:${note?.id}:${product}`)}))});
+    allRetailForCost.filter(order=>String(order?.status||'')==='completed').forEach(order=>{const grouped=new Map();(Array.isArray(order?.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)grouped.set(product,(grouped.get(product)||0)+qty)});const saleDay=String(order?.completedAt||order?.pickupDate||order?.createdAt||'').slice(0,10);grouped.forEach((qty,product)=>costEvents.push({kind:'retail-sale',product,qty,order,fallback:retailUnitRawCost(order,product),key:costEventKey(saleDay,order?.completedAt||order?.updatedAt||order?.createdAt||`${saleDay}T12:00:00.000Z`,25,`retail:${order?.id}:${product}`)}))});
+    costEvents.sort((a,b)=>String(a.key).localeCompare(String(b.key)));
+    costEvents.forEach(event=>{if(event.kind==='add'){addLayer(event.product,event.qty,event.unitCost,event.source);return}if(event.kind==='inventory'){const current=layerQty(event.product);if(current>event.target+1e-9)consumeLayers(event.product,current-event.target,event.fallback);else if(current+1e-9<event.target)addLayer(event.product,event.target-current,event.fallback,`inventory:${event.id}`);return}if(event.kind==='b2b-sale'){const allocation=consumeLayers(event.product,event.qty,event.fallback);b2bSaleCost.set(`${String(event.note?.id||'')}\u0000${event.product}`,{...allocation,qty:event.qty});return}if(event.kind==='retail-sale'){const allocation=consumeLayers(event.product,event.qty,event.fallback);retailSaleCost.set(`${String(event.order?.id||'')}\u0000${event.product}`,{...allocation,qty:event.qty});return}if(event.kind==='return'){let profile=null;if(event.b2bNoteId)profile=b2bSaleCost.get(`${event.b2bNoteId}\u0000${event.product}`);else if(event.retailOrderId)profile=retailSaleCost.get(`${event.retailOrderId}\u0000${event.product}`);const unit=profile&&Number(profile.qty)>0?Number(profile.cost||0)/Number(profile.qty):event.fallback,cost=unit*event.qty;returnMovementCost.set(event.id,cost);addLayer(event.product,event.qty,unit,`return:${event.id}`);return}if(event.kind==='writeoff'){const allocation=consumeLayers(event.product,event.qty,event.fallback);writeOffCost.set(event.id,allocation.cost);return}if(event.kind==='consume')consumeLayers(event.product,event.qty,event.fallback)});
+    const b2bAllocatedUnitCost=(note,product)=>{const row=b2bSaleCost.get(`${String(note?.id||'')}\u0000${String(product||'')}`);return row&&Number(row.qty)>0?Number(row.cost||0)/Number(row.qty):noteUnitRawCost(note,product)};
+    const retailAllocatedUnitCost=(order,product)=>{const row=retailSaleCost.get(`${String(order?.id||'')}\u0000${String(product||'')}`);return row&&Number(row.qty)>0?Number(row.cost||0)/Number(row.qty):retailUnitRawCost(order,product)};
     const notes=allNotes.filter(note=>inPeriod(note.date));
     const productMap=new Map(),partnerMap=new Map();
     let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0,b2bReturnsGross=0,b2bReturnedPieces=0;
@@ -178,7 +208,7 @@
       const itemNetTotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(pricesSnapshot[item.product]||0),0)||noteNet||1;
       items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const unitCogs=noteUnitRawCost(note,item.product),itemCogs=unitCogs*qty;
+        const unitCogs=b2bAllocatedUnitCost(note,item.product),itemCogs=unitCogs*qty;
         const sourceGross=qty*Number(pricesSnapshot[item.product]||0);
         const itemNet=itemNetTotal>0?noteNet*(sourceGross/itemNetTotal):0;
         b2bCogs+=itemCogs;b2bPieces+=qty;
@@ -199,8 +229,8 @@
         (credit?.rows||[]).filter(row=>inPeriod(row?.movement?.date)).forEach(row=>{
           const gross=Math.max(0,Number(row.gross||0)),net=Math.max(0,Number(row.net||0)),tax=Math.max(0,Number(row.tax||0)),qty=Math.max(0,Number(row.quantity||0)),product=String(row.product||'');
           if(gross<=0||qty<=0||!product)return;
-          const itemCogs=noteUnitRawCost(note,product)*qty;
-          // Panora 7.03: a DN return is a physical reversal, so unit analytics must
+          const movementId=String(row?.movement?.id||''),itemCogs=returnMovementCost.has(movementId)?Number(returnMovementCost.get(movementId)||0):b2bAllocatedUnitCost(note,product)*qty;
+          // Panora 7.04: a DN return is a physical reversal, so unit analytics must
           // reverse the returned pieces together with revenue and COGS. Otherwise a
           // same-period return leaves the sale price/profit per piece artificially low.
           b2bReturnsGross+=gross;b2bReturnedPieces+=qty;b2bGrossRevenue-=gross;b2bRevenueNet-=net;b2bSalesVat-=tax;b2bCogs-=itemCogs;b2bPieces-=qty;
@@ -240,7 +270,7 @@
       const grossBasis=x.itemGross||1;
       x.items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailUnitRawCost(order,item.product)*qty;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailAllocatedUnitCost(order,item.product)*qty;
         retailCogs+=itemCogs;retailPieces+=qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.pieces+=qty;p.retailPieces+=qty;p.revenue+=itemNet;p.retailRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
@@ -253,7 +283,7 @@
       const grossBasis=x.itemGross||1;
       x.items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailUnitRawCost(order,item.product)*qty;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailAllocatedUnitCost(order,item.product)*qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.revenue-=itemNet;p.retailRevenue-=itemNet;
         if(physicalReturn){retailCogs-=itemCogs;retailPieces-=qty;p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty}
@@ -292,7 +322,7 @@
     (Array.isArray(finishedMovements)?finishedMovements:[]).filter(row=>row&&String(row.type||'')==='written_off'&&inPeriod(row.date)).forEach((movement,index)=>{
       const key=String(movement.id||`${movement.date}:${movement.product}:${movement.quantity}:${index}`);if(seenWriteOffs.has(key))return;seenWriteOffs.add(key);
       const product=String(movement.product||''),qty=Math.max(0,Number(movement.quantity||0));if(!product||!qty)return;
-      const cost=historicalUnitRawCost(product,movement.date)*qty;if(cost<=0)return;
+      const cost=writeOffCost.has(String(movement.id||''))?Number(writeOffCost.get(String(movement.id||''))||0):historicalUnitRawCost(product,movement.date)*qty;if(cost<=0)return;
       const note=String(movement.note||'').trim();
       lossRows.push({id:`auto-loss:stock:${key}`,date:String(movement.date||''),category:'Потери склада',description:`Списание готового хлеба · ${productLabel(product)} · ${qty} шт.${note?` · ${note}`:''}`,expenseType:'variable',grossAmount:cost,vatRate:0,vatDeductible:false,syntheticLoss:true,lossKind:'finished_write_off'});
     });
