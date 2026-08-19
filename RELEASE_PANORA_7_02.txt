@@ -1,0 +1,14 @@
+Panora 7.02 — immutable production-cost snapshots for Finance
+
+Build: 7020
+Package series: 8
+
+Changes:
+- factual bake completion now stores a JSON cost snapshot with ingredient prices and per-bread raw-material cost;
+- historical B2B and retail COGS uses the frozen bake cost instead of today's ingredient prices;
+- a later physical return reverses the same historical COGS that belonged to the original bake;
+- bake waste and finished-bread write-offs use the historical production cost when available;
+- existing bake completions receive a one-time migration estimate so past periods stop drifting after 7.02;
+- cost snapshots live inside the existing bake_completions.items JSON, so no new SQL is required.
+
+No layout redesign. No new SQL.
