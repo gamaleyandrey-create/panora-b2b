@@ -902,7 +902,7 @@
       return byPayment.get(key);
     };
 
-    // Panora 6.93: a future DN covered by an older advance closes on the DN date, never before it exists.
+    // Panora 6.94: a future DN covered by an older advance closes on the DN date, never before it exists.
     const settlementAppliedAt=(paymentDate,noteDate)=>{
       const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
       const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
