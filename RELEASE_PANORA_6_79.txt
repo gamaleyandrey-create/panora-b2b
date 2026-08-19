@@ -1,0 +1,13 @@
+Panora 6.79 — production / purchasing / finance regression fixes
+
+Build: 6790
+Package series: 8
+
+Changes:
+- retail-only bake preorder dates now appear in purchasing even when there is no B2B order or explicit production-plan row;
+- completed bake dates are retained as purchasing/archive date sources;
+- purchasing help text now matches the per-date demand fallback introduced in 6.78;
+- finance expense create/update/delete in a configured Supabase installation is applied locally only after the server confirms it;
+- failed cloud finance writes no longer appear temporarily saved and then disappear on the next refresh.
+
+No layout changes. No new SQL.
