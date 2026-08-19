@@ -200,11 +200,14 @@
           const gross=Math.max(0,Number(row.gross||0)),net=Math.max(0,Number(row.net||0)),tax=Math.max(0,Number(row.tax||0)),qty=Math.max(0,Number(row.quantity||0)),product=String(row.product||'');
           if(gross<=0||qty<=0||!product)return;
           const itemCogs=noteUnitRawCost(note,product)*qty;
-          b2bReturnsGross+=gross;b2bReturnedPieces+=qty;b2bGrossRevenue-=gross;b2bRevenueNet-=net;b2bSalesVat-=tax;b2bCogs-=itemCogs;
+          // Panora 7.03: a DN return is a physical reversal, so unit analytics must
+          // reverse the returned pieces together with revenue and COGS. Otherwise a
+          // same-period return leaves the sale price/profit per piece artificially low.
+          b2bReturnsGross+=gross;b2bReturnedPieces+=qty;b2bGrossRevenue-=gross;b2bRevenueNet-=net;b2bSalesVat-=tax;b2bCogs-=itemCogs;b2bPieces-=qty;
           const p=productMap.get(product)||{product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
-          p.revenue-=net;p.b2bRevenue-=net;p.cogs-=itemCogs;productMap.set(product,p);
+          p.revenue-=net;p.b2bRevenue-=net;p.cogs-=itemCogs;p.pieces-=qty;p.b2bPieces-=qty;productMap.set(product,p);
           const k=String(note.restaurantId||''),partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};
-          partner.revenue-=net;partner.cogs-=itemCogs;partnerMap.set(k,partner);
+          partner.revenue-=net;partner.cogs-=itemCogs;partner.pieces-=qty;partnerMap.set(k,partner);
         });
       });
     }
@@ -253,7 +256,7 @@
         const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=retailUnitRawCost(order,item.product)*qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.revenue-=itemNet;p.retailRevenue-=itemNet;
-        if(physicalReturn){retailCogs-=itemCogs;retailPieces=Math.max(0,retailPieces-qty);p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty}
+        if(physicalReturn){retailCogs-=itemCogs;retailPieces-=qty;p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty}
         productMap.set(item.product,p);
       });
     });
