@@ -1,0 +1,15 @@
+Panora 6.76 — technical consistency cleanup
+
+Build: 6760
+Package series: 8
+
+Changes:
+- reconciled service-worker CORE precache with current HTML dependencies;
+- removed stale desktop-orders-v21.css from precache;
+- added current finance, audit, connection, notification, PWA and recovery assets to precache;
+- synchronized build 6760 in build.json, manifest, PWA controller, health check and HTML cache-busting URLs;
+- removed stale internal release labels from retail admin copy;
+- aligned retail analytics text with the existing finance-dashboard logic that includes completed paid retail sales in consolidated finance.
+
+No business-logic, mobile-layout or desktop-layout changes in 6.76.
+No new SQL in 6.76.
