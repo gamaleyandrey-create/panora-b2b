@@ -163,6 +163,10 @@ const paidFor = (id) =>
   payments
     .filter((p) => p.restaurantId === id && paymentConfirmed(p))
     .reduce((s, p) => s + p.amount, 0);
+const financeNetFor = (id) => {
+  const allocation=typeof window.panoraFinanceAllocation==='function'?window.panoraFinanceAllocation(id):null;
+  return allocation?Number(allocation.net??(Number(allocation.debt||0)-Number(allocation.credit||0))):shippedFor(id)-paidFor(id);
+};
 function syncPlansFromOrders() {
   const current = cRead("panora-production-plans", []),
     grouped = {};
@@ -271,7 +275,7 @@ function renderRestaurants() {
       ? active
           .map(
             (r) =>
-              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="text" inputmode="decimal" autocomplete="off" value="${adminPartnerPrice(r.id,product.id,r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(shippedFor(r.id) - paidFor(r.id))}</strong></div></article>`,
+              `<article class="restaurant-card"><div class="restaurant-card-head"><span class="tag">${partnerTypeLabel(r.partnerType)}</span><button class="restaurant-delete" data-delete-restaurant="${r.id}" type="button">Удалить</button></div><h3>${commerceEscape(r.name)}</h3><p>${commerceEscape(r.email)}<br>${commerceEscape(r.address || "Адрес доставки не указан")}</p>${partnerContactHtml(r)}${(r.legalName||r.taxId||r.billingAddress)?`<details class="partner-requisites"><summary>Реквизиты</summary><p><strong>${commerceEscape(r.legalName||r.name)}</strong>${r.taxId?`<br>NIF / CIF: ${commerceEscape(r.taxId)}`:''}${r.billingAddress?`<br>${commerceEscape(r.billingAddress)}`:''}</p></details>`:''}${commerceProducts().map((product) => `<label class="price-row"><span>${commerceProductLabel(product.id)}<small>Оптовая цена</small></span><span><input data-price="${r.id}:${product.id}" type="text" inputmode="decimal" autocomplete="off" value="${adminPartnerPrice(r.id,product.id,r.prices?.[product.id] ?? product.basePrice ?? product.price ?? 0).toFixed(2)}"> €</span></label>`).join("")}<div class="debt-row"><span>Задолженность</span><strong>${euro(financeNetFor(r.id))}</strong></div></article>`,
           )
           .join("")
       : '<div class="empty-row">Добавьте первого партнёра и назначьте ему индивидуальные цены.</div>') +
@@ -747,7 +751,7 @@ function accountingAllocationFor(restaurantId) {
     }
     const key = String(linked.id);
     const already = Number(paidByNote.get(key) || 0);
-    const total = Math.max(0, Number(linked.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(linked):Math.max(0, Number(linked.total || 0));
     const applied = Math.min(Math.max(0, total - already), amount);
     paidByNote.set(key, already + applied);
     fifoPool += Math.max(0, amount - applied);
@@ -757,7 +761,7 @@ function accountingAllocationFor(restaurantId) {
     if (fifoPool <= 0) return;
     const key = String(note.id);
     const already = Number(paidByNote.get(key) || 0);
-    const total = Math.max(0, Number(note.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0));
     const due = Math.max(0, total - already);
     const applied = Math.min(due, fifoPool);
     if (applied > 0) {
@@ -767,7 +771,7 @@ function accountingAllocationFor(restaurantId) {
   });
 
   const rows = notes.map((note) => {
-    const total = Math.max(0, Number(note.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0));
     const paid = Math.min(total, Math.max(0, Number(paidByNote.get(String(note.id)) || 0)));
     const due = Math.max(0, total - paid);
     return { note, total, paid, due, closed: due <= 0.005 };
@@ -1249,7 +1253,7 @@ function openShipment(id) {
       );
     document.querySelector("#shipmentActualTotal").textContent = euro(total);
     document.querySelector("#shipmentDebtAfter").textContent = euro(
-      Math.max(0, shippedFor(r.id) - paidFor(r.id) + total - paid),
+      Math.max(0, financeNetFor(r.id) + total - paid),
     );
     document.querySelector("#shipmentTrayBalance").textContent =
       `${Math.max(0, previousTrays + traysDelivered - traysReturned)} шт.`;
@@ -1404,7 +1408,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
         traysReturned,
         trayBalanceAfter,
         balanceAfter:
-          shippedFor(o.restaurantId) + total - paidFor(o.restaurantId) - paid,
+          financeNetFor(o.restaurantId) + total - paid,
       };
       deliveryNotes.push(note);
       if (paid)

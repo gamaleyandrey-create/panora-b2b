@@ -221,10 +221,15 @@ function retailPreorderQuantity(date,product){return retailPreorderOrdersForDate
 function retailPreorderMapForDate(date){const map=new Map();retailPreorderOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)map.set(product,(map.get(product)||0)+qty)}));return map}
 function retailBakeCoverage(date){const completion=bakeCompletionFor(date),retailDemand=retailPreorderMapForDate(date),partnerDemand=new Map(),good=new Map((completion?.items||[]).map(item=>[String(item.product||''),Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))))]));bakeOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(product&&qty)partnerDemand.set(product,(partnerDemand.get(product)||0)+qty)}));let required=0,shortage=0;retailDemand.forEach((qty,product)=>{required+=qty;const partner=Math.max(0,Number(partnerDemand.get(product)||0)),baked=Math.max(0,Number(good.get(product)||0));shortage+=Math.min(qty,Math.max(0,partner+qty-baked))});return{completion,required,shortage,covered:!!completion&&shortage<=0}}
 function retailStatusLabel(status,order){if(status==='completed'&&String(order?.fulfillment||'pickup')==='delivery')return 'Доставлен';return({new:'Новый',confirmed:'Подтверждён',preparing:'Готовится',ready:'Готов',delivering:'В доставке',completed:'Выдан',cancelled:'Отменён'}[status]||status||'—')}
-function retailReturnMovementId(order,item,index){return `retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`}
+function retailLegacyReturnMovementId(order,item,index){return `retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`}
+function retailReturnMovementMarker(order,item,index){return `[panora:retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}]`}
+function retailReturnMovementMatches(movement,order,item,index){
+ const legacy=retailLegacyReturnMovementId(order,item,index),marker=retailReturnMovementMarker(order,item,index);
+ return String(movement?.type||'')==='returned'&&(String(movement?.id||'')===legacy||String(movement?.note||'').includes(marker));
+}
 function retailOrderReturnedToStock(order){
  const items=Array.isArray(order?.items)?order.items:[];if(!items.length)return false;
- return items.every((item,index)=>{const id=retailReturnMovementId(order,item,index),qty=Math.max(0,Number(item?.quantity||0));return qty>0&&movements.some(m=>String(m?.id||'')===id&&String(m?.type||'')==='returned'&&Math.abs(Number(m?.quantity||0))>=qty)});
+ return items.every((item,index)=>{const qty=Math.max(0,Number(item?.quantity||0));return qty>0&&movements.some(m=>retailReturnMovementMatches(m,order,item,index)&&Math.abs(Number(m?.quantity||0))>=qty)});
 }
 function retailPaymentLabel(order){const value=String(order?.paymentStatus||'pending'),method=String(order?.paymentMethod||'pickup');if(value==='paid')return 'Оплачен';if(value==='refunded')return retailOrderReturnedToStock(order)?'Возврат · хлеб на складе':'Возврат оплаты';if(value==='failed')return 'Ошибка оплаты';return method==='online'?'Ожидает онлайн-оплаты':'При получении'}
 function retailFulfillmentLabel(order){return String(order?.fulfillment||'pickup')==='delivery'?'Доставка':'Самовывоз'}
@@ -296,16 +301,16 @@ async function updateRetailPaymentStatusCloud(id,nextStatus){
 }
 async function returnRetailOrderToFinishedStock(order){
  const items=Array.isArray(order?.items)?order.items:[],now=new Date().toISOString(),date=stockLocalDate(),number=retailOrderNumber(order);
- const rows=items.map((item,index)=>({id:retailReturnMovementId(order,item,index),date,product:String(item?.product||''),type:'returned',quantity:Math.max(0,Number(item?.quantity||0)),note:`Возврат розничного заказа ${number}`,createdAt:now,retailOrderId:String(order?.id||'')})).filter(row=>row.product&&row.quantity>0);
+ const rows=items.map((item,index)=>({id:crypto.randomUUID(),marker:retailReturnMovementMarker(order,item,index),date,product:String(item?.product||''),type:'returned',quantity:Math.max(0,Number(item?.quantity||0)),note:`Возврат розничного заказа ${number} · ${retailReturnMovementMarker(order,item,index)}`,createdAt:now,retailOrderId:String(order?.id||''),item,index})).filter(row=>row.product&&row.quantity>0);
  if(!rows.length)return true;
- const missing=rows.filter(row=>!movements.some(m=>String(m?.id||'')===row.id));if(!missing.length)return true;
+ const missing=rows.filter(row=>!movements.some(m=>retailReturnMovementMatches(m,order,row.item,row.index)));if(!missing.length)return true;
  if(window.panoraSupabaseSession?.access_token){
   const cloudRows=missing.map(row=>({id:row.id,movement_date:row.date,product_id:row.product,movement_type:'returned',quantity:row.quantity,note:row.note,created_at:row.createdAt,updated_at:now,updated_by:window.panoraSupabaseSession?.user?.id||null}));
-  await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(cloudRows)});
-  const loaded=await loadFinishedStockMovementsCloud();if(!loaded)throw new Error('Возврат оплаты выполнен, но склад не удалось перечитать из облака');
-  const confirmed=missing.every(row=>movements.some(m=>String(m?.id||'')===row.id&&String(m?.type||'')==='returned'&&Math.abs(Number(m?.quantity||0))>=row.quantity));if(!confirmed)throw new Error('Сервер не подтвердил возврат хлеба на склад');
+  const saved=await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(cloudRows)});
+  const confirmed=missing.every(row=>(Array.isArray(saved)?saved:[]).some(server=>String(server?.id||'')===row.id&&String(server?.movement_type||'')==='returned'&&String(server?.note||'').includes(row.marker)&&Math.abs(Number(server?.quantity||0))>=row.quantity));if(!confirmed)throw new Error('Сервер не подтвердил возврат хлеба на склад');
+  movements.push(...missing.map(({item,index,marker,...row})=>row));setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
  }else{
-  movements.push(...missing);setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
+  movements.push(...missing.map(({item,index,marker,...row})=>row));setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
  }
  renderStock();renderRetailOrderQueue();window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));return true;
 }
@@ -593,6 +598,25 @@ function stockOperationLabel(type){
 }
 function stockOrders(){return stockRead('panora-orders',[])}
 function stockNotes(){return stockRead('panora-delivery-notes',[])}
+function b2bReturnMarker(noteId){return `[panora:b2b-return:${String(noteId||'')}]`}
+function b2bReturnNoteId(movement){
+ if(movement?.b2bReturnNoteId)return String(movement.b2bReturnNoteId);
+ const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):'';
+}
+function b2bReturnedQty(noteId,product){
+ return movements.filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteId(m)===String(noteId)&&String(m?.product||'')===String(product)).reduce((sum,m)=>sum+Math.max(0,Math.abs(Number(m?.quantity||0))),0);
+}
+function b2bReturnCandidates(product){
+ const restaurants=stockRead('panora-restaurants',[]),nameFor=id=>restaurants.find(r=>String(r?.id||'')===String(id))?.name||'Партнёр';
+ return stockCanonicalNotes().map(note=>{
+  const shipped=(Array.isArray(note?.items)?note.items:[]).filter(item=>String(item?.product||'')===String(product)).reduce((sum,item)=>sum+Math.max(0,Number(item?.quantity||0)),0);
+  const returned=b2bReturnedQty(note.id,product),remaining=Math.max(0,shipped-returned);
+  return{note,remaining,partner:nameFor(note.restaurantId)};
+ }).filter(row=>row.remaining>0.0001).sort((a,b)=>String(b.note?.date||'').localeCompare(String(a.note?.date||''))||Number(b.note?.number||0)-Number(a.note?.number||0));
+}
+function b2bReturnCreditPreview(note,product,quantity){
+ const unitNet=Math.max(0,Number(note?.prices?.[product]||0)),taxRate=Math.max(0,Number(note?.taxRate||0));return Math.max(0,Number(quantity||0))*unitNet*(1+taxRate/100);
+}
 function stockManualProduced(date,product){
  return movements.filter(m=>m.type==='produced'&&String(m.date||'')===String(date)&&String(m.product)===String(product)).reduce((sum,m)=>sum+Math.abs(Number(m.quantity||0)),0);
 }
@@ -695,6 +719,8 @@ function stockOpenBake(date){
 }
 function stockMovementNote(m){
  if(m.type==='shipped'&&m.noteId)return `<button type="button" class="stock-doc-link" data-stock-note="${adminEscape(m.noteId)}" data-stock-order="${adminEscape(m.orderId||'')}">${adminEscape(m.note||'Накладная')}</button>`;
+ const returnNoteId=m.type==='returned'?b2bReturnNoteId(m):'';
+ if(returnNoteId)return `<button type="button" class="stock-doc-link" data-stock-note="${adminEscape(returnNoteId)}">${adminEscape(String(m.note||'Возврат по накладной').replace(/\s*·?\s*\[panora:b2b-return:[^\]]+\]/g,''))}</button>`;
  if(m.type==='baked'&&m.bakeDate)return `<button type="button" class="stock-doc-link" data-stock-bake="${adminEscape(m.bakeDate)}">${adminEscape(m.note||'Выпечка')}</button>`;
  return adminEscape(m.note||'—');
 }
@@ -751,10 +777,17 @@ function updateStockAdjustCurrent(){
  root.classList.remove('is-warning');
  root.innerHTML=`<span><small>На складе</small><strong>${onHand} шт.</strong></span><span><small>Зарезервировано</small><strong>${reserved} шт.</strong></span><span><small>Свободно</small><strong>${free} шт.</strong></span>`;
 }
+function fillMovementReturnNotes(){
+ const form=$('#movementForm'),label=$('#movementReturnNoteLabel'),select=$('#movementReturnNote');if(!form||!label||!select)return;
+ const isReturn=form.type.value==='returned';label.hidden=!isReturn;if(!isReturn){select.innerHTML='<option value="">Только склад — без финансовой корректировки</option>';return}
+ const product=String(form.product.value||''),current=select.value,candidates=b2bReturnCandidates(product);
+ select.innerHTML='<option value="">Только склад — без финансовой корректировки</option>'+candidates.map(({note,remaining,partner})=>`<option value="${adminEscape(note.id)}">DN-${String(note.number||'').padStart(4,'0')} · ${adminEscape(partner)} · ${adminEscape(String(note.date||''))} · можно вернуть ${remaining} шт.</option>`).join('');
+ if(current&&[...select.options].some(option=>option.value===current))select.value=current;
+}
 function updateStockAdjustPreview(){
  const form=$('#movementForm'),product=form.product.value,type=form.type.value,qty=Math.max(0,Number(form.quantity.value||0)),raw=stockRawBalance(product);
  const label=$('#movementQuantityLabel'),preview=$('#stockAdjustPreview');
- updateStockAdjustCurrent();
+ updateStockAdjustCurrent();fillMovementReturnNotes();
  label.textContent=type==='inventory_set'?'Фактический остаток, шт.':'Количество, шт.';
  if(type==='inventory_set'){
   if(form.quantity.value===''){preview.innerHTML='Введите фактический остаток — Panora сразу покажет изменение.';return}
@@ -762,6 +795,14 @@ function updateStockAdjustPreview(){
   preview.innerHTML=`После операции: <strong>${qty} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
   return;
  }
+ if(type==='returned'&&form.returnNoteId?.value){
+  const note=stockCanonicalNotes().find(row=>String(row.id)===String(form.returnNoteId.value)),candidate=b2bReturnCandidates(product).find(row=>String(row.note.id)===String(form.returnNoteId.value));
+  const maxQty=Math.max(0,Number(candidate?.remaining||0));form.quantity.max=maxQty?String(maxQty):'';
+  if(form.quantity.value===''){preview.innerHTML=`Возврат по накладной: доступно <strong>${maxQty} шт.</strong>. Долг партнёра уменьшится на стоимость фактически возвращённого хлеба.`;return}
+  const credit=b2bReturnCreditPreview(note,product,Math.min(qty,maxQty));
+  preview.innerHTML=`Возврат по DN-${String(note?.number||'').padStart(4,'0')}: на склад <strong>+${Math.min(qty,maxQty)} шт.</strong> · кредит партнёру примерно <strong>${credit.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €</strong>.`;return
+ }
+ form.quantity.removeAttribute('max');
  if(form.quantity.value===''){preview.innerHTML=`Текущий расчётный остаток: <strong>${raw} шт.</strong>`;return}
  const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
  preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
@@ -807,11 +848,12 @@ $('#closeMovementDialog').onclick=closeMovementDialog;
 $('#movementDialog').onclick=e=>{if(e.target===$('#movementDialog'))closeMovementDialog()};
 $('#movementProduct').onchange=updateStockAdjustPreview;
 $('#movementType').onchange=updateStockAdjustPreview;
+$('#movementReturnNote')?.addEventListener('change',updateStockAdjustPreview);
 $('#movementForm').quantity.oninput=updateStockAdjustPreview;
-$('#movementForm').onsubmit=e=>{
+$('#movementForm').onsubmit=async e=>{
  e.preventDefault();
  const form=$('#movementForm');if(!form.reportValidity())return;
- const f=new FormData(form),product=String(f.get('product')||''),requested=Math.max(0,Number(f.get('quantity')||0)),requestedType=String(f.get('type')||''),note=String(f.get('note')||'').trim();
+ const f=new FormData(form),product=String(f.get('product')||''),requested=Math.max(0,Number(f.get('quantity')||0)),requestedType=String(f.get('type')||''),returnNoteId=String(f.get('returnNoteId')||''),userNote=String(f.get('note')||'').trim();
  let type=requestedType,quantity=requested;
  if(requestedType==='inventory_set'){
   const current=stockRawBalance(product),delta=requested-current;
@@ -819,13 +861,26 @@ $('#movementForm').onsubmit=e=>{
   type=delta>0?'correction_plus':'correction_minus';quantity=Math.abs(delta);
  }
  if(quantity<=0)return alert('Количество должно быть больше нуля.');
- movements.push({
-  id:crypto.randomUUID(),date:iso(new Date()),product,type,quantity,createdAt:new Date().toISOString(),
-  note:requestedType==='inventory_set'?`Инвентаризация: установлен остаток ${requested} шт.${note?` · ${note}`:''}`:note
- });
- store('panora-stock-movements',movements);
- window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));
- closeMovementDialog();renderStock()
+ let note=userNote,b2bNote=null;
+ if(requestedType==='returned'&&returnNoteId){
+  const candidate=b2bReturnCandidates(product).find(row=>String(row.note.id)===returnNoteId);
+  if(!candidate)return alert('Эта накладная уже полностью возвращена по выбранному хлебу. Обновите склад и повторите.');
+  if(quantity>Number(candidate.remaining)+0.0001)return alert(`По этой накладной можно вернуть не больше ${candidate.remaining} шт.`);
+  b2bNote=candidate.note;const marker=b2bReturnMarker(b2bNote.id),prefix=`Возврат B2B · DN-${String(b2bNote.number||'').padStart(4,'0')} · ${marker}`;note=userNote?`${prefix} · ${userNote}`:prefix;
+ }
+ const movement={id:crypto.randomUUID(),date:iso(new Date()),product,type,quantity,createdAt:new Date().toISOString(),note:requestedType==='inventory_set'?`Инвентаризация: установлен остаток ${requested} шт.${userNote?` · ${userNote}`:''}`:note};
+ if(b2bNote)movement.b2bReturnNoteId=String(b2bNote.id);
+ try{
+  if(b2bNote&&window.PANORA_SUPABASE?.url&&window.PANORA_SUPABASE?.publishableKey){
+   if(!window.panoraSupabaseSession?.access_token)throw new Error('Нет активной облачной сессии. Возврат по накладной не проведён.');
+   const saved=await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify([{id:movement.id,movement_date:movement.date,product_id:movement.product,movement_type:'returned',quantity:movement.quantity,note:movement.note,created_at:movement.createdAt,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}])});
+   const server=Array.isArray(saved)?saved[0]:saved;if(!server||String(server.id||'')!==movement.id||String(server.movement_type||'')!=='returned'||!String(server.note||'').includes(b2bReturnMarker(b2bNote.id)))throw new Error('Supabase не подтвердил связанный возврат по накладной.');
+   movements.push(movement);setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
+  }else{
+   movements.push(movement);setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
+  }
+  window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));window.panoraRecalculateBalances?.();closeMovementDialog();renderStock();if(typeof renderCommerce==='function')renderCommerce();
+ }catch(error){alert(`Возврат не сохранён: ${error.message||error}`)}
 };
 window.addEventListener('panora:order-cycle-updated',()=>{renderStock();renderBakeCompletionBoard()});
 window.addEventListener('panora:products-changed',()=>{renderStock();renderBakeCompletionBoard()});

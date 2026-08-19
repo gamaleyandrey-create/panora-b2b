@@ -1110,6 +1110,32 @@
     status('Облако ✓');
     return cachePayment(row);
   }
+function b2bReturnNoteIdFromMovement(movement){
+  const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):'';
+}
+function localFinishedStockMovements(){
+  try{const rows=JSON.parse(localStorage.getItem('panora-stock-movements')||'[]');return Array.isArray(rows)?rows:[]}catch{return[]}
+}
+function b2bReturnCreditForNote(note){
+  if(!note?.id)return{gross:0,net:0,tax:0,rows:[]};
+  const items=Array.isArray(note.items)?note.items:[],prices=note.prices||{},remaining=new Map();
+  items.forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)remaining.set(product,(remaining.get(product)||0)+qty)});
+  const subtotalBasis=Math.max(0,Number(note.subtotal||0))||items.reduce((sum,item)=>sum+Math.max(0,Number(item?.quantity||0))*Math.max(0,Number(prices[item?.product]||0)),0);
+  const grossBasis=Math.max(0,Number(note.total||0)),taxRate=Math.max(0,Number(note.taxRate||0));
+  let gross=0,net=0,tax=0;const rows=[];
+  localFinishedStockMovements().filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
+    const product=String(movement?.product||''),left=Math.max(0,Number(remaining.get(product)||0)),requested=Math.max(0,Math.abs(Number(movement?.quantity||0))),qty=Math.min(left,requested);if(!product||qty<=0)return;
+    remaining.set(product,Math.max(0,left-qty));
+    const rowNet=qty*Math.max(0,Number(prices[product]||0));
+    const rowGross=subtotalBasis>0&&grossBasis>0?grossBasis*(rowNet/subtotalBasis):rowNet*(1+taxRate/100);
+    const cappedGross=Math.min(Math.max(0,grossBasis-gross),Math.max(0,rowGross)),rowTax=Math.max(0,cappedGross-rowNet);
+    gross+=cappedGross;net+=rowNet;tax+=rowTax;rows.push({movement,product,quantity:qty,net:rowNet,gross:cappedGross,tax:rowTax});
+  });
+  return{gross:Math.min(grossBasis,gross),net:Math.min(subtotalBasis||net,net),tax,rows};
+}
+function b2bEffectiveNoteTotal(note){return Math.max(0,Number(note?.total||0)-Number(b2bReturnCreditForNote(note).gross||0))}
+window.panoraB2BReturnCredit=b2bReturnCreditForNote;
+window.panoraB2BEffectiveNoteTotal=b2bEffectiveNoteTotal;
 function financeAllocation(restaurantId){
   if(typeof deliveryNotes==='undefined'||typeof payments==='undefined'){
     return{notes:[],debt:0,credit:0,net:0,totalShipped:0,totalPaid:0};
@@ -1142,7 +1168,7 @@ function financeAllocation(restaurantId){
     const amount=Math.max(0,Number(payment.amount||0));
     const linked=payment.deliveryNoteId?noteById.get(String(payment.deliveryNoteId)):null;
     if(!linked){fifoPool+=amount;return;}
-    const id=String(linked.id),already=Number(paidByNote.get(id)||0),total=Math.max(0,Number(linked.total||0));
+    const id=String(linked.id),already=Number(paidByNote.get(id)||0),total=b2bEffectiveNoteTotal(linked);
     const applied=Math.min(Math.max(0,total-already),amount);
     paidByNote.set(id,already+applied);
     fifoPool+=Math.max(0,amount-applied);
@@ -1150,7 +1176,7 @@ function financeAllocation(restaurantId){
 
   notes.forEach(note=>{
     if(fifoPool<=0)return;
-    const id=String(note.id),already=Number(paidByNote.get(id)||0),total=Math.max(0,Number(note.total||0));
+    const id=String(note.id),already=Number(paidByNote.get(id)||0),total=b2bEffectiveNoteTotal(note);
     const due=Math.max(0,total-already),applied=Math.min(due,fifoPool);
     if(applied>0){
       paidByNote.set(id,already+applied);
@@ -1159,7 +1185,7 @@ function financeAllocation(restaurantId){
   });
 
   const rows=notes.map(note=>{
-    const total=Math.max(0,Number(note.total||0));
+    const total=b2bEffectiveNoteTotal(note);
     const paid=Math.min(total,Math.max(0,Number(paidByNote.get(String(note.id))||0)));
     const due=Math.max(0,total-paid);
     note.paid=paid;
@@ -1177,6 +1203,9 @@ function financeTimeline(restaurantId){
   if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return[];
   const notes=deliveryNotes.filter(note=>note.restaurantId===restaurantId);
   const noteById=new Map(notes.map(note=>[note.id,note]));
+  const returnEvents=notes.flatMap(note=>b2bReturnCreditForNote(note).rows.map((row,index)=>({
+    id:`return:${row.movement?.id||note.id+':'+index}`,date:String(row.movement?.date||note.date||''),kind:'return',sequence:Number(note.number||0)*2+0.5,note,movement:row.movement,product:row.product,quantity:row.quantity,amount:Number(row.gross||0)
+  })));
   const events=[
     ...notes.map(note=>({
       id:`delivery:${note.id}`,
@@ -1186,6 +1215,7 @@ function financeTimeline(restaurantId){
       note,
       amount:Number(note.total||0)
     })),
+    ...returnEvents,
     ...payments.filter(payment=>payment.restaurantId===restaurantId&&payment.status!=='cancelled').map(payment=>{
       const linkedNote=noteById.get(payment.deliveryNoteId);
       const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
@@ -1207,6 +1237,8 @@ function financeTimeline(restaurantId){
       event.note.balanceBefore=running;
       running+=event.amount;
       event.note.balanceAfter=Math.max(0,running);
+    }else if(event.kind==='return'){
+      running-=event.amount;
     }else if(event.payment.confirmed!==false){
       running-=event.amount;
       if(event.linkedNote&&event.date===String(event.linkedNote.date||'')){

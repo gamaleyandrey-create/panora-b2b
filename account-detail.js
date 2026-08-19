@@ -41,7 +41,7 @@
       )
       .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     const rows = notes.map(note => {
-      const total = Math.max(0,Number(note.total||0));
+      const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0,Number(note.total||0));
       const paid = Math.min(total,pool);
       pool -= paid;
       return {note,total,paid,due:Math.max(0,total-paid),closed:total-paid<=0.005};
@@ -65,30 +65,16 @@
   function historyFor(id) {
     window.panoraRecalculateBalances?.();
     if (typeof window.panoraFinanceTimeline === "function") {
-      return window.panoraFinanceTimeline(id).slice().reverse().map((event) =>
-        event.kind === "delivery"
-          ? {
-              date: event.date,
-              type: "Отгрузка",
-              number: `DN-${String(event.note.number).padStart(4, "0")}`,
-              amount: event.amount,
-              className: "shipment",
-              balanceAfter: event.balanceAfter,
-            }
-          : {
-              id: event.payment.id,
-              date: event.date,
-              type: paymentConfirmed(event.payment)
-                ? event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
-                : "Ожидает подтверждения",
-              number: event.payment.note || event.payment.method || "",
-              amount: -event.amount,
-              className: paymentConfirmed(event.payment)
-                ? "payment"
-                : "payment pending",
-              balanceAfter: event.balanceAfter,
-            },
-      );
+      return window.panoraFinanceTimeline(id).slice().reverse().map((event) => {
+        if(event.kind === "delivery")return {date:event.date,type:"Отгрузка",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:event.amount,className:"shipment",balanceAfter:event.balanceAfter};
+        if(event.kind === "return")return {id:event.movement?.id,date:event.date,type:"Возврат по накладной",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:-event.amount,className:"return",balanceAfter:event.balanceAfter};
+        return {
+          id: event.payment.id,date: event.date,
+          type: paymentConfirmed(event.payment) ? event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата" : "Ожидает подтверждения",
+          number: event.payment.note || event.payment.method || "",amount: -event.amount,
+          className: paymentConfirmed(event.payment) ? "payment" : "payment pending",balanceAfter: event.balanceAfter
+        };
+      });
     }
     let running = 0;
     return [
@@ -144,7 +130,7 @@
         Number(a.number || 0) - Number(b.number || 0)
       );
     const remaining = new Map(
-      notes.map(note => [String(note.id || note.number), Math.max(0, Number(note.total || 0))])
+      notes.map(note => [String(note.id || note.number), typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0))])
     );
     const byId = new Map();
     const confirmed = payments
@@ -182,11 +168,12 @@
           String(note.number || "") === String(payment.deliveryNoteId)
         );
         if (target) left -= takeFromNote(paymentId, target, left, payment.receivedAt||payment.date||target.date, payment);
-      } else {
-        for (const note of notes) {
-          if (left <= 0.005) break;
-          left -= takeFromNote(paymentId, note, left, payment.receivedAt||payment.date||note.date, payment);
-        }
+      }
+      // Any excess from a payment linked to one DN follows the same FIFO rule as the
+      // accounting engine: close the oldest remaining debts, then keep only the rest as credit.
+      for (const note of notes) {
+        if (left <= 0.005) break;
+        left -= takeFromNote(paymentId, note, left, payment.receivedAt||payment.date||note.date, payment);
       }
 
       if (left > 0.005) {
@@ -225,6 +212,7 @@
   function operationAmountHtml(item) {
     const amount = euro(Math.abs(Number(item.amount || 0)));
     if (item.className.includes("pending")) return `<b class="operation-amount-pending">Ожидается ${amount}</b>`;
+    if (item.className.includes("return")) return `<b class="operation-amount-payment">Кредит ${amount}</b>`;
     if (Number(item.amount || 0) < 0) return `<b class="operation-amount-payment">Оплата ${amount}</b>`;
     return `<b class="operation-amount-shipment">Начислено ${amount}</b>`;
   }

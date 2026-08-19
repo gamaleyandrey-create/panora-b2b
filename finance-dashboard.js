@@ -139,8 +139,7 @@
 
   function calculate(){
     const seenNotes=new Set();
-    const notes=read('panora-delivery-notes',[])
-      .filter(note=>inPeriod(note.date))
+    const allNotes=read('panora-delivery-notes',[])
       .slice()
       .sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||'')))
       .filter(note=>{
@@ -148,8 +147,9 @@
         if(seenNotes.has(key))return false;
         seenNotes.add(key);return true;
       });
+    const notes=allNotes.filter(note=>inPeriod(note.date));
     const productMap=new Map(),partnerMap=new Map();
-    let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0;
+    let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0,b2bReturnsGross=0,b2bReturnedPieces=0;
 
     notes.forEach(note=>{
       const noteGross=Number(note.total||0),noteNet=Number(note.subtotal??(noteGross-Number(note.tax||0))),noteVat=Number(note.tax??Math.max(0,noteGross-noteNet));
@@ -170,7 +170,26 @@
       });
     });
 
-    // Panora 6.84 retail accounting: sale and refund are separate accounting events.
+    // Panora 6.85 B2B: a return linked to a delivery note is a separate credit event.
+    // The original delivery note stays intact; the return reduces revenue/VAT in the return
+    // period and reverses COGS only because the bread is physically back in finished stock.
+    if(typeof window.panoraB2BReturnCredit==='function'){
+      allNotes.forEach(note=>{
+        const credit=window.panoraB2BReturnCredit(note);
+        (credit?.rows||[]).filter(row=>inPeriod(row?.movement?.date)).forEach(row=>{
+          const gross=Math.max(0,Number(row.gross||0)),net=Math.max(0,Number(row.net||0)),tax=Math.max(0,Number(row.tax||0)),qty=Math.max(0,Number(row.quantity||0)),product=String(row.product||'');
+          if(gross<=0||qty<=0||!product)return;
+          const itemCogs=unitRawCost(product)*qty;
+          b2bReturnsGross+=gross;b2bReturnedPieces+=qty;b2bGrossRevenue-=gross;b2bRevenueNet-=net;b2bSalesVat-=tax;b2bCogs-=itemCogs;
+          const p=productMap.get(product)||{product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
+          p.revenue-=net;p.b2bRevenue-=net;p.cogs-=itemCogs;productMap.set(product,p);
+          const k=String(note.restaurantId||''),partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};
+          partner.revenue-=net;partner.cogs-=itemCogs;partnerMap.set(k,partner);
+        });
+      });
+    }
+
+    // Panora 6.85 retail accounting: sale and refund are separate accounting events.
     // The completed sale stays in its original period. A later refund reverses revenue in the
     // refund period. COGS is reversed only when that same completed order was physically
     // returned to finished stock through Panora's order-linked return movement.
@@ -180,7 +199,7 @@
     const stockMovements=read('panora-stock-movements',[]);
     const returnedToStock=order=>{
       const items=Array.isArray(order?.items)?order.items:[];if(!items.length)return false;
-      return items.every((item,index)=>{const id=`retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`,qty=Math.max(0,Number(item?.quantity||0));return qty>0&&(Array.isArray(stockMovements)?stockMovements:[]).some(m=>String(m?.id||'')===id&&String(m?.type||'')==='returned'&&Math.abs(Number(m?.quantity||0))>=qty)});
+      return items.every((item,index)=>{const legacy=`retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`,marker=`[panora:retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}]`,qty=Math.max(0,Number(item?.quantity||0));return qty>0&&(Array.isArray(stockMovements)?stockMovements:[]).some(m=>String(m?.type||'')==='returned'&&(String(m?.id||'')===legacy||String(m?.note||'').includes(marker))&&Math.abs(Number(m?.quantity||0))>=qty)});
     };
     const saleDate=order=>order.completedAt||order.pickupDate||order.createdAt;
     const refundDate=order=>order.updatedAt||order.cancelledAt||order.completedAt||order.pickupDate||order.createdAt;
@@ -260,7 +279,7 @@
     const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-operatingCostsNet;
     return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,stockLossesNet,operatingCostsNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
       vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses:[...manualExpenses,...lossRows],lossRows,
-      b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,grossProfit:b2bRevenueNet-b2bCogs},
+      b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,returnsGross:b2bReturnsGross,returnedPieces:b2bReturnedPieces,grossProfit:b2bRevenueNet-b2bCogs},
       retail:{grossRevenue:retailGrossRevenue,revenueNet:retailRevenueNet,salesVat:retailSalesVat,cogs:retailCogs,pieces:retailPieces,grossProfit:retailRevenueNet-retailCogs,deliveryGross:retailDeliveryGross,deliveryNet:retailDeliveryNet,breadGross:retailBreadGross,breadNet:retailBreadNet,refundsGross:retailRefundsGross,completed:retailCompleted.length,refunded:retailRefunded.length,vatRate:retailVatRate}};
   }
 
@@ -280,7 +299,7 @@
     document.querySelector('#financeRevenueGross').textContent=`С НДС: ${money(x.grossRevenue)}`;
     document.querySelector('#financeCogs').textContent=money(x.cogs);
     const setText=(id,value)=>{const el=document.querySelector(id);if(el)el.textContent=value};
-    setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
+    setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bReturns',money(x.b2b.returnsGross));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
     setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} завершённых продаж · ${x.retail.refunded} возвратов`);
     setSignedState(document.querySelector('#financeRetailGrossProfit'),x.retail.grossProfit);
 
