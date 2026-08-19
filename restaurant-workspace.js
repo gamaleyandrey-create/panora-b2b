@@ -844,7 +844,7 @@
 
     const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
     const payments=ownPayments().filter(payment=>partnerPaymentConfirmed(payment));
-    // Panora 6.89: partner settlement includes linked payments, FIFO overflow and return credits.
+    // Panora 6.90: partner settlement includes linked payments, FIFO overflow and return credits.
     // A payment tied to one DN may exceed that DN; the excess must close the oldest
     // remaining debts before it becomes an advance.
     const distribution=partnerPaymentDistribution(notes,payments);
@@ -886,6 +886,7 @@
       sortedNotes.map(note=>[String(note.id),Math.max(0,Number(note.total||0))])
     );
     const byPayment=new Map();
+    const closedAtByNote=new Map();
     const pooled=[];
 
     const rowFor=payment=>{
@@ -907,8 +908,12 @@
       const remaining=Math.max(0,Number(remainingByNote.get(key)||0));
       const used=Math.min(remaining,Math.max(0,Number(requested||0)));
       if(used<=0)return 0;
-      remainingByNote.set(key,remaining-used);
+      const next=Math.max(0,remaining-used);
+      remainingByNote.set(key,next);
       row.allocations.push({note,amount:used});
+      if(next<=0.005&&!closedAtByNote.has(key)){
+        closedAtByNote.set(key,String(row.payment?.receivedAt||row.payment?.date||note.date||''));
+      }
       return used;
     };
 
@@ -936,7 +941,7 @@
       pool.row.credit=Math.max(0,amount);
     });
 
-    return {byPayment,remainingByNote};
+    return {byPayment,remainingByNote,closedAtByNote};
   };
 
   const partnerPaymentAllocationHtml=(payment,distribution)=>{
@@ -992,9 +997,8 @@
       const total=Number(note.total||0);
       const due=debtItem?Number(debtItem.due||0):0;
       const paidAmount=Math.max(0,total-due);
-      const linkedPayments=confirmedPayments.filter(payment=>String(payment.deliveryNoteId||"")===String(note.id));
-      const latestPaymentDate=linkedPayments.map(payment=>payment.receivedAt||payment.date||"").filter(Boolean).sort().slice(-1)[0]||note.date||"";
-      return {note,total,paidAmount,due,closedAt:latestPaymentDate};
+      const closedAt=paymentDistribution.closedAtByNote?.get?.(String(note.id))||note.date||"";
+      return {note,total,paidAmount,due,closedAt};
     }).filter(item=>item.due<=0.009);
 
     const filteredDebts=debts.filter(({note})=>
