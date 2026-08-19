@@ -1,0 +1,18 @@
+Panora 6.85 — B2B returns, delivery-note credits and payment allocation consistency
+
+Build: 6850
+Package series: 8
+
+Changes:
+- added an explicit B2B finished-bread return flow linked to an existing delivery note (DN);
+- a DN-linked return is server-confirmed before it changes local stock or partner debt in cloud-backed mode;
+- the original delivery note remains immutable; the return is a separate credit event;
+- partner debt uses the effective delivery-note amount after linked physical returns;
+- B2B Finance recognises the original sale in the delivery period and the return credit in the actual return period;
+- B2B return reverses revenue, sales VAT and COGS only for the physically returned quantity;
+- account history shows DN-linked return credits and resulting balances;
+- excess from a payment explicitly linked to one delivery note now continues through FIFO to other debts before becoming advance/overpayment, matching the main accounting engine;
+- retail return linkage from 6.84 is hardened: cloud-safe UUID movement IDs plus a persistent order marker, with legacy 6.84 deterministic IDs still recognised;
+- generic warehouse "Return" without a DN remains stock-only and does not silently alter financials.
+
+No layout redesign outside the relevant stock/finance controls. No new SQL.
