@@ -1,0 +1,12 @@
+Panora 6.80 — retail completion timestamp consistency
+
+Build: 6800
+Package series: 8
+
+Changes:
+- retail status transition to completed now writes completed_at explicitly;
+- retail cancellation now writes cancelled_at explicitly;
+- server response and post-sync cache must confirm the matching timestamp before the action is treated as successful;
+- keeps finished-bread stock movement timing and retail finance period aligned with the actual completion/cancellation event.
+
+No layout changes. No new SQL.

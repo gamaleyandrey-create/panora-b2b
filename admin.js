@@ -274,9 +274,16 @@ async function loadRetailOrdersCloud(){
  catch(error){if(status)status.textContent='Выполните SQL 6.28';return false}
 }
 async function updateRetailOrderStatusCloud(id,nextStatus){
- const payload={status:nextStatus,updated_at:new Date().toISOString()};
+ const now=new Date().toISOString(),payload={status:nextStatus,updated_at:now};
+ if(nextStatus==='completed')payload.completed_at=now;
+ if(nextStatus==='cancelled')payload.cancelled_at=now;
  const rows=await retailAdminApi(`retail_orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!Array.isArray(rows)||!rows.length||String(rows[0]?.status||'')!==String(nextStatus))throw new Error('Сервер не подтвердил новый статус заказа');
- await loadRetailOrdersCloud();const current=readRetailOrders().find(order=>String(order.id)===String(id));if(!current||retailOrderStatus(current)!==String(nextStatus))throw new Error('Статус заказа не подтвердился после синхронизации');renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();window.dispatchEvent(new CustomEvent('panora:retail-orders-updated'))
+ if(nextStatus==='completed'&&!rows[0]?.completed_at)throw new Error('Сервер не подтвердил время завершения заказа');
+ if(nextStatus==='cancelled'&&!rows[0]?.cancelled_at)throw new Error('Сервер не подтвердил время отмены заказа');
+ await loadRetailOrdersCloud();const current=readRetailOrders().find(order=>String(order.id)===String(id));if(!current||retailOrderStatus(current)!==String(nextStatus))throw new Error('Статус заказа не подтвердился после синхронизации');
+ if(nextStatus==='completed'&&!current.completedAt)throw new Error('Время завершения заказа не подтвердилось после синхронизации');
+ if(nextStatus==='cancelled'&&!current.cancelledAt)throw new Error('Время отмены заказа не подтвердилось после синхронизации');
+ renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();window.dispatchEvent(new CustomEvent('panora:retail-orders-updated'))
 }
 async function updateRetailPaymentStatusCloud(id,nextStatus){
  const payload={payment_status:nextStatus,updated_at:new Date().toISOString()},rows=await retailAdminApi(`retail_orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!Array.isArray(rows)||!rows.length||String(rows[0]?.payment_status||'')!==String(nextStatus))throw new Error('Сервер не подтвердил новый статус оплаты');
