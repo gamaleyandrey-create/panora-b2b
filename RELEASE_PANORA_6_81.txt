@@ -1,0 +1,12 @@
+Panora 6.81 — retail actual completion date alignment
+
+Build: 6810
+Package series: 8
+
+Changes:
+- finished-bread retail stock movement now uses completed_at before the planned pickup date;
+- retail analytics assigns completed orders to completed_at and cancelled orders to cancelled_at;
+- active retail orders still use the planned pickup date for operational period views;
+- aligns retail stock movement history and retail analytics periods with finance, which already uses the actual completion time.
+
+No layout changes. No new SQL.

@@ -384,11 +384,17 @@ function renderRetailOrderQueue(){
  renderRetailOrderFilters(all);const visible=retailFilteredOrders(all);set('#retailOrderTotal',`${visible.length} ${visible.length===1?'заказ':'заказов'}`);const rows=$('#retailOrderRows');if(rows){rows.innerHTML=visible.map(retailOrderRow).join('');bindRetailOrderActions(rows)}const cards=$('#retailOrderCards');if(cards){cards.innerHTML=visible.map(retailOrderCard).join('');bindRetailOrderActions(cards)}
  const empty=$('#retailEmptyState');if(empty)empty.hidden=visible.length>0;set('#retailEmptyText',settings.enabled?'Новых заказов в этой выборке нет. Откройте экран покупателя и оформите тестовый заказ.':'Витрина выключена. Уже созданные заказы остаются в истории.');
 }
+function retailAnalyticsEventDate(order){
+ const status=retailOrderStatus(order);
+ if(status==='completed')return String(order?.completedAt||order?.pickupDate||order?.createdAt||'').slice(0,10);
+ if(status==='cancelled')return String(order?.cancelledAt||order?.pickupDate||order?.createdAt||'').slice(0,10);
+ return String(order?.pickupDate||order?.createdAt||'').slice(0,10);
+}
 function retailAnalyticsPeriodOrders(orders){
  const now=new Date(),today=iso(now);if(retailAnalyticsPeriod==='all')return orders;
- if(retailAnalyticsPeriod==='today')return orders.filter(order=>String(order.pickupDate||'')===today);
+ if(retailAnalyticsPeriod==='today')return orders.filter(order=>retailAnalyticsEventDate(order)===today);
  const days=Math.max(1,Number(retailAnalyticsPeriod||30)),from=new Date(now);from.setHours(0,0,0,0);from.setDate(from.getDate()-(days-1));const fromIso=iso(from);
- return orders.filter(order=>{const date=String(order.pickupDate||order.createdAt||'').slice(0,10);return date>=fromIso&&date<=today});
+ return orders.filter(order=>{const date=retailAnalyticsEventDate(order);return date>=fromIso&&date<=today});
 }
 function retailAnalyticsMoney(value){return `${Number(value||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})} €`}
 function retailAnalyticsBreakdown(rootId,rows,total){const root=$(rootId);if(!root)return;const max=Math.max(1,...rows.map(row=>Number(row.value||0)));root.innerHTML=rows.map(row=>{const value=Number(row.value||0),pct=Math.max(0,Math.min(100,value/max*100)),share=total>0?Math.round(value/total*100):0;return `<div class="retail-analytics-breakdown-row"><span>${adminEscape(row.label)}</span><strong>${adminEscape(row.display??String(value))}</strong><i><b style="width:${pct}%"></b></i><small>${row.note?adminEscape(row.note):`${share}% выборки`}</small></div>`}).join('')||'<div class="retail-analytics-empty">Пока нет данных</div>'}
@@ -590,7 +596,7 @@ function stockShipmentMovements(){
 function stockRetailCompletedMovements(){
  return readRetailOrders().filter(order=>order&&retailOrderStatus(order)==='completed').flatMap(order=>(order.items||[]).map((item,index)=>({
   id:`retail-sold:${order.id}:${item.product}:${index}`,
-  date:String(order.pickupDate||order.completedAt||order.updatedAt||'').slice(0,10)||stockLocalDate(),
+  date:String(order.completedAt||order.pickupDate||order.updatedAt||'').slice(0,10)||stockLocalDate(),
   product:String(item.product||''),
   type:'retail_sold',
   quantity:Math.max(0,Number(item.quantity||0)),
