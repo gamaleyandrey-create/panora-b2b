@@ -257,7 +257,7 @@
       head?.before(debtBlock);
     }
 
-    if(debtTab==="active"&&!active.length&&archived.length)debtTab="active";
+    if(debtTab==="active"&&!active.length&&archived.length)debtTab="archive";
     const rows=debtTab==="archive"?archived:active;
     const creditNotice=allocation.credit>0.005
       ? `<div class="account-credit-notice"><span>Аванс / переплата</span><strong>${euro(allocation.credit)}</strong><small>Будет автоматически зачтена в самые старые неоплаченные накладные и будущие поставки.</small></div>`

@@ -1,0 +1,12 @@
+Panora 6.90 — settlement archive closing-date consistency
+
+Build: 6900
+Package series: 8
+
+Changes:
+- partner finance archive now records the actual event date that closes each delivery note, including FIFO allocation from excess payments and B2B return credits;
+- closed-settlement archive sorting now follows the real closing event instead of falling back to the delivery date;
+- bakery partner account automatically opens the closed-debt archive when no active debts remain;
+- keeps cash payments and return credits visually and financially distinct.
+
+No layout changes. No new SQL.
