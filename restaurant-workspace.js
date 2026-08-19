@@ -1021,7 +1021,7 @@
           event.kind==="delivery"
             ? {date:event.date,kind:"delivery",amount:event.amount,label:noteNumber(event.note),note:event.note,sort:0,balanceAfter:event.balanceAfter}
             : event.kind==="return"
-              ? {date:event.date,kind:"return",amount:-event.amount,label:noteNumber(event.note),note:event.note,sort:.5,balanceAfter:event.balanceAfter}
+              ? {date:event.date,kind:"return",amount:-event.amount,label:noteNumber(event.note),note:event.note,payment:event.payment||null,sort:.5,balanceAfter:event.balanceAfter}
               : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
                   ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
                   : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
