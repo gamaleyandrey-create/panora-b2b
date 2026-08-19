@@ -1,0 +1,12 @@
+Panora 7.03 — net realised pieces after physical returns
+
+Build: 7030
+Package series: 8
+
+Changes:
+- B2B physical returns now reverse returned pieces together with revenue and COGS;
+- product and partner unit analytics stay aligned with the post-return financial totals;
+- retail physical returns use the same net-piece rule, including return-only periods;
+- average sale/profit per piece no longer divides post-return revenue by pre-return unit counts.
+
+No layout redesign. No new SQL.
