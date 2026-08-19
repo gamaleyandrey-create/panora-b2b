@@ -965,9 +965,32 @@ const paymentReminderCopy = {
   en:(row)=>`Hello, ${row.r.name}! This is a reminder to pay ${euro(row.balance)} for delivery note DN-${String(row.note.number).padStart(4,"0")}. Expected payment date: ${reminderPrettyDate(row.note.paymentDueDate,'en',false)}.`,
   es:(row)=>`¡Hola, ${row.r.name}! Te recordamos el pago de ${euro(row.balance)} del albarán DN-${String(row.note.number).padStart(4,"0")}. Fecha prevista de pago: ${reminderPrettyDate(row.note.paymentDueDate,'es',false)}.`,
 };
+const paymentReminderState=(restaurantId)=>{
+  const own=payments.filter(payment=>String(payment?.restaurantId||'')===String(restaurantId||''));
+  const time=value=>{const stamp=new Date(value||'').getTime();return Number.isFinite(stamp)?stamp:0};
+  const version=own.reduce((latest,payment)=>Math.max(latest,time(payment?.updatedAt),time(payment?.disputedAt),time(payment?.confirmedAt),time(payment?.receivedAt),time(payment?.date)),0);
+  const reopenVersion=own
+    .filter(payment=>payment?.disputeStatus==='open'||payment?.status==='cancelled')
+    .reduce((latest,payment)=>Math.max(latest,time(payment?.updatedAt),time(payment?.disputedAt),time(payment?.receivedAt),time(payment?.date)),0);
+  return{version,reopenVersion};
+};
+const paymentReminderSentIsCurrent=(sent,balance,state)=>{
+  if(!sent?.sentAt)return false;
+  const sentAt=new Date(sent.sentAt).getTime();
+  if(!Number.isFinite(sentAt))return false;
+  const storedBalance=Number(sent.balance);
+  if(Number.isFinite(storedBalance)){
+    if(Math.abs(storedBalance-Number(balance||0))>0.005)return false;
+    return Number(state?.reopenVersion||0)<=sentAt;
+  }
+  // Legacy 6.86-and-earlier records had no debt snapshot. Keep them only when no
+  // payment state changed after the reminder was marked as sent.
+  return Number(state?.version||0)<=sentAt;
+};
 function paymentReminderRows() {
   const today = iso(new Date());
   const allocationByRestaurant = new Map();
+  const stateByRestaurant = new Map();
   return deliveryNotes
     .filter((note) => note.paymentDueDate)
     .map((note) => {
@@ -976,6 +999,7 @@ function paymentReminderRows() {
       if(!allocationByRestaurant.has(r.id)){
         allocationByRestaurant.set(r.id,window.panoraFinanceAllocation?.(r.id));
       }
+      if(!stateByRestaurant.has(r.id))stateByRestaurant.set(r.id,paymentReminderState(r.id));
       const allocation=allocationByRestaurant.get(r.id);
       const row=allocation?.notes?.find(item=>String(item.note.id)===String(note.id));
       const balance=row?Number(row.due||0):Math.max(0,Number(note.total||0)-Number(note.paid||0));
@@ -986,7 +1010,9 @@ function paymentReminderRows() {
           86400000,
       );
       const key = `payment-${note.id}-${note.paymentDueDate}`;
-      return { note, r, balance, days, key, sent: reminderLog[key] };
+      const reminderState=stateByRestaurant.get(r.id)||{version:0,reopenVersion:0},stored=reminderLog[key];
+      const sent=paymentReminderSentIsCurrent(stored,balance,reminderState)?stored:null;
+      return { note, r, balance, days, key, sent, reminderState };
     })
     .filter(Boolean)
     .sort((a, b) =>
@@ -995,8 +1021,14 @@ function paymentReminderRows() {
       ),
     );
 }
-function markReminder(key, channel) {
-  reminderLog[key] = { sentAt: new Date().toISOString(), channel };
+function markReminder(key, channel, row=null) {
+  const record={ sentAt: new Date().toISOString(), channel };
+  if(row?.note){
+    record.balance=Number(row.balance||0);
+    const state=row.reminderState||paymentReminderState(row.r?.id);
+    record.stateVersion=Number(state?.version||0);
+  }
+  reminderLog[key] = record;
   cSave("panora-reminder-log", reminderLog);
   renderReminders();
 }
@@ -1059,7 +1091,8 @@ function bindReminderCards(rows,paymentRows){
   document.querySelectorAll('[data-confirm-reminder-sent]').forEach(button=>button.onclick=()=>{
     const key=button.dataset.confirmReminderSent,channel=button.dataset.channel;
     if(!key||!channel)return;
-    if(confirm(`Отметить сообщение как отправленное через ${reminderChannelLabel(channel)}?`))markReminder(key,channel);
+    const row=all.find(item=>item.key===key)||null;
+    if(confirm(`Отметить сообщение как отправленное через ${reminderChannelLabel(channel)}?`))markReminder(key,channel,row);
   });
 }
 function renderReminders() {

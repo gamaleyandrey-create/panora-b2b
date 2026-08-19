@@ -1,0 +1,14 @@
+Panora 6.87 — payment-reminder debt-cycle hardening
+
+Build: 6870
+Package series: 8
+
+Changes:
+- a payment reminder marked as sent becomes actionable again when the confirmed outstanding balance changes;
+- partial payments no longer leave a stale already-sent reminder with the old amount;
+- a disputed or cancelled B2B payment that reopens debt creates a fresh reminder cycle even if the same delivery note was reminded before;
+- unchanged debt does not generate duplicate reminder cycles;
+- legacy reminder records remain compatible and are invalidated only when a newer payment state change occurred.
+
+No layout redesign in 6.87.
+No new SQL in 6.87.
