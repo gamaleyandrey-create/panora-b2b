@@ -951,7 +951,7 @@
     return {byPayment,remainingByNote,closedAtByNote};
   };
 
-  // Panora 7.00: keep an immutable history of where each payment was first applied.
+  // Panora 7.01: keep an immutable history of where each payment was first applied.
   // Current balances may legitimately reallocate surviving payments after an older payment
   // is disputed/cancelled, but that must not rewrite what a later payment did at the time.
   const partnerHistoricalPaymentDistribution=(notes,payments)=>{
