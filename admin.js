@@ -607,9 +607,16 @@ function stockMovementOrderKey(m){
 /* Panora 7.05 — a delivery note may be prepared before its economic shipment date.
    Never let an older creation timestamp move the stock issue ahead of bake/inventory events
    on the actual DN date. Use a real same-day timestamp when available, otherwise noon. */
+/* Panora 7.08 — economic dates are local calendar dates, while createdAt is normally UTC.
+   Around local midnight an ISO timestamp can belong to the previous/next UTC date. Compare the
+   timestamp's LOCAL day to the economic day before deciding whether its real time is usable. */
+function stockStampLocalDay(value){
+ const stamp=String(value||'');if(!stamp)return '';
+ const parsed=new Date(stamp);return Number.isNaN(parsed.getTime())?stamp.slice(0,10):iso(parsed);
+}
 function stockEconomicOccurredAt(date,...candidates){
  const day=String(date||'').slice(0,10);if(!day)return '';
- for(const value of candidates){const stamp=String(value||'');if(stamp.length>10&&stamp.slice(0,10)===day)return stamp}
+ for(const value of candidates){const stamp=String(value||'');if(stamp.length>10&&stockStampLocalDay(stamp)===day)return stamp}
  return `${day}T12:00:00.000Z`;
 }
 function stockOperationLabel(type){

@@ -1,0 +1,6 @@
+Panora 7.08 / build 7080
+Local-calendar timestamp ordering around midnight for finished-stock and Finance FIFO.
+UTC created_at timestamps whose UTC date differs from the local economic date now keep their real same-day time when that timestamp belongs to the economic day in the browser timezone.
+This prevents an early-morning bake from being pushed to noon and crossing an inventory checkpoint, which could distort both physical finished-stock quantity and historical COGS.
+Two same-day inventories, bakes between them, later shipments/returns and historical return COGS keep chronological order.
+No new SQL.
