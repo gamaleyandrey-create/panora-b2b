@@ -11,7 +11,7 @@
     const client=restaurant(note.restaurantId)||{},bakery={...(typeof invoiceDefaults!=='undefined'?invoiceDefaults:{}),...bakerySettings,...(note.bakery||{})};
     const prefix=bakery.notePrefix||'DN-',number=`${prefix}${String(note.number).padStart(4,'0')}`;
     window.panoraRecalculateBalances?.();
-    const paidHere=Number(note.paidAtShipment??payments.filter(item=>item.deliveryNoteId===note.id&&item.confirmed!==false&&item.status!=='cancelled'&&String(item.date||'')===String(note.date||'')).reduce((sum,item)=>sum+Number(item.amount||0),0));
+    const paidHere=Number(note.paidAtShipment??payments.filter(item=>item.deliveryNoteId===note.id&&item.confirmed!==false&&item.status!=='cancelled'&&item.disputeStatus!=='open'&&!/\[panora:b2b-return-credit:[^\]]+\]/.test(String(item.note||''))&&String(item.date||'')===String(note.date||'')).reduce((sum,item)=>sum+Number(item.amount||0),0));
     const before=Math.max(0,Number(note.balanceBefore||0));
     const balance=Math.max(0,Number(note.balanceAfter??(before+Number(note.total||0)-paidHere)));
     document.querySelector('#invoicePreviewDialog')?.remove();

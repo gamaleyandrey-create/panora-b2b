@@ -1029,28 +1029,31 @@
             ? {date:event.date,kind:"delivery",amount:event.amount,label:noteNumber(event.note),note:event.note,sort:0,balanceAfter:event.balanceAfter}
             : event.kind==="return"
               ? {date:event.date,kind:"return",amount:-event.amount,label:noteNumber(event.note),note:event.note,payment:event.payment||null,sort:.5,balanceAfter:event.balanceAfter}
-              : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
-                  ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
-                  : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
+              : event.kind==="payment_reversal"
+                ? {date:event.date,kind:"payment_reversal",amount:event.amount,label:event.payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),payment:event.payment,reversalType:event.reversalType,sort:2,balanceAfter:event.balanceAfter}
+                : {date:event.date,kind:"payment",amount:-event.amount,label:event.payment.deliveryNoteId
+                    ? noteNumber(notes.find(note=>note.id===event.payment.deliveryNoteId)||{number:"—"})
+                    : t("withoutNote"),payment:event.payment,timelineState:event.timelineState,sort:1,balanceAfter:event.balanceAfter})
       : [
-          ...notes.map(note=>({date:note.date,kind:"delivery",amount:Number(note.total||0),label:noteNumber(note),note,sort:0})),
-          // Panora 6.95: cancelled payments remain visible in the partner history.
-          // They are excluded from settlement by partnerPaymentConfirmed(), but hiding the
-          // operation made a reopened debt look unexplained after the bakery cancelled a payment.
-          ...payments.map(payment=>({
-            date:payment.date,kind:partnerReturnCreditPayment(payment)?"return":"payment",amount:-Number(payment.amount||0),
-            label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),
-            payment,sort:partnerReturnCreditPayment(payment)?.5:1
-          }))
+          ...notes.map(note=>({date:note.date,kind:"delivery",amount:Number(note.total||0),label:noteNumber(note),note,sort:0,effect:Number(note.total||0)})),
+          ...payments.flatMap(payment=>{
+            if(partnerReturnCreditPayment(payment))return [{date:payment.date,kind:"return",amount:-Number(payment.amount||0),label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),payment,sort:.5,effect:-Number(payment.amount||0)}];
+            const originallyConfirmed=Boolean(payment.confirmedAt)||["confirmed","cancelled"].includes(String(payment.status||""))||payment.disputeStatus==="open";
+            const label=payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote");
+            const rows=[{date:payment.date,kind:"payment",amount:-Number(payment.amount||0),label,payment,timelineState:originallyConfirmed?"received":"pending",sort:1,effect:originallyConfirmed?-Number(payment.amount||0):0}];
+            const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
+            if(reversalType&&originallyConfirmed){
+              const stateAt=reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt);
+              rows.push({date:String(stateAt||payment.date||"").slice(0,10),kind:"payment_reversal",amount:Number(payment.amount||0),label,payment,reversalType,sort:2,effect:Number(payment.amount||0)});
+            }
+            return rows;
+          })
         ].sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.sort-b.sort);
 
     if(!sharedTimeline){
       let running=0;
       operations.forEach(operation=>{
-        if(operation.kind==="delivery"||operation.kind==="return"||partnerPaymentConfirmed(operation.payment))running+=operation.amount;
-        // Preserve the signed balance. A negative value is a real partner advance and the
-        // operation UI already renders it as “Аванс после операции”. Clamping it to zero
-        // erased the financial meaning before cloud/shared finance helpers were available.
+        running+=Number(operation.effect??operation.amount??0);
         operation.balanceAfter=running;
       });
     }
@@ -1141,12 +1144,15 @@
 
       ${filteredHistory.length
         ? `<div class="rw-finance-history">${filteredHistory.map(operation=>{
-            const operationKindLabel=operation.kind==="payment"?t("payment"):operation.kind==="return"?(lang==="ru"?"возврат товара":lang==="es"?"devolución":"goods return"):t("delivery");
+            const operationKindLabel=operation.kind==="payment"?t("payment"):operation.kind==="payment_reversal"?(operation.reversalType==="cancel"?(lang==="ru"?"отмена оплаты":lang==="es"?"cancelación del pago":"payment cancellation"):(lang==="ru"?"спор по оплате":lang==="es"?"disputa del pago":"payment dispute")):operation.kind==="return"?(lang==="ru"?"возврат товара":lang==="es"?"devolución":"goods return"):t("delivery");
             const searchText=`${operation.label||""} ${operation.payment?.method||""} ${partnerPaymentNoteText(operation.payment)} ${operationKindLabel}`.toLowerCase();
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
-            return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
-              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
-              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):Number(operation.balanceAfter||0)>0.005?`${t("balanceAfter")}: ${portalMoney(operation.balanceAfter)}`:Number(operation.balanceAfter||0)<-0.005?(lang==="ru"?`Аванс после операции: ${portalMoney(Math.abs(operation.balanceAfter))}`:lang==="es"?`Anticipo tras la operación: ${portalMoney(Math.abs(operation.balanceAfter))}`:`Advance after operation: ${portalMoney(Math.abs(operation.balanceAfter))}`):(lang==="ru"?"Расчёты после операции закрыты":lang==="es"?"Saldo liquidado tras la operación":"Settled after operation")}</small></div>
+            const reversal=operation.kind==="payment_reversal";
+            const reversalTitle=operation.reversalType==="cancel"?(lang==="ru"?"Оплата отменена":lang==="es"?"Pago cancelado":"Payment cancelled"):(lang==="ru"?"Оплата оспорена":lang==="es"?"Pago disputado":"Payment disputed");
+            const balanceText=Number(operation.balanceAfter||0)>0.005?`${t("balanceAfter")}: ${portalMoney(operation.balanceAfter)}`:Number(operation.balanceAfter||0)<-0.005?(lang==="ru"?`Аванс после операции: ${portalMoney(Math.abs(operation.balanceAfter))}`:lang==="es"?`Anticipo tras la operación: ${portalMoney(Math.abs(operation.balanceAfter))}`:`Advance after operation: ${portalMoney(Math.abs(operation.balanceAfter))}`):(lang==="ru"?"Расчёты после операции закрыты":lang==="es"?"Saldo liquidado tras la operación":"Settled after operation");
+            return `<article class="rw-operation ${operation.kind}${operation.reversalType==="dispute"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
+              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:reversal?`${reversalTitle} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
+              <div class="rw-operation-amount"><b>${reversal?`${reversalTitle} `:operation.kind==="payment"?(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment "):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${balanceText}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
