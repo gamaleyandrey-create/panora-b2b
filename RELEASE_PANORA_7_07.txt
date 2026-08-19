@@ -1,0 +1,5 @@
+Panora 7.07 / build 7070
+Time-aware FIFO fallback valuation inside a calendar day.
+An inventory increase, correction, fallback sale/write-off or return earlier in the day no longer borrows the cost snapshot of a later same-day bake.
+Finished-stock quantities and inventory checkpoint semantics are unchanged; only historical fallback valuation is made economically chronological.
+No new SQL.
