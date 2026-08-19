@@ -520,10 +520,11 @@
     if (!navigator.onLine) return t("offline");
     return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
   }
+  const partnerPaymentConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==="confirmed");
   const partnerFinanceSummary=()=>{
     const delivered=ownNotes().reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid=ownPayments()
-      .filter(payment=>payment.status!=="cancelled")
+      .filter(payment=>partnerPaymentConfirmed(payment))
       .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
     return {
       delivered,
@@ -840,7 +841,7 @@
     }
 
     const notes=ownNotes().slice().sort((a,b)=>String(a.paymentDueDate||a.date||"").localeCompare(String(b.paymentDueDate||b.date||""))||Number(a.number||0)-Number(b.number||0));
-    const payments=ownPayments().filter(payment=>payment.status!=="cancelled");
+    const payments=ownPayments().filter(payment=>partnerPaymentConfirmed(payment));
 
     const allocated=new Map(notes.map(note=>[String(note.id),0]));
     payments.filter(payment=>payment.deliveryNoteId).forEach(payment=>{
@@ -880,7 +881,7 @@
         String(a.id||"").localeCompare(String(b.id||""))
       );
     const sortedPayments=(Array.isArray(payments)?payments:[])
-      .filter(payment=>payment&&payment.status!=="cancelled"&&Number(payment.amount||0)>0)
+      .filter(payment=>partnerPaymentConfirmed(payment)&&Number(payment.amount||0)>0)
       .slice()
       .sort((a,b)=>
         String(a.receivedAt||a.date||"").localeCompare(String(b.receivedAt||b.date||""))||
@@ -978,7 +979,7 @@
     const payments = ownPayments(),
       notes = ownNotes();
 
-    const confirmedPayments=payments.filter(payment=>payment.status!=="cancelled");
+    const confirmedPayments=payments.filter(payment=>partnerPaymentConfirmed(payment));
     const disputedPayments=payments.filter(payment=>payment.status!=="cancelled"&&payment.disputeStatus==="open");
     const paymentDistribution=partnerPaymentDistribution(notes,confirmedPayments);
 
@@ -1048,7 +1049,7 @@
       ${(()=>{
         const now=Date.now();
         const disputable=payments.filter(payment=>{
-          if(payment.status==="cancelled"||payment.disputeStatus==="open")return false;
+          if(!partnerPaymentConfirmed(payment)||payment.disputeStatus==="open")return false;
           const deadline=new Date(payment.disputeDeadline||"").getTime();
           return Number.isFinite(deadline)&&deadline>now;
         }).sort((a,b)=>String(b.receivedAt||b.date).localeCompare(String(a.receivedAt||a.date)));
