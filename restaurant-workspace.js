@@ -951,6 +951,88 @@
     return {byPayment,remainingByNote,closedAtByNote};
   };
 
+  // Panora 7.00: keep an immutable history of where each payment was first applied.
+  // Current balances may legitimately reallocate surviving payments after an older payment
+  // is disputed/cancelled, but that must not rewrite what a later payment did at the time.
+  const partnerHistoricalPaymentDistribution=(notes,payments)=>{
+    const allNotes=(Array.isArray(notes)?notes:[]).slice().sort((a,b)=>
+      String(a.date||"").localeCompare(String(b.date||""))||
+      Number(a.number||0)-Number(b.number||0)||
+      String(a.id||"").localeCompare(String(b.id||""))
+    );
+    const allPayments=(Array.isArray(payments)?payments:[]).filter(payment=>{
+      if(Number(payment?.amount||0)<=0)return false;
+      if(partnerReturnCreditPayment(payment))return true;
+      return Boolean(payment?.confirmedAt)||["confirmed","cancelled"].includes(String(payment?.status||""))||payment?.disputeStatus==="open"||payment?.confirmed===true;
+    });
+    const active=new Map(),existingNotes=[];
+    const historyByPayment=new Map();
+    const confirmedClone=payment=>({...payment,confirmed:true,status:"confirmed",disputeStatus:"none"});
+    const historyRow=payment=>{
+      const key=String(payment?.id||"");
+      if(!historyByPayment.has(key))historyByPayment.set(key,{payment,amount:Math.max(0,Number(payment?.amount||0)),allocations:[],assignedByNote:new Map(),credit:Math.max(0,Number(payment?.amount||0))});
+      return historyByPayment.get(key);
+    };
+    const capture=eventDate=>{
+      const current=partnerPaymentDistribution(existingNotes,[...active.values()]);
+      for(const [paymentId,activePayment] of active){
+        const currentRow=current.byPayment.get(String(paymentId));
+        if(!currentRow)continue;
+        const historical=historyRow(activePayment);
+        let assigned=historical.allocations.reduce((sum,item)=>sum+Number(item.amount||0),0);
+        let available=Math.max(0,historical.amount-assigned);
+        if(available<=0.005){historical.credit=0;continue;}
+        const currentByNote=new Map();
+        (currentRow.allocations||[]).forEach(item=>{
+          const key=String(item.note?.id||item.note?.number||"");
+          currentByNote.set(key,(currentByNote.get(key)||0)+Number(item.amount||0));
+        });
+        for(const item of currentRow.allocations||[]){
+          if(available<=0.005)break;
+          const noteKey=String(item.note?.id||item.note?.number||"");
+          const already=Number(historical.assignedByNote.get(noteKey)||0);
+          const currentAmount=Number(currentByNote.get(noteKey)||0);
+          const gain=Math.min(available,Math.max(0,currentAmount-already));
+          if(gain<=0.005)continue;
+          historical.allocations.push({note:item.note,amount:gain,appliedAt:String(eventDate||item.appliedAt||activePayment.receivedAt||activePayment.date||"")});
+          historical.assignedByNote.set(noteKey,already+gain);
+          available-=gain;
+        }
+        assigned=historical.allocations.reduce((sum,item)=>sum+Number(item.amount||0),0);
+        historical.credit=Math.max(0,historical.amount-assigned);
+      }
+    };
+    const events=[
+      ...allNotes.map(note=>({kind:"note",date:String(note.date||""),occurredAt:`${String(note.date||"")}T00:00:00`,note})),
+      ...allPayments.flatMap(payment=>{
+        const receivedAt=String(payment.receivedAt||`${payment.date||""}T12:00:00`);
+        const rows=[{kind:"payment",date:String(payment.date||receivedAt.slice(0,10)||""),occurredAt:receivedAt,payment}];
+        if(partnerReturnCreditPayment(payment))return rows;
+        const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
+        if(reversalType){
+          const stateAt=String(reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt)||receivedAt);
+          rows.push({kind:"reversal",date:stateAt.slice(0,10),occurredAt:stateAt,payment});
+        }
+        return rows;
+      })
+    ].sort((a,b)=>String(a.occurredAt||a.date).localeCompare(String(b.occurredAt||b.date))||({note:0,payment:1,reversal:2}[a.kind]-{note:0,payment:1,reversal:2}[b.kind])||String(a.payment?.id||a.note?.id||"").localeCompare(String(b.payment?.id||b.note?.id||"")));
+
+    events.forEach(event=>{
+      if(event.kind==="note"){
+        existingNotes.push(event.note);
+        existingNotes.sort((a,b)=>String(a.date||"").localeCompare(String(b.date||""))||Number(a.number||0)-Number(b.number||0)||String(a.id||"").localeCompare(String(b.id||"")));
+      }else if(event.kind==="payment"){
+        active.set(String(event.payment.id||""),confirmedClone(event.payment));
+        historyRow(event.payment);
+      }else if(event.kind==="reversal"){
+        active.delete(String(event.payment.id||""));
+      }
+      capture(event.date);
+    });
+    historyByPayment.forEach(row=>delete row.assignedByNote);
+    return {byPayment:historyByPayment};
+  };
+
   const partnerPaymentAllocationHtml=(payment,distribution)=>{
     const key=String(payment?.id||"");
     const row=distribution?.byPayment?.get?.(key);
@@ -962,10 +1044,10 @@
     const open=openPaymentAllocations.has(key);
     const allocatedTotal=allocations.reduce((sum,item)=>sum+Number(item.amount||0),0);
     const summary=lang==="ru"
-      ? `Куда зачтено · ${portalMoney(allocatedTotal)}${credit>0.005?` · аванс ${portalMoney(credit)}`:""}`
+      ? `История зачёта · ${portalMoney(allocatedTotal)}${credit>0.005?` · не зачтено ${portalMoney(credit)}`:""}`
       : lang==="es"
-        ? `Aplicación · ${portalMoney(allocatedTotal)}${credit>0.005?` · anticipo ${portalMoney(credit)}`:""}`
-        : `Applied to · ${portalMoney(allocatedTotal)}${credit>0.005?` · credit ${portalMoney(credit)}`:""}`;
+        ? `Historial de aplicación · ${portalMoney(allocatedTotal)}${credit>0.005?` · sin aplicar ${portalMoney(credit)}`:""}`
+        : `Application history · ${portalMoney(allocatedTotal)}${credit>0.005?` · unapplied ${portalMoney(credit)}`:""}`;
 
     return `<details class="rw-payment-allocation" data-rw-payment-allocation="${esc(key)}"${open?" open":""}>
       <summary>${esc(summary)}</summary>
@@ -974,7 +1056,7 @@
           <button type="button" class="rw-payment-note-link" data-rw-allocation-note="${esc(item.note.id)}">${esc(noteNumber(item.note))}</button>
           <strong>${portalMoney(item.amount)}</strong>
         </div>`).join("")}
-        ${credit>0.005?`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Аванс / переплата":lang==="es"?"Anticipo / saldo":"Advance / credit"}</span><strong>${portalMoney(credit)}</strong></div>`:""}
+        ${credit>0.005?`<div class="rw-payment-allocation-row rw-payment-allocation-credit"><span>${lang==="ru"?"Не было зачтено в DN":lang==="es"?"No aplicado a albarán":"Not applied to a delivery note"}</span><strong>${portalMoney(credit)}</strong></div>`:""}
       </div>
     </details>`;
   };
@@ -989,6 +1071,7 @@
     const returnCredits=confirmedPayments.filter(payment=>partnerReturnCreditPayment(payment));
     const disputedPayments=payments.filter(payment=>!partnerReturnCreditPayment(payment)&&payment.status!=="cancelled"&&payment.disputeStatus==="open");
     const paymentDistribution=partnerPaymentDistribution(notes,confirmedPayments);
+    const historicalPaymentDistribution=partnerHistoricalPaymentDistribution(notes,payments);
 
     const delivered = notes.reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid = cashPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
@@ -1151,7 +1234,7 @@
             const reversalTitle=operation.reversalType==="cancel"?(lang==="ru"?"Оплата отменена":lang==="es"?"Pago cancelado":"Payment cancelled"):(lang==="ru"?"Оплата оспорена":lang==="es"?"Pago disputado":"Payment disputed");
             const balanceText=Number(operation.balanceAfter||0)>0.005?`${t("balanceAfter")}: ${portalMoney(operation.balanceAfter)}`:Number(operation.balanceAfter||0)<-0.005?(lang==="ru"?`Аванс после операции: ${portalMoney(Math.abs(operation.balanceAfter))}`:lang==="es"?`Anticipo tras la operación: ${portalMoney(Math.abs(operation.balanceAfter))}`:`Advance after operation: ${portalMoney(Math.abs(operation.balanceAfter))}`):(lang==="ru"?"Расчёты после операции закрыты":lang==="es"?"Saldo liquidado tras la operación":"Settled after operation");
             return `<article class="rw-operation ${operation.kind}${operation.reversalType==="dispute"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
-              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:reversal?`${reversalTitle} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
+              <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:reversal?`${reversalTitle} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,historicalPaymentDistribution):""}</div>
               <div class="rw-operation-amount"><b>${reversal?`${reversalTitle} `:operation.kind==="payment"?(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment "):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${balanceText}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
