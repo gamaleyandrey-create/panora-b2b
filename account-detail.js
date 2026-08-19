@@ -167,6 +167,12 @@
         String(a.id || "").localeCompare(String(b.id || ""))
       );
 
+    // Panora 6.93: an advance can close a delivery note only when that note exists.
+    const settlementAppliedAt = (paymentDate, noteDate) => {
+      const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
+      const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
+      return noteDay&&(!paymentDay||noteDay>paymentDay)?noteValue:(paymentValue||noteValue);
+    };
     const takeFromNote = (paymentId, note, amount, date, payment) => {
       const key = String(note.id || note.number);
       const due = Math.max(0, Number(remaining.get(key) || 0));
@@ -174,7 +180,8 @@
       if (used <= 0.005) return 0;
       remaining.set(key, Math.max(0, due - used));
       const entry = byId.get(paymentId) || { rows: [], credit: 0, returnCredit: returnCreditPayment(payment) };
-      entry.rows.push({ note, amount: used, date: String(date || payment.receivedAt || payment.date || note.date || "") });
+      const appliedAt=settlementAppliedAt(date||payment.receivedAt||payment.date,note.date);
+      entry.rows.push({ note, amount: used, date: appliedAt });
       byId.set(paymentId, entry);
       return used;
     };
