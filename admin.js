@@ -604,6 +604,14 @@ function stockInventoryTarget(m){
 function stockMovementOrderKey(m){
  return `${String(m?.date||'')}\u0000${String(m?.occurredAt||m?.createdAt||'')}\u0000${String(m?.id||'')}`;
 }
+/* Panora 7.05 — a delivery note may be prepared before its economic shipment date.
+   Never let an older creation timestamp move the stock issue ahead of bake/inventory events
+   on the actual DN date. Use a real same-day timestamp when available, otherwise noon. */
+function stockEconomicOccurredAt(date,...candidates){
+ const day=String(date||'').slice(0,10);if(!day)return '';
+ for(const value of candidates){const stamp=String(value||'');if(stamp.length>10&&stamp.slice(0,10)===day)return stamp}
+ return `${day}T12:00:00.000Z`;
+}
 function stockOperationLabel(type){
  return ({
   baked:'Выпечка',
@@ -664,7 +672,7 @@ function stockShipmentMovements(){
   note:`Накладная DN-${String(note.number||'').padStart(4,'0')}`,
   noteId:String(note.id||''),
   orderId:String(note.orderId||''),
-  occurredAt:note.createdAt||note.customerConfirmedAt||`${String(note.date||'')}T12:00:00`,
+  occurredAt:stockEconomicOccurredAt(note.date,note.createdAt,note.customerConfirmedAt,note.offlineProof?.receivedAt),
   virtual:true
  }))).filter(m=>m.product&&m.quantity>0);
 }

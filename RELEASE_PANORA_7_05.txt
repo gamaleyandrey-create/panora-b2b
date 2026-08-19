@@ -1,0 +1,3 @@
+Panora 7.05 / build 7050
+Economic shipment timestamps for finished-goods FIFO.
+A delivery note prepared before its DN date no longer consumes cost layers before bake/inventory events on the actual shipment date.
