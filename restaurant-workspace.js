@@ -902,7 +902,7 @@
       return byPayment.get(key);
     };
 
-    // Panora 6.94: a future DN covered by an older advance closes on the DN date, never before it exists.
+    // Panora 6.95: a future DN covered by an older advance closes on the DN date, never before it exists.
     const settlementAppliedAt=(paymentDate,noteDate)=>{
       const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
       const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
@@ -1034,7 +1034,10 @@
                   : t("withoutNote"),payment:event.payment,sort:1,balanceAfter:event.balanceAfter})
       : [
           ...notes.map(note=>({date:note.date,kind:"delivery",amount:Number(note.total||0),label:noteNumber(note),note,sort:0})),
-          ...payments.filter(payment=>payment.status!=="cancelled").map(payment=>({
+          // Panora 6.95: cancelled payments remain visible in the partner history.
+          // They are excluded from settlement by partnerPaymentConfirmed(), but hiding the
+          // operation made a reopened debt look unexplained after the bakery cancelled a payment.
+          ...payments.map(payment=>({
             date:payment.date,kind:partnerReturnCreditPayment(payment)?"return":"payment",amount:-Number(payment.amount||0),
             label:payment.deliveryNoteId?noteNumber(notes.find(note=>note.id===payment.deliveryNoteId)||{number:"—"}):t("withoutNote"),
             payment,sort:partnerReturnCreditPayment(payment)?.5:1
@@ -1045,7 +1048,10 @@
       let running=0;
       operations.forEach(operation=>{
         if(operation.kind==="delivery"||operation.kind==="return"||partnerPaymentConfirmed(operation.payment))running+=operation.amount;
-        operation.balanceAfter=Math.max(0,running);
+        // Preserve the signed balance. A negative value is a real partner advance and the
+        // operation UI already renders it as “Аванс после операции”. Clamping it to zero
+        // erased the financial meaning before cloud/shared finance helpers were available.
+        operation.balanceAfter=running;
       });
     }
 
