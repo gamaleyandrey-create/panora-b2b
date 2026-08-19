@@ -967,14 +967,88 @@ const paymentReminderCopy = {
   en:(row)=>`Hello, ${row.r.name}! This is a reminder to pay ${euro(row.balance)} for delivery note DN-${String(row.note.number).padStart(4,"0")}. Expected payment date: ${reminderPrettyDate(row.note.paymentDueDate,'en',false)}.`,
   es:(row)=>`¡Hola, ${row.r.name}! Te recordamos el pago de ${euro(row.balance)} del albarán DN-${String(row.note.number).padStart(4,"0")}. Fecha prevista de pago: ${reminderPrettyDate(row.note.paymentDueDate,'es',false)}.`,
 };
-const paymentReminderState=(restaurantId)=>{
-  const own=payments.filter(payment=>String(payment?.restaurantId||'')===String(restaurantId||''));
+const paymentReminderMoment=payment=>{
   const time=value=>{const stamp=new Date(value||'').getTime();return Number.isFinite(stamp)?stamp:0};
-  const version=own.reduce((latest,payment)=>Math.max(latest,time(payment?.updatedAt),time(payment?.disputedAt),time(payment?.confirmedAt),time(payment?.receivedAt),time(payment?.date)),0);
-  const reopenVersion=own
-    .filter(payment=>payment?.disputeStatus==='open'||payment?.status==='cancelled')
-    .reduce((latest,payment)=>Math.max(latest,time(payment?.updatedAt),time(payment?.disputedAt),time(payment?.receivedAt),time(payment?.date)),0);
-  return{version,reopenVersion};
+  return Math.max(time(payment?.updatedAt),time(payment?.disputedAt),time(payment?.confirmedAt),time(payment?.receivedAt),time(payment?.date));
+};
+const paymentReminderAllocationSnapshot=(restaurantId,{forceActiveId=null}={})=>{
+  const notes=deliveryNotes
+    .filter(note=>String(note?.restaurantId||'')===String(restaurantId||''))
+    .slice()
+    .sort((a,b)=>
+      String(a?.date||'').localeCompare(String(b?.date||''))||
+      Number(a?.number||0)-Number(b?.number||0)||
+      String(a?.id||'').localeCompare(String(b?.id||''))
+    );
+  const noteById=new Map(notes.map(note=>[String(note.id),note]));
+  const paidByNote=new Map(notes.map(note=>[String(note.id),0]));
+  const totalFor=note=>typeof window.panoraB2BEffectiveNoteTotal==='function'
+    ? Math.max(0,Number(window.panoraB2BEffectiveNoteTotal(note)||0))
+    : Math.max(0,Number(note?.total||0));
+  const activePayments=payments
+    .filter(payment=>{
+      if(String(payment?.restaurantId||'')!==String(restaurantId||''))return false;
+      if(paymentIsReturnCredit(payment)||Number(payment?.amount||0)<=0)return false;
+      const id=String(payment?.id||'');
+      if(forceActiveId&&id===String(forceActiveId))return true;
+      return paymentConfirmed(payment)&&payment?.status!=='cancelled';
+    })
+    .slice()
+    .sort((a,b)=>
+      String(a?.receivedAt||a?.date||'').localeCompare(String(b?.receivedAt||b?.date||''))||
+      String(a?.id||'').localeCompare(String(b?.id||''))
+    );
+  let fifoPool=0;
+  activePayments.forEach(payment=>{
+    const amount=Math.max(0,Number(payment?.amount||0));
+    const linked=payment?.deliveryNoteId?noteById.get(String(payment.deliveryNoteId)):null;
+    if(!linked){fifoPool+=amount;return}
+    const id=String(linked.id),already=Math.max(0,Number(paidByNote.get(id)||0)),total=totalFor(linked);
+    const applied=Math.min(Math.max(0,total-already),amount);
+    paidByNote.set(id,already+applied);
+    fifoPool+=Math.max(0,amount-applied);
+  });
+  notes.forEach(note=>{
+    if(fifoPool<=0.005)return;
+    const id=String(note.id),already=Math.max(0,Number(paidByNote.get(id)||0)),total=totalFor(note);
+    const applied=Math.min(Math.max(0,total-already),fifoPool);
+    if(applied>0){paidByNote.set(id,already+applied);fifoPool-=applied}
+  });
+  return new Map(notes.map(note=>{
+    const total=totalFor(note),paid=Math.min(total,Math.max(0,Number(paidByNote.get(String(note.id))||0)));
+    return[String(note.id),Math.max(0,total-paid)];
+  }));
+};
+/* Panora 6.91: payment-reminder reopening is DN-specific. An unrelated disputed/cancelled
+   payment must not resurrect a reminder whose delivery-note balance never changed. */
+const paymentReminderStates=(restaurantId,allocation)=>{
+  const currentDue=allocation?.notes
+    ? new Map(allocation.notes.map(row=>[String(row?.note?.id||''),Math.max(0,Number(row?.due||0))]))
+    : paymentReminderAllocationSnapshot(restaurantId);
+  const own=payments.filter(payment=>String(payment?.restaurantId||'')===String(restaurantId||''));
+  // Legacy reminder records had no debt snapshot, so preserve the old account-wide
+  // invalidation rule for them. Modern reminders use balance + DN-specific reopen state.
+  const globalVersion=own.reduce((latest,payment)=>Math.max(latest,paymentReminderMoment(payment)),0);
+  const states=new Map([...currentDue.keys()].map(id=>[id,{version:globalVersion,reopenVersion:0}]));
+  own.filter(payment=>
+    !paymentIsReturnCredit(payment)&&
+    Number(payment?.amount||0)>0&&
+    (payment?.disputeStatus==='open'||payment?.status==='cancelled')
+  ).forEach(payment=>{
+    const id=String(payment?.id||'');if(!id)return;
+    // Re-activate only this disputed/cancelled payment in a counterfactual allocation.
+    // Any DN whose due changes is genuinely affected, including indirect FIFO shifts.
+    const alternate=paymentReminderAllocationSnapshot(restaurantId,{forceActiveId:id});
+    const moment=paymentReminderMoment(payment);
+    currentDue.forEach((due,noteId)=>{
+      const other=Math.max(0,Number(alternate.get(noteId)||0));
+      if(Math.abs(other-due)<=0.005)return;
+      const state=states.get(noteId)||{version:globalVersion,reopenVersion:0};
+      state.reopenVersion=Math.max(Number(state.reopenVersion||0),moment);
+      states.set(noteId,state);
+    });
+  });
+  return states;
 };
 const paymentReminderSentIsCurrent=(sent,balance,state)=>{
   if(!sent?.sentAt)return false;
@@ -1001,8 +1075,8 @@ function paymentReminderRows() {
       if(!allocationByRestaurant.has(r.id)){
         allocationByRestaurant.set(r.id,window.panoraFinanceAllocation?.(r.id));
       }
-      if(!stateByRestaurant.has(r.id))stateByRestaurant.set(r.id,paymentReminderState(r.id));
       const allocation=allocationByRestaurant.get(r.id);
+      if(!stateByRestaurant.has(r.id))stateByRestaurant.set(r.id,paymentReminderStates(r.id,allocation));
       const row=allocation?.notes?.find(item=>String(item.note.id)===String(note.id));
       const balance=row?Number(row.due||0):Math.max(0,Number(note.total||0)-Number(note.paid||0));
       if (balance <= 0.005) return null;
@@ -1012,7 +1086,7 @@ function paymentReminderRows() {
           86400000,
       );
       const key = `payment-${note.id}-${note.paymentDueDate}`;
-      const reminderState=stateByRestaurant.get(r.id)||{version:0,reopenVersion:0},stored=reminderLog[key];
+      const reminderState=stateByRestaurant.get(r.id)?.get(String(note.id))||{version:0,reopenVersion:0},stored=reminderLog[key];
       const sent=paymentReminderSentIsCurrent(stored,balance,reminderState)?stored:null;
       return { note, r, balance, days, key, sent, reminderState };
     })
@@ -1027,7 +1101,8 @@ function markReminder(key, channel, row=null) {
   const record={ sentAt: new Date().toISOString(), channel };
   if(row?.note){
     record.balance=Number(row.balance||0);
-    const state=row.reminderState||paymentReminderState(row.r?.id);
+    const allocation=window.panoraFinanceAllocation?.(row.r?.id);
+    const state=row.reminderState||paymentReminderStates(row.r?.id,allocation).get(String(row.note.id))||{version:0,reopenVersion:0};
     record.stateVersion=Number(state?.version||0);
   }
   reminderLog[key] = record;

@@ -1,0 +1,13 @@
+Panora 6.91 — delivery-note-specific payment reminder reopening
+
+Build: 6910
+Package series: 8
+
+Changes:
+- payment reminder re-opening is now evaluated per delivery note instead of per partner account;
+- a disputed or cancelled payment no longer resurrects already-sent reminders for unrelated delivery notes whose balance did not change;
+- FIFO side effects are covered: if cancelling/disputing one payment really reopens another delivery note through payment reallocation, that note correctly becomes reminder-eligible again;
+- linked overpayments are handled the same way, including overflow applied to later delivery notes;
+- legacy reminder records remain supported, while modern records continue to use the stored debt snapshot as the primary stale-reminder guard.
+
+No layout changes. No new SQL.
