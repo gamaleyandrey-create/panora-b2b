@@ -170,7 +170,7 @@
       });
     });
 
-    // Panora 6.85 B2B: a return linked to a delivery note is a separate credit event.
+    // Panora 6.86 B2B: a return linked to a delivery note is a separate credit event.
     // The original delivery note stays intact; the return reduces revenue/VAT in the return
     // period and reverses COGS only because the bread is physically back in finished stock.
     if(typeof window.panoraB2BReturnCredit==='function'){
@@ -189,7 +189,7 @@
       });
     }
 
-    // Panora 6.85 retail accounting: sale and refund are separate accounting events.
+    // Panora 6.86 retail accounting: sale and refund are separate accounting events.
     // The completed sale stays in its original period. A later refund reverses revenue in the
     // refund period. COGS is reversed only when that same completed order was physically
     // returned to finished stock through Panora's order-linked return movement.

@@ -520,7 +520,7 @@
     if (!navigator.onLine) return t("offline");
     return window.panoraRestaurantSyncState?.type === "sending" ? t("syncing") : t("saved");
   }
-  const partnerPaymentConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==="confirmed");
+  const partnerPaymentConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==="confirmed")&&payment?.disputeStatus!=="open";
   const partnerFinanceSummary=()=>{
     const delivered=ownNotes().reduce((sum,note)=>sum+Number(note.total||0),0);
     const paid=ownPayments()
@@ -1034,7 +1034,7 @@
     if(!sharedTimeline){
       let running=0;
       operations.forEach(operation=>{
-        if(operation.kind==="delivery"||operation.payment?.confirmed!==false)running+=operation.amount;
+        if(operation.kind==="delivery"||partnerPaymentConfirmed(operation.payment))running+=operation.amount;
         operation.balanceAfter=Math.max(0,running);
       });
     }
@@ -1129,7 +1129,7 @@
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
             return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
               <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${operation.payment?.note?` · ${esc(operation.payment.note)}`:""}</small>${operation.kind==="payment"?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
-              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
