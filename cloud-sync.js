@@ -1128,17 +1128,19 @@
 function b2bReturnNoteIdFromMovement(movement){
   const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):'';
 }
+const b2bReturnCreditPaymentMarker=movementId=>`[panora:b2b-return-credit:${String(movementId||'')}]`;
+const isB2BReturnCreditPayment=payment=>/\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||''));
 function localFinishedStockMovements(){
   try{const rows=JSON.parse(localStorage.getItem('panora-stock-movements')||'[]');return Array.isArray(rows)?rows:[]}catch{return[]}
 }
-function b2bReturnCreditForNote(note){
+function b2bReturnCreditForNote(note,sourceMovements=localFinishedStockMovements()){
   if(!note?.id)return{gross:0,net:0,tax:0,rows:[]};
   const items=Array.isArray(note.items)?note.items:[],prices=note.prices||{},remaining=new Map();
   items.forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)remaining.set(product,(remaining.get(product)||0)+qty)});
   const subtotalBasis=Math.max(0,Number(note.subtotal||0))||items.reduce((sum,item)=>sum+Math.max(0,Number(item?.quantity||0))*Math.max(0,Number(prices[item?.product]||0)),0);
   const grossBasis=Math.max(0,Number(note.total||0)),taxRate=Math.max(0,Number(note.taxRate||0));
   let gross=0,net=0,tax=0;const rows=[];
-  localFinishedStockMovements().filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
+  (Array.isArray(sourceMovements)?sourceMovements:[]).filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
     const product=String(movement?.product||''),left=Math.max(0,Number(remaining.get(product)||0)),requested=Math.max(0,Math.abs(Number(movement?.quantity||0))),qty=Math.min(left,requested);if(!product||qty<=0)return;
     remaining.set(product,Math.max(0,left-qty));
     const rowNet=qty*Math.max(0,Number(prices[product]||0));
@@ -1149,8 +1151,31 @@ function b2bReturnCreditForNote(note){
   return{gross:Math.min(grossBasis,gross),net:Math.min(subtotalBasis||net,net),tax,rows};
 }
 function b2bEffectiveNoteTotal(note){return Math.max(0,Number(note?.total||0)-Number(b2bReturnCreditForNote(note).gross||0))}
+async function ensureB2BReturnCreditPayments(){
+  if(!ready||typeof deliveryNotes==='undefined'||typeof payments==='undefined')return 0;
+  const remoteRows=await request('finished_stock_movements?movement_type=eq.returned&select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at&order=movement_date.asc,created_at.asc');
+  const remoteMovements=(Array.isArray(remoteRows)?remoteRows:[]).map(row=>({id:String(row.id||''),date:String(row.movement_date||''),product:String(row.product_id||''),type:String(row.movement_type||''),quantity:Math.abs(Number(row.quantity||0)),note:row.note||'',createdAt:row.created_at||row.updated_at||''})).filter(m=>m.id&&m.product&&m.type==='returned'&&b2bReturnNoteIdFromMovement(m));
+  if(!remoteMovements.length)return 0;
+  const paymentById=new Map((Array.isArray(payments)?payments:[]).map(payment=>[String(payment?.id||''),payment]));
+  const payload=[];
+  for(const note of deliveryNotes){
+    const rows=b2bReturnCreditForNote(note,remoteMovements).rows;
+    for(const row of rows){
+      const movementId=String(row.movement?.id||'');if(!movementId||Number(row.gross||0)<=0)continue;
+      const existing=paymentById.get(movementId);
+      if(existing&&isB2BReturnCreditPayment(existing)&&String(existing.deliveryNoteId||'')===String(note.id)&&Math.abs(Number(existing.amount||0)-Number(row.gross||0))<=0.01)continue;
+      payload.push({id:movementId,restaurant_id:note.restaurantId,delivery_note_id:note.id,amount:Number(row.gross||0),method:'Возврат товара',note:`${b2bReturnCreditPaymentMarker(movementId)} Возврат товара по DN-${String(note.number||'').padStart(4,'0')}`,status:'confirmed',received_at:row.movement?.createdAt||`${String(row.movement?.date||note.date||localDate(new Date().toISOString()))}T12:00:00Z`,confirmed_at:row.movement?.createdAt||new Date().toISOString(),confirmed_by:session.user?.id||null,recorded_by:session.user?.id||null,dispute_status:'none'});
+    }
+  }
+  if(!payload.length)return 0;
+  const saved=await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
+  if(!Array.isArray(saved)||saved.length<payload.length)throw new Error('Supabase не подтвердил кредит B2B-возврата.');
+  saved.forEach(cachePayment);
+  return saved.length;
+}
 window.panoraB2BReturnCredit=b2bReturnCreditForNote;
 window.panoraB2BEffectiveNoteTotal=b2bEffectiveNoteTotal;
+window.panoraIsB2BReturnCreditPayment=isB2BReturnCreditPayment;
 function financeAllocation(restaurantId){
   if(typeof deliveryNotes==='undefined'||typeof payments==='undefined'){
     return{notes:[],debt:0,credit:0,net:0,totalShipped:0,totalPaid:0};
@@ -1167,6 +1192,7 @@ function financeAllocation(restaurantId){
     .filter(payment=>
       payment.restaurantId===restaurantId&&
       paymentFinanciallyConfirmed(payment)&&
+      !isB2BReturnCreditPayment(payment)&&
       Number(payment.amount||0)>0
     )
     .slice()
@@ -1230,7 +1256,7 @@ function financeTimeline(restaurantId){
       amount:Number(note.total||0)
     })),
     ...returnEvents,
-    ...payments.filter(payment=>payment.restaurantId===restaurantId).map(payment=>{
+    ...payments.filter(payment=>payment.restaurantId===restaurantId&&!isB2BReturnCreditPayment(payment)).map(payment=>{
       const linkedNote=noteById.get(payment.deliveryNoteId);
       const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
       return{
@@ -1613,7 +1639,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(pending.finance){await syncFinanceNow();clearPending('finance')}
       if(pending.rawStock)await syncRawStockNow();
       if(pending.bakeCompletions)await syncBakeCompletionsNow();
-      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadIngredientCosts();await loadOrders();await loadPayments();await loadDeliveryNotes();await syncBakeCompletionsNow({quiet:true});await syncRawStockNow({quiet:true});await loadOperationEvents();
+      await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadIngredientCosts();await loadOrders();await loadPayments();await loadDeliveryNotes();await ensureB2BReturnCreditPayments();await syncBakeCompletionsNow({quiet:true});await syncRawStockNow({quiet:true});await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
       status('Облако ✓');return true;
     }catch(error){
@@ -1628,7 +1654,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
-    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['цены сырья',loadIngredientCosts],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
+    const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['цены сырья',loadIngredientCosts],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['B2B возвраты',ensureB2BReturnCreditPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
@@ -1662,7 +1688,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,resolvePaymentDisputeAtomic,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{

@@ -23,6 +23,10 @@
     }
   };
 
+  const returnCreditPayment = payment => typeof window.panoraIsB2BReturnCreditPayment==='function'
+    ? window.panoraIsB2BReturnCreditPayment(payment)
+    : /\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||''));
+
   const allocationFor = (id) => {
     const cloud = window.panoraFinanceAllocation?.(id);
     if (cloud) return cloud;
@@ -37,6 +41,7 @@
       .filter(payment =>
         payment.restaurantId === id &&
         paymentConfirmed(payment) &&
+        !returnCreditPayment(payment) &&
         payment.status !== "cancelled"
       )
       .reduce((sum,payment)=>sum+Number(payment.amount||0),0);
@@ -95,24 +100,28 @@
         .map((payment) => ({
           id: payment.id,
           date: payment.date,
-          type: payment.status === "cancelled"
-            ? "Оплата отменена"
-            : payment.disputeStatus === "open"
-              ? "Оплата оспорена"
-              : paymentConfirmed(payment)
-              ? payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
-              : "Ожидает подтверждения",
+          type: returnCreditPayment(payment)
+            ? "Возврат по накладной"
+            : payment.status === "cancelled"
+              ? "Оплата отменена"
+              : payment.disputeStatus === "open"
+                ? "Оплата оспорена"
+                : paymentConfirmed(payment)
+                ? payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
+                : "Ожидает подтверждения",
           number: payment.note || payment.method || "",
           amount: -payment.amount,
-          className: payment.status === "cancelled"
-            ? "payment cancelled"
-            : payment.disputeStatus === "open"
-              ? "payment disputed"
-              : paymentConfirmed(payment)
-              ? "payment"
-              : "payment pending",
+          className: returnCreditPayment(payment)
+            ? "return"
+            : payment.status === "cancelled"
+              ? "payment cancelled"
+              : payment.disputeStatus === "open"
+                ? "payment disputed"
+                : paymentConfirmed(payment)
+                ? "payment"
+                : "payment pending",
           disputeReason: payment.disputeReason || "",
-          sort: 1,
+          sort: returnCreditPayment(payment) ? 0.5 : 1,
         })),
     ]
       .sort(
@@ -120,7 +129,7 @@
           String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
       )
       .map((item) => {
-        if (item.className === "shipment" || item.className === "payment")
+        if (item.className === "shipment" || item.className === "payment" || item.className === "return")
           running += Number(item.amount || 0);
         item.balanceAfter = running;
         return item;
@@ -145,6 +154,7 @@
       .filter(payment =>
         payment.restaurantId === id &&
         paymentConfirmed(payment) &&
+        !returnCreditPayment(payment) &&
         payment.status !== "cancelled"
       )
       .slice()

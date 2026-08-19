@@ -1,0 +1,14 @@
+Panora 6.89 — B2B return credits visible to partners
+
+Build: 6890
+Package series: 8
+
+Changes:
+- B2B goods returns linked to a delivery note now create a server-confirmed non-cash return credit in the existing payments stream;
+- the partner portal uses that return credit in its FIFO settlement calculation, so bakery and partner debt/advance stay aligned;
+- return credits are excluded from cash-paid totals and cannot be disputed as payments;
+- partner finance history shows goods-return credits separately from cash payments;
+- historical linked B2B stock returns are backfilled into return-credit records when the bakery admin syncs;
+- a new linked return is applied locally only after both the stock return and the financial credit are confirmed by Supabase; failed linked returns attempt server rollback.
+
+No layout changes outside partner finance wording/history. No new SQL.

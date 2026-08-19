@@ -875,6 +875,14 @@ $('#movementForm').onsubmit=async e=>{
    if(!window.panoraSupabaseSession?.access_token)throw new Error('Нет активной облачной сессии. Возврат по накладной не проведён.');
    const saved=await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify([{id:movement.id,movement_date:movement.date,product_id:movement.product,movement_type:'returned',quantity:movement.quantity,note:movement.note,created_at:movement.createdAt,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}])});
    const server=Array.isArray(saved)?saved[0]:saved;if(!server||String(server.id||'')!==movement.id||String(server.movement_type||'')!=='returned'||!String(server.note||'').includes(b2bReturnMarker(b2bNote.id)))throw new Error('Supabase не подтвердил связанный возврат по накладной.');
+   try{
+    if(typeof window.panoraCloud?.syncB2BReturnCredits!=='function')throw new Error('Модуль финансовой синхронизации возврата ещё не готов.');
+    await window.panoraCloud.syncB2BReturnCredits();
+   }catch(creditError){
+    try{await retailAdminApi(`payments?id=eq.${encodeURIComponent(movement.id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})}catch(paymentRollbackError){console.error('Panora B2B return payment rollback failed',paymentRollbackError)}
+    try{await retailAdminApi(`finished_stock_movements?id=eq.${encodeURIComponent(movement.id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})}catch(rollbackError){console.error('Panora B2B return stock rollback failed',rollbackError)}
+    throw new Error(`Финансовый кредит возврата не подтверждён. Складская операция отменена. ${creditError?.message||creditError}`);
+   }
    movements.push(movement);setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));
   }else{
    movements.push(movement);setLocalStorageSafely('panora-stock-movements',JSON.stringify(movements));

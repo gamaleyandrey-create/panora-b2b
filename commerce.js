@@ -159,9 +159,10 @@ const shippedFor = (id) =>
     .filter((n) => n.restaurantId === id)
     .reduce((s, n) => s + n.total, 0);
 const paymentConfirmed = (payment) => payment?.confirmed !== false && (!payment?.status || payment.status === "confirmed") && payment?.disputeStatus !== "open";
+const paymentIsReturnCredit = payment => /\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||""));
 const paidFor = (id) =>
   payments
-    .filter((p) => p.restaurantId === id && paymentConfirmed(p))
+    .filter((p) => p.restaurantId === id && paymentConfirmed(p) && !paymentIsReturnCredit(p))
     .reduce((s, p) => s + p.amount, 0);
 const financeNetFor = (id) => {
   const allocation=typeof window.panoraFinanceAllocation==='function'?window.panoraFinanceAllocation(id):null;
@@ -727,6 +728,7 @@ function accountingAllocationFor(restaurantId) {
     .filter((payment) =>
       payment.restaurantId === restaurantId &&
       paymentConfirmed(payment) &&
+      !paymentIsReturnCredit(payment) &&
       payment.status !== "cancelled" &&
       Number(payment.amount || 0) > 0
     )
@@ -1755,11 +1757,11 @@ document.querySelector("#exportPayments").onclick = () => {
     ...payments.map((p) => [
       restaurant(p.restaurantId)?.name,
       p.date,
-      "Оплата",
+      paymentIsReturnCredit(p) ? "Кредит возврата" : "Оплата",
       (-p.amount).toFixed(2),
       p.method,
       p.note,
-      paymentConfirmed(p) ? "Подтверждена" : "Ожидает подтверждения",
+      paymentIsReturnCredit(p) ? "Возврат товара" : paymentConfirmed(p) ? "Подтверждена" : "Ожидает подтверждения",
     ]),
   ].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
   downloadFile(
