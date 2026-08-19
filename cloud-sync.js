@@ -1009,7 +1009,16 @@
     amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),disputeStatus:String(payment?.disputeStatus||'none'),
     receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||'')
   })).sort((a,b)=>a.id.localeCompare(b.id)));
-  const localDate=value=>String(value||'').slice(0,10);
+  // Panora 7.10: Supabase timestamps are UTC, while Panora's economic dates are bakery-local.
+  // Around midnight, a payment received at 00:30 local time may still have yesterday's UTC date.
+  // Preserve date-only values, but convert real timestamps through the browser's local calendar.
+  const localDate=value=>{
+    const raw=String(value||'');if(!raw)return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+    const parsed=new Date(raw);if(Number.isNaN(parsed.getTime()))return raw.slice(0,10);
+    const pad=n=>String(n).padStart(2,'0');
+    return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}`;
+  };
   function noteTaxPartsFromGross(grossValue,taxRateValue){
     const gross=Math.max(0,Number(grossValue||0)),taxRate=Math.max(0,Number(taxRateValue||0));
     const subtotal=taxRate>0?gross/(1+taxRate/100):gross;

@@ -1,0 +1,9 @@
+Panora 7.10 / build 7100
+
+B2B local economic date fix:
+- Supabase payment timestamps are converted from UTC to the bakery-local calendar day before admin accounting uses them;
+- partner payment history uses the same local-day rule, so a payment just after local midnight no longer appears on the previous UTC day;
+- payment reversal/dispute event dates inherit the same local economic-date conversion;
+- delivery-note cloud mapping uses the same helper for consistency while existing noon-based DN dates remain unchanged.
+
+No SQL changes.

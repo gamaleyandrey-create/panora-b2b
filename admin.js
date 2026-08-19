@@ -411,7 +411,7 @@ function renderRetailOrderQueue(){
 }
 function retailAnalyticsEventDate(order){
  const status=retailOrderStatus(order);
- // Panora 7.09: completed/cancelled timestamps come from cloud in UTC; analytics uses local bakery dates.
+ // Panora 7.10: completed/cancelled timestamps come from cloud in UTC; analytics uses local bakery dates.
  if(status==='completed')return stockStampLocalDay(order?.completedAt||order?.pickupDate||order?.createdAt||'');
  if(status==='cancelled')return stockStampLocalDay(order?.cancelledAt||order?.pickupDate||order?.createdAt||'');
  return stockStampLocalDay(order?.pickupDate||order?.createdAt||'');
@@ -686,7 +686,7 @@ function stockShipmentMovements(){
 }
 function stockRetailCompletedMovements(){
  return readRetailOrders().filter(order=>order&&retailOrderStatus(order)==='completed').flatMap(order=>{
-  // Panora 7.09: keep retail stock issue on its local economic day around UTC midnight.
+  // Panora 7.10: keep retail stock issue on its local economic day around UTC midnight.
   const date=stockStampLocalDay(order.completedAt||order.pickupDate||order.updatedAt||order.createdAt||'')||stockLocalDate();
   const occurredAt=stockEconomicOccurredAt(date,order.completedAt,order.updatedAt,order.createdAt);
   return (order.items||[]).map((item,index)=>({
