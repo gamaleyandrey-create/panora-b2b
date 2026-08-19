@@ -1,0 +1,15 @@
+Panora 6.84 — retail refunds, stock returns and COGS consistency
+
+Build: 6840
+Package series: 8
+
+Changes:
+- retail payment refund and physical bread return are now separate, explicit actions;
+- for a completed retail order, the bakery can confirm whether returned bread is physically back and fit for resale;
+- physical returns create order-linked finished-stock movements and are server-confirmed before the stock is treated as restored;
+- a refund without a physical return keeps the original bread COGS as a real loss;
+- a refund with a physical return reverses that order COGS because the bread is restored to finished stock and can be sold again;
+- retail sale and refund are accounted as separate events, so a later refund no longer rewrites the original sale period;
+- Finance refreshes after finished-stock cloud synchronization.
+
+No layout redesign. No new SQL.
