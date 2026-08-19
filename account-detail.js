@@ -213,14 +213,14 @@
       }
     });
 
-    // Panora 7.00: expose the actual settlement moment for the bakery archive.
+    // Panora 7.01: expose the actual settlement moment for the bakery archive.
     // Reopened notes must return to the archive according to the latest real close,
     // not according to their old delivery date.
     byId.closedAtByNote=closedAtByNote;
     return byId;
   }
 
-  // Panora 7.00: historical payment allocation is immutable. Current FIFO may change
+  // Panora 7.01: historical payment allocation is immutable. Current FIFO may change
   // after a later dispute/cancellation, but older payment rows must keep the allocation
   // that was actually established at that point in time. Unused advance can still be
   // applied later when a new DN appears or another payment is reversed.
