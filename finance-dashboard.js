@@ -24,9 +24,9 @@
   const ingredientPrice=(map,name,unit)=>Number(map[`${normalize(name)}|${String(unit||'').toLowerCase()}`]??map[`${name}|${unit}`]??0);
   const canonicalRetailOrders=list=>{const map=new Map();(Array.isArray(list)?list:[]).filter(Boolean).forEach(order=>{const key=String(order.id||order.number||'').trim();if(!key)return;const prev=map.get(key),stamp=o=>String(o?.updatedAt||o?.completedAt||o?.createdAt||'');if(!prev||stamp(order)>=stamp(prev))map.set(key,order)});return [...map.values()]};
 
-  const unitRawCost=(product)=>{
-    const recipe=recipes()?.[product]||[],priceMap=prices();
-    return (Array.isArray(recipe)?recipe:[]).reduce((sum,item)=>{
+  const recipeUnitRawCost=(recipe,product)=>{
+    const source=Array.isArray(recipe)&&recipe.length?recipe:(recipes()?.[product]||[]),priceMap=prices();
+    return (Array.isArray(source)?source:[]).reduce((sum,item)=>{
       const qty=Math.max(0,Number(item.qty||0));if(!qty)return sum;
       if(item.sourceIngredientName&&Number(item.sourceYieldPct)>0){
         const sourceUnit=item.sourceUnit||item.unit||'g';
@@ -37,6 +37,7 @@
       return sum+qty/factor(item.unit||'g')*ingredientPrice(priceMap,item.name,item.unit||'g');
     },0);
   };
+  const unitRawCost=product=>recipeUnitRawCost(null,product);
 
   let expenses=read(KEY,[]);
   let retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]));
@@ -201,9 +202,9 @@
     });
     const retailRefundsGross=retailRefunded.reduce((sum,order)=>sum+Math.max(0,Number(order.total||0)),0);
 
-    const periodExpenses=expenses.filter(row=>inPeriod(row.date));
+    const manualExpenses=expenses.filter(row=>inPeriod(row.date));
     let expensesNet=0,inputVat=0,rawPurchasesNet=0,rawPurchasesGross=0,rawPurchasesVat=0;
-    periodExpenses.forEach(row=>{
+    manualExpenses.forEach(row=>{
       const x=expenseParts(row);
       inputVat+=x.deductibleVat;
       if(isRawMaterialPurchase(row)){
@@ -214,10 +215,34 @@
         expensesNet+=x.net;
       }
     });
+
+    // Panora 6.83: factual bake waste and explicit finished-bread write-offs are real
+    // production/stock losses. Keep sales COGS clean, but subtract these losses from
+    // operating profit so physical losses cannot disappear from P&L. Inventory
+    // corrections (+/-) remain reconciliation entries and are not auto-expensed.
+    const lossRows=[];
+    const bakeCompletions=read('panora-bake-completions',[]);
+    (Array.isArray(bakeCompletions)?bakeCompletions:[]).filter(row=>row&&!row.deletedAt&&inPeriod(row.date)).forEach(completion=>{
+      (Array.isArray(completion.items)?completion.items:[]).forEach((item,index)=>{
+        const product=String(item?.product||''),waste=Math.max(0,Number(item?.waste||0));if(!product||!waste)return;
+        const cost=recipeUnitRawCost(item?.recipeSnapshot,product)*waste;if(cost<=0)return;
+        lossRows.push({id:`auto-loss:bake:${completion.id||completion.date}:${product}:${index}`,date:String(completion.date||''),category:'Производственные потери',description:`Брак при выпечке · ${productLabel(product)} · ${waste} шт.`,expenseType:'variable',grossAmount:cost,vatRate:0,vatDeductible:false,syntheticLoss:true,lossKind:'bake_waste'});
+      });
+    });
+    const finishedMovements=read('panora-stock-movements',[]),seenWriteOffs=new Set();
+    (Array.isArray(finishedMovements)?finishedMovements:[]).filter(row=>row&&String(row.type||'')==='written_off'&&inPeriod(row.date)).forEach((movement,index)=>{
+      const key=String(movement.id||`${movement.date}:${movement.product}:${movement.quantity}:${index}`);if(seenWriteOffs.has(key))return;seenWriteOffs.add(key);
+      const product=String(movement.product||''),qty=Math.max(0,Number(movement.quantity||0));if(!product||!qty)return;
+      const cost=unitRawCost(product)*qty;if(cost<=0)return;
+      const note=String(movement.note||'').trim();
+      lossRows.push({id:`auto-loss:stock:${key}`,date:String(movement.date||''),category:'Потери склада',description:`Списание готового хлеба · ${productLabel(product)} · ${qty} шт.${note?` · ${note}`:''}`,expenseType:'variable',grossAmount:cost,vatRate:0,vatDeductible:false,syntheticLoss:true,lossKind:'finished_write_off'});
+    });
+    const stockLossesNet=lossRows.reduce((sum,row)=>sum+Math.max(0,Number(row.grossAmount||0)),0);
+    const operatingCostsNet=expensesNet+stockLossesNet;
     const grossRevenue=b2bGrossRevenue+retailGrossRevenue,revenueNet=b2bRevenueNet+retailRevenueNet,salesVat=b2bSalesVat+retailSalesVat,cogs=b2bCogs+retailCogs,pieces=b2bPieces+retailPieces;
-    const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-expensesNet;
-    return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
-      vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses,
+    const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-operatingCostsNet;
+    return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,stockLossesNet,operatingCostsNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
+      vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses:[...manualExpenses,...lossRows],lossRows,
       b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,grossProfit:b2bRevenueNet-b2bCogs},
       retail:{grossRevenue:retailGrossRevenue,revenueNet:retailRevenueNet,salesVat:retailSalesVat,cogs:retailCogs,pieces:retailPieces,grossProfit:retailRevenueNet-retailCogs,deliveryGross:retailDeliveryGross,deliveryNet:retailDeliveryNet,breadGross:retailBreadGross,breadNet:retailBreadNet,refundsGross:retailRefundsGross,completed:retailCompleted.length,refunded:retailRefunded.length,vatRate:retailVatRate}};
   }
@@ -255,7 +280,8 @@
     setSignedState(grossProfit,x.grossProfit);
     document.querySelector('#financeGrossMargin').textContent=`Маржа: ${pct(grossMargin)}`;
 
-    document.querySelector('#financeExpensesNet').textContent=money(x.expensesNet);
+    document.querySelector('#financeExpensesNet').textContent=money(x.operatingCostsNet);
+    setText('#financeExpensesDetail',`Ручные: ${money(x.expensesNet)} · потери: ${money(x.stockLossesNet)} · перейти ↓`);
     const rawPurchases=document.querySelector('#financeRawPurchasesNet');
     if(rawPurchases)rawPurchases.textContent=money(x.rawPurchasesNet);
     const rawPurchasesGross=document.querySelector('#financeRawPurchasesGross');
@@ -307,7 +333,8 @@
       const accounting=inventory
         ? '<span class="finance-accounting-badge inventory">Запас сырья</span><small>не уменьшает прибыль повторно</small>'
         : '<span class="finance-accounting-badge operating">Операционный</span><small>уменьшает операционную прибыль</small>';
-      return `<tr class="${inventory?'finance-inventory-row':''}"><td>${esc(row.date)}</td><td>${esc(row.category)}</td><td>${esc(row.description||'—')}</td><td>${row.expenseType==='fixed'?'Постоянный':'Переменный'}</td><td>${money(part.gross)}</td><td>${money(part.vat)}${row.vatDeductible===false?' <small>без вычета</small>':''}</td><td>${money(part.net)}</td><td>${accounting}</td><td><button type="button" class="finance-row-action" data-finance-edit="${row.id}">Изменить</button><button type="button" class="finance-row-action danger" data-finance-delete="${row.id}">Удалить</button></td></tr>`
+      const actions=row.syntheticLoss?'<span class="finance-accounting-badge operating">Автоматически</span>':`<button type="button" class="finance-row-action" data-finance-edit="${row.id}">Изменить</button><button type="button" class="finance-row-action danger" data-finance-delete="${row.id}">Удалить</button>`;
+      return `<tr class="${inventory?'finance-inventory-row':''}"><td>${esc(row.date)}</td><td>${esc(row.category)}</td><td>${esc(row.description||'—')}</td><td>${row.expenseType==='fixed'?'Постоянный':'Переменный'}</td><td>${money(part.gross)}</td><td>${money(part.vat)}${row.vatDeductible===false&&!row.syntheticLoss?' <small>без вычета</small>':''}</td><td>${money(part.net)}</td><td>${accounting}</td><td>${actions}</td></tr>`
     }).join(''):'<tr><td colspan="9">Расходов и закупок за выбранный период нет.</td></tr>';
 
     root.querySelectorAll('[data-finance-edit]').forEach(button=>button.onclick=()=>openExpense(expenses.find(row=>row.id===button.dataset.financeEdit)));
@@ -361,6 +388,9 @@
   window.addEventListener('panora:recipes-changed',render);
   window.addEventListener('panora:retail-orders-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
   window.addEventListener('panora:retail-payments-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
-  window.addEventListener('storage',event=>{if(event.key==='panora-retail-orders'){retailOrders=read('panora-retail-orders',[]);render()}});
+  window.addEventListener('panora:stock-movements-changed',render);
+  window.addEventListener('panora:bake-completions-changed',render);
+  window.addEventListener('panora:bake-completions-cloud-updated',render);
+  window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
   render();setTimeout(()=>{loadCloud();loadRetailCloud()},700);
 })();
