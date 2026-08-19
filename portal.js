@@ -108,11 +108,14 @@ const portalPaymentFinanciallyConfirmed = (payment) =>
 function accountDebt() {
   const shipped = portalNotes()
       .filter((n) => n.restaurantId === account.id)
-      .reduce((s, n) => s + n.total, 0),
-    paid = portalPayments()
+      .reduce((s, n) => s + Number(n.total || 0), 0),
+    settled = portalPayments()
       .filter((p) => p.restaurantId === account.id && portalPaymentFinanciallyConfirmed(p))
-      .reduce((s, p) => s + p.amount, 0);
-  return shipped - paid;
+      .reduce((s, p) => s + Number(p.amount || 0), 0);
+  // Panora 6.98: this legacy profile card is labelled as debt, not net balance.
+  // FIFO overpayment / return credit can create an advance, but must never be rendered
+  // here as a negative debt. The full workspace shows the advance separately.
+  return Math.max(0, shipped - settled);
 }
 function accountText(key) {
   const x = {
