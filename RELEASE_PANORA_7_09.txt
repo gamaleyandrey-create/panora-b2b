@@ -1,0 +1,9 @@
+Panora 7.09 / build 7090
+
+Retail local economic date fix:
+- completed/cancelled retail cloud timestamps are converted to the bakery-local calendar day;
+- finished-stock retail issues keep the correct local day around UTC midnight;
+- Finance FIFO retail sales and Finance period filters use the same local-day rule;
+- retail admin analytics uses the same event date semantics.
+
+No SQL changes.

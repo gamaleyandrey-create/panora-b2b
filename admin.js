@@ -411,9 +411,10 @@ function renderRetailOrderQueue(){
 }
 function retailAnalyticsEventDate(order){
  const status=retailOrderStatus(order);
- if(status==='completed')return String(order?.completedAt||order?.pickupDate||order?.createdAt||'').slice(0,10);
- if(status==='cancelled')return String(order?.cancelledAt||order?.pickupDate||order?.createdAt||'').slice(0,10);
- return String(order?.pickupDate||order?.createdAt||'').slice(0,10);
+ // Panora 7.09: completed/cancelled timestamps come from cloud in UTC; analytics uses local bakery dates.
+ if(status==='completed')return stockStampLocalDay(order?.completedAt||order?.pickupDate||order?.createdAt||'');
+ if(status==='cancelled')return stockStampLocalDay(order?.cancelledAt||order?.pickupDate||order?.createdAt||'');
+ return stockStampLocalDay(order?.pickupDate||order?.createdAt||'');
 }
 function retailAnalyticsPeriodOrders(orders){
  const now=new Date(),today=iso(now);if(retailAnalyticsPeriod==='all')return orders;
@@ -684,17 +685,22 @@ function stockShipmentMovements(){
  }))).filter(m=>m.product&&m.quantity>0);
 }
 function stockRetailCompletedMovements(){
- return readRetailOrders().filter(order=>order&&retailOrderStatus(order)==='completed').flatMap(order=>(order.items||[]).map((item,index)=>({
-  id:`retail-sold:${order.id}:${item.product}:${index}`,
-  date:String(order.completedAt||order.pickupDate||order.updatedAt||'').slice(0,10)||stockLocalDate(),
-  product:String(item.product||''),
-  type:'retail_sold',
-  quantity:Math.max(0,Number(item.quantity||0)),
-  note:`Розничный заказ ${retailOrderNumber(order)}`,
-  retailOrderId:String(order.id||''),
-  occurredAt:order.completedAt||order.updatedAt||order.createdAt||'',
-  virtual:true
- }))).filter(m=>m.product&&m.quantity>0);
+ return readRetailOrders().filter(order=>order&&retailOrderStatus(order)==='completed').flatMap(order=>{
+  // Panora 7.09: keep retail stock issue on its local economic day around UTC midnight.
+  const date=stockStampLocalDay(order.completedAt||order.pickupDate||order.updatedAt||order.createdAt||'')||stockLocalDate();
+  const occurredAt=stockEconomicOccurredAt(date,order.completedAt,order.updatedAt,order.createdAt);
+  return (order.items||[]).map((item,index)=>({
+   id:`retail-sold:${order.id}:${item.product}:${index}`,
+   date,
+   product:String(item.product||''),
+   type:'retail_sold',
+   quantity:Math.max(0,Number(item.quantity||0)),
+   note:`Розничный заказ ${retailOrderNumber(order)}`,
+   retailOrderId:String(order.id||''),
+   occurredAt,
+   virtual:true
+  }));
+ }).filter(m=>m.product&&m.quantity>0);
 }
 function stockEffectiveMovements(){
  const notes=stockCanonicalNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
