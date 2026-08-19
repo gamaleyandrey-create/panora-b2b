@@ -235,15 +235,13 @@
  }
 
  function rawDemandByDate(dateSet){
-  const dates=[...dateSet].sort(),partnerOrders=activeOrders().filter(order=>dateSet.has(dateOfOrder(order))),retailOrders=activeRetailPreorders().filter(order=>dateSet.has(String(order.bakeDate||order.pickupDate||'').slice(0,10)));
-  const partnerHasDemand=partnerOrders.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
-  const retailHasDemand=retailOrders.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0));
-  const hasRealDemand=partnerHasDemand||retailHasDemand,rows=[];
+  const dates=[...dateSet].sort(),partnerOrders=activeOrders().filter(order=>dateSet.has(dateOfOrder(order))),retailOrders=activeRetailPreorders().filter(order=>dateSet.has(String(order.bakeDate||order.pickupDate||'').slice(0,10))),rows=[];
   dates.forEach(date=>{
-   const products=new Map(),partnerProducts=new Map(),retailProducts=new Map();
+   const products=new Map(),partnerProducts=new Map(),retailProducts=new Map(),partnerForDate=partnerOrders.filter(order=>dateOfOrder(order)===date),retailForDate=retailOrders.filter(order=>String(order.bakeDate||order.pickupDate||'').slice(0,10)===date);
+   const partnerHasDemand=partnerForDate.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0)),retailHasDemand=retailForDate.some(order=>(Array.isArray(order.items)?order.items:[]).some(item=>Math.max(0,Number(item?.quantity||0))>0)),hasRealDemand=partnerHasDemand||retailHasDemand;
    if(hasRealDemand){
-    partnerOrders.filter(order=>dateOfOrder(order)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);partnerProducts.set(product,(partnerProducts.get(product)||0)+qty)}}));
-    retailOrders.filter(order=>String(order.bakeDate||order.pickupDate||'').slice(0,10)===date).forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);retailProducts.set(product,(retailProducts.get(product)||0)+qty)}}));
+    partnerForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);partnerProducts.set(product,(partnerProducts.get(product)||0)+qty)}}));
+    retailForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);retailProducts.set(product,(retailProducts.get(product)||0)+qty)}}));
    }else{
     (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));if(product&&qty)products.set(product,(products.get(product)||0)+qty)});
    }
