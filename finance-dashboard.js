@@ -72,12 +72,12 @@
   const retailOrderFromCloud=row=>({
     id:String(row.id||''),number:Number(row.order_number||0),source:String(row.source||'stock'),fulfillment:String(row.fulfillment||'pickup'),
     bakeDate:row.bake_date||'',pickupDate:row.pickup_date||'',deliveryFee:Number(row.delivery_fee||0),status:String(row.status||'new'),
-    paymentStatus:String(row.payment_status||'pending'),paymentMethod:String(row.payment_method||'pickup'),total:Number(row.total||0),createdAt:row.created_at||'',completedAt:row.completed_at||'',
+    paymentStatus:String(row.payment_status||'pending'),paymentMethod:String(row.payment_method||'pickup'),total:Number(row.total||0),createdAt:row.created_at||'',updatedAt:row.updated_at||'',completedAt:row.completed_at||'',cancelledAt:row.cancelled_at||'',
     items:(row.retail_order_items||[]).map(item=>({product:String(item.product_id||''),quantity:Math.max(0,Number(item.quantity||0)),unitPrice:Number(item.unit_price||0)}))
   });
   const loadRetailCloud=async()=>{
     try{
-      const rows=await request('retail_orders?select=id,order_number,source,fulfillment,bake_date,pickup_date,delivery_fee,status,payment_status,payment_method,total,created_at,completed_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');
+      const rows=await request('retail_orders?select=id,order_number,source,fulfillment,bake_date,pickup_date,delivery_fee,status,payment_status,payment_method,total,created_at,updated_at,completed_at,cancelled_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');
       if(Array.isArray(rows)){retailOrders=canonicalRetailOrders(rows.map(retailOrderFromCloud));save('panora-retail-orders',retailOrders);render()}
     }catch{retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]))}
   };
@@ -170,37 +170,54 @@
       });
     });
 
-    // Retail accounting: recognise revenue only when the order is completed and paid.
-    // A full refund removes that order from recognised revenue. Stock/preorder source does not change COGS logic:
-    // COGS is recognised once, on the bread that was actually handed over/delivered.
+    // Panora 6.84 retail accounting: sale and refund are separate accounting events.
+    // The completed sale stays in its original period. A later refund reverses revenue in the
+    // refund period. COGS is reversed only when that same completed order was physically
+    // returned to finished stock through Panora's order-linked return movement.
     const bakery=read('panora-bakery-settings',{}),retailVatRate=bakery?.useTax?Math.max(0,Number(bakery.taxRate||0)):0;
     const netOfVat=gross=>retailVatRate>0?gross/(1+retailVatRate/100):gross;
-    const retailPeriod=(Array.isArray(retailOrders)?retailOrders:[]).filter(order=>inPeriod(order.completedAt||order.pickupDate||order.createdAt));
-    const retailCompleted=retailPeriod.filter(order=>String(order.status)==='completed'&&String(order.paymentStatus)==='paid');
-    const retailRefunded=retailPeriod.filter(order=>String(order.paymentStatus)==='refunded');
+    const allRetail=Array.isArray(retailOrders)?retailOrders:[];
+    const stockMovements=read('panora-stock-movements',[]);
+    const returnedToStock=order=>{
+      const items=Array.isArray(order?.items)?order.items:[];if(!items.length)return false;
+      return items.every((item,index)=>{const id=`retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`,qty=Math.max(0,Number(item?.quantity||0));return qty>0&&(Array.isArray(stockMovements)?stockMovements:[]).some(m=>String(m?.id||'')===id&&String(m?.type||'')==='returned'&&Math.abs(Number(m?.quantity||0))>=qty)});
+    };
+    const saleDate=order=>order.completedAt||order.pickupDate||order.createdAt;
+    const refundDate=order=>order.updatedAt||order.cancelledAt||order.completedAt||order.pickupDate||order.createdAt;
+    const retailCompleted=allRetail.filter(order=>String(order.status)==='completed'&&['paid','refunded'].includes(String(order.paymentStatus))&&inPeriod(saleDate(order)));
+    const retailRefunded=allRetail.filter(order=>String(order.paymentStatus)==='refunded'&&Boolean(order.completedAt)&&inPeriod(refundDate(order)));
     let retailGrossRevenue=0,retailRevenueNet=0,retailSalesVat=0,retailCogs=0,retailPieces=0,retailDeliveryGross=0,retailDeliveryNet=0,retailBreadGross=0,retailBreadNet=0;
+    const retailParts=order=>{
+      const items=Array.isArray(order.items)?order.items:[],itemGross=items.reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0))*Math.max(0,Number(item.unitPrice||0)),0),orderGross=Math.max(0,Number(order.total||0)),deliveryGross=Math.max(0,Math.min(orderGross,Number(order.deliveryFee||0))),breadGross=Math.max(0,Math.min(orderGross-deliveryGross,itemGross||orderGross-deliveryGross)),otherGross=Math.max(0,orderGross-breadGross-deliveryGross),orderNet=netOfVat(orderGross),deliveryNet=netOfVat(deliveryGross),breadNet=Math.max(0,orderNet-deliveryNet);
+      return{items,itemGross,orderGross,deliveryGross,breadGross,otherGross,orderNet,deliveryNet,breadNet};
+    };
     retailCompleted.forEach(order=>{
-      const items=Array.isArray(order.items)?order.items:[];
-      const itemGross=items.reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0))*Math.max(0,Number(item.unitPrice||0)),0);
-      const orderGross=Math.max(0,Number(order.total||0));
-      const deliveryGross=Math.max(0,Math.min(orderGross,Number(order.deliveryFee||0)));
-      const breadGross=Math.max(0,Math.min(orderGross-deliveryGross,itemGross||orderGross-deliveryGross));
-      const otherGross=Math.max(0,orderGross-breadGross-deliveryGross);
-      retailGrossRevenue+=orderGross;retailBreadGross+=breadGross+otherGross;retailDeliveryGross+=deliveryGross;
-      const orderNet=netOfVat(orderGross),deliveryNet=netOfVat(deliveryGross),breadNet=Math.max(0,orderNet-deliveryNet);
-      retailRevenueNet+=orderNet;retailDeliveryNet+=deliveryNet;retailBreadNet+=breadNet;retailSalesVat+=Math.max(0,orderGross-orderNet);
-      const grossBasis=itemGross||1;
-      items.forEach(item=>{
+      const x=retailParts(order);
+      retailGrossRevenue+=x.orderGross;retailBreadGross+=x.breadGross+x.otherGross;retailDeliveryGross+=x.deliveryGross;
+      retailRevenueNet+=x.orderNet;retailDeliveryNet+=x.deliveryNet;retailBreadNet+=x.breadNet;retailSalesVat+=Math.max(0,x.orderGross-x.orderNet);
+      const grossBasis=x.itemGross||1;
+      x.items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
-        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0));
-        const itemNet=breadNet*(itemGrossValue/grossBasis);
-        const itemCogs=unitRawCost(item.product)*qty;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=unitRawCost(item.product)*qty;
         retailCogs+=itemCogs;retailPieces+=qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.pieces+=qty;p.retailPieces+=qty;p.revenue+=itemNet;p.retailRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
       });
     });
-    const retailRefundsGross=retailRefunded.reduce((sum,order)=>sum+Math.max(0,Number(order.total||0)),0);
+    let retailRefundsGross=0;
+    retailRefunded.forEach(order=>{
+      const x=retailParts(order),physicalReturn=returnedToStock(order);retailRefundsGross+=x.orderGross;
+      retailGrossRevenue-=x.orderGross;retailBreadGross-=x.breadGross+x.otherGross;retailDeliveryGross-=x.deliveryGross;retailRevenueNet-=x.orderNet;retailDeliveryNet-=x.deliveryNet;retailBreadNet-=x.breadNet;retailSalesVat-=Math.max(0,x.orderGross-x.orderNet);
+      const grossBasis=x.itemGross||1;
+      x.items.forEach(item=>{
+        const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
+        const itemGrossValue=qty*Math.max(0,Number(item.unitPrice||0)),itemNet=x.breadNet*(itemGrossValue/grossBasis),itemCogs=unitRawCost(item.product)*qty;
+        const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
+        p.revenue-=itemNet;p.retailRevenue-=itemNet;
+        if(physicalReturn){retailCogs-=itemCogs;retailPieces=Math.max(0,retailPieces-qty);p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty}
+        productMap.set(item.product,p);
+      });
+    });
 
     const manualExpenses=expenses.filter(row=>inPeriod(row.date));
     let expensesNet=0,inputVat=0,rawPurchasesNet=0,rawPurchasesGross=0,rawPurchasesVat=0;
@@ -264,7 +281,7 @@
     document.querySelector('#financeCogs').textContent=money(x.cogs);
     const setText=(id,value)=>{const el=document.querySelector(id);if(el)el.textContent=value};
     setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
-    setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} оплаченных завершённых · ${x.retail.refunded} возвратов`);
+    setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} завершённых продаж · ${x.retail.refunded} возвратов`);
     setSignedState(document.querySelector('#financeRetailGrossProfit'),x.retail.grossProfit);
 
     const profit=document.querySelector('#financeOperatingProfit');
@@ -389,6 +406,7 @@
   window.addEventListener('panora:retail-orders-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
   window.addEventListener('panora:retail-payments-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
   window.addEventListener('panora:stock-movements-changed',render);
+  window.addEventListener('panora:finished-stock-cloud-updated',render);
   window.addEventListener('panora:bake-completions-changed',render);
   window.addEventListener('panora:bake-completions-cloud-updated',render);
   window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
