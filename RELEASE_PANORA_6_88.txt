@@ -1,0 +1,11 @@
+Panora 6.88 — partner payment allocation consistency
+
+Build: 6880
+Package series: 8
+
+Changes:
+- fixed partner-side allocation of payments linked to a specific delivery note: any excess now continues FIFO across the oldest remaining delivery-note debts before becoming an advance;
+- aligned legacy partner debt calculations with current payment semantics: cancelled and open-dispute payments no longer reduce the displayed debt.
+
+No mobile-layout or desktop-layout changes in 6.88.
+No new SQL in 6.88.
