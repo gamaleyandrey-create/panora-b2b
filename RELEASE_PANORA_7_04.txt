@@ -1,0 +1,3 @@
+Panora 7.04 / build 7040
+Finished-goods FIFO cost layers for mixed bake batches.
+B2B/retail sales, linked physical returns and write-offs use exact FIFO-derived historical COGS.
