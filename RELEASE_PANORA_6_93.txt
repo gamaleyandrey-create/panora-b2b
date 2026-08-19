@@ -1,0 +1,13 @@
+Panora 6.93 — advance settlement chronology
+
+Build: 6930
+Package series: 8
+
+Changes:
+- an advance / overpayment still automatically covers the oldest open delivery notes and future B2B delivery notes;
+- when a future DN is fully covered by an older advance, its archive close date can no longer precede the DN itself;
+- bakery-side payment allocation details use the real application date when an older payment later covers a newer DN;
+- partner operation history now shows a real advance / overpayment after an operation instead of flattening negative settlement balance to zero;
+- fully covered DNs remain excluded from payment reminders, so this chronology fix does not create false reminders.
+
+No layout redesign. No new SQL.

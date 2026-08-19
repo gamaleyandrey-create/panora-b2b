@@ -902,6 +902,12 @@
       return byPayment.get(key);
     };
 
+    // Panora 6.93: a future DN covered by an older advance closes on the DN date, never before it exists.
+    const settlementAppliedAt=(paymentDate,noteDate)=>{
+      const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
+      const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
+      return noteDay&&(!paymentDay||noteDay>paymentDay)?noteValue:(paymentValue||noteValue);
+    };
     const apply=(row,note,requested)=>{
       if(!note||requested<=0)return 0;
       const key=String(note.id);
@@ -910,9 +916,10 @@
       if(used<=0)return 0;
       const next=Math.max(0,remaining-used);
       remainingByNote.set(key,next);
-      row.allocations.push({note,amount:used});
+      const appliedAt=settlementAppliedAt(row.payment?.receivedAt||row.payment?.date,note.date);
+      row.allocations.push({note,amount:used,appliedAt});
       if(next<=0.005&&!closedAtByNote.has(key)){
-        closedAtByNote.set(key,String(row.payment?.receivedAt||row.payment?.date||note.date||''));
+        closedAtByNote.set(key,appliedAt);
       }
       return used;
     };
@@ -1133,7 +1140,7 @@
             const hidden=paymentSearch&&!searchText.includes(paymentSearch.toLowerCase());
             return `<article class="rw-operation ${operation.kind}${operation.payment?.disputeStatus==="open"?" disputed":""}" data-rw-payment-search data-panora-no-draft="1"-text="${esc(searchText)}"${hidden?" hidden":""}>
               <div><strong>${operation.kind==="delivery"?`${t("delivery")} · ${esc(operation.label)}`:operation.kind==="return"?`${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"} · ${esc(operation.label)}`:`${t("payment")} · ${esc(operation.label)}`}</strong><small>${esc(localDate(operation.date))}${operation.note?.paymentDueDate?` · ${t("paymentDue")}: ${esc(localDate(operation.note.paymentDueDate))}`:""}${operation.payment?.method?` · ${esc(operation.payment.method)}`:""}${partnerPaymentNoteText(operation.payment)?` · ${esc(partnerPaymentNoteText(operation.payment))}`:""}</small>${operation.kind==="payment"||operation.kind==="return"&&operation.payment?partnerPaymentAllocationHtml(operation.payment,paymentDistribution):""}</div>
-              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):`${t("balanceAfter")}: ${portalMoney(Math.max(0,operation.balanceAfter))}`}</small></div>
+              <div class="rw-operation-amount"><b>${operation.kind==="payment"?(operation.payment?.status==="cancelled"?(lang==="ru"?"Оплата отменена ":lang==="es"?"Pago cancelado ":"Payment cancelled "):(lang==="ru"?"Оплата ":lang==="es"?"Pago ":"Payment ")):operation.kind==="return"?(lang==="ru"?"Кредит возврата ":lang==="es"?"Crédito de devolución ":"Return credit "):(lang==="ru"?"Начислено ":lang==="es"?"Cargado ":"Charged ")}${portalMoney(Math.abs(operation.amount))}</b><small>${operation.payment?.status==="cancelled"?(lang==="ru"?"Не участвует в расчётах":lang==="es"?"No afecta al saldo":"Excluded from balance"):operation.payment?.disputeStatus==="open"?(lang==="ru"?"В споре":lang==="es"?"En disputa":"In dispute"):Number(operation.balanceAfter||0)>0.005?`${t("balanceAfter")}: ${portalMoney(operation.balanceAfter)}`:Number(operation.balanceAfter||0)<-0.005?(lang==="ru"?`Аванс после операции: ${portalMoney(Math.abs(operation.balanceAfter))}`:lang==="es"?`Anticipo tras la operación: ${portalMoney(Math.abs(operation.balanceAfter))}`:`Advance after operation: ${portalMoney(Math.abs(operation.balanceAfter))}`):(lang==="ru"?"Расчёты после операции закрыты":lang==="es"?"Saldo liquidado tras la operación":"Settled after operation")}</small></div>
             </article>`;
           }).join("")}</div><p class="rw-finance-empty" data-rw-payment-empty hidden>${t("emptyPayments")}</p>`
         : `<p class="rw-finance-empty">${t("emptyPayments")}</p>`}
