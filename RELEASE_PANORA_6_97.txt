@@ -1,0 +1,13 @@
+Panora 6.97 — B2B reopened-note archive settlement date consistency
+
+Build: 6970
+Package series: 8
+
+Changes:
+- bakery partner-account archive now sorts closed delivery notes by the actual settlement/close moment, not by the original delivery date;
+- a delivery note reopened after a dispute/cancellation and later paid again returns to the archive with its new real close date;
+- archive cards explicitly show the settlement close date;
+- closed B2B rows now say “Расчёты закрыты” instead of “Оплачено полностью”, because a note can be settled partly or fully by a non-cash goods-return credit;
+- payment/return allocation semantics remain unchanged.
+
+No layout redesign. No new SQL.

@@ -152,6 +152,7 @@
       notes.map(note => [String(note.id || note.number), Math.max(0, Number(note.total || 0))])
     );
     const byId = new Map();
+    const closedAtByNote = new Map();
     const confirmed = payments
       .filter(payment =>
         payment.restaurantId === id &&
@@ -176,10 +177,12 @@
       const due = Math.max(0, Number(remaining.get(key) || 0));
       const used = Math.min(due, Math.max(0, Number(amount || 0)));
       if (used <= 0.005) return 0;
-      remaining.set(key, Math.max(0, due - used));
+      const next=Math.max(0, due - used);
+      remaining.set(key, next);
       const entry = byId.get(paymentId) || { rows: [], credit: 0, returnCredit: returnCreditPayment(payment) };
       const appliedAt=settlementAppliedAt(date||payment.receivedAt||payment.date,note.date);
       entry.rows.push({ note, amount: used, date: appliedAt });
+      if(next<=0.005&&!closedAtByNote.has(key))closedAtByNote.set(key,appliedAt);
       byId.set(paymentId, entry);
       return used;
     };
@@ -210,6 +213,10 @@
       }
     });
 
+    // Panora 6.97: expose the actual settlement moment for the bakery archive.
+    // Reopened notes must return to the archive according to the latest real close,
+    // not according to their old delivery date.
+    byId.closedAtByNote=closedAtByNote;
     return byId;
   }
 
@@ -261,7 +268,12 @@
   function renderDebtBlock(id) {
     const allocation=allocationFor(id);
     const active=allocation.notes.filter(row=>Number(row.due||0)>0.005);
-    const archived=allocation.notes.filter(row=>Number(row.due||0)<=0.005).slice().reverse();
+    const settlement=paymentDistributionFor(id);
+    const closedAtByNote=settlement?.closedAtByNote||new Map();
+    const archived=allocation.notes
+      .filter(row=>Number(row.due||0)<=0.005)
+      .map(row=>({...row,closedAt:closedAtByNote.get(String(row.note?.id||row.note?.number||""))||row.note?.date||""}))
+      .sort((a,b)=>String(b.closedAt||b.note?.date||"").localeCompare(String(a.closedAt||a.note?.date||""))||Number(b.note?.number||0)-Number(a.note?.number||0));
     let debtBlock = dialog.querySelector("#accountDetailDebts");
     if (!debtBlock) {
       debtBlock = document.createElement("section");
@@ -278,8 +290,8 @@
       : "";
 
     const listHtml=rows.length
-      ? `<div class="account-detail-debt-list ${debtTab==="archive"?"is-archive":""}">${rows.map(({note,total,paid,due}) =>
-          `<article class="account-note-card" data-account-note="${String(note.id)}" tabindex="0" role="button"><div><button type="button" class="account-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button><span>Поставка: ${prettyDate(note.date)}</span>${note.paymentDueDate?`<small>Оплатить до: ${prettyDate(note.paymentDueDate)}</small>`:""}</div><div><span>Сумма ${euro(total)}</span><span>Зачтено ${euro(paid)}</span>${due>0.005?`<b>К оплате ${euro(due)}</b>`:`<b class="paid-full">Оплачено полностью</b>`}</div></article>`
+      ? `<div class="account-detail-debt-list ${debtTab==="archive"?"is-archive":""}">${rows.map(({note,total,paid,due,closedAt}) =>
+          `<article class="account-note-card" data-account-note="${String(note.id)}" tabindex="0" role="button"><div><button type="button" class="account-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button><span>Поставка: ${prettyDate(note.date)}</span>${note.paymentDueDate?`<small>Оплатить до: ${prettyDate(note.paymentDueDate)}</small>`:""}${debtTab==="archive"&&closedAt?`<small>Расчёты закрыты: ${prettyDate(closedAt)}</small>`:""}</div><div><span>Сумма ${euro(total)}</span><span>Зачтено ${euro(paid)}</span>${due>0.005?`<b>К оплате ${euro(due)}</b>`:`<b class="paid-full">Расчёты закрыты</b>`}</div></article>`
         ).join("")}</div>`
       : debtTab==="archive"
         ? `<p class="account-detail-no-debt">В архиве пока нет полностью оплаченных накладных.</p>`
