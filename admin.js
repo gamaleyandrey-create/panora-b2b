@@ -548,6 +548,16 @@ function signed(m){
  const qty=Math.abs(Number(m?.quantity||0));
  return ['shipped','retail_sold','written_off','correction_minus'].includes(type)?-qty:qty;
 }
+/* Panora 6.82 — an inventory count is an absolute stock checkpoint, not a forever-fixed delta. */
+function stockInventoryTarget(m){
+ const match=String(m?.note||'').match(/^Инвентаризация:\s*установлен остаток\s+(-?\d+(?:[.,]\d+)?)\s*шт\./i);
+ if(!match)return null;
+ const target=Number(String(match[1]).replace(',','.'));
+ return Number.isFinite(target)?Math.max(0,target):null;
+}
+function stockMovementOrderKey(m){
+ return `${String(m?.date||'')}\u0000${String(m?.occurredAt||m?.createdAt||'')}\u0000${String(m?.id||'')}`;
+}
 function stockOperationLabel(type){
  return ({
   baked:'Выпечка',
@@ -609,7 +619,19 @@ function stockRetailCompletedMovements(){
 function stockEffectiveMovements(){
  const notes=stockCanonicalNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
  const manual=movements.filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
- return [...manual,...stockAutoBakeMovements(),...stockShipmentMovements(),...stockRetailCompletedMovements()];
+ const source=[...manual,...stockAutoBakeMovements(),...stockShipmentMovements(),...stockRetailCompletedMovements()]
+  .slice().sort((a,b)=>stockMovementOrderKey(a).localeCompare(stockMovementOrderKey(b)));
+ const balances=new Map();
+ return source.map(m=>{
+  const product=String(m?.product||''),before=Number(balances.get(product)||0),target=m?.virtual?null:stockInventoryTarget(m);
+  let effective=m;
+  if(target!==null){
+   const delta=target-before;
+   effective={...m,type:delta<0?'correction_minus':'correction_plus',quantity:Math.abs(delta),inventorySet:true,inventoryTarget:target,inventoryDelta:delta};
+  }
+  balances.set(product,before+signed(effective));
+  return effective;
+ });
 }
 function stockRawBalance(product){
  return stockEffectiveMovements().filter(m=>String(m.product)===String(product)).reduce((sum,m)=>sum+signed(m),0);
@@ -685,7 +707,7 @@ function renderStock(){
  tabs.innerHTML=`<button type="button" class="${stockMovementView==='active'?'active':''}" data-stock-view="active"><span>Активные</span><b>${recent.length}</b></button><button type="button" class="${stockMovementView==='archive'?'active':''}" data-stock-view="archive"><span>Архив</span><b>${archive.length}</b></button>`;
  tabs.querySelectorAll('[data-stock-view]').forEach(button=>button.onclick=()=>{stockMovementView=button.dataset.stockView;renderStock()});
  const rows=stockMovementView==='archive'?archive:recent;
- $('#movementRows').innerHTML=rows.length?rows.map(m=>{const value=signed(m);return `<tr class="${m.virtual?'stock-auto-row':''}"><td>${fmt(m.date)}</td><td>${adminEscape(stockProductName(m.product))}</td><td><span class="stock-operation stock-operation-${adminEscape(m.type)}">${stockOperationLabel(m.type)}</span></td><td class="${value<0?'stock-qty-minus':'stock-qty-plus'}">${value>0?'+':''}${value} ${t('pcs')}</td><td>${stockMovementNote(m)}</td></tr>`}).join(''):`<tr><td colspan="5">Движений пока нет.</td></tr>`;
+ $('#movementRows').innerHTML=rows.length?rows.map(m=>{const value=signed(m),operation=m.inventorySet?'Инвентаризация':stockOperationLabel(m.type);return `<tr class="${m.virtual?'stock-auto-row':''}"><td>${fmt(m.date)}</td><td>${adminEscape(stockProductName(m.product))}</td><td><span class="stock-operation stock-operation-${adminEscape(m.type)}">${adminEscape(operation)}</span></td><td class="${value<0?'stock-qty-minus':'stock-qty-plus'}">${value>0?'+':''}${value} ${t('pcs')}</td><td>${stockMovementNote(m)}</td></tr>`}).join(''):`<tr><td colspan="5">Движений пока нет.</td></tr>`;
  $$('[data-stock-note]').forEach(b=>b.onclick=()=>stockOpenNote(b.dataset.stockNote,b.dataset.stockOrder));
  $$('[data-stock-bake]').forEach(b=>b.onclick=()=>stockOpenBake(b.dataset.stockBake));
 }

@@ -1,0 +1,12 @@
+Panora 6.82 — finished-stock inventory checkpoint stabilization
+
+Build: 6820
+Package series: 8
+
+Changes:
+- finished-bread inventory counts are treated as absolute physical-stock checkpoints when the ledger is recalculated;
+- a later correction of an earlier bake completion no longer moves the already inventoried finished-bread balance away from the counted quantity;
+- existing inventory adjustments remain cloud-compatible: the target quantity is recovered from the existing inventory note, so no Supabase schema change is required;
+- stock movement history labels these generated checkpoint adjustments as inventory operations.
+
+No layout changes. No new SQL.
