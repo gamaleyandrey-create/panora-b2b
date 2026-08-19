@@ -1,0 +1,13 @@
+Panora 6.92 — chronological B2B return-credit allocation history
+
+Build: 6920
+Package series: 8
+
+Changes:
+- bakery account history now reconstructs cash payments and goods-return credits chronologically from the original delivery-note totals;
+- a late goods return no longer retroactively makes an older cash payment appear to have been allocated to another delivery note;
+- return-credit history can show where the credit was actually applied: linked DN, FIFO debt, or advance / overpayment;
+- linked cash overpayments also expose their FIFO spill / advance when it is materially relevant;
+- the shared finance timeline carries the matching return-credit operation metadata so the partner finance history can show the same allocation detail.
+
+No layout changes. No new SQL.

@@ -1019,7 +1019,7 @@ const paymentReminderAllocationSnapshot=(restaurantId,{forceActiveId=null}={})=>
     return[String(note.id),Math.max(0,total-paid)];
   }));
 };
-/* Panora 6.91: payment-reminder reopening is DN-specific. An unrelated disputed/cancelled
+/* Panora 6.92: payment-reminder reopening is DN-specific. An unrelated disputed/cancelled
    payment must not resurrect a reminder whose delivery-note balance never changed. */
 const paymentReminderStates=(restaurantId,allocation)=>{
   const currentDue=allocation?.notes

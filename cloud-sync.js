@@ -1243,8 +1243,9 @@ function financeTimeline(restaurantId){
   if(typeof deliveryNotes==='undefined'||typeof payments==='undefined')return[];
   const notes=deliveryNotes.filter(note=>note.restaurantId===restaurantId);
   const noteById=new Map(notes.map(note=>[note.id,note]));
+  const returnCreditById=new Map(payments.filter(payment=>payment.restaurantId===restaurantId&&isB2BReturnCreditPayment(payment)).map(payment=>[String(payment.id||''),payment]));
   const returnEvents=notes.flatMap(note=>b2bReturnCreditForNote(note).rows.map((row,index)=>({
-    id:`return:${row.movement?.id||note.id+':'+index}`,date:String(row.movement?.date||note.date||''),kind:'return',sequence:Number(note.number||0)*2+0.5,note,movement:row.movement,product:row.product,quantity:row.quantity,amount:Number(row.gross||0)
+    id:`return:${row.movement?.id||note.id+':'+index}`,date:String(row.movement?.date||note.date||''),kind:'return',sequence:Number(note.number||0)*2+0.5,note,movement:row.movement,product:row.product,quantity:row.quantity,amount:Number(row.gross||0),payment:returnCreditById.get(String(row.movement?.id||''))||null
   })));
   const events=[
     ...notes.map(note=>({

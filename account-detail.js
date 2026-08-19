@@ -144,18 +144,22 @@
       .slice()
       .sort((a,b) =>
         String(a.date || "").localeCompare(String(b.date || "")) ||
-        Number(a.number || 0) - Number(b.number || 0)
+        Number(a.number || 0) - Number(b.number || 0) ||
+        String(a.id || "").localeCompare(String(b.id || ""))
       );
+    // Panora 6.92: reconstruct operation allocation chronologically from original DN
+    // totals. A later goods-return credit is its own event and must not retroactively
+    // make an older cash payment look as if it had been applied to another DN.
     const remaining = new Map(
-      notes.map(note => [String(note.id || note.number), typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0))])
+      notes.map(note => [String(note.id || note.number), Math.max(0, Number(note.total || 0))])
     );
     const byId = new Map();
     const confirmed = payments
       .filter(payment =>
         payment.restaurantId === id &&
         paymentConfirmed(payment) &&
-        !returnCreditPayment(payment) &&
-        payment.status !== "cancelled"
+        payment.status !== "cancelled" &&
+        Number(payment.amount || 0) > 0
       )
       .slice()
       .sort((a,b) =>
@@ -169,7 +173,7 @@
       const used = Math.min(due, Math.max(0, Number(amount || 0)));
       if (used <= 0.005) return 0;
       remaining.set(key, Math.max(0, due - used));
-      const entry = byId.get(paymentId) || { rows: [], credit: 0 };
+      const entry = byId.get(paymentId) || { rows: [], credit: 0, returnCredit: returnCreditPayment(payment) };
       entry.rows.push({ note, amount: used, date: String(date || payment.receivedAt || payment.date || note.date || "") });
       byId.set(paymentId, entry);
       return used;
@@ -178,7 +182,7 @@
     confirmed.forEach(payment => {
       const paymentId = String(payment.id || "");
       let left = Math.max(0, Number(payment.amount || 0));
-      byId.set(paymentId, { rows: [], credit: 0 });
+      byId.set(paymentId, { rows: [], credit: 0, returnCredit: returnCreditPayment(payment) });
 
       if (payment.deliveryNoteId) {
         const target = notes.find(note =>
@@ -187,8 +191,8 @@
         );
         if (target) left -= takeFromNote(paymentId, target, left, payment.receivedAt||payment.date||target.date, payment);
       }
-      // Any excess from a payment linked to one DN follows the same FIFO rule as the
-      // accounting engine: close the oldest remaining debts, then keep only the rest as credit.
+      // Cash overpayments and goods-return credits use the same FIFO continuation:
+      // after the linked DN, apply any remainder to the oldest open DN, then to advance.
       for (const note of notes) {
         if (left <= 0.005) break;
         left -= takeFromNote(paymentId, note, left, payment.receivedAt||payment.date||note.date, payment);
@@ -205,11 +209,16 @@
   }
 
   function paymentDistributionHtml(id, item) {
-    if (!item?.id || item.amount >= 0 || item.className.includes("pending")) return "";
+    if (!item?.id || item.amount >= 0 || item.className.includes("pending") || item.className.includes("cancelled") || item.className.includes("disputed")) return "";
     const payment = payments.find(row => String(row.id) === String(item.id));
-    if (!payment || payment.deliveryNoteId) return "";
+    if (!payment) return "";
     const distribution = paymentDistributionFor(id).get(String(item.id));
     if (!distribution) return "";
+    const isReturnCredit=returnCreditPayment(payment);
+    const targetId=String(payment.deliveryNoteId||"");
+    const spills=(distribution.rows||[]).some(({note})=>targetId&&String(note.id||note.number)!==targetId);
+    const meaningful=isReturnCredit||!payment.deliveryNoteId||spills||Number(distribution.credit||0)>0.005||(distribution.rows||[]).length>1;
+    if(!meaningful)return "";
 
     const rows = (distribution.rows || []).map(({note, amount, date}) =>
       `<div><span>${prettyDate(date)} · <button type="button" class="account-allocation-note-link" data-account-note="${String(note.id)}">DN-${String(note.number).padStart(4,"0")}</button></span><strong>${euro(amount)}</strong></div>`
@@ -222,7 +231,7 @@
     }
 
     return `<details class="payment-allocation">
-      <summary>Распределение платежа</summary>
+      <summary>${isReturnCredit?"Распределение кредита возврата":"Распределение платежа"}</summary>
       <div class="payment-allocation-rows">${rows.join("")}</div>
     </details>`;
   }
