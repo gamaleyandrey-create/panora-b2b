@@ -184,7 +184,11 @@
     const b2bReturnNoteId=movement=>{const direct=String(movement?.b2bReturnNoteId||'');if(direct)return direct;const match=String(movement?.note||'').match(/\[panora:b2b-return:([^\]]+)\]/);return match?String(match[1]):''};
     const retailReturnOrderId=movement=>{const direct=String(movement?.retailOrderId||'');if(direct)return direct;const match=String(movement?.note||'').match(/\[panora:retail-return:([^:\]]+):/);return match?String(match[1]):''};
     const stockInventoryTarget=movement=>{const match=String(movement?.note||'').match(/^Инвентаризация:\s*установлен остаток\s+(-?\d+(?:[.,]\d+)?)\s*шт\./i);if(!match)return null;const target=Number(String(match[1]).replace(',','.'));return Number.isFinite(target)?Math.max(0,target):null};
-    const economicEventStamp=(date,...candidates)=>{const day=String(date||'').slice(0,10);if(!day)return '';for(const value of candidates){const stamp=String(value||'');if(stamp.length>10&&stamp.slice(0,10)===day)return stamp}return `${day}T12:00:00.000Z`};
+    // Panora 7.08: economic dates are local calendar dates while cloud timestamps are UTC.
+    // Around local midnight, compare the timestamp's local day rather than stamp.slice(0,10),
+    // otherwise a real 00:30 bake can be pushed to noon and cross an inventory checkpoint.
+    const stampLocalDay=value=>{const stamp=String(value||'');if(!stamp)return '';const parsed=new Date(stamp);return Number.isNaN(parsed.getTime())?stamp.slice(0,10):iso(parsed)};
+    const economicEventStamp=(date,...candidates)=>{const day=String(date||'').slice(0,10);if(!day)return '';for(const value of candidates){const stamp=String(value||'');if(stamp.length>10&&stampLocalDay(stamp)===day)return stamp}return `${day}T12:00:00.000Z`};
     // Panora 7.07: FIFO fallback valuation must respect time inside the day as well as the date.
     // Example: a 09:00 inventory increase must not borrow the cost of a more expensive bake
     // completed at 15:00 the same day. Use only cost snapshots economically available by cutoff.
