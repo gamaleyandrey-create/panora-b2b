@@ -80,17 +80,21 @@
       if(Array.isArray(rows)){retailOrders=canonicalRetailOrders(rows.map(retailOrderFromCloud));save('panora-retail-orders',retailOrders);render()}
     }catch{retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]))}
   };
+  const cloudConfigured=()=>Boolean(cfg.url&&cfg.publishableKey);
   const persist=async row=>{
+    // Financial edits must never look saved locally when the configured cloud rejected them.
+    // In a cloud-backed installation the server confirms first; local mode remains available only when Supabase is not configured.
+    if(cloudConfigured()){
+      await request('finance_expenses?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rowToCloud(row))});
+    }
     const index=expenses.findIndex(x=>x.id===row.id);
     if(index>=0)expenses[index]=row;else expenses.push(row);
     save(KEY,expenses);render();
-    try{
-      await request('finance_expenses?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rowToCloud(row))});
-    }catch{}
+    return true;
   };
   const remove=async id=>{
-    expenses=expenses.filter(row=>row.id!==id);save(KEY,expenses);render();
-    try{await request(`finance_expenses?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'})}catch{}
+    if(cloudConfigured())await request(`finance_expenses?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'});
+    expenses=expenses.filter(row=>row.id!==id);save(KEY,expenses);render();return true;
   };
 
   const from=document.querySelector('#financeDateFrom'),to=document.querySelector('#financeDateTo');
@@ -307,7 +311,12 @@
     }).join(''):'<tr><td colspan="9">Расходов и закупок за выбранный период нет.</td></tr>';
 
     root.querySelectorAll('[data-finance-edit]').forEach(button=>button.onclick=()=>openExpense(expenses.find(row=>row.id===button.dataset.financeEdit)));
-    root.querySelectorAll('[data-finance-delete]').forEach(button=>button.onclick=()=>{if(confirm('Удалить этот расход?'))remove(button.dataset.financeDelete)});
+    root.querySelectorAll('[data-finance-delete]').forEach(button=>button.onclick=async()=>{
+      if(!confirm('Удалить этот расход?'))return;
+      button.disabled=true;
+      try{await remove(button.dataset.financeDelete)}
+      catch(error){button.disabled=false;alert(`Не удалось удалить расход из облака. Изменения не применены. ${error?.message||''}`.trim())}
+    });
   }
 
   const dialog=document.querySelector('#financeExpenseDialog'),form=document.querySelector('#financeExpenseForm'),preview=document.querySelector('#financeExpensePreview');
@@ -334,11 +343,14 @@
   };
   document.querySelector('#financeExpenseClose').onclick=document.querySelector('#financeExpenseCancel').onclick=()=>dialog.close();
   form.grossAmount.oninput=form.vatRate.oninput=previewExpense;
-  form.onsubmit=event=>{
+  form.onsubmit=async event=>{
     event.preventDefault();const data=Object.fromEntries(new FormData(form)),gross=parse(data.grossAmount);
     if(gross<=0)return alert('Введите сумму расхода больше нуля.');
     const row={id:data.id||crypto.randomUUID(),date:data.date,category:data.category,description:data.description||'',expenseType:data.expenseType,grossAmount:gross,vatRate:Math.max(0,parse(data.vatRate)),vatDeductible:form.vatDeductible.checked};
-    persist(row);dialog.close();
+    const submit=form.querySelector('[type="submit"]');if(submit)submit.disabled=true;
+    try{await persist(row);dialog.close()}
+    catch(error){alert(`Не удалось сохранить расход в облаке. Изменения не применены. ${error?.message||''}`.trim())}
+    finally{if(submit)submit.disabled=false}
   };
 
   from.onchange=to.onchange=render;

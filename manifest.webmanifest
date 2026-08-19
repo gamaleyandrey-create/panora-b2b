@@ -1,7 +1,7 @@
 {
   "name": "Panora",
   "short_name": "Panora",
-  "start_url": "./index.html?source=pwa&build=6780",
+  "start_url": "./index.html?source=pwa&build=6790",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6f2",

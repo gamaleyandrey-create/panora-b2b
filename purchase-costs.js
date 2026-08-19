@@ -48,8 +48,10 @@
 
  function allAvailableDates(){
   const fromOrders=activeOrders().map(dateOfOrder).filter(Boolean);
+  const fromRetail=activeRetailPreorders().map(order=>String(order?.bakeDate||order?.pickupDate||'').slice(0,10)).filter(Boolean);
   const fromPlans=(Array.isArray(plans)?plans:[]).map(plan=>plan?.bakeDate).filter(Boolean);
-  return [...new Set([...fromOrders,...fromPlans])].sort();
+  const fromCompletions=readBakeCompletions().filter(item=>item&&!item.deletedAt).map(item=>String(item.date||'').slice(0,10)).filter(Boolean);
+  return [...new Set([...fromOrders,...fromRetail,...fromPlans,...fromCompletions])].sort();
  }
 
  function availableDates(view=purchaseView){
@@ -741,8 +743,8 @@
   document.querySelector('#costPurchaseLabel').textContent=isArchive?'Расчётная закупка':'Нужно закупить';
   document.querySelector('#purchaseBuyHeader').textContent=isArchive?'Требовалось':'Купить';
   document.querySelector('#purchaseModeHint').textContent=isArchive
-    ? 'Архив предназначен только для просмотра прошлых дат. Расчёт показывает реальные партнёрские и розничные предзаказы либо план, если реальных заказов во всей выборке не было; данные закупки здесь не редактируются.'
-    : 'Отметьте одну или несколько дат выпечки. Реальный спрос = партнёры + розничные предзаказы «К выпечке». План используется только если во всей выборке нет реальных заказов. Покупки из наличия не создают новую потребность в сырье.';
+    ? 'Архив предназначен только для просмотра прошлых дат. Расчёт показывает реальные партнёрские и розничные предзаказы; для каждой даты без реальных заказов используется план. Данные закупки здесь не редактируются.'
+    : 'Отметьте одну или несколько дат выпечки. Реальный спрос = партнёры + розничные предзаказы «К выпечке». Для каждой выбранной даты план используется только если на эту дату нет реальных заказов. Покупки из наличия не создают новую потребность в сырье.';
   const {demand,rows,breadCosts}=buildTotals(),priceMap=costs();
   const pieces=demand.reduce((sum,row)=>sum+Number(row.quantity||0),0);
   const consumption=breadCosts.reduce((sum,row)=>sum+row.totalCost,0);
