@@ -1115,8 +1115,8 @@
     if(!ready)throw new Error('Облако ещё загружается.');
     const mode=decision==='cancel'?'cancel':'keep';
     const patch=mode==='cancel'
-      ? {status:'cancelled',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null}
-      : {status:'confirmed',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null};
+      ? {status:'cancelled',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null,updated_at:new Date().toISOString()}
+      : {status:'confirmed',dispute_status:'none',dispute_reason:null,disputed_at:null,dispute_deadline:null,updated_at:new Date().toISOString()};
     const rows=await request(`payments?id=eq.${encodeURIComponent(paymentId)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(patch)});
     const row=Array.isArray(rows)?rows[0]:rows;
     if(!row?.id)throw new Error(mode==='cancel'?'Сервер не подтвердил отмену оплаты.':'Сервер не подтвердил снятие спора.');
@@ -1245,48 +1245,81 @@ function financeTimeline(restaurantId){
   const noteById=new Map(notes.map(note=>[note.id,note]));
   const returnCreditById=new Map(payments.filter(payment=>payment.restaurantId===restaurantId&&isB2BReturnCreditPayment(payment)).map(payment=>[String(payment.id||''),payment]));
   const returnEvents=notes.flatMap(note=>b2bReturnCreditForNote(note).rows.map((row,index)=>({
-    id:`return:${row.movement?.id||note.id+':'+index}`,date:String(row.movement?.date||note.date||''),kind:'return',sequence:Number(note.number||0)*2+0.5,note,movement:row.movement,product:row.product,quantity:row.quantity,amount:Number(row.gross||0),payment:returnCreditById.get(String(row.movement?.id||''))||null
+    id:`return:${row.movement?.id||note.id+':'+index}`,date:String(row.movement?.date||note.date||''),occurredAt:String(row.movement?.createdAt||`${row.movement?.date||note.date||''}T12:00:00`),kind:'return',sequence:Number(note.number||0)*2+0.5,note,movement:row.movement,product:row.product,quantity:row.quantity,amount:Number(row.gross||0),payment:returnCreditById.get(String(row.movement?.id||''))||null
   })));
+  const paymentEvents=payments.filter(payment=>payment.restaurantId===restaurantId&&!isB2BReturnCreditPayment(payment)).flatMap(payment=>{
+    const linkedNote=noteById.get(payment.deliveryNoteId);
+    const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
+    const amount=Number(payment.amount||0);
+    const originallyConfirmed=Boolean(payment.confirmedAt)||['confirmed','cancelled'].includes(String(payment.status||''))||String(payment.disputeStatus||'')==='open';
+    const received={
+      id:`payment:${payment.id}`,
+      date:String(payment.date||localDate(payment.receivedAt)||''),
+      occurredAt:String(payment.receivedAt||`${payment.date||''}T12:00:00`),
+      kind:'payment',
+      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1000000,
+      payment,
+      amount,
+      linkedNote:linkedNote||null,
+      financialEffect:originallyConfirmed?-amount:0,
+      timelineState:originallyConfirmed?'received':'pending'
+    };
+    const reversalType=String(payment.status||'')==='cancelled'?'cancel':String(payment.disputeStatus||'')==='open'?'dispute':'';
+    if(!reversalType||!originallyConfirmed)return[received];
+    const stateAt=reversalType==='dispute'?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt);
+    return[received,{
+      id:`payment-reversal:${payment.id}:${reversalType}`,
+      date:String(localDate(stateAt)||payment.date||''),
+      occurredAt:String(stateAt||`${payment.date||''}T23:59:59`),
+      kind:'payment_reversal',
+      sequence:1000001,
+      payment,
+      amount,
+      linkedNote:linkedNote||null,
+      financialEffect:amount,
+      reversalType
+    }];
+  });
   const events=[
     ...notes.map(note=>({
       id:`delivery:${note.id}`,
       date:String(note.date||''),
+      occurredAt:`${String(note.date||'')}T12:00:00`,
       kind:'delivery',
       sequence:Number(note.number||0)*2,
       note,
       amount:Number(note.total||0)
     })),
     ...returnEvents,
-    ...payments.filter(payment=>payment.restaurantId===restaurantId&&!isB2BReturnCreditPayment(payment)).map(payment=>{
-      const linkedNote=noteById.get(payment.deliveryNoteId);
-      const paidAtShipment=linkedNote&&String(linkedNote.date||'')===String(payment.date||'');
-      return{
-        id:`payment:${payment.id}`,
-        date:String(payment.date||''),
-        kind:'payment',
-        sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1000000,
-        payment,
-        amount:Number(payment.amount||0),
-        linkedNote:linkedNote||null
-      };
-    })
-  ].sort((a,b)=>a.date.localeCompare(b.date)||a.sequence-b.sequence||a.id.localeCompare(b.id));
+    ...paymentEvents
+  ].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.sequence||0)-Number(b.sequence||0)||String(a.occurredAt||'').localeCompare(String(b.occurredAt||''))||a.id.localeCompare(b.id));
 
-  let running=0;
+  // Panora 6.96: history is event-sourced. A confirmed payment remains on its original
+  // receipt date; a later dispute/cancellation is a separate reversal on its own date.
+  // This keeps the current debt identical while avoiding retroactive rewriting of history.
+  let historyRunning=0;
+  events.forEach(event=>{
+    if(event.kind==='delivery')historyRunning+=event.amount;
+    else if(event.kind==='return')historyRunning-=event.amount;
+    else historyRunning+=Number(event.financialEffect||0);
+    event.balanceAfter=historyRunning;
+  });
+
+  // Preserve the existing current-state note fields used by document previews: disputed or
+  // cancelled payments do not reduce the current note balance. History balances above remain
+  // chronological and are not reused for this mutable current-state projection.
+  let currentRunning=0;
   events.forEach(event=>{
     if(event.kind==='delivery'){
-      event.note.balanceBefore=running;
-      running+=event.amount;
-      event.note.balanceAfter=Math.max(0,running);
+      event.note.balanceBefore=currentRunning;
+      currentRunning+=event.amount;
+      event.note.balanceAfter=Math.max(0,currentRunning);
     }else if(event.kind==='return'){
-      running-=event.amount;
-    }else if(paymentFinanciallyConfirmed(event.payment)){
-      running-=event.amount;
-      if(event.linkedNote&&event.date===String(event.linkedNote.date||'')){
-        event.linkedNote.balanceAfter=Math.max(0,running);
-      }
+      currentRunning-=event.amount;
+    }else if(event.kind==='payment'&&paymentFinanciallyConfirmed(event.payment)){
+      currentRunning-=event.amount;
+      if(event.linkedNote&&event.date===String(event.linkedNote.date||''))event.linkedNote.balanceAfter=Math.max(0,currentRunning);
     }
-    event.balanceAfter=running;
   });
 
   financeAllocation(restaurantId);

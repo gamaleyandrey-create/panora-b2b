@@ -73,17 +73,44 @@
       return window.panoraFinanceTimeline(id).slice().reverse().map((event) => {
         if(event.kind === "delivery")return {date:event.date,type:"Отгрузка",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:event.amount,className:"shipment",balanceAfter:event.balanceAfter};
         if(event.kind === "return")return {id:event.movement?.id,date:event.date,type:"Возврат по накладной",number:`DN-${String(event.note.number).padStart(4, "0")}`,amount:-event.amount,className:"return",balanceAfter:event.balanceAfter};
-        const disputed=event.payment?.disputeStatus === "open",cancelled=event.payment?.status === "cancelled";
+        if(event.kind === "payment_reversal")return {
+          id:event.payment.id,date:event.date,
+          type:event.reversalType === "cancel" ? "Оплата отменена" : "Оплата оспорена",
+          number:event.payment.note || event.payment.method || "",amount:event.amount,
+          className:event.reversalType === "cancel" ? "payment reversal cancelled" : "payment reversal disputed",
+          balanceAfter:event.balanceAfter,disputeReason:event.payment?.disputeReason||""
+        };
+        const pending=event.timelineState === "pending";
         return {
-          id: event.payment.id,date: event.date,
-          type: cancelled ? "Оплата отменена" : disputed ? "Оплата оспорена" : paymentConfirmed(event.payment) ? event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата" : "Ожидает подтверждения",
-          number: event.payment.note || event.payment.method || "",amount: -event.amount,
-          className: cancelled ? "payment cancelled" : disputed ? "payment disputed" : paymentConfirmed(event.payment) ? "payment" : "payment pending",balanceAfter: event.balanceAfter,
-          disputeReason:event.payment?.disputeReason||""
+          id:event.payment.id,date:event.date,
+          type:pending ? "Ожидает подтверждения" : event.payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата",
+          number:event.payment.note || event.payment.method || "",amount:-event.amount,
+          className:pending ? "payment pending" : "payment",balanceAfter:event.balanceAfter,
+          disputeReason:""
         };
       });
     }
     let running = 0;
+    const paymentHistoryEvents=payments
+      .filter(payment=>payment.restaurantId===id)
+      .flatMap(payment=>{
+        if(returnCreditPayment(payment))return [{
+          id:payment.id,date:payment.date,type:"Возврат по накладной",number:payment.note||payment.method||"",amount:-payment.amount,className:"return",sort:.5
+        }];
+        const originallyConfirmed=Boolean(payment.confirmedAt)||["confirmed","cancelled"].includes(String(payment.status||""))||payment.disputeStatus==="open";
+        const rows=[{
+          id:payment.id,date:payment.date,
+          type:originallyConfirmed?(payment.deliveryNoteId?"Оплата по накладной":"Общая оплата"):"Ожидает подтверждения",
+          number:payment.note||payment.method||"",amount:-payment.amount,
+          className:originallyConfirmed?"payment":"payment pending",sort:1,effect:originallyConfirmed?-Number(payment.amount||0):0
+        }];
+        const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
+        if(reversalType&&originallyConfirmed){
+          const stateAt=reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt);
+          rows.push({id:payment.id,date:String(stateAt||payment.date||"").slice(0,10),type:reversalType==="cancel"?"Оплата отменена":"Оплата оспорена",number:payment.note||payment.method||"",amount:Number(payment.amount||0),className:reversalType==="cancel"?"payment reversal cancelled":"payment reversal disputed",disputeReason:payment.disputeReason||"",sort:2,effect:Number(payment.amount||0)});
+        }
+        return rows;
+      });
     return [
       ...deliveryNotes
         .filter((note) => note.restaurantId === id)
@@ -94,44 +121,15 @@
           amount: note.total,
           className: "shipment",
           sort: 0,
+          effect:Number(note.total||0)
         })),
-      ...payments
-        .filter((payment) => payment.restaurantId === id)
-        .map((payment) => ({
-          id: payment.id,
-          date: payment.date,
-          type: returnCreditPayment(payment)
-            ? "Возврат по накладной"
-            : payment.status === "cancelled"
-              ? "Оплата отменена"
-              : payment.disputeStatus === "open"
-                ? "Оплата оспорена"
-                : paymentConfirmed(payment)
-                ? payment.deliveryNoteId ? "Оплата по накладной" : "Общая оплата"
-                : "Ожидает подтверждения",
-          number: payment.note || payment.method || "",
-          amount: -payment.amount,
-          className: returnCreditPayment(payment)
-            ? "return"
-            : payment.status === "cancelled"
-              ? "payment cancelled"
-              : payment.disputeStatus === "open"
-                ? "payment disputed"
-                : paymentConfirmed(payment)
-                ? "payment"
-                : "payment pending",
-          disputeReason: payment.disputeReason || "",
-          sort: returnCreditPayment(payment) ? 0.5 : 1,
-        })),
+      ...paymentHistoryEvents,
     ]
-      .sort(
-        (a, b) =>
-          String(a.date).localeCompare(String(b.date)) || a.sort - b.sort,
-      )
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.sort - b.sort)
       .map((item) => {
-        if (item.className === "shipment" || item.className === "payment" || item.className === "return")
-          running += Number(item.amount || 0);
-        item.balanceAfter = running;
+        if(item.className==="shipment"||item.className==="return")running+=Number(item.amount||0);
+        else running+=Number(item.effect||0);
+        item.balanceAfter=running;
         return item;
       })
       .reverse();

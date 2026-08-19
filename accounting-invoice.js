@@ -196,7 +196,9 @@
             (item) =>
               item.deliveryNoteId === note.id &&
               item.confirmed !== false &&
-              item.status !== "cancelled",
+              item.status !== "cancelled" &&
+              item.disputeStatus !== "open" &&
+              !/\[panora:b2b-return-credit:[^\]]+\]/.test(String(item.note || "")),
           )
           .reduce((sum, item) => sum + Number(item.amount || 0), 0),
     );

@@ -1,0 +1,15 @@
+Panora 6.96 — B2B payment dispute/cancellation timeline consistency
+
+Build: 6960
+Package series: 8
+
+Changes:
+- B2B payment history is now event-based: the original payment remains on its receipt date and a later dispute/cancellation is shown as a separate reversal event on the actual change date;
+- current debt calculation remains unchanged: disputed and cancelled payments do not settle delivery notes or create advance credit;
+- partner payment sync now retains payments.updated_at so cancellation dates are available in the partner history;
+- bakery and partner histories both show a reopened debt chronologically instead of rewriting the original payment row;
+- delivery-note/accounting document paid amounts no longer count open-dispute payments as paid;
+- B2B goods-return credits remain non-cash credits and are excluded from cash-paid document totals;
+- cancellation/dispute resolution writes an explicit updated_at timestamp for deterministic history ordering.
+
+No layout redesign. No new SQL.
