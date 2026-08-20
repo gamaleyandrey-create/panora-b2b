@@ -401,12 +401,19 @@
     return null;
   };
 
+  const archiveNextCalendarDayReached = (value) => {
+    const d=value?new Date(value):null;
+    if(!d||Number.isNaN(d.getTime()))return false;
+    const next=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0);
+    return Date.now()>=next.getTime();
+  };
+
   const isArchivedOrder = (order) => {
     if (order?.archived === true) return true;
     if (order.status === "cancelled") return true;
     const deliveredAt = archiveReferenceDate(order);
     if (!deliveredAt || Number.isNaN(deliveredAt.getTime())) return false;
-    return Date.now() - deliveredAt.getTime() >= 5 * 24 * 60 * 60 * 1000;
+    return archiveNextCalendarDayReached(deliveredAt);
   };
 
   const isActiveOrder = (order) => !isArchivedOrder(order);
@@ -511,8 +518,8 @@
     const lifecycle=orderLifecycleStatus(order);
     if(lifecycle==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
     if(lifecycle==="confirmed")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
-    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он ещё 5 дней останется в рабочих.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá 5 días en curso.":"The order has shipped. After receipt confirmation it remains in Working for 5 days.";
-    if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив через 5 дней.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente en 5 días.":"Delivery completed. The order moves to Archive automatically after 5 days.";
+    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он останется в рабочих до конца текущего дня.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá en curso hasta el final del día actual.":"The order has shipped. After receipt confirmation it remains in Working until the end of the current day.";
+    if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив на следующий календарный день.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente el siguiente día natural.":"Delivery completed. The order moves to Archive automatically on the next calendar day.";
     return "";
   }
 
@@ -754,7 +761,7 @@
           ${(orderStatusFilter!=="all"||orderDateFrom||orderDateTo||orderSearch)?`<button type="button" class="rw-order-filter-reset" data-rw-order-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
         </div>
       </header>
-      ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и недавно доставленные заказы. После подтверждения доставки заказ автоматически переносится в архив через 5 дней.":lang==="es"?"Los pedidos actuales y recién entregados permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente en 5 días.":"Current and recently delivered orders stay in Working. After delivery confirmation they move to Archive automatically after 5 days."}</p>`:""}
+      ${orderView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"В рабочих остаются текущие и доставленные сегодня заказы. После подтверждения доставки заказ автоматически переносится в архив на следующий календарный день.":lang==="es"?"Los pedidos actuales y los entregados hoy permanecen en curso. Tras confirmar la entrega, pasan al archivo automáticamente el siguiente día natural.":"Current orders and orders delivered today stay in Working. After delivery confirmation they move to Archive automatically on the next calendar day."}</p>`:""}
       ${rows.length ? `<section class="rw-list">${rows.map((order) => {
         const note=orderDeliveryNote(order);
         const lifecycle=orderLifecycleStatus(order);
@@ -787,7 +794,7 @@
       const confirmed=note.customerConfirmedAt||note.offlineProof?.receivedAt;
       if(!confirmed)return false;
       const d=new Date(confirmed);
-      return !Number.isNaN(d.getTime()) && Date.now()-d.getTime()>=5 * 24 * 60 * 60 * 1000;
+      return !Number.isNaN(d.getTime()) && archiveNextCalendarDayReached(d);
     };
     const working=allNotes.filter(note=>!noteArchived(note));
     const archive=allNotes.filter(noteArchived);
@@ -828,7 +835,7 @@
         <div class="rw-finance-filter-actions"><button type="button" class="rw-finance-filter-apply" data-rw-note-filter-apply>${lang==="ru"?"Применить":lang==="es"?"Aplicar":"Apply"}</button><button type="button" class="rw-finance-filter-close" data-rw-note-filter-close>${lang==="ru"?"Закрыть":lang==="es"?"Cerrar":"Close"}</button></div>
         ${(noteQuery||noteDateFrom||noteDateTo)?`<button type="button" class="rw-order-filter-reset" data-rw-note-filter-reset>${lang==="ru"?"Сбросить":lang==="es"?"Restablecer":"Reset"}</button>`:""}
       </div>
-      ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и ещё 5 дней после подтверждения получения. Затем она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y 5 días más tras confirmar la recepción. Después pasa al archivo junto con el pedido.":"A delivery note stays in Working until delivery is complete and for 5 days after receipt confirmation, then moves to Archive with the order."}</p>`:""}
+      ${noteView==="active"?`<p class="rw-archive-rule">${lang==="ru"?"Рабочая накладная остаётся здесь до завершения поставки и до конца дня подтверждения получения. На следующий календарный день она автоматически переходит в архив вместе с заказом.":lang==="es"?"El albarán permanece en curso hasta completar la entrega y hasta el final del día de confirmación. El siguiente día natural pasa automáticamente al archivo junto con el pedido.":"A delivery note stays in Working through the day receipt is confirmed, then moves to Archive with the order on the next calendar day."}</p>`:""}
       <div class="rw-list">${notes.map((note) => {
         const order = noteOrder(note);
         const isMain = note.id === working[0]?.id && noteView==="active";

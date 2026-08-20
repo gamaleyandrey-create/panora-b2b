@@ -99,3 +99,31 @@
  .order-message-channel{align-items:stretch;flex-direction:column}
  .order-message-channel button{width:100%;min-height:42px}
 }
+
+
+/* Panora 7.26 — stable communication button geometry while unread badge changes */
+.admin-order-message-button{
+  position:relative!important;
+  box-sizing:border-box!important;
+  min-width:112px;
+  padding-right:36px!important;
+  justify-content:center!important;
+}
+.admin-order-message-button .order-message-badge{
+  position:absolute!important;
+  right:8px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  margin-left:0!important;
+  min-width:20px!important;
+  box-sizing:border-box!important;
+  pointer-events:none!important;
+}
+@media(max-width:640px){
+  .admin-order-message-button{
+    width:100%!important;
+    min-width:0!important;
+    padding-left:36px!important;
+    padding-right:36px!important;
+  }
+}
