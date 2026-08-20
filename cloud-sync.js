@@ -808,10 +808,7 @@
       syncPlansFromOrders();
       if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}
 
-      if(changed&&!adminOrderInteractionActive()){
-        if(typeof renderCommerce==='function')renderCommerce();
-        if(typeof renderAll==='function')renderAll();
-      }
+      if(changed)queueAdminCommerceRender(true);
       status(`Облако ✓ · ${rows?.length||0} заказов`);
     })().finally(()=>loadingOrders=null);
     return loadingOrders;
@@ -987,7 +984,24 @@
     }
     status('Облако ✓');})().finally(()=>savingOrders=null);return savingOrders
   }
+  let adminCommerceRenderTimer=0,adminCommerceRenderNeedsAll=false;
   const adminOrderInteractionActive=()=>Date.now()<Number(window.panoraAdminOrderInteractionUntil||0);
+  function queueAdminCommerceRender(needsAll=false){
+    adminCommerceRenderNeedsAll=adminCommerceRenderNeedsAll||Boolean(needsAll);
+    clearTimeout(adminCommerceRenderTimer);
+    const run=()=>{
+      if(adminOrderInteractionActive()){
+        adminCommerceRenderTimer=setTimeout(run,120);
+        return;
+      }
+      adminCommerceRenderTimer=0;
+      const renderAllNeeded=adminCommerceRenderNeedsAll;
+      adminCommerceRenderNeedsAll=false;
+      if(typeof renderCommerce==='function')renderCommerce();
+      if(renderAllNeeded&&typeof renderAll==='function')renderAll();
+    };
+    adminCommerceRenderTimer=setTimeout(run,0);
+  }
   const stableJson=value=>JSON.stringify(value);
   const orderUiSignature=list=>stableJson((list||[]).map(order=>({
     id:String(order?.id||''),number:Number(order?.number||0),restaurantId:String(order?.restaurantId||''),
@@ -1046,7 +1060,7 @@
       for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
       const changed=noteUiSignature(deliveryNotes)!==noteUiSignature(JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]'));
       recalculateBalances();cacheDeliveryNotesLocal();
-      if((missing.length||changed)&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce();
+      if(missing.length||changed)queueAdminCommerceRender();
       return missing.length;
     })().finally(()=>repairingFinance=null);
     return repairingFinance;
@@ -1063,7 +1077,7 @@
     console.warn('Pending delivery notes were not uploaded; repair will retry by order.',error)}}
     ready=true;await repairMissingDeliveryNotes();
     const changed=beforeSignature!==noteUiSignature(deliveryNotes);
-    if(changed&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce()
+    if(changed)queueAdminCommerceRender()
   }
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;
@@ -1094,7 +1108,7 @@
     if(rows?.length){
       payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();
       const changed=beforeSignature!==paymentUiSignature(payments);
-      if(changed&&!adminOrderInteractionActive()&&typeof renderCommerce==='function')renderCommerce();
+      if(changed)queueAdminCommerceRender();
     }else if(local.length){payments=local;ready=true;await savePaymentsNow()}
   }
   async function savePaymentsNow(){
@@ -1715,9 +1729,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(recipeDirty)try{await flushRecipes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push(['рецептуры',error])}
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadDeliveryNotes()}catch(error){
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы и накладные',error)}},2000);
+    fail('заказы, оплаты и накладные',error)}},2000);
     clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
     clearInterval(planPoll);planPoll=setInterval(()=>refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
