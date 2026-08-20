@@ -7,9 +7,9 @@
     return ["ru","en","es"].includes(value)?value:"ru";
   };
   const words={
-    ru:{title:"Связь по заказу",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Связь",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
-    en:{title:"Order communication",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Communication",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
-    es:{title:"Comunicación del pedido",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Comunicación",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
+    ru:{title:"Сообщения по заказу",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Сообщения",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
+    en:{title:"Order messages",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Messages",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
+    es:{title:"Mensajes del pedido",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Mensajes",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
   };
   const t=key=>words[language()]?.[key]||words.ru[key]||key;
 
@@ -37,7 +37,7 @@
     };
   };
 
-  let dialog=null,currentOrderId="",currentOrderLabel="",poll=0;
+  let dialog=null,currentOrderId="",currentOrderLabel="",poll=0,lastUnreadMap=new Map(),unreadPaintQueued=false;
   const ownRole=()=>window.panoraPartnerOrderMessages?"restaurant":"admin";
   const pushApi=()=>ownRole()==="restaurant"?window.panoraPartnerPush:window.panoraAdminWebPush;
   const pushAvailable=()=>Boolean(pushApi()?.status&&("Notification" in window)&&("serviceWorker" in navigator)&&("PushManager" in window));
@@ -154,21 +154,45 @@
     poll=setInterval(()=>{if(dialog&&!document.hidden)load({quiet:true})},5000);
   };
 
-  const applyUnread=map=>{
+  const applyUnread=(map,{remember=true}={})=>{
+    const source=map instanceof Map?map:new Map();
+    if(remember)lastUnreadMap=new Map(source);
     document.querySelectorAll("[data-order-messages]").forEach(button=>{
       const id=String(button.dataset.orderMessages||"");
-      const count=Number(map.get(id)||0);
+      const count=Number(source.get(id)||0);
       let badge=button.querySelector(".order-message-badge");
-      if(count){
-        if(!badge){badge=document.createElement("b");badge.className="order-message-badge";button.append(badge)}
-        badge.textContent=String(count);badge.hidden=false;
-        button.classList.add("has-unread");
-      }else{
-        if(badge)badge.hidden=true;
-        button.classList.remove("has-unread");
+      if(!badge){
+        badge=document.createElement("b");
+        badge.className="order-message-badge";
+        badge.setAttribute("aria-hidden","true");
+        button.append(badge);
       }
+      badge.textContent=count?String(count):"0";
+      badge.hidden=!count;
+      button.classList.toggle("has-unread",Boolean(count));
+      button.setAttribute("aria-label",count?`${t("message")}: ${count}`:t("message"));
     });
   };
+  const scheduleUnreadPaint=()=>{
+    if(unreadPaintQueued)return;
+    unreadPaintQueued=true;
+    queueMicrotask(()=>{
+      unreadPaintQueued=false;
+      applyUnread(lastUnreadMap,{remember:false});
+    });
+  };
+  const unreadObserver=new MutationObserver(mutations=>{
+    for(const mutation of mutations){
+      for(const node of mutation.addedNodes){
+        if(node?.nodeType!==1)continue;
+        if(node.matches?.("[data-order-messages]")||node.querySelector?.("[data-order-messages]")){
+          scheduleUnreadPaint();
+          return;
+        }
+      }
+    }
+  });
+  unreadObserver.observe(document.documentElement,{childList:true,subtree:true});
   async function refreshUnread(){
     try{
       const rows=await api().unread();

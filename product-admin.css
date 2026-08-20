@@ -84,7 +84,7 @@
 .product-gallery-empty{grid-column:1/-1;color:#747b74;padding:8px 0}@media(max-width:760px){.product-gallery-preview{grid-template-columns:repeat(3,1fr)}}
 
 
-/* Panora 7.28 — real product-card removal UX: active list + recoverable archive */
+/* Panora 7.29 — real product-card removal UX: active list + recoverable archive */
 .product-admin-empty{grid-column:1/-1;padding:26px;border:1px dashed #cdd7cf;border-radius:16px;background:#fafbf9;color:#6f7b72;text-align:center}
 .product-archive-section{margin-top:24px;border:1px solid #d9e0da;border-radius:16px;background:#f7f9f6;overflow:hidden}
 .product-archive-section>summary{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;list-style:none;color:#344a3b}
