@@ -1,0 +1,8 @@
+Panora 7.17 — B2B finished-stock live sync
+
+- Bakery devices now refresh finished-stock movements while visible, on focus and after returning to the tab.
+- A B2B return recorded on one bakery device appears on another already-open bakery device without manual reload.
+- Finished-stock cloud refresh is re-entrancy guarded and only rerenders stock UI when the movement snapshot actually changes.
+- Partner finance live sync from Panora 7.15 remains unchanged; B2B return credits continue to propagate through payments.
+- No schema or SQL change is required.
+- Archive set: Panora 9.2.
