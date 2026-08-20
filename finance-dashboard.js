@@ -274,12 +274,12 @@
     const netOfVat=gross=>retailVatRate>0?gross/(1+retailVatRate/100):gross;
     const allRetail=Array.isArray(retailOrders)?retailOrders:[];
     const stockMovements=read('panora-stock-movements',[]);
-    // Panora 7.12: money refund and physical bread return are separate accounting events.
+    // Panora 7.13: money refund and physical bread return are separate accounting events.
     // A refund can happen before the bread actually comes back (including across local midnight).
     // Revenue/VAT reverse on the refund timestamp; COGS and pieces reverse on the linked stock-return day.
-    const retailReturnMovementForItem=(order,item,index)=>{
+    const retailReturnMovementsForItem=(order,item,index)=>{
       const legacy=`retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}`,marker=`[panora:retail-return:${String(order?.id||'')}:${String(item?.product||'')}:${index}]`;
-      return (Array.isArray(stockMovements)?stockMovements:[]).filter(m=>String(m?.type||'')==='returned'&&(String(m?.id||'')===legacy||String(m?.note||'').includes(marker))).sort((a,b)=>String(a?.createdAt||a?.date||'').localeCompare(String(b?.createdAt||b?.date||'')))[0]||null;
+      return (Array.isArray(stockMovements)?stockMovements:[]).filter(m=>String(m?.type||'')==='returned'&&(String(m?.id||'')===legacy||String(m?.note||'').includes(marker))).sort((a,b)=>String(a?.createdAt||a?.date||'').localeCompare(String(b?.createdAt||b?.date||'')));
     };
     const saleDate=order=>order.completedAt||order.pickupDate||order.createdAt;
     const refundDate=order=>order.updatedAt||order.cancelledAt||order.completedAt||order.pickupDate||order.createdAt;
@@ -315,13 +315,14 @@
         p.revenue-=itemNet;p.retailRevenue-=itemNet;productMap.set(item.product,p);
       });
     });
-    // Physical retail return belongs to the stock movement period, independently of the refund period.
-    // This keeps adjacent-day filters additive: sale + refund-only = product loss; later stock return restores that COGS.
+    // Panora 7.13: partial/repeated physical returns accumulate chronologically up to the original sold quantity.
+    // Each movement reverses COGS/pieces in its own period; duplicate/over-return data can never reverse more than was sold.
     allRetail.filter(order=>String(order?.paymentStatus||'')==='refunded'&&Boolean(order?.completedAt)).forEach(order=>{
       (Array.isArray(order?.items)?order.items:[]).forEach((item,index)=>{
         const soldQty=Math.max(0,Number(item?.quantity||0));if(!soldQty)return;
-        const movement=retailReturnMovementForItem(order,item,index);if(!movement||!inPeriod(movement?.date||movement?.createdAt))return;
-        const qty=Math.min(soldQty,Math.max(0,Math.abs(Number(movement?.quantity||0))));if(!qty)return;
+        let remaining=soldQty,periodQty=0;
+        retailReturnMovementsForItem(order,item,index).forEach(movement=>{if(remaining<=0)return;const qty=Math.min(remaining,Math.max(0,Math.abs(Number(movement?.quantity||0))));remaining-=qty;if(qty>0&&inPeriod(movement?.date||movement?.createdAt))periodQty+=qty});
+        const qty=Math.min(soldQty,periodQty);if(!qty)return;
         const itemCogs=retailAllocatedUnitCost(order,item.product)*qty;retailCogs-=itemCogs;retailPieces-=qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.cogs-=itemCogs;p.pieces-=qty;p.retailPieces-=qty;productMap.set(item.product,p);
