@@ -1,0 +1,2 @@
+Panora 7.33 / build 7330
+Finance KPI flow: revenue → raw-material COGS → expenses/losses → operating profit → operating margin. Cost values are visually red; expenses are displayed as negative.
