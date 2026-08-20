@@ -16,7 +16,7 @@
 .price-row[data-save-state="saved"] input{border-color:#b8cbbd}
 .price-row[data-save-state="error"] input{border-color:#b8645c;background:#fff8f7}
 
-/* Panora 7.25 — keep bakery bake calendar visible at the top of the mobile Plan tab */
+/* Panora 7.26 — keep bakery bake calendar visible at the top of the mobile Plan tab */
 @media(max-width:720px){
  #view-plan.active>#bakeCalendar{display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;margin:0 0 16px!important}
  #view-plan.active>.page-head{margin-bottom:14px!important}

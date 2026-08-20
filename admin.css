@@ -317,7 +317,7 @@
 @media(max-width:720px){.retail-message-push-inline{align-items:stretch;flex-direction:column}.retail-message-push-inline button{width:100%}}
 
 
-/* Panora 7.25 — current bakery debt first; volume moved into filter */
+/* Panora 7.26 — current bakery debt first; volume moved into filter */
 .finance-summary-current{grid-template-columns:repeat(2,minmax(0,1fr))}
 .finance-summary-current .partner-debt-total strong{color:#b3261e!important}
 #accountRows .account-balance-debt{color:#b3261e!important}

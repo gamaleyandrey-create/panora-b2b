@@ -9,7 +9,7 @@ const mobileLayout=window.matchMedia('(max-width:850px)');
 function placeBakeCalendar(){
  const calendar=document.querySelector('#bakeCalendar'),view=document.querySelector('#view-plan');
  if(!calendar||!calendarHeading||!view)return;
- // Panora 7.25: on mobile the calendar used to be moved after #planList. That list is
+ // Panora 7.26: on mobile the calendar used to be moved after #planList. That list is
  // intentionally hidden by calendar-calm.css and the completion board can be long,
  // so the real calendar ended up far below the visible mobile viewport and looked absent.
  // Keep the calendar directly under the page heading on mobile; desktop placement stays unchanged.

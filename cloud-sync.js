@@ -142,7 +142,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;safeLocalSet(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
   const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
@@ -1825,7 +1825,24 @@ window.panoraRecalculateBalances=recalculateBalances;
     });
   });
   window.addEventListener('panora:bake-completion-local-change',()=>{markPending('bakeCompletions');if(ready&&navigator.onLine)syncBakeCompletionsNow().catch(error=>console.warn('Panora bake completion save',error))});
-  window.addEventListener('online',()=>{pending=readPending();if(ready)retrySync()});
+  const refreshAdminCommerceOnWake=reason=>{
+    if(!ready||!navigator.onLine)return Promise.resolve(false);
+    const now=Date.now();
+    if(adminWakeRefreshPromise)return adminWakeRefreshPromise;
+    if(now-adminWakeRefreshAt<700)return Promise.resolve(false);
+    adminWakeRefreshAt=now;
+    adminWakeRefreshPromise=(async()=>{
+      await loadOrders();await loadPayments();await loadDeliveryNotes();
+      window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason}}));
+      return true;
+    })().finally(()=>{adminWakeRefreshPromise=null});
+    return adminWakeRefreshPromise;
+  };
+  const scheduleAdminCommerceWakeRefresh=(reason,delay=60)=>{
+    clearTimeout(adminWakeRefreshTimer);
+    adminWakeRefreshTimer=setTimeout(()=>refreshAdminCommerceOnWake(reason).catch(error=>console.warn('Panora commerce wake refresh',reason,error)),delay);
+  };
+  window.addEventListener('online',()=>{pending=readPending();if(ready){retrySync();scheduleAdminCommerceWakeRefresh('online',100)}});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
   const startPendingWatchdog=()=>{
     clearInterval(pendingRetryTimer);
@@ -1838,9 +1855,13 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready){loadIngredientCosts().catch(error=>console.warn('Panora ingredient price visibility refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion visibility refresh',error))}
+    if(!document.hidden&&ready){scheduleAdminCommerceWakeRefresh('visibility');loadIngredientCosts().catch(error=>console.warn('Panora ingredient price visibility refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion visibility refresh',error))}
   });
   window.addEventListener('focus',()=>{
-    if(ready){loadIngredientCosts().catch(error=>console.warn('Panora ingredient price focus refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion focus refresh',error))}
+    if(ready){scheduleAdminCommerceWakeRefresh('focus');loadIngredientCosts().catch(error=>console.warn('Panora ingredient price focus refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion focus refresh',error))}
+  });
+  window.addEventListener('pageshow',()=>{if(ready)scheduleAdminCommerceWakeRefresh('pageshow',30)});
+  navigator.serviceWorker?.addEventListener?.('message',event=>{
+    if(event.data?.type==='PANORA_PUSH_OPENED'&&ready)scheduleAdminCommerceWakeRefresh('push',0);
   });
 })();

@@ -106,6 +106,7 @@ function productionPlans(){try{return JSON.parse(localStorage.getItem('panora-pr
 const dateValue=d=>{const x=new Date(d),pad=v=>String(v).padStart(2,'0');return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`};
 const localToday=()=>dateValue(new Date());
 const cutoffDate=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d:null};
+const planPlannedPieces=plan=>Math.max(0,Math.floor(Number(plan?.planned??plan?.plannedQuantity??0)||0));
 function getBakeDates(count=4){const plans=productionPlans(),now=new Date(),today=localToday(),scheduled=plans.filter(p=>{const cutoff=cutoffDate(p.cutoff);return p.open!==false&&String(p.bakeDate||'')>=today&&cutoff&&cutoff>now});const grouped=new Map();scheduled.forEach(p=>{const key=String(p.bakeDate||'');if(!key)return;const cutoff=cutoffDate(p.cutoff);if(!grouped.has(key))grouped.set(key,{date:new Date(`${key}T12:00:00`),cutoff,deliveryDate:p.deliveryDate||key});else if(cutoff<grouped.get(key).cutoff)grouped.get(key).cutoff=cutoff});return [...grouped.values()].sort((a,b)=>dateValue(a.date).localeCompare(dateValue(b.date))).slice(0,count)}
 function compatibleBakeDatesForProducts(productIds,count=12){
  const ids=[...new Set((productIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
@@ -116,7 +117,7 @@ function compatibleBakeDatesForProducts(productIds,count=12){
   const bakeDate=dateValue(date);
   return ids.every(id=>plans.some(plan=>{
    const cutoff=cutoffDate(plan.cutoff);
-   return plan.open!==false&&String(plan.product||'')===id&&String(plan.bakeDate||'')===bakeDate&&cutoff&&cutoff>now;
+   return plan.open!==false&&planPlannedPieces(plan)>0&&String(plan.product||'')===id&&String(plan.bakeDate||'')===bakeDate&&cutoff&&cutoff>now;
   }));
  });
 }
@@ -168,8 +169,8 @@ function syncCartDeliveryDate(){
 function syncDateSelect(){const s=$('#deliveryDate'),dates=getBakeDates();if(!dates.length){s.innerHTML=`<option value="">${I18N[lang].calendar.noDates}</option>`;s.disabled=true;syncCartDeliveryDate();return}s.disabled=false;s.innerHTML=dates.map(({date})=>`<option value="${dateValue(date)}" ${dateValue(date)===selectedBakeDate?'selected':''}>${formatDate(date)}</option>`).join('');s.onchange=()=>{selectedBakeDate=s.value;localStorage.setItem('panora-bake-date',selectedBakeDate);renderBakeDates();renderProducts()};syncCartDeliveryDate()}
 function renderCategories(){const cats=['all',...new Set(PRODUCTS.map(p=>String(p.category||'Хлеб')).filter(Boolean))];if(activeCategory!=='all'&&!cats.includes(activeCategory))activeCategory='all';$('#categoryChips').innerHTML=cats.map(c=>`<button class="chip ${c===activeCategory?'active':''}" data-category="${c}">${c==='all'?tr('catalog.all'):c}</button>`).join('');document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{activeCategory=b.dataset.category;renderCategories();renderProducts()})}
 function piecesLabel(qty){return lang==='ru'?`${qty} шт.`:lang==='es'?`${qty} uds.`:`${qty} pcs`}
-function availablePieces(id){const plan=productionPlans().find(p=>p.open&&p.bakeDate===selectedBakeDate&&p.product===id);return plan?MAX_PIECES_PER_PRODUCT:0}
-function catalogAvailablePieces(id){const plans=productionPlans(),now=new Date();if(!plans.length)return 0;return plans.some(p=>p.open!==false&&p.product===id&&String(p.bakeDate||'')>=localToday()&&cutoffDate(p.cutoff)>now)?MAX_PIECES_PER_PRODUCT:0}
+function availablePieces(id){const plan=productionPlans().find(p=>p.open!==false&&p.bakeDate===selectedBakeDate&&p.product===id);return plan?Math.min(MAX_PIECES_PER_PRODUCT,planPlannedPieces(plan)):0}
+function catalogAvailablePieces(id){const plans=productionPlans(),now=new Date();if(!plans.length)return 0;const eligible=plans.filter(p=>p.open!==false&&p.product===id&&String(p.bakeDate||'')>=localToday()&&cutoffDate(p.cutoff)>now&&planPlannedPieces(p)>0);if(!eligible.length)return 0;const selected=eligible.find(p=>String(p.bakeDate||'')===String(selectedBakeDate||''));const planned=selected?planPlannedPieces(selected):Math.max(...eligible.map(planPlannedPieces));return Math.min(MAX_PIECES_PER_PRODUCT,planned)}
 function qtyControl(id,qty){const max=catalogAvailablePieces(id);if(max===0)return `<div class="sold-out"><strong>${lang==='ru'?'Нет ближайшей выпечки':lang==='es'?'No hay próximo horneado':'No upcoming bake'}</strong><span>${lang==='ru'?'Следите за расписанием':lang==='es'?'Consulta el calendario':'Check the schedule'}</span></div>`;const safeQty=Math.min(qty,max),options=Array.from({length:max+1},(_,n)=>`<option value="${n}" ${n===safeQty?'selected':''}>${piecesLabel(n)}</option>`).join('');return `<label class="piece-select"><select aria-label="${lang==='ru'?'Количество, шт.':lang==='es'?'Cantidad, uds.':'Quantity, pcs'}" data-qty-select="${id}">${options}</select></label>`}
 function privatePriceText(){return lang==='ru'?'Цена в личном кабинете':lang==='es'?'Precio en la cuenta personal':'Price in your account'}
 function wholesaleMinQty(p){return Math.max(1,Number(p?.wholesaleMinQty||8))}

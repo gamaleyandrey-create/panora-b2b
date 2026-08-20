@@ -1,0 +1,12 @@
+Panora 7.26 — instant admin wake refresh + bake-plan capacity + next-day partner archive
+
+- Bakery/admin now refreshes B2B orders, payments and delivery notes immediately when the app returns from background, receives focus, is restored with pageshow, comes back online, or is opened from a Push notification.
+- Service worker sends PANORA_PUSH_OPENED to the focused admin client after a notification click.
+- Partner quantity selectors respect planned_quantity instead of exposing a generic 200-piece ceiling when the plan is smaller.
+- panora_create_order now atomically locks the bake day and rejects orders that would exceed planned_quantity after existing non-cancelled reservations.
+- Capacity rejection preserves the partner cart, reloads the current plan and returns the user to the cart for correction.
+- Partner delivered orders and delivery notes remain in Working through the confirmation day and automatically move to Archive on the next calendar day instead of after five days.
+- Bakery archive timing is intentionally unchanged: shipped/cancelled orders and fully settled finance records archive immediately.
+- Bakery order communication button now keeps stable geometry while unread counts appear/disappear, preventing visible blinking and width changes.
+- Run Panora_9.11_SUPABASE_PLAN_LIMIT.sql once in Supabase SQL Editor to activate the atomic server capacity guard.
+- Archive set: Panora 9.11.

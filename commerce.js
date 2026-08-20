@@ -192,7 +192,7 @@ function syncPlansFromOrders() {
       (x) => x.bakeDate === g.bakeDate && x.product === g.product,
     );
     if (!p) {
-      // Panora 7.25: a shipped order is history and must not recreate a bake day
+      // Panora 7.26: a shipped order is history and must not recreate a bake day
       // that the bakery already cancelled/removed. If an active order still exists,
       // auto-recovery remains available as before.
       if (!g.hasUnshippedOrder) return;
