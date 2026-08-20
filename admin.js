@@ -1,8 +1,8 @@
 const PRODUCTS={plain:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Yeast-free flaxseed bread with seeds',es:'Pan de lino sin levadura con semillas'},pumpkin:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'}};
 const TEXT={
-ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Готовый хлеб приходуется только после подтверждения «Выпечка завершена»; выдача рознице и отгрузка партнёру уменьшают остаток.',movement:'+ Корректировка',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Корректировка склада',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
-en:{bakery:'Bakery',plan:'Bake plan',recipes:'Recipes',purchase:'Purchasing',stock:'Bread stock',planTitle:'Bake and delivery plan',planText:'Add dates and plan each bread in pieces.',addBake:'+ Add bake',today:'Today',planned:'Planned',ordered:'Ordered',reserve:'Available',recipeTitle:'Bread recipes',recipeText:'For each bread, enter the finished cooled product weight and ingredients per piece.',purchaseTitle:'Purchase list',purchaseText:'Calculated from the bake plan, stock and safety margin.',print:'Print',ingredient:'Ingredient',required:'Required',ingredientStock:'Stock',margin:'Margin',buy:'Buy',stockTitle:'Finished bread stock',stockText:'Finished bread is added only after confirming “Bake completed”; retail pickup and partner shipment reduce stock.',movement:'+ Adjustment',date:'Date',product:'Bread',operation:'Operation',quantity:'Quantity',note:'Note',newBake:'New bake',bakeDate:'Bake date',deliveryDate:'Delivery date',plannedPiecesLabel:'Plan, pcs',cutoff:'Order cutoff',accepting:'Accept orders',cancel:'Cancel',save:'Save',newMovement:'Stock adjustment',open:'Orders open',closed:'Closed',delivery:'Delivery',cutoffShort:'Cutoff',empty:'No bakes this week',pcs:'pcs',orderedShort:'ordered'},
-es:{bakery:'Panadería',plan:'Plan de horneado',recipes:'Recetas',purchase:'Compras',stock:'Stock de pan',planTitle:'Plan de horneado y entrega',planText:'Añade fechas y planifica cada pan por unidades.',addBake:'+ Añadir horneado',today:'Hoy',planned:'Planificado',ordered:'Pedido',reserve:'Disponible',recipeTitle:'Recetas de pan',recipeText:'Indique para cada pan el peso del producto frío terminado y los ingredientes por unidad.',purchaseTitle:'Lista de compras',purchaseText:'Cálculo según el plan, existencias y margen de seguridad.',print:'Imprimir',ingredient:'Ingrediente',required:'Necesario',ingredientStock:'Existencias',margin:'Margen',buy:'Comprar',stockTitle:'Stock de pan terminado',stockText:'El pan terminado entra solo tras confirmar «Horneado finalizado»; la entrega minorista y el envío a socios reducen el stock.',movement:'+ Ajuste',date:'Fecha',product:'Pan',operation:'Operación',quantity:'Cantidad',note:'Nota',newBake:'Nuevo horneado',bakeDate:'Fecha de horneado',deliveryDate:'Fecha de entrega',plannedPiecesLabel:'Plan, uds.',cutoff:'Cierre de pedidos',accepting:'Aceptar pedidos',cancel:'Cancelar',save:'Guardar',newMovement:'Ajuste de stock',open:'Pedidos abiertos',closed:'Cerrado',delivery:'Entrega',cutoffShort:'Cierre',empty:'No hay horneados esta semana',pcs:'uds.',orderedShort:'pedido'}
+ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Готовый хлеб приходуется только после подтверждения «Выпечка завершена»; выдача рознице и отгрузка партнёру уменьшают остаток.',movement:'+ Инвентаризация / корректировка',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Инвентаризация / корректировка склада',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
+en:{bakery:'Bakery',plan:'Bake plan',recipes:'Recipes',purchase:'Purchasing',stock:'Bread stock',planTitle:'Bake and delivery plan',planText:'Add dates and plan each bread in pieces.',addBake:'+ Add bake',today:'Today',planned:'Planned',ordered:'Ordered',reserve:'Available',recipeTitle:'Bread recipes',recipeText:'For each bread, enter the finished cooled product weight and ingredients per piece.',purchaseTitle:'Purchase list',purchaseText:'Calculated from the bake plan, stock and safety margin.',print:'Print',ingredient:'Ingredient',required:'Required',ingredientStock:'Stock',margin:'Margin',buy:'Buy',stockTitle:'Finished bread stock',stockText:'Finished bread is added only after confirming “Bake completed”; retail pickup and partner shipment reduce stock.',movement:'+ Inventory / adjustment',date:'Date',product:'Bread',operation:'Operation',quantity:'Quantity',note:'Note',newBake:'New bake',bakeDate:'Bake date',deliveryDate:'Delivery date',plannedPiecesLabel:'Plan, pcs',cutoff:'Order cutoff',accepting:'Accept orders',cancel:'Cancel',save:'Save',newMovement:'Inventory / stock adjustment',open:'Orders open',closed:'Closed',delivery:'Delivery',cutoffShort:'Cutoff',empty:'No bakes this week',pcs:'pcs',orderedShort:'ordered'},
+es:{bakery:'Panadería',plan:'Plan de horneado',recipes:'Recetas',purchase:'Compras',stock:'Stock de pan',planTitle:'Plan de horneado y entrega',planText:'Añade fechas y planifica cada pan por unidades.',addBake:'+ Añadir horneado',today:'Hoy',planned:'Planificado',ordered:'Pedido',reserve:'Disponible',recipeTitle:'Recetas de pan',recipeText:'Indique para cada pan el peso del producto frío terminado y los ingredientes por unidad.',purchaseTitle:'Lista de compras',purchaseText:'Cálculo según el plan, existencias y margen de seguridad.',print:'Imprimir',ingredient:'Ingrediente',required:'Necesario',ingredientStock:'Existencias',margin:'Margen',buy:'Comprar',stockTitle:'Stock de pan terminado',stockText:'El pan terminado entra solo tras confirmar «Horneado finalizado»; la entrega minorista y el envío a socios reducen el stock.',movement:'+ Inventario / ajuste',date:'Fecha',product:'Pan',operation:'Operación',quantity:'Cantidad',note:'Nota',newBake:'Nuevo horneado',bakeDate:'Fecha de horneado',deliveryDate:'Fecha de entrega',plannedPiecesLabel:'Plan, uds.',cutoff:'Cierre de pedidos',accepting:'Aceptar pedidos',cancel:'Cancelar',save:'Guardar',newMovement:'Inventario / ajuste de stock',open:'Pedidos abiertos',closed:'Cerrado',delivery:'Entrega',cutoffShort:'Cierre',empty:'No hay horneados esta semana',pcs:'uds.',orderedShort:'pedido'}
 };
 Object.assign(TEXT.ru,{plan:'Календарь выпечки',planTitle:'Календарь выпечки',planText:'Назначайте дни выпечки и указывайте количество каждого хлеба.'});
 Object.assign(TEXT.en,{plan:'Bake calendar',planTitle:'Bake calendar',planText:'Schedule bake days and enter the quantity of each bread.'});
@@ -803,29 +803,45 @@ function stockMovementNote(m){
  if(m.type==='baked'&&m.bakeDate)return `<button type="button" class="stock-doc-link" data-stock-bake="${adminEscape(m.bakeDate)}">${adminEscape(m.note||'Выпечка')}</button>`;
  return adminEscape(m.note||'—');
 }
+function stockProductCountLabel(value){
+ const n=Math.max(0,Math.round(Number(value)||0)),m10=n%10,m100=n%100;
+ return `${n} ${m10===1&&m100!==11?'товар':m10>=2&&m10<=4&&(m100<12||m100>14)?'товара':'товаров'}`;
+}
 function renderStock(){
- const ids=stockProductIds(),effective=stockEffectiveMovements(),today=stockLocalDate(),cutoff=stockCutoffDate(30);
+ const ids=stockProductIds(),effective=stockEffectiveMovements(),cutoff=stockCutoffDate(30);
  const cards=ids.map(pid=>{
   const raw=effective.filter(m=>String(m.product)===String(pid)).reduce((sum,m)=>sum+signed(m),0);
-  const onHand=Math.max(0,raw),reserved=stockReserved(pid),free=Math.max(0,onHand-reserved),shortage=Math.max(0,reserved-onHand);
-  return {pid,raw,onHand,reserved,free,shortage};
+  const inventoryConfirmed=raw>=0,onHand=inventoryConfirmed?raw:0,reserved=stockReserved(pid),coveredReserved=inventoryConfirmed?Math.min(reserved,onHand):0,free=inventoryConfirmed?Math.max(0,onHand-reserved):0,shortage=inventoryConfirmed?Math.max(0,reserved-onHand):reserved;
+  return {pid,raw,inventoryConfirmed,onHand,reserved,coveredReserved,free,shortage};
  }).sort((x,y)=>stockProductName(x.pid).localeCompare(stockProductName(y.pid),'ru'));
- const totalOnHand=cards.reduce((s,x)=>s+x.onHand,0),totalReserved=cards.reduce((s,x)=>s+x.reserved,0),totalFree=cards.reduce((s,x)=>s+x.free,0);
+ const confirmed=cards.filter(x=>x.inventoryConfirmed),inventoryNeeded=cards.filter(x=>!x.inventoryConfirmed);
+ const totalOnHand=confirmed.reduce((s,x)=>s+x.onHand,0),totalReserved=confirmed.reduce((s,x)=>s+x.coveredReserved,0),totalFree=confirmed.reduce((s,x)=>s+x.free,0);
  const writtenOff30=effective.filter(m=>String(m.date||'')>=cutoff&&m.type==='written_off').reduce((s,m)=>s+Math.abs(Number(m.quantity||0)),0);
  $('#stockTotalOnHand').textContent=`${totalOnHand} ${t('pcs')}`;
  $('#stockTotalReserved').textContent=`${totalReserved} ${t('pcs')}`;
  $('#stockTotalFree').textContent=`${totalFree} ${t('pcs')}`;
+ $('#stockNeedsInventory').textContent=stockProductCountLabel(inventoryNeeded.length);
  $('#stockWrittenOff30').textContent=`${writtenOff30} ${t('pcs')}`;
- $('#stockCards').innerHTML=cards.map(x=>`<article class="stock-product-card ${x.shortage?'has-shortage':''} ${x.raw<0?'has-discrepancy':''}">
+ $('#stockCards').innerHTML=cards.map(x=>{
+  if(!x.inventoryConfirmed)return `<article class="stock-product-card has-discrepancy ${x.shortage?'has-shortage':''}">
+   <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Резерв ${x.shortage} шт. не покрыт</span>`:''}</div>
+   <div class="stock-product-main stock-product-main-unconfirmed"><small>Фактический остаток</small><b>Остаток не подтверждён</b><em>Расчётный: ${x.raw} шт.</em></div>
+   <dl><div><dt>Активные резервы</dt><dd>${x.reserved} ${t('pcs')}</dd></div><div><dt>Свободно</dt><dd>—</dd></div></dl>
+   <button type="button" class="stock-inventory-button" data-stock-inventory="${adminEscape(x.pid)}">Провести инвентаризацию</button>
+  </article>`;
+  return `<article class="stock-product-card ${x.shortage?'has-shortage':''}">
    <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Не хватает ${x.shortage} шт.</span>`:''}</div>
-   <div class="stock-product-main"><small>На складе</small><b>${x.onHand} ${t('pcs')}</b></div>
+   <div class="stock-product-main"><small>Подтверждено на складе</small><b>${x.onHand} ${t('pcs')}</b></div>
    <dl><div><dt>Зарезервировано</dt><dd>${x.reserved} ${t('pcs')}</dd></div><div><dt>Свободно</dt><dd>${x.free} ${t('pcs')}</dd></div></dl>
-   ${x.raw<0?`<p class="stock-discrepancy">Нужна инвентаризация: старые движения дают расчётный остаток ${x.raw} шт.</p>`:''}
-  </article>`).join('');
- const warnings=[];
- cards.filter(x=>x.raw<0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: требуется инвентаризация, исторический расчёт ${x.raw} шт.</p>`));
- cards.filter(x=>x.shortage>0).forEach(x=>warnings.push(`<p><strong>${adminEscape(stockProductName(x.pid))}</strong>: не хватает для активных резервов ${x.shortage} шт.</p>`));
- const warningRoot=$('#stockWarnings');warningRoot.hidden=!warnings.length;warningRoot.innerHTML=warnings.join('');
+  </article>`;
+ }).join('');
+ const uncovered=cards.reduce((sum,x)=>sum+x.shortage,0),warningRoot=$('#stockWarnings');
+ if(inventoryNeeded.length||uncovered>0){
+  const first=inventoryNeeded[0]?.pid||'';
+  warningRoot.hidden=false;
+  warningRoot.innerHTML=`<div class="stock-warning-summary"><div><strong>${inventoryNeeded.length?`${stockProductCountLabel(inventoryNeeded.length)} требуют инвентаризации`:'Есть непокрытые резервы'}</strong><span>${inventoryNeeded.length?'Физический остаток этих позиций не считается нулём, пока его не подтвердит инвентаризация.':''}${inventoryNeeded.length&&uncovered?' ':''}${uncovered?`Не покрыто готовым хлебом: ${uncovered} шт.`:''}</span></div>${first?`<button type="button" data-stock-inventory="${adminEscape(first)}">Провести инвентаризацию</button>`:''}</div>`;
+ }else{warningRoot.hidden=true;warningRoot.innerHTML=''}
+ $$('[data-stock-inventory]').forEach(button=>button.onclick=()=>openStockMovementDialog(button.dataset.stockInventory,'inventory_set'));
  const sorted=effective.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
  const recent=sorted.filter(m=>String(m.date||'')>=cutoff),archive=sorted.filter(m=>String(m.date||'')<cutoff);
  const tabs=$('#stockMovementTabs');
@@ -913,10 +929,13 @@ $('#cancelBakeDate').onchange=renderCancelBakeSummary;
 $('#closeCancelBake').onclick=$('#keepBakeDay').onclick=()=>$('#cancelBakeDialog').close();
 $('#cancelBakeDialog').onclick=e=>{if(e.target===$('#cancelBakeDialog'))$('#cancelBakeDialog').close()};
 $('#cancelBakeForm').onsubmit=async e=>{e.preventDefault();const form=$('#cancelBakeForm');if(!form.reportValidity())return;const f=new FormData(form),date=f.get('bakeDate'),reason=f.get('reason'),button=$('#confirmCancelBake');button.disabled=true;try{if(await performCancelBake(date,reason))$('#cancelBakeDialog').close()}finally{button.disabled=false}};
-$('#addMovement').onclick=()=>{
+function openStockMovementDialog(product='',type='inventory_set'){
  fillMovementProducts();
- const form=$('#movementForm');form.reset();form.type.value='inventory_set';updateStockAdjustPreview();$('#movementDialog').showModal()
-};
+ const form=$('#movementForm');form.reset();form.type.value=type||'inventory_set';
+ if(product&&[...form.product.options].some(option=>option.value===String(product)))form.product.value=String(product);
+ updateStockAdjustPreview();$('#movementDialog').showModal();
+}
+$('#addMovement').onclick=()=>openStockMovementDialog();
 const closeMovementDialog=()=>{
  const dialog=$('#movementDialog'),form=$('#movementForm');
  if(dialog?.open)dialog.close();

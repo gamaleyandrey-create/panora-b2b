@@ -1,0 +1,12 @@
+Panora 7.36 / build 7360
+
+Finished-stock trust model + inventory-first UX:
+- top KPIs distinguish confirmed stock from products requiring inventory
+- uncertain negative historical balances are no longer displayed as factual 0 stock
+- inventory action is available directly from the warning and affected product card
+- covered reservations are separated from uncovered demand; free stock uses confirmed balances only
+- 30-day write-offs move to a secondary analytical line
+- product catalogue cards keep equal row heights on desktop
+- purchase date selector keeps the 7.35 unified button/check-state model
+
+No Supabase schema migration required.
