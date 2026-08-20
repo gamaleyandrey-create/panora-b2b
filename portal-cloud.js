@@ -510,6 +510,11 @@
         api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
+      if(restaurantRows[0].active===false){
+        const inactiveMessage=labels('Профиль партнёра архивирован пекарней. Новые заказы недоступны.','The partner profile has been archived by the bakery. New orders are unavailable.','El perfil del socio ha sido archivado por la panadería. No se pueden realizar nuevos pedidos.');
+        try{await logoutAccount()}catch{}
+        throw new Error(inactiveMessage);
+      }
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
       const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices};
