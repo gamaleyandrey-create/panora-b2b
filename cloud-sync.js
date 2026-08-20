@@ -1447,6 +1447,48 @@ window.panoraRecalculateBalances=recalculateBalances;
     return true;
   }
 
+  const bakeCancellationLog=()=>{try{return JSON.parse(localStorage.getItem('panora-cancelled-bake-dates')||'[]')}catch{return[]}};
+  const bakeCancellationReason=date=>{const matches=bakeCancellationLog().filter(row=>String(row?.date||'')===String(date));return String(matches.at(-1)?.reason||'День выпечки отменён пекарней').trim()||'День выпечки отменён пекарней'};
+  async function retireBakeDayRemote(day,reason=bakeCancellationReason(day?.bake_date)){
+    const id=String(day?.id||'');const date=String(day?.bake_date||'');if(!id)return{date,ordersCancelled:0};
+    const closed=await request(`bake_days?id=eq.${encodeURIComponent(id)}`,{
+      method:'PATCH',
+      headers:{Prefer:'return=representation'},
+      body:JSON.stringify({accepting_orders:false})
+    });
+    if(closed?.[0]&&closed[0].accepting_orders!==undefined&&closed[0].accepting_orders!==false)throw new Error(`Не удалось закрыть приём заказов на ${date}`);
+    const closedCheck=await request(`bake_days?id=eq.${encodeURIComponent(id)}&select=id,accepting_orders&limit=1`);
+    if(!closedCheck?.[0]||closedCheck[0].accepting_orders!==false)throw new Error(`Supabase не подтвердил закрытие приёма заказов на ${date}`);
+    const remoteOrders=await request(`orders?bake_day_id=eq.${encodeURIComponent(id)}&select=id,status`);
+    const cancellable=(remoteOrders||[]).filter(order=>!['cancelled','canceled','shipped'].includes(String(order?.status||'').toLowerCase()));
+    for(const order of cancellable){
+      await request('rpc/panora_admin_set_order_status',{
+        method:'POST',
+        headers:{Prefer:'return=representation'},
+        body:JSON.stringify({p_order_id:order.id,p_status:'cancelled',p_reason:String(reason||'День выпечки отменён пекарней')})
+      });
+    }
+    const verifiedOrders=await request(`orders?bake_day_id=eq.${encodeURIComponent(id)}&select=id,status`);
+    const stillActive=(verifiedOrders||[]).filter(order=>!['cancelled','canceled','shipped'].includes(String(order?.status||'').toLowerCase()));
+    if(stillActive.length)throw new Error(`Не удалось отменить ${stillActive.length} заказ(а) на ${date}`);
+    await request(`bake_items?bake_day_id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+    const remaining=await request(`bake_items?bake_day_id=eq.${encodeURIComponent(id)}&select=product_id`);
+    if(remaining?.length)throw new Error(`Не удалось удалить план выпечки на ${date}`);
+    return{date,ordersCancelled:cancellable.length};
+  }
+  async function cancelBakeDayAtomic({date,reason}={}){
+    if(!ready)throw new Error('Облако ещё загружается');
+    if(!navigator.onLine)throw new Error('Нет соединения с облаком');
+    const target=String(date||'');if(!target)throw new Error('Не указана дата выпечки');
+    status('Отменяем день выпечки…');
+    const rows=await request(`bake_days?bake_date=eq.${encodeURIComponent(target)}&select=id,bake_date,accepting_orders,bake_items(product_id)&limit=1`);
+    const day=rows?.[0];
+    if(!day){status('Облако ✓');return{date:target,ordersCancelled:0,alreadyMissing:true}}
+    const result=await retireBakeDayRemote(day,String(reason||bakeCancellationReason(target)));
+    await loadOrders();status('Облако ✓');
+    window.dispatchEvent(new CustomEvent('panora:bake-day-cancelled',{detail:result}));
+    return result;
+  }
   async function savePlansNow(){
     if(!ready||typeof plans==='undefined')return;
     status('Сохраняем…');
@@ -1468,8 +1510,14 @@ window.panoraRecalculateBalances=recalculateBalances;
 
     const byDate=new Map();
     plans.forEach(p=>{if(!byDate.has(p.bakeDate))byDate.set(p.bakeDate,[]);byDate.get(p.bakeDate).push(p)});
-    const existing=await request('bake_days?select=id,bake_date');
-    for(const day of existing||[]){if(!byDate.has(day.bake_date))await request(`bake_days?id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'})}
+    const existing=await request('bake_days?select=id,bake_date,accepting_orders,bake_items(product_id)');
+    let retiredAny=false;
+    for(const day of existing||[]){
+      if(byDate.has(day.bake_date))continue;
+      const hasItems=Array.isArray(day.bake_items)&&day.bake_items.length>0;
+      if(day.accepting_orders===false&&!hasItems)continue;
+      await retireBakeDayRemote(day);retiredAny=true;
+    }
     for(const [date,items] of byDate){
       const first=items[0],cutoff=cutoffIso(first.cutoff);if(!cutoff)throw new Error(`Некорректный срок приёма заказов для ${date}`);const payload={bake_date:date,delivery_date:first.deliveryDate||date,cutoff_at:cutoff,accepting_orders:first.open!==false};
       const rows=await request('bake_days?on_conflict=bake_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
@@ -1479,6 +1527,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
     revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');delete conflicts.plans;saveConflicts();
     clearPending('plans');savePlanBaseline(plans);
+    if(retiredAny)await loadOrders();
     status('Сохранено');
     window.dispatchEvent(new CustomEvent('panora:plan-saved',{detail:{at:new Date().toISOString()}}));
   }
@@ -1759,7 +1808,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{

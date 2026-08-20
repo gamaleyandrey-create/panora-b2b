@@ -1,0 +1,10 @@
+Panora 7.22 — reliable bake-day cancellation
+
+- Fixed the bakery calendar defect where a cancelled bake day could return from Supabase and partner orders could remain active.
+- Bake-day cancellation now closes ordering on the server first, cancels every non-shipped linked order through the existing Panora status RPC, verifies the statuses, removes the bake items, and verifies that the day is no longer available for ordering.
+- The bake_days row is preserved as a closed historical anchor instead of being hard-deleted, so linked order history is not broken.
+- Offline cancellation remains queued through the existing production-plan sync; when connectivity returns, the same verified server retirement flow is applied.
+- The bakery UI reports cloud failure instead of showing a false success message.
+- Partner cache isolation was re-audited: a new partner account is not assigned until its own restaurant data has replaced the prior private caches, and working views remain filtered by account.id.
+- No schema or SQL change is required.
+- Archive set: Panora 9.7.
