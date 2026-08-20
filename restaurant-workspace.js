@@ -157,6 +157,29 @@
     const locale = lang === "es" ? "es-ES" : lang === "en" ? "en-GB" : "ru-RU";
     return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
   };
+  // Panora 7.11: convert UTC event timestamps to the bakery-local economic day.
+  // This is intentionally separate from localDate(), which formats already-normalized dates for display.
+  const economicDay = (value) => {
+    const raw=String(value||"");
+    if(!raw)return "";
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+    const parsed=new Date(raw);
+    if(Number.isNaN(parsed.getTime()))return raw.slice(0,10);
+    const pad=n=>String(n).padStart(2,"0");
+    return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}`;
+  };
+  const economicMoment = (day,value,fallbackHour=12) => {
+    const target=String(day||economicDay(value)||"").slice(0,10);
+    if(!target)return 0;
+    const raw=String(value||"");
+    if(raw&&economicDay(raw)===target){
+      const parsed=new Date(raw);
+      if(!Number.isNaN(parsed.getTime()))return parsed.getTime();
+    }
+    const fallback=new Date(`${target}T${String(fallbackHour).padStart(2,"0")}:00:00`);
+    return Number.isNaN(fallback.getTime())?0:fallback.getTime();
+  };
+
   const esc = (value) =>
     String(value ?? "").replace(
       /[&<>"']/g,
@@ -904,9 +927,8 @@
 
     // Panora 6.95: a future DN covered by an older advance closes on the DN date, never before it exists.
     const settlementAppliedAt=(paymentDate,noteDate)=>{
-      const paymentValue=String(paymentDate||""),noteValue=String(noteDate||"");
-      const paymentDay=paymentValue.slice(0,10),noteDay=noteValue.slice(0,10);
-      return noteDay&&(!paymentDay||noteDay>paymentDay)?noteValue:(paymentValue||noteValue);
+      const paymentDay=economicDay(paymentDate),noteDay=economicDay(noteDate);
+      return noteDay&&(!paymentDay||noteDay>paymentDay)?noteDay:(paymentDay||noteDay);
     };
     const apply=(row,note,requested)=>{
       if(!note||requested<=0)return 0;
@@ -1003,19 +1025,21 @@
       }
     };
     const events=[
-      ...allNotes.map(note=>({kind:"note",date:String(note.date||""),occurredAt:`${String(note.date||"")}T00:00:00`,note})),
+      ...allNotes.map(note=>({kind:"note",date:economicDay(note.date),occurredAt:economicMoment(note.date,null,0),note})),
       ...allPayments.flatMap(payment=>{
         const receivedAt=String(payment.receivedAt||`${payment.date||""}T12:00:00`);
-        const rows=[{kind:"payment",date:String(payment.date||receivedAt.slice(0,10)||""),occurredAt:receivedAt,payment}];
+        const paymentDay=String(payment.date||economicDay(receivedAt)||"");
+        const rows=[{kind:"payment",date:paymentDay,occurredAt:economicMoment(paymentDay,receivedAt,12),payment}];
         if(partnerReturnCreditPayment(payment))return rows;
         const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
         if(reversalType){
           const stateAt=String(reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt)||receivedAt);
-          rows.push({kind:"reversal",date:stateAt.slice(0,10),occurredAt:stateAt,payment});
+          const reversalDay=economicDay(stateAt)||paymentDay;
+          rows.push({kind:"reversal",date:reversalDay,occurredAt:economicMoment(reversalDay,stateAt,23),payment});
         }
         return rows;
       })
-    ].sort((a,b)=>String(a.occurredAt||a.date).localeCompare(String(b.occurredAt||b.date))||({note:0,payment:1,reversal:2}[a.kind]-{note:0,payment:1,reversal:2}[b.kind])||String(a.payment?.id||a.note?.id||"").localeCompare(String(b.payment?.id||b.note?.id||"")));
+    ].sort((a,b)=>Number(a.occurredAt||0)-Number(b.occurredAt||0)||({note:0,payment:1,reversal:2}[a.kind]-{note:0,payment:1,reversal:2}[b.kind])||String(a.payment?.id||a.note?.id||"").localeCompare(String(b.payment?.id||b.note?.id||"")));
 
     events.forEach(event=>{
       if(event.kind==="note"){
@@ -1127,7 +1151,7 @@
             const reversalType=payment.status==="cancelled"?"cancel":payment.disputeStatus==="open"?"dispute":"";
             if(reversalType&&originallyConfirmed){
               const stateAt=reversalType==="dispute"?(payment.disputedAt||payment.updatedAt||payment.receivedAt):(payment.updatedAt||payment.disputedAt||payment.receivedAt);
-              rows.push({date:String(stateAt||payment.date||"").slice(0,10),kind:"payment_reversal",amount:Number(payment.amount||0),label,payment,reversalType,sort:2,effect:Number(payment.amount||0)});
+              rows.push({date:economicDay(stateAt||payment.date),kind:"payment_reversal",amount:Number(payment.amount||0),label,payment,reversalType,sort:2,effect:Number(payment.amount||0)});
             }
             return rows;
           })

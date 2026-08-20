@@ -7,7 +7,7 @@
   const PORTAL_NOTES_CACHE_LIMIT=250;
   const PORTAL_PAYMENTS_CACHE_LIMIT=350;
 
-  // Panora 7.10: use the partner device's local calendar for UTC cloud timestamps.
+  // Panora 7.11: use the partner device's local calendar for UTC cloud timestamps.
   // This keeps the partner history aligned with bakery Finance around local midnight.
   function portalEconomicDate(value){
     const raw=String(value||'');if(!raw)return '';
