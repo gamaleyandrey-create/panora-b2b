@@ -1,0 +1,9 @@
+Panora 7.20 — offline delivery-confirmation recovery
+
+- Fixed a partner-to-bakery delivery acknowledgement gap when connectivity disappears on the QR confirmation page.
+- Previously an offline confirmation was queued only inside confirm.js. If the partner closed that QR page before connectivity returned, the main partner app never flushed the queued acknowledgement.
+- The authenticated partner app now safely flushes pending delivery confirmations after account hydration and whenever connectivity returns.
+- Successful recovery immediately refreshes partner delivery-note state; the bakery already receives the server-side confirmation through its existing 2-second delivery-note polling.
+- Failed or foreign-account queue entries are preserved for a later valid session instead of being discarded.
+- No schema or SQL change is required.
+- Archive set: Panora 9.5.
