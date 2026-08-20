@@ -1,0 +1,9 @@
+Panora 7.29 — stable order messages badge and clearer message action
+
+- Order communication action is renamed to “Сообщения” / “Messages” / “Mensajes”.
+- Bakery and partner message buttons are larger and keep fixed geometry on desktop and mobile.
+- Unread badge state is retained across live order-list rerenders, so the red count no longer disappears and reappears while the same unread state is active.
+- The unread badge keeps a fixed 22px geometry and is absolutely positioned so count changes do not resize the button.
+- Opening a conversation still correctly clears its unread badge after messages are marked read.
+- No SQL/schema change is required.
+- Archive set: Panora 9.14.
