@@ -16,8 +16,8 @@
     const partnerPage=!document.body.classList.contains('admin-page');
     if(partnerPage){
       document.querySelector('#panoraConnectionState')?.remove();
-      const inline=document.querySelector('#partnerSyncInline');
-      if(inline)return inline;
+      document.querySelector('#partnerSyncInline')?.remove();
+      return null;
     }
     let el=document.querySelector('#panoraConnectionState');
     if(el)return el;
@@ -46,6 +46,7 @@
 
   function render(state,text,detail=''){
     const el=ensure();
+    if(!el)return;
     const s=state||'synced';
     const partnerPage=!document.body.classList.contains('admin-page');
     const resolved=(s==='synced'&&partnerPage)?'Актуально':(text||labels[s]||labels.synced);
