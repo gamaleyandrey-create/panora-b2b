@@ -1,0 +1,9 @@
+Panora 7.21 — partner cancellation cutoff/race hardening
+
+- Fixed a stale partner cancellation action around the bake-day cutoff.
+- An order opened before cutoff no longer keeps a usable cancellation action after the cancellation window closes; the partner workspace refreshes cancelability while it is open.
+- Cancellation eligibility is rechecked at click time before any cloud update is attempted.
+- The partner cancellation PATCH now targets only submitted orders and requests the changed row back from Supabase.
+- A zero-row/RLS race (for example when the bakery confirms the order at the same moment) is no longer reported as a successful cancellation.
+- No schema or SQL change is required.
+- Archive set: Panora 9.6.
