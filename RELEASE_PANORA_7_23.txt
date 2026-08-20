@@ -1,0 +1,9 @@
+Panora 7.23 — partner bake-plan live UI refresh
+
+- Fixed the partner-side live-sync gap after a bakery bake day is cancelled or changed.
+- Background partner hydration already received the current bake_days/bake_items data, but the open catalogue, bake-date selector and cart were not re-rendered when only the production plan changed.
+- Panora now compares the previous and freshly hydrated partner production-plan signatures and refreshes the bake dates, product availability and cart only when the plan actually changed.
+- A bake day retired by the bakery therefore disappears from an already-open partner screen without a manual reload; server-side order validation remains authoritative.
+- The refresh reuses the existing 10-second hydration and adds no extra Supabase polling calls.
+- No schema or SQL change is required.
+- Archive set: Panora 9.8.
