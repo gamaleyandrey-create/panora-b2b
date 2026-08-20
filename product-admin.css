@@ -99,3 +99,36 @@
 .product-restore-button{min-height:44px;border:1px solid #9aa99e;border-radius:12px;background:#fff;color:#365344;font-weight:750}
 .product-restore-button:hover{background:#f2f6f2}
 @media(max-width:620px){.product-archive-section{margin-top:18px}.product-archive-section>summary{padding:14px}.product-archive-section>p{padding:0 14px 12px}.product-archive-grid{padding:0 14px 14px}}
+
+
+/* Panora 7.36 — equal product-card geometry on desktop rows */
+#productAdminGrid.product-admin-grid{align-items:stretch}
+#productAdminGrid .product-admin-card{display:flex;flex-direction:column;height:100%}
+#productAdminGrid .product-admin-body{display:flex;flex:1;flex-direction:column}
+#productAdminGrid .product-card-actions{margin-top:auto}
+@media(max-width:620px){#productAdminGrid .product-admin-card{height:auto}}
+
+/* Panora 7.36 — fixed internal alignment for all active product cards */
+#productAdminGrid.product-admin-grid{grid-auto-rows:1fr}
+#productAdminGrid .product-admin-body h3{
+  min-height:2.6em;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+#productAdminGrid .product-admin-body p{
+  min-height:3em;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+#productAdminGrid .product-storefront-control{margin-top:auto}
+#productAdminGrid .product-card-actions{margin-top:10px}
+@media(max-width:620px){
+  #productAdminGrid.product-admin-grid{grid-auto-rows:auto}
+  #productAdminGrid .product-admin-body h3,
+  #productAdminGrid .product-admin-body p{min-height:0;display:block;overflow:visible}
+  #productAdminGrid .product-storefront-control{margin-top:14px}
+}
