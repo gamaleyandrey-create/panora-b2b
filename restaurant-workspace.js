@@ -673,7 +673,7 @@
     const count=cartCount();
     const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
     return `<section class="rw-new-order-page">
-      <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. День выпечки выберете один раз в корзине.":lang==="es"?"Elige el pan y la cantidad. Elegirás el día de horneado una sola vez en la cesta.":"Choose bread and quantity. You will choose the bake day once in the basket."}</p></div></header>
+      <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. День выпечки выберете перед подтверждением заказа.":lang==="es"?"Elige el pan y la cantidad. Elegirás el día de horneado antes de confirmar el pedido.":"Choose bread and quantity. You will choose the bake day before confirming the order."}</p></div></header>
       <div class="rw-new-product-grid">
         ${products.map(product=>{
           const qty=Math.max(0,Math.min(NEW_ORDER_QTY_CAP,Number(cart?.[product.id]||0)));

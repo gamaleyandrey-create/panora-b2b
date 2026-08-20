@@ -24,3 +24,11 @@
   #checkoutForm [data-checkout-bake-date-shadow]{display:none!important}
   #checkoutForm .checkout-time-row{display:grid!important;grid-template-columns:1fr!important}
 }
+
+
+/* Panora 9.27 — mobile partner can see and choose the bake day on final confirmation. */
+.checkout-bake-date-field{display:none!important}
+@media(max-width:720px){
+  #checkoutForm .checkout-bake-date-field{display:grid!important}
+  #checkoutForm .checkout-bake-date-field select{display:block!important;width:100%!important;min-height:48px!important;font-size:16px!important}
+}
