@@ -1040,26 +1040,11 @@
     if(changed){localStorage.setItem('panora-cart',JSON.stringify(cart));renderCart?.();renderProducts?.()}
     return changed;
   }
-  const planCapacityIssue=(date,items)=>{
-    const plans=productionPlans();
-    for(const item of items||[]){
-      const plan=plans.find(p=>p.open!==false&&String(p.bakeDate||'')===String(date||'')&&String(p.product||'')===String(item.product||''));
-      const planned=Math.max(0,Math.floor(Number(plan?.planned||0)));
-      const requested=Math.max(0,Math.floor(Number(item.quantity||0)));
-      if(!plan||planned<=0||requested>planned)return{product:String(item.product||''),requested,remaining:planned};
-    }
-    return null;
-  };
   const parsePlanCapacityError=error=>{
     const text=String(error?.message||error||'');
     const match=text.match(/PANORA_PLAN_CAPACITY\|product=([^|]+)\|requested=(\d+)\|remaining=(\d+)/i);
     return match?{product:decodeURIComponent(match[1]),requested:Number(match[2]||0),remaining:Number(match[3]||0)}:null;
   };
-  const planCapacityMessage=issue=>labels(
-    `Недостаточно свободного плана для «${portalProduct(issue.product)}». Доступно: ${issue.remaining} шт. Корзина сохранена — скорректируйте количество.`,
-    `Not enough bake-plan capacity for “${portalProduct(issue.product)}”. Available: ${issue.remaining} pcs. Your cart is saved — adjust the quantity.`,
-    `No hay suficiente capacidad de horneado para «${portalProduct(issue.product)}». Disponible: ${issue.remaining} uds. La cesta se conserva; ajusta la cantidad.`
-  );
   const isOrderNumberConflict=error=>/orders_order_number_key|duplicate key value[^\n]*order_number|key \(order_number\)=/i.test(String(error?.message||error||''));
   const isCreateOrderRpcUnavailable=error=>error?.status===404||/panora_create_order|schema cache|PGRST202|ambiguous|42702/i.test(String(error?.message||error||''));
   async function createOrderWithRecovery(id,date,deliveryDate,items,comment){
@@ -1177,8 +1162,6 @@
     if(fulfillment==='delivery'&&!form.address.value)missing.push(labels('адрес доставки','delivery address','dirección de entrega'));
     if(!resolvedDate)missing.push(labels('день выпечки','bake day','día de horneado'));
     if(missing.length)return showToast(labels(`Заполните: ${missing.join(', ')}`,`Complete: ${missing.join(', ')}`,`Completa: ${missing.join(', ')}`));
-    const localCapacityIssue=planCapacityIssue(resolvedDate,items);
-    if(localCapacityIssue)return showToast(planCapacityMessage(localCapacityIssue));
     submitting=true;const button=form.querySelector('[type="submit"]');button.disabled=true;state('sending',labels('Отправляем заказ…','Sending order…','Enviando pedido…'));
     if(typeof saveCheckoutProfile==='function')saveCheckoutProfile();
     const nextPhone=String(form.phone.value||'').trim(),nextAddress=String(form.address.value||'').trim();
@@ -1237,28 +1220,12 @@
         const capacityIssue=parsePlanCapacityError(error);
         const message=String(error?.message||'');
         if(capacityIssue){
-          await loadAll(true).catch(()=>{});
-          const productId=String(capacityIssue.product||'');
-          const remaining=Math.max(0,Math.floor(Number(capacityIssue.remaining||0)));
-          const current=Math.max(0,Math.floor(Number(cart?.[productId]||0)));
-          if(productId&&current>remaining){
-            if(remaining>0)cart[productId]=remaining;else delete cart[productId];
-            try{localStorage.setItem('panora-cart',JSON.stringify(cart))}catch{}
-            try{syncCartDeliveryDate?.();renderProducts?.();renderCart?.()}catch{}
-          }
           const friendly=labels(
-            remaining>0
-              ?`Свободный план изменился. Количество «${portalProduct(productId)}» обновлено до ${remaining} шт. Проверьте корзину и отправьте заказ снова.`
-              :`Свободный план для «${portalProduct(productId)}» закончился. Позиция убрана из корзины — выберите другую дату или товар.`,
-            remaining>0
-              ?`Bake-plan capacity changed. “${portalProduct(productId)}” was updated to ${remaining} pcs. Review the basket and send the order again.`
-              :`No bake-plan capacity remains for “${portalProduct(productId)}”. The item was removed from the basket — choose another date or product.`,
-            remaining>0
-              ?`La capacidad de horneado cambió. «${portalProduct(productId)}» se actualizó a ${remaining} uds. Revisa la cesta y vuelve a enviar el pedido.`
-              :`Ya no queda capacidad de horneado para «${portalProduct(productId)}». El producto se eliminó de la cesta; elige otra fecha o producto.`
+            'Сервер использует старое правило ограничения планом. Корзина сохранена без изменения количества.',
+            'The server is still using the old bake-plan capacity rule. Your cart was preserved without changing quantities.',
+            'El servidor sigue usando la regla antigua de capacidad del plan. La cesta se conserva sin cambiar cantidades.'
           );
           state('error',friendly);showToast(friendly);
-          closePanels();setTimeout(()=>openPanel(document.querySelector('#cartDrawer')),120);
         }else{
           if(/Product unavailable|Unknown product|inactive product/i.test(message)){
             const checked=validateCheckoutItems(rawItems);purgeUnavailableCart(checked.unavailable);showToast(unavailableCartError().message);

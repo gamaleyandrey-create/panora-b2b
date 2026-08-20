@@ -691,7 +691,7 @@
                 <label>
                   <span>${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}</span>
                   <select data-rw-new-qty-select="${esc(product.id)}" data-panora-no-draft="1" data-rw-stable-select="qty" aria-label="${lang==="ru"?"Количество":lang==="es"?"Cantidad":"Quantity"}">
-                    ${Array.from({length:Math.min(NEW_ORDER_QTY_CAP+1,Math.max(51,product.wholesaleMinQty+25))},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
+                    ${Array.from({length:NEW_ORDER_QTY_CAP+1},(_,value)=>`<option value="${value}"${value===qty?" selected":""}>${value}</option>`).join("")}
                   </select>
                 </label>
                 <small class="rw-new-limit-warning"${warning?"":" hidden"}>${warning}</small>

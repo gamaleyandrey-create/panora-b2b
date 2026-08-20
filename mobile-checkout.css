@@ -26,9 +26,8 @@
 }
 
 
-/* Panora 9.27 — mobile partner can see and choose the bake day on final confirmation. */
-.checkout-bake-date-field{display:none!important}
+/* Panora 9.28 — bake date is explicit on final confirmation; receiving selector removed. */
+#checkoutForm .checkout-bake-date-field{display:grid!important}
 @media(max-width:720px){
-  #checkoutForm .checkout-bake-date-field{display:grid!important}
   #checkoutForm .checkout-bake-date-field select{display:block!important;width:100%!important;min-height:48px!important;font-size:16px!important}
 }
