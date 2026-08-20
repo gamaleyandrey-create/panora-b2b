@@ -15,3 +15,9 @@
 .price-row[data-save-state="saving"] input{border-color:#6f947a;box-shadow:0 0 0 2px rgba(65,102,76,.08)}
 .price-row[data-save-state="saved"] input{border-color:#b8cbbd}
 .price-row[data-save-state="error"] input{border-color:#b8645c;background:#fff8f7}
+
+/* Panora 7.24 — keep bakery bake calendar visible at the top of the mobile Plan tab */
+@media(max-width:720px){
+ #view-plan.active>#bakeCalendar{display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;margin:0 0 16px!important}
+ #view-plan.active>.page-head{margin-bottom:14px!important}
+}

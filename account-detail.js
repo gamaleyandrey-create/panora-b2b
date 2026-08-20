@@ -51,6 +51,8 @@
     : /\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||''));
 
   const allocationFor = (id) => {
+    const today = window.panoraAccountingAllocationToday?.(id);
+    if (today) return today;
     const cloud = window.panoraFinanceAllocation?.(id);
     if (cloud) return cloud;
     const notes = deliveryNotes
@@ -627,7 +629,7 @@
     const balanceCard=$("#accountDetailBalanceCard");
     balanceCard?.classList.remove("is-credit","is-zero","is-debt");
     if(allocation.debt>0.005){
-      if(balanceLabel)balanceLabel.textContent="Задолженность";
+      if(balanceLabel)balanceLabel.textContent="Задолженность перед пекарней на сегодня";
       $("#accountDetailDebt").textContent=euro(allocation.debt);
       balanceCard?.classList.add("is-debt");
     }else if(allocation.credit>0.005){

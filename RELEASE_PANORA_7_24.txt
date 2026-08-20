@@ -1,0 +1,9 @@
+Panora 7.24 — bakery calendar + current debt
+
+- Mobile bakery: the bake calendar now stays directly below the Plan heading and is visible at the top of the mobile screen.
+- Cancelling/removing a bake day is no longer undone by already shipped historical orders; shipped orders still contribute to an existing plan but cannot recreate a missing day by themselves.
+- Bakery Payments & balances now leads with the real debt to the bakery as of today. Debt is highlighted in red.
+- Total/open-invoice volume and allocated amount were moved out of the main balance view into the expandable “Общий объём” filter, with an optional partner selector.
+- Partner account detail follows the same debt-first presentation; shipment/payment totals are under the expandable volume filter.
+- No SQL/schema change is required.
+- Archive set: Panora 9.9.

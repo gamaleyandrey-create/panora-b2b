@@ -172,7 +172,7 @@ function syncPlansFromOrders() {
   const current = cRead("panora-production-plans", []),
     grouped = {};
   orders
-    .filter((o) => o.status !== "cancelled")
+    .filter((o) => String(o.status || "") !== "cancelled")
     .forEach((o) =>
       o.items.forEach((i) => {
         const key = `${o.date}:${i.product}`;
@@ -181,8 +181,10 @@ function syncPlansFromOrders() {
           deliveryDate: o.deliveryDate || o.date,
           product: i.product,
           ordered: 0,
+          hasUnshippedOrder: false,
         };
         grouped[key].ordered += Number(i.quantity || 0);
+        if (String(o.status || "") !== "shipped") grouped[key].hasUnshippedOrder = true;
       }),
     );
   Object.values(grouped).forEach((g) => {
@@ -190,6 +192,10 @@ function syncPlansFromOrders() {
       (x) => x.bakeDate === g.bakeDate && x.product === g.product,
     );
     if (!p) {
+      // Panora 7.24: a shipped order is history and must not recreate a bake day
+      // that the bakery already cancelled/removed. If an active order still exists,
+      // auto-recovery remains available as before.
+      if (!g.hasUnshippedOrder) return;
       const cutoff = new Date(`${g.bakeDate}T09:00:00`);
       cutoff.setHours(cutoff.getHours() - 48);
       p = {
@@ -710,28 +716,44 @@ function accountingDate(value) {
   }
 }
 
-function accountingAllocationFor(restaurantId) {
-  const shared = typeof window.panoraFinanceAllocation === "function"
+const accountingEconomicDay = (value) => {
+  const raw = String(value || "");
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 10);
+  const pad = (number) => String(number).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+const accountingToday = () => accountingEconomicDay(new Date().toISOString());
+
+function accountingAllocationFor(restaurantId, { asOfToday = false } = {}) {
+  const asOf = asOfToday ? accountingToday() : "";
+  const shared = !asOfToday && typeof window.panoraFinanceAllocation === "function"
     ? window.panoraFinanceAllocation(restaurantId)
     : null;
   if (shared?.notes) return shared;
 
   const notes = deliveryNotes
-    .filter((note) => note.restaurantId === restaurantId)
+    .filter((note) =>
+      note.restaurantId === restaurantId &&
+      (!asOf || accountingEconomicDay(note.date) <= asOf)
+    )
     .slice()
     .sort((a, b) =>
       String(a.date || "").localeCompare(String(b.date || "")) ||
       Number(a.number || 0) - Number(b.number || 0) ||
       String(a.id || "").localeCompare(String(b.id || ""))
     );
-  const hasEffectiveReturnTotals=typeof window.panoraB2BEffectiveNoteTotal==='function';
+  const hasEffectiveReturnTotals = typeof window.panoraB2BEffectiveNoteTotal === "function";
   const confirmed = payments
     .filter((payment) =>
       payment.restaurantId === restaurantId &&
       paymentConfirmed(payment) &&
       (!hasEffectiveReturnTotals || !paymentIsReturnCredit(payment)) &&
       payment.status !== "cancelled" &&
-      Number(payment.amount || 0) > 0
+      Number(payment.amount || 0) > 0 &&
+      (!asOf || accountingEconomicDay(payment.receivedAt || payment.date) <= asOf)
     )
     .slice()
     .sort((a, b) =>
@@ -754,7 +776,9 @@ function accountingAllocationFor(restaurantId) {
     }
     const key = String(linked.id);
     const already = Number(paidByNote.get(key) || 0);
-    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(linked):Math.max(0, Number(linked.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
+      ? window.panoraB2BEffectiveNoteTotal(linked)
+      : Math.max(0, Number(linked.total || 0));
     const applied = Math.min(Math.max(0, total - already), amount);
     paidByNote.set(key, already + applied);
     fifoPool += Math.max(0, amount - applied);
@@ -764,7 +788,9 @@ function accountingAllocationFor(restaurantId) {
     if (fifoPool <= 0) return;
     const key = String(note.id);
     const already = Number(paidByNote.get(key) || 0);
-    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
+      ? window.panoraB2BEffectiveNoteTotal(note)
+      : Math.max(0, Number(note.total || 0));
     const due = Math.max(0, total - already);
     const applied = Math.min(due, fifoPool);
     if (applied > 0) {
@@ -774,7 +800,9 @@ function accountingAllocationFor(restaurantId) {
   });
 
   const rows = notes.map((note) => {
-    const total = typeof window.panoraB2BEffectiveNoteTotal==='function'?window.panoraB2BEffectiveNoteTotal(note):Math.max(0, Number(note.total || 0));
+    const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
+      ? window.panoraB2BEffectiveNoteTotal(note)
+      : Math.max(0, Number(note.total || 0));
     const paid = Math.min(total, Math.max(0, Number(paidByNote.get(String(note.id)) || 0)));
     const due = Math.max(0, total - paid);
     return { note, total, paid, due, closed: due <= 0.005 };
@@ -786,62 +814,87 @@ function accountingAllocationFor(restaurantId) {
     credit: Math.max(0, fifoPool)
   };
 }
+window.panoraAccountingAllocationToday = (restaurantId) => accountingAllocationFor(restaurantId, { asOfToday: true });
 
+let accountingVolumePartnerId = "all";
 function renderAccounting() {
-  let activeInvoiceTotal = 0,
-    activeAllocatedTotal = 0,
-    debtTotal = 0,
+  let debtTotal = 0,
     creditTotal = 0;
+  const today = accountingToday();
+  const accountData = restaurants.map((r) => {
+    const allocation = accountingAllocationFor(r.id, { asOfToday: true });
+    const activeNotes = (allocation.notes || []).filter((row) => Number(row.due || 0) > 0.005);
+    const activeInvoices = activeNotes.reduce((sum, row) => sum + Number(row.total || 0), 0);
+    const activeAllocated = activeNotes.reduce((sum, row) => sum + Number(row.paid || 0), 0);
+    const debt = activeNotes.reduce((sum, row) => sum + Number(row.due || 0), 0);
+    const credit = Number(allocation.credit || 0);
+    const last = [
+      ...deliveryNotes
+        .filter((n) => n.restaurantId === r.id && accountingEconomicDay(n.date) <= today)
+        .map((n) => n.date),
+      ...payments
+        .filter((x) => x.restaurantId === r.id && accountingEconomicDay(x.receivedAt || x.date) <= today)
+        .map((x) => x.receivedAt || x.date),
+    ].sort().pop() || "—";
+    debtTotal += debt;
+    creditTotal += credit;
+    return { r, activeNotes, activeInvoices, activeAllocated, debt, credit, last };
+  });
 
-  document.querySelector("#accountRows").innerHTML = restaurants.length
-    ? restaurants
-        .map((r) => {
-          const allocation = accountingAllocationFor(r.id);
-          const activeNotes = (allocation.notes || []).filter((row) => Number(row.due || 0) > 0.005);
-          const activeInvoices = activeNotes.reduce((sum, row) => sum + Number(row.total || 0), 0);
-          const activeAllocated = activeNotes.reduce((sum, row) => sum + Number(row.paid || 0), 0);
-          const debt = activeNotes.reduce((sum, row) => sum + Number(row.due || 0), 0);
-          const credit = Number(allocation.credit || 0);
-          const last =
-            [
-              ...deliveryNotes
-                .filter((n) => n.restaurantId === r.id)
-                .map((n) => n.date),
-              ...payments
-                .filter((x) => x.restaurantId === r.id)
-                .map((x) => x.date),
-            ]
-              .sort()
-              .pop() || "—";
-
-          activeInvoiceTotal += activeInvoices;
-          activeAllocatedTotal += activeAllocated;
-          debtTotal += debt;
-          creditTotal += credit;
-
+  const accountRows = document.querySelector("#accountRows");
+  if (accountRows) {
+    accountRows.innerHTML = accountData.length
+      ? accountData.map(({ r, debt, credit, last }) => {
           const balanceHtml = debt > 0.005
-            ? `<span class="account-balance-debt"><small>Партнёр должен</small>К оплате пекарне <strong>${euro(debt)}</strong></span>`
+            ? `<span class="account-balance-debt"><small>Задолженность перед пекарней на сегодня</small><strong>${euro(debt)}</strong></span>`
             : credit > 0.005
               ? `<span class="account-balance-credit"><small>Пекарня получила аванс</small>Переплата партнёра <strong>${euro(credit)}</strong></span>`
               : `<span class="account-balance-zero"><small>Долга и аванса нет</small><strong>Расчёты закрыты</strong></span>`;
-
           return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}">
             <td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></button></td>
             <td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}"><button type="button" class="account-balance-button" data-open-account="${commerceEscape(r.id)}">${balanceHtml}</button></td>
-            <td><strong>${euro(activeInvoices)}</strong><small class="account-current-hint">${activeNotes.length} ${activeNotes.length===1?"накладная":"накладных"}</small></td>
-            <td><strong>${euro(activeAllocated)}</strong><small class="account-current-hint">в текущие накладные</small></td>
             <td>${commerceEscape(accountingDate(last))}</td>
           </tr>`;
-        })
-        .join("")
-    : '<tr><td class="empty-row" colspan="5">Партнёров пока нет.</td></tr>';
+        }).join("")
+      : '<tr><td class="empty-row" colspan="3">Партнёров пока нет.</td></tr>';
+  }
 
-  document.querySelector("#totalShipped").textContent = euro(activeInvoiceTotal);
-  document.querySelector("#totalPaid").textContent = euro(activeAllocatedTotal);
   document.querySelector("#totalDebt").textContent = euro(debtTotal);
   const creditNode = document.querySelector("#totalCredit");
   if (creditNode) creditNode.textContent = euro(creditTotal);
+
+  const volumePartner = document.querySelector("#accountingVolumePartner");
+  if (volumePartner) {
+    const known = accountingVolumePartnerId === "all" || restaurants.some((r) => String(r.id) === String(accountingVolumePartnerId));
+    if (!known) accountingVolumePartnerId = "all";
+    volumePartner.innerHTML = `<option value="all">Все партнёры</option>${restaurants.map((r) => `<option value="${commerceEscape(r.id)}">${commerceEscape(r.name)}</option>`).join("")}`;
+    volumePartner.value = accountingVolumePartnerId;
+  }
+  const volumeData = accountingVolumePartnerId === "all"
+    ? accountData
+    : accountData.filter(({ r }) => String(r.id) === String(accountingVolumePartnerId));
+  const volumeInvoiceTotal = volumeData.reduce((sum, row) => sum + row.activeInvoices, 0);
+  const volumeAllocatedTotal = volumeData.reduce((sum, row) => sum + row.activeAllocated, 0);
+  const shippedNode = document.querySelector("#totalShipped");
+  const paidNode = document.querySelector("#totalPaid");
+  if (shippedNode) shippedNode.textContent = euro(volumeInvoiceTotal);
+  if (paidNode) paidNode.textContent = euro(volumeAllocatedTotal);
+  const volumeRows = document.querySelector("#accountVolumeRows");
+  if (volumeRows) {
+    volumeRows.innerHTML = volumeData.length
+      ? volumeData.map(({ r, activeNotes, activeInvoices, activeAllocated }) => `<tr>
+          <td><strong>${commerceEscape(r.name)}</strong></td>
+          <td><strong>${euro(activeInvoices)}</strong><small class="account-current-hint">${activeNotes.length} ${activeNotes.length === 1 ? "накладная" : "накладных"}</small></td>
+          <td><strong>${euro(activeAllocated)}</strong><small class="account-current-hint">зачтено в текущие накладные</small></td>
+        </tr>`).join("")
+      : '<tr><td class="empty-row" colspan="3">Нет данных по выбранному партнёру.</td></tr>';
+  }
 }
+const accountingVolumePartner = document.querySelector("#accountingVolumePartner");
+accountingVolumePartner?.addEventListener("change", () => {
+  accountingVolumePartnerId = accountingVolumePartner.value || "all";
+  renderAccounting();
+});
 const reminderLocale=language=>language==='es'?'es-ES':language==='en'?'en-GB':'ru-RU';
 const reminderPrettyDate=(value,language='ru',withYear=true)=>{
   if(!value)return '—';

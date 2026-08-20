@@ -7,10 +7,19 @@ const calendarBlock=document.querySelector('#bakeCalendar');
 if(calendarHeading&&calendarBlock)calendarBlock.insertAdjacentElement('beforebegin',calendarHeading);
 const mobileLayout=window.matchMedia('(max-width:850px)');
 function placeBakeCalendar(){
- const calendar=document.querySelector('#bakeCalendar'),planList=document.querySelector('#planList');
- if(!calendar||!planList)return;
- if(mobileLayout.matches){planList.insertAdjacentElement('afterend',calendarHeading);calendarHeading.insertAdjacentElement('afterend',calendar)}
- else{navigation.insertAdjacentElement('beforebegin',calendarHeading);calendarHeading.insertAdjacentElement('afterend',calendar)}
+ const calendar=document.querySelector('#bakeCalendar'),view=document.querySelector('#view-plan');
+ if(!calendar||!calendarHeading||!view)return;
+ // Panora 7.24: on mobile the calendar used to be moved after #planList. That list is
+ // intentionally hidden by calendar-calm.css and the completion board can be long,
+ // so the real calendar ended up far below the visible mobile viewport and looked absent.
+ // Keep the calendar directly under the page heading on mobile; desktop placement stays unchanged.
+ if(mobileLayout.matches){
+   view.insertAdjacentElement('afterbegin',calendarHeading);
+   calendarHeading.insertAdjacentElement('afterend',calendar);
+ }else{
+   navigation.insertAdjacentElement('beforebegin',calendarHeading);
+   calendarHeading.insertAdjacentElement('afterend',calendar);
+ }
 }
 placeBakeCalendar();
 if(typeof mobileLayout.addEventListener==='function')mobileLayout.addEventListener('change',placeBakeCalendar);

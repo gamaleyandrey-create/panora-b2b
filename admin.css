@@ -315,3 +315,25 @@
 .retail-message-push-inline>div{display:grid;gap:2px;min-width:0}.retail-message-push-inline strong{font-size:11px}.retail-message-push-inline small{font-size:10px;color:#68766d}
 .retail-message-push-inline button{flex:0 0 auto}
 @media(max-width:720px){.retail-message-push-inline{align-items:stretch;flex-direction:column}.retail-message-push-inline button{width:100%}}
+
+
+/* Panora 7.24 — current bakery debt first; volume moved into filter */
+.finance-summary-current{grid-template-columns:repeat(2,minmax(0,1fr))}
+.finance-summary-current .partner-debt-total strong{color:#b3261e!important}
+#accountRows .account-balance-debt{color:#b3261e!important}
+#accountRows td.negative{color:#b3261e}
+.accounting-volume-filter{margin:0 0 16px;border:1px solid #d9ded8;border-radius:13px;background:#fff;overflow:hidden}
+.accounting-volume-filter>summary{display:flex;align-items:center;gap:8px;min-height:46px;padding:0 14px;cursor:pointer;list-style:none;color:#35463b;font-size:12px;font-weight:750}
+.accounting-volume-filter>summary::-webkit-details-marker{display:none}
+.accounting-volume-filter>summary span{color:#77827a;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.accounting-volume-filter>summary strong{font-size:13px}
+.accounting-volume-filter>summary i{margin-left:auto;color:#7a857d;font-style:normal;transition:transform .15s ease}
+.accounting-volume-filter[open]>summary i{transform:rotate(180deg)}
+.accounting-volume-filter-body{display:grid;gap:12px;padding:0 14px 14px;border-top:1px solid #edf0ec}
+.accounting-volume-filter-body>label{display:grid;gap:5px;max-width:360px;margin-top:13px;color:#6e796f;font-size:11px;font-weight:700}
+.accounting-volume-filter-body select{min-height:40px;padding:0 10px;border:1px solid #d4dbd4;border-radius:9px;background:#fff;color:#26382d}
+.finance-volume-summary{grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+.finance-volume-summary article{padding:14px 15px;background:#f8faf7}
+.finance-volume-summary strong{font-size:22px!important;color:#2f4036!important}
+.accounting-volume-table{border-radius:10px}
+@media(max-width:850px){.finance-summary-current,.finance-volume-summary{grid-template-columns:1fr}}
