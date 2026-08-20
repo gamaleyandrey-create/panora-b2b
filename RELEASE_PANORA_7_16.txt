@@ -1,0 +1,8 @@
+Panora 7.16 — direct bakery payment cancellation
+
+- Bakery can now cancel an erroneously recorded ordinary confirmed B2B payment directly from the partner account history.
+- Cancellation immediately reopens the affected debt using the existing verified allocation logic.
+- Return-credit payments cannot be cancelled with this action.
+- Partner live polling from 7.15 continues to receive the cancelled status automatically, so the reopened debt appears without manual reload.
+- No schema or SQL change is required.
+- Archive set: Panora 9.1.

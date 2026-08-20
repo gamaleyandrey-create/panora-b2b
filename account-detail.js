@@ -503,9 +503,20 @@
         ? `<p class="account-history-hint">Старые операции остаются в финансовых расчётах и не удаляются.</p>`
         : ""}`;
 
+    const canCancelDirectPayment = (item) => {
+      if(item.className !== "payment" || !item.id)return false;
+      const payment=payments.find(row=>String(row?.id)===String(item.id));
+      return Boolean(
+        payment &&
+        !returnCreditPayment(payment) &&
+        paymentConfirmed(payment) &&
+        payment.status !== "cancelled" &&
+        payment.disputeStatus !== "open"
+      );
+    };
     historyRoot.innerHTML = visible.length
       ? visible.map((item) =>
-          `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("disputed") ? `<small class="account-payment-dispute-reason">${item.disputeReason ? `Причина: ${String(item.disputeReason).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}` : "Партнёр оспорил оплату"}</small><div class="account-payment-dispute-actions"><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="keep">Оплата верна</button><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="cancel">Отменить оплату</button></div>` : item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : ""}</div></article>`
+          `<article class="${item.className}"><div><strong>${item.type}</strong><span>${prettyDate(item.date)}${item.number ? ` · ${item.number}` : ""}</span></div><div class="account-payment-value">${operationAmountHtml(item)}${balanceAfterHtml(item.balanceAfter)}${paymentDistributionHtml(id,item)}${item.className.includes("disputed") ? `<small class="account-payment-dispute-reason">${item.disputeReason ? `Причина: ${String(item.disputeReason).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}` : "Партнёр оспорил оплату"}</small><div class="account-payment-dispute-actions"><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="keep">Оплата верна</button><button type="button" data-resolve-payment-dispute="${item.id}" data-dispute-decision="cancel">Отменить оплату</button></div>` : item.className.includes("pending") ? `<button type="button" data-confirm-payment="${item.id}">Подтвердить получение</button>` : canCancelDirectPayment(item) ? `<div class="account-payment-dispute-actions"><button type="button" data-cancel-payment="${item.id}">Отменить оплату</button></div>` : ""}</div></article>`
         ).join("")
       : `<p class="empty-row">${historyTab==="archive"?"Архивных операций пока нет.":"Операций пока нет."}</p>`;
 
@@ -548,6 +559,24 @@
           }
         }),
     );
+
+    historyRoot.querySelectorAll("[data-cancel-payment]").forEach((button) => {
+      button.onclick = async () => {
+        const payment=payments.find(item=>String(item.id)===String(button.dataset.cancelPayment));
+        if(!payment||returnCreditPayment(payment)||!paymentConfirmed(payment))return;
+        if(!confirm(`Отменить оплату ${euro(payment.amount)}? Сумма снова станет задолженностью.`))return;
+        if(!window.panoraCloud?.ready||typeof window.panoraCloud.cancelPaymentAtomic!=="function")return alert("Облако ещё загружается. Подождите несколько секунд и повторите.");
+        button.disabled=true;button.textContent="Отменяем…";
+        try{
+          await window.panoraCloud.cancelPaymentAtomic(payment.id);
+          renderCommerce();
+          open(id);
+        }catch(error){
+          alert(`Отмена оплаты не сохранена: ${error.message||error}`);
+          open(id);
+        }
+      };
+    });
 
     historyRoot.querySelectorAll("[data-resolve-payment-dispute]").forEach((button) => {
       button.onclick = async () => {
