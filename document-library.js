@@ -30,6 +30,7 @@
     const note = findNote(value);
     if (!note) return alert(t("panora") + ": —");
     if (options.context === "restaurant" && (typeof account === "undefined" || !account || note.restaurantId !== account.id)) return alert("Доступ запрещён.");
+    if (options.context === "restaurant") { ordinary(note, options); return; }
     document.querySelector("#panoraDocumentLibrary")?.remove();
     const client = findRestaurant(note.restaurantId), shop = bakery(), saved = read(note);
     const defaults = {

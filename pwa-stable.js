@@ -1,7 +1,7 @@
 
-/* Panora 7.17 — stable install/update controller */
+/* Panora 7.18 — stable install/update controller */
 (function(){
-  const BUILD='7170';
+  const BUILD='7180';
   let deferredPrompt=null;
 
   function ensure(){

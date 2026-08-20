@@ -837,7 +837,7 @@
         return `<article class="rw-document${isMain ? " rw-document-main" : ""}" data-rw-note-id="${esc(note.id)}" data-rw-note-search data-panora-no-draft="1"-text="${esc(noteSearchText)}"${noteSearchHidden?" hidden":""}>
       <span>${isMain ? `<em class="rw-main-note">${t("mainNote")}</em>` : ""}<strong>${noteNumber(note)}</strong>${order?`<button type="button" class="rw-linked-order" data-rw-open-order="${esc(order.id)}">${esc(orderNumber(order))}</button>`:""}<small>${t("delivery")}: ${esc(localDate(order?.deliveryDate || note.date))}</small>${order?.items?.length?`<small class="rw-note-products">${order.items.map(item=>{const qty=Number(item.quantity||0),priceSource=(order.prices&&Object.prototype.hasOwnProperty.call(order.prices,item.product))?order.prices:account.prices||{},unit=Number(priceSource[item.product]||0),line=qty*unit;return `<span class="rw-note-product-name">${esc(orderItemName(order,item))}</span><span class="rw-note-product-math"><b>${qty} ${t("pieces")}</b> × <b>${portalMoney(unit)}</b> = <strong>${portalMoney(line)}</strong></span>`}).join("")}</small>`:""}${note.paymentDueDate ? `<small class="rw-payment-due">${t("paymentDue")}: <strong>${esc(localDate(note.paymentDueDate))}</strong></small>` : ""}${(()=>{const fin=notePaymentSummary(note);return `<small class="rw-note-payment-state"><span>${lang==="ru"?"Сумма":lang==="es"?"Total":"Total"}: <b>${portalMoney(fin.total)}</b></span><span>${lang==="ru"?"Зачтено":lang==="es"?"Aplicado":"Applied"}: <b>${portalMoney(fin.paid)}</b></span>${fin.returnCredit>0.005?`<span>${lang==="ru"?"Возврат товара":lang==="es"?"Devolución":"Goods return"}: <b>${portalMoney(fin.returnCredit)}</b></span>`:""}<span>${lang==="ru"?"К оплате":lang==="es"?"A pagar":"Due"}: <b>${portalMoney(fin.due)}</b></span></small>`})()}<small class="rw-trays">${t("traysDelivered")}: <b>${Number(note.traysDelivered || 0)}</b> · ${t("traysReturned")}: <b>${Number(note.traysReturned || 0)}</b> · ${t("trayBalance")}: <b>${Number(note.trayBalanceAfter || 0)}</b></small></span>
       <b>${portalMoney(note.total)}</b>
-      <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${lang==="ru"?"Распечатать накладную":lang==="es"?"Imprimir albarán":"Print delivery note"}</button><button class="rw-other-forms" data-rw-forms="${esc(note.id)}">${t("otherForms")}</button></div>
+      <div class="rw-document-actions"><button class="button button-ghost" data-rw-note="${esc(note.id)}">${lang==="ru"?"Распечатать накладную":lang==="es"?"Imprimir albarán":"Print delivery note"}</button></div>
     </article>`;
       }).join("")}</div><p class="rw-filter-empty" data-rw-note-empty${notes.some(note=>!noteQuery||noteNumber(note).toLowerCase().includes(noteQuery.toLowerCase()))?" hidden":""}>${t("nothingFound")}</p>
     </section>`;
@@ -1894,16 +1894,6 @@
           if (note) {
             portalPrintNote(note);
           }
-        }),
-    );
-    modal.querySelectorAll("[data-rw-forms]").forEach(
-      (button) =>
-        (button.onclick = () => {
-          const note = ownNotes().find(
-            (item) => item.id === button.dataset.rwForms,
-          );
-          if (note && window.openPanoraDocumentLibrary)
-            window.openPanoraDocumentLibrary(note, { context: "restaurant" });
         }),
     );
   }
