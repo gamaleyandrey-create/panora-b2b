@@ -1,6 +1,6 @@
 /* Panora restaurant cloud v2. Supabase is the only source of truth for orders. */
 (()=>{
-  let partnerOrderPoll=0,partnerOrdersLoading=null,partnerFinanceLoading=null,partnerWorkspaceRenderTimer=0;
+  let partnerOrderPoll=0,partnerOrdersLoading=null,partnerFinanceLoading=null,partnerWorkspaceRenderTimer=0,partnerCancelabilitySignature='';
   'use strict';
   const PORTAL_ORDERS_CACHE_KEY="panora-portal-orders";
   const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=250;
@@ -675,11 +675,30 @@
   }
   window.panoraPartnerPayments={dispute:disputePayment};
 
+  function currentPartnerCancelabilitySignature(){
+    if(typeof canRestaurantCancel!=='function')return '';
+    try{
+      return JSON.stringify((read('panora-orders',[])||[])
+        .map(order=>[String(order?.id||''),Boolean(canRestaurantCancel(order))])
+        .sort((a,b)=>a[0].localeCompare(b[0])));
+    }catch{return ''}
+  }
+  function refreshPartnerCancelabilityIfChanged(){
+    const next=currentPartnerCancelabilitySignature();
+    if(!next)return false;
+    if(!partnerCancelabilitySignature){partnerCancelabilitySignature=next;return false}
+    if(next===partnerCancelabilitySignature)return false;
+    partnerCancelabilitySignature=next;
+    if(partnerWorkspaceEditing())schedulePartnerWorkspaceRender();
+    else try{renderAccountModal(true)}catch(error){console.warn('Panora partner cutoff render',error)}
+    return true;
+  }
   function startPartnerOrderPolling(){
     clearInterval(partnerOrderPoll);
     if(!session?.user||!account)return;
+    partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
     const tick=async()=>{
-      try{await refreshPartnerOrders();await refreshPartnerFinance()}
+      try{await refreshPartnerOrders();await refreshPartnerFinance();refreshPartnerCancelabilityIfChanged()}
       catch(error){
         if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
         console.warn('Panora partner live refresh',error);
@@ -688,7 +707,7 @@
     tick();
     partnerOrderPoll=setInterval(()=>{if(!document.hidden)tick()},2000);
   }
-  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0}
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature=''}
   let partnerPricingPoll=0,partnerPricingLoading=null;
   async function refreshPartnerPricing(){
     if(partnerPricingLoading)return partnerPricingLoading;
@@ -784,7 +803,43 @@
   };
   const legacyLogout=logoutAccount;
   logoutAccount=async()=>{stopPartnerOrderPolling();stopPartnerPricingPolling();try{if(session)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`}})}catch{}saveSession(null);legacyLogout()};
-  restaurantCancelOrder=async id=>{try{await api(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})});await loadAll(true);state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'))}catch(error){state('error',error.message)}};
+  restaurantCancelOrder=async id=>{
+    const order=(read('panora-orders',[])||[]).find(item=>String(item?.id||'')===String(id));
+    if(!order||(typeof canRestaurantCancel==='function'&&!canRestaurantCancel(order))){
+      const message=labels(
+        'Срок отмены истёк или заказ уже изменён пекарней. Отмена не выполнена.',
+        'The cancellation window has closed or the bakery already changed the order. The order was not cancelled.',
+        'El plazo de cancelación ha terminado o la panadería ya modificó el pedido. El pedido no se canceló.'
+      );
+      partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
+      try{renderAccountModal(true)}catch{}
+      state('error',message);try{showToast(message)}catch{}
+      return;
+    }
+    try{
+      const rows=await api(`orders?id=eq.${encodeURIComponent(id)}&status=eq.submitted`,{
+        method:'PATCH',headers:{Prefer:'return=representation'},
+        body:JSON.stringify({status:'cancelled',cancelled_reason:'Cancelled by partner',updated_at:new Date().toISOString()})
+      });
+      const returned=Array.isArray(rows)?rows:(rows?[rows]:[]);
+      const saved=returned.find(row=>String(row?.id||'')===String(id));
+      if(!saved||String(saved.status||'')!=='cancelled'){
+        await loadAll(true).catch(()=>{});
+        throw new Error(labels(
+          'Заказ уже изменён пекарней. Отмена не выполнена.',
+          'The bakery already changed this order. The order was not cancelled.',
+          'La panadería ya modificó este pedido. El pedido no se canceló.'
+        ));
+      }
+      await loadAll(true);
+      partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
+      state('ok',labels('Заказ отменён','Order cancelled','Pedido cancelado'));
+    }catch(error){
+      await refreshPartnerOrders().catch(()=>{});
+      const message=String(error?.message||error||'');
+      state('error',message);try{showToast(message)}catch{}
+    }
+  };
   window.panoraPartnerOrderMessages={
     list:orderId=>api('rpc/panora_order_messages_for_order',{method:'POST',body:JSON.stringify({p_order_id:orderId})}),
     send:(orderId,body)=>api('rpc/panora_send_order_message',{method:'POST',body:JSON.stringify({p_order_id:orderId,p_body:String(body||'').trim()})}),
