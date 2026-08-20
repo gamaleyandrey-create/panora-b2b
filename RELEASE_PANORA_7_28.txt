@@ -1,0 +1,10 @@
+Panora 7.28 — product card deletion and recoverable archive
+
+- “Карточки продукции” now shows only active product cards in the main grid.
+- “Удалить карточку” removes the product from active bakery catalog, partner/new orders, storefront and bake planning after confirmed Supabase save.
+- Removed cards move to a separate collapsible “Архив карточек” with a restore action.
+- Historical orders, delivery notes, prices and product references are preserved; no physical DELETE is performed.
+- Restore keeps the product hidden from the storefront until the bakery explicitly enables it again.
+- Removed the recipes-screen active checkbox bypass so archive/restore uses the same confirmed cloud path everywhere.
+- No SQL/schema change is required.
+- Archive set: Panora 9.13.
