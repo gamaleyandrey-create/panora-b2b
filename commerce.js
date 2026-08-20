@@ -257,11 +257,20 @@ const partnerContactHtml=r=>{
   return rows.length?`<div class="partner-contacts">${rows.map(([name,value])=>`<span><b>${commerceEscape(name)}</b><small>${commerceEscape(value)}</small></span>`).join('')}</div>`:'<p class="partner-empty">Контакты не указаны</p>';
 };
 function fillRestaurants() {
-  const options = activeRestaurants()
+  const orderOptions = activeRestaurants()
     .map((r) => `<option value="${commerceEscape(r.id)}">${commerceEscape(r.name)}</option>`)
     .join("");
-  document.querySelector("#orderRestaurant").innerHTML = options;
-  document.querySelector("#paymentRestaurant").innerHTML = options;
+  const paymentOptions = restaurants
+    .map((r) => {
+      let debt=0;
+      try{debt=Number(window.panoraAccountingAllocationToday?.(r.id)?.debt||0)}catch{}
+      if(r.deletedAt&&debt<=0.005)return "";
+      const suffix=r.deletedAt?` · архив · долг ${euro(debt)}`:"";
+      return `<option value="${commerceEscape(r.id)}">${commerceEscape(r.name+suffix)}</option>`;
+    })
+    .join("");
+  document.querySelector("#orderRestaurant").innerHTML = orderOptions;
+  document.querySelector("#paymentRestaurant").innerHTML = paymentOptions;
 }
 function renderRestaurants() {
   // Panora 5.32: the Partners screen is owned by the direct Supabase price editor.
@@ -270,6 +279,8 @@ function renderRestaurants() {
     document.querySelector("#view-restaurants")?.classList.contains("active") &&
     window.panoraDirectPartnerPrices?.renderCurrent
   ) {
+    // Keep order/payment selectors current even while the direct partner editor owns this screen.
+    fillRestaurants();
     window.panoraDirectPartnerPrices.renderCurrent();
     return;
   }
@@ -384,25 +395,25 @@ function renderRestaurants() {
     );
   fillRestaurants();
 }
-function deleteRestaurant(id) {
+async function deleteRestaurant(id) {
   const r = restaurant(id);
-  if (
-    !r ||
-    !confirm(
-      `Удалить партнёра «${r.name}» из активных клиентов? Заказы, накладные и задолженность сохранятся.`,
-    )
-  )
-    return;
-  r.deletedAt = new Date().toISOString();
-  cSave("panora-restaurants", restaurants);
-  renderCommerce();
+  if(!r)return;
+  let debt=0;
+  try{debt=Number(window.panoraAccountingAllocationToday?.(id)?.debt||0)}catch{}
+  if(!confirm(`Архивировать партнёра «${r.name}»?\n\nЗаказы, накладные, оплаты и финансовая история сохранятся. Новые заказы будут заблокированы.${debt>0.005?`\n\nЗадолженность перед пекарней на сегодня: ${euro(debt)}`:""}`))return;
+  try{
+    if(!window.panoraCloud?.setRestaurantActiveConfirmed)throw new Error('Облако ещё загружается');
+    await window.panoraCloud.setRestaurantActiveConfirmed(id,false);
+    reloadRestaurantsFromStorage();renderCommerce();
+  }catch(error){alert(`Не удалось архивировать партнёра: ${error.message||error}`)}
 }
-function restoreRestaurant(id) {
-  const r = restaurant(id);
-  if (!r) return;
-  delete r.deletedAt;
-  cSave("panora-restaurants", restaurants);
-  renderCommerce();
+async function restoreRestaurant(id) {
+  const r = restaurant(id);if(!r)return;
+  try{
+    if(!window.panoraCloud?.setRestaurantActiveConfirmed)throw new Error('Облако ещё загружается');
+    await window.panoraCloud.setRestaurantActiveConfirmed(id,true);
+    reloadRestaurantsFromStorage();renderCommerce();
+  }catch(error){alert(`Не удалось восстановить партнёра: ${error.message||error}`)}
 }
 function orderStatus(o) {
   return (
@@ -841,17 +852,21 @@ function renderAccounting() {
     return { r, activeNotes, activeInvoices, activeAllocated, debt, credit, last };
   });
 
+  const currentAccountData = accountData.filter(({r,debt,credit}) => !r.deletedAt || debt > 0.005 || credit > 0.005);
   const accountRows = document.querySelector("#accountRows");
   if (accountRows) {
-    accountRows.innerHTML = accountData.length
-      ? accountData.map(({ r, debt, credit, last }) => {
+    accountRows.innerHTML = currentAccountData.length
+      ? currentAccountData.map(({ r, debt, credit, last }) => {
           const balanceHtml = debt > 0.005
             ? `<span class="account-balance-debt"><small>Задолженность перед пекарней на сегодня</small><strong>${euro(debt)}</strong></span>`
             : credit > 0.005
               ? `<span class="account-balance-credit"><small>Пекарня получила аванс</small>Переплата партнёра <strong>${euro(credit)}</strong></span>`
               : `<span class="account-balance-zero"><small>Долга и аванса нет</small><strong>Расчёты закрыты</strong></span>`;
+          const archiveStatus=r.deletedAt
+            ? `<small class="account-row-archive${debt>0.005?' has-debt':''}">${debt>0.005?'Архив · есть задолженность':credit>0.005?'Архив · есть переплата':'Архив'}</small>`
+            : '';
           return `<tr data-account-restaurant="${commerceEscape(r.id)}" tabindex="0" role="button" aria-label="Открыть расчёты партнёра ${commerceEscape(r.name)}">
-            <td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong><small class="account-row-hint">Открыть расчёты</small></button></td>
+            <td><button type="button" class="account-open-button" data-open-account="${commerceEscape(r.id)}"><strong>${commerceEscape(r.name)}</strong>${archiveStatus}<small class="account-row-hint">Открыть расчёты</small></button></td>
             <td class="${debt > 0.005 ? "negative" : credit > 0.005 ? "positive" : ""}"><button type="button" class="account-balance-button" data-open-account="${commerceEscape(r.id)}">${balanceHtml}</button></td>
             <td>${commerceEscape(accountingDate(last))}</td>
           </tr>`;

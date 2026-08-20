@@ -1549,6 +1549,37 @@ window.panoraRecalculateBalances=recalculateBalances;
     },350);
   }
   async function flushRestaurants(){clearTimeout(restaurantTimer);restaurantTimer=0;await saveRestaurantsNow();return true}
+  async function setRestaurantActiveConfirmed(restaurantId,active){
+    if(!ready)throw new Error('Облако ещё загружается');
+    if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
+    const id=String(restaurantId||'');
+    if(!id)throw new Error('Не удалось определить партнёра');
+    const nextActive=Boolean(active),changedAt=new Date().toISOString();
+    status(nextActive?'Восстанавливаем партнёра…':'Архивируем партнёра…');
+    const rows=await request(`restaurants?id=eq.${encodeURIComponent(id)}`,{
+      method:'PATCH',
+      headers:{Prefer:'return=representation'},
+      body:JSON.stringify({active:nextActive,updated_at:changedAt})
+    });
+    const saved=rows?.[0];
+    if(!saved||Boolean(saved.active)!==nextActive)throw new Error('Supabase не подтвердил статус партнёра');
+    const verified=await request(`restaurants?id=eq.${encodeURIComponent(id)}&select=id,active,updated_at&limit=1`);
+    if(!verified?.[0]||Boolean(verified[0].active)!==nextActive)throw new Error('Повторная проверка Supabase не подтвердила статус партнёра');
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    const nextLocal=(local||[]).map(r=>{
+      if(String(r.id)!==id)return r;
+      if(nextActive){const restored={...r};delete restored.deletedAt;return restored}
+      return {...r,deletedAt:verified[0].updated_at||changedAt};
+    });
+    restaurants=nextLocal;
+    safeLocalSet('panora-restaurants',JSON.stringify(nextLocal),{quotaIsWarning:false});
+    writeRestaurantBaseline(nextLocal);clearPending('restaurants');
+    window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh',{detail:{source:nextActive?'partner-restored':'partner-archived',restaurantId:id,active:nextActive}}));
+    if(typeof renderCommerce==='function')renderCommerce();
+    status('Облако ✓');
+    return {id,active:nextActive,updatedAt:verified[0].updated_at||changedAt};
+  }
+
   async function saveRestaurantPriceConfirmed(restaurantId,productId,price){
     if(!ready)throw new Error('Облако ещё загружается');
     const row={restaurant_id:restaurantId,product_id:productId,price:Number(price)};
@@ -1813,7 +1844,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },2000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{

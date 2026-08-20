@@ -73,6 +73,53 @@
   const cards=()=>document.querySelector('#restaurantCards');
   const draftKey=(restaurantId,productId)=>`${restaurantId}:${productId}`;
   const partnerHasDrafts=restaurantId=>[...drafts.keys()].some(key=>key.startsWith(`${restaurantId}:`));
+  const euro=value=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'EUR'}).format(Number(value||0));
+  const partnerDebtToday=restaurantId=>{try{return Math.max(0,Number(window.panoraAccountingAllocationToday?.(restaurantId)?.debt||0))}catch{return 0}};
+  const updateLocalArchive=(restaurantId,active,updatedAt)=>{try{
+    const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+    const next=(Array.isArray(local)?local:[]).map(r=>{
+      if(String(r.id)!==String(restaurantId))return r;
+      if(active){const restored={...r};delete restored.deletedAt;return restored}
+      return {...r,deletedAt:updatedAt||new Date().toISOString()};
+    });
+    localStorage.setItem('panora-restaurants',JSON.stringify(next));
+  }catch{}};
+  const archiveDialog=()=>{
+    let dialog=document.querySelector('#directPartnerArchiveDialog');
+    if(dialog)return dialog;
+    document.body.insertAdjacentHTML('beforeend',`<dialog id="directPartnerArchiveDialog" class="partner-archive-dialog"><form method="dialog"><button type="button" class="dialog-close" data-partner-archive-close aria-label="Закрыть">×</button><h3>Архивировать партнёра?</h3><p data-partner-archive-name></p><div class="partner-archive-warning"><span>Задолженность перед пекарней на сегодня</span><strong data-partner-archive-debt></strong></div><p class="partner-archive-help">Партнёр потеряет доступ к новым заказам. Заказы, накладные, оплаты, возвраты и вся финансовая история сохранятся. При наличии долга партнёр останется в «Оплаты и задолженности» до полного погашения.</p><div class="dialog-actions"><button type="button" data-partner-archive-cancel>Отмена</button><button type="button" class="danger" data-partner-archive-confirm>Архивировать</button></div></form></dialog>`);
+    dialog=document.querySelector('#directPartnerArchiveDialog');
+    dialog.querySelector('[data-partner-archive-close]').onclick=()=>dialog.close('cancel');
+    dialog.querySelector('[data-partner-archive-cancel]').onclick=()=>dialog.close('cancel');
+    dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close('cancel')});
+    return dialog;
+  };
+  const askArchivePartner=(partner,debt)=>new Promise(resolve=>{
+    const dialog=archiveDialog(),confirmButton=dialog.querySelector('[data-partner-archive-confirm]');
+    dialog.querySelector('[data-partner-archive-name]').innerHTML=`Партнёр <strong>${esc(partner?.name||'')}</strong> будет перенесён из активных в архив.`;
+    const debtNode=dialog.querySelector('[data-partner-archive-debt]');
+    debtNode.textContent=euro(debt);debtNode.classList.toggle('is-zero',debt<=0.005);
+    const finish=value=>{dialog.removeEventListener('close',onClose);resolve(value)};
+    const onClose=()=>finish(false);
+    dialog.addEventListener('close',onClose,{once:true});
+    confirmButton.onclick=()=>{dialog.removeEventListener('close',onClose);dialog.close('confirm');resolve(true)};
+    dialog.showModal();
+  });
+  const setPartnerActive=async(restaurantId,nextActive)=>{
+    restaurantId=String(restaurantId||'');
+    const partner=lastRows.find(r=>String(r.id)===restaurantId);if(!partner)return false;
+    if(!nextActive&&partnerHasDrafts(restaurantId)){alert('Сначала сохраните или отмените изменения цен этого партнёра.');return false}
+    if(!nextActive){const debt=partnerDebtToday(restaurantId);if(!await askArchivePartner(partner,debt))return false}
+    else if(!confirm(`Восстановить партнёра «${partner.name}»? Он снова сможет создавать новые заказы.`))return false;
+    try{
+      if(!window.panoraCloud?.setRestaurantActiveConfirmed)throw new Error('Облако ещё загружается');
+      const saved=await window.panoraCloud.setRestaurantActiveConfirmed(restaurantId,nextActive);
+      partner.active=nextActive;updateLocalArchive(restaurantId,nextActive,saved?.updatedAt);
+      await refresh();
+      window.dispatchEvent(new CustomEvent('panora:partner-archive-changed',{detail:{restaurantId,active:nextActive}}));
+      return true;
+    }catch(error){alert(`Не удалось ${nextActive?'восстановить':'архивировать'} партнёра: ${error.message||error}`);return false}
+  };
 
   const syncCaches=(restaurantId,values)=>{
     try{
@@ -97,12 +144,13 @@
     const root=cards();
     if(!root)return;
     lastRows=rows||[];
-    root.innerHTML=(rows||[]).map(r=>{
+    const activeRows=(rows||[]).filter(r=>r?.active!==false),archivedRows=(rows||[]).filter(r=>r?.active===false);
+    root.innerHTML=activeRows.map(r=>{
       const prices=Object.fromEntries((r.restaurant_prices||[]).map(x=>[String(x.product_id),Number(x.price)]));
       const productList=products();
       const restaurantId=String(r.id);
       return `<article class="restaurant-card" data-direct-restaurant="${esc(r.id)}">
-        <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span></div>
+        <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span><button type="button" class="restaurant-delete" data-direct-archive-partner="${esc(restaurantId)}">Архивировать</button></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
         <details class="partner-contact-settings">
@@ -142,8 +190,13 @@
           <button type="button" class="partner-price-save" data-save-partner-prices="${esc(restaurantId)}"${partnerHasDrafts(restaurantId)?'':' hidden'}>Сохранить цены</button>
         </div>
       </article>`;
-    }).join('')||'<div class="empty-row">Нет партнёров.</div>';
+    }).join('')||'<div class="empty-row">Нет активных партнёров.</div>';
+    if(archivedRows.length){
+      root.insertAdjacentHTML('beforeend',`<section class="direct-archived-partners"><div class="direct-archived-head"><div><span class="tag">Архив</span><h3>Архивные партнёры</h3></div><small>Финансовая история сохранена</small></div>${archivedRows.map(r=>{const debt=partnerDebtToday(r.id);return `<article class="direct-archived-row"><span><strong>${esc(r.name)}</strong><small>${esc(r.email||'')}</small></span><span class="direct-archived-debt${debt>0.005?' has-debt':''}"><small>${debt>0.005?'Задолженность на сегодня':'Расчёты закрыты'}</small><strong>${euro(debt)}</strong></span><button type="button" data-direct-restore-partner="${esc(r.id)}">Восстановить</button></article>`}).join('')}</section>`);
+    }
 
+    root.querySelectorAll('[data-direct-archive-partner]').forEach(button=>button.onclick=()=>setPartnerActive(button.dataset.directArchivePartner,false));
+    root.querySelectorAll('[data-direct-restore-partner]').forEach(button=>button.onclick=()=>setPartnerActive(button.dataset.directRestorePartner,true));
     root.querySelectorAll('select[data-direct-partner-language]').forEach(select=>{
       select.addEventListener('change',async()=>{
         const restaurantId=String(select.dataset.directPartnerLanguage||'');
@@ -377,7 +430,7 @@
     if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
-      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,restaurant_prices(product_id,price,updated_at)&active=eq.true&order=created_at.asc');
+      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,updated_at,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
       if(active)render(rows||[]);
     }catch(error){
       console.error('Panora direct partners refresh',error);
