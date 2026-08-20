@@ -47,12 +47,15 @@
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     const count=cartData().count;
+    try{ if(typeof syncCartDeliveryDate==='function')syncCartDeliveryDate(); }catch{}
     const bakeSelect=document.querySelector('#cartDeliveryDate');
     const dateReady=Boolean(bakeSelect?.value&&!bakeSelect?.disabled);
     if(!dateReady){
       showToast(message('Выберите день выпечки','Choose the bake day','Elige el día de horneado'));
-      bakeSelect?.closest('label')?.scrollIntoView({behavior:'smooth',block:'center'});
-      bakeSelect?.focus();
+      if(window.matchMedia?.('(min-width:721px)').matches){
+        bakeSelect?.closest('label')?.scrollIntoView({behavior:'smooth',block:'center'});
+        bakeSelect?.focus();
+      }
       return;
     }
     if(!account){

@@ -142,9 +142,15 @@ function syncCartDeliveryDate(){
   checkoutDate.innerHTML=s.innerHTML;
   checkoutDate.disabled=false;
   checkoutDate.value=selectedBakeDate;
-  // Hidden backing field only. The customer-facing date is controlled
-  // exclusively by #cartDeliveryDate on the first confirmation step.
-  checkoutDate.onchange=null;
+  // Desktop chooses the date in the cart; mobile shows the same compatible
+  // choices on the final confirmation form. Keep both controls in sync.
+  checkoutDate.onchange=()=>{
+   if(!dates.some(({date})=>dateValue(date)===checkoutDate.value))return;
+   selectedBakeDate=checkoutDate.value;
+   localStorage.setItem('panora-bake-date',selectedBakeDate);
+   s.value=selectedBakeDate;
+   renderProducts();renderCart();
+  };
  }
  s.onchange=()=>{
   if(!dates.some(({date})=>dateValue(date)===s.value))return;
