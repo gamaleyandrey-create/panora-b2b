@@ -1,6 +1,6 @@
 /* Panora restaurant cloud v2. Supabase is the only source of truth for orders. */
 (()=>{
-  let partnerOrderPoll=0,partnerOrdersLoading=null;
+  let partnerOrderPoll=0,partnerOrdersLoading=null,partnerFinanceLoading=null,partnerWorkspaceRenderTimer=0;
   'use strict';
   const PORTAL_ORDERS_CACHE_KEY="panora-portal-orders";
   const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=250;
@@ -495,6 +495,68 @@
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
+  function partnerWorkspaceEditing(){
+    const active=document.activeElement;
+    return Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
+  }
+  function schedulePartnerWorkspaceRender(){
+    clearTimeout(partnerWorkspaceRenderTimer);
+    const run=()=>{
+      if(!account){partnerWorkspaceRenderTimer=0;return}
+      if(partnerWorkspaceEditing()){
+        partnerWorkspaceRenderTimer=setTimeout(run,180);
+        return;
+      }
+      partnerWorkspaceRenderTimer=0;
+      try{renderAccountModal(true)}catch(error){console.warn('Panora partner deferred render',error)}
+    };
+    partnerWorkspaceRenderTimer=setTimeout(run,80);
+  }
+  const partnerNoteSignature=list=>JSON.stringify((list||[]).map(note=>({
+    id:String(note?.id||''),orderId:String(note?.orderId||''),number:Number(note?.number||0),date:String(note?.date||''),
+    paymentDueDate:String(note?.paymentDueDate||''),total:Number(note?.total||0),traysDelivered:Number(note?.traysDelivered||0),
+    traysReturned:Number(note?.traysReturned||0),trayBalanceAfter:Number(note?.trayBalanceAfter||0),
+    customerTraysReceived:note?.customerTraysReceived==null?null:Number(note.customerTraysReceived),
+    customerTraysReturned:note?.customerTraysReturned==null?null:Number(note.customerTraysReturned),
+    customerConfirmedAt:String(note?.customerConfirmedAt||''),customerReceiver:String(note?.customerReceiver||'')
+  })).sort((a,b)=>a.id.localeCompare(b.id)));
+  const partnerPaymentSignature=list=>JSON.stringify((list||[]).map(payment=>({
+    id:String(payment?.id||''),restaurantId:String(payment?.restaurantId||''),deliveryNoteId:String(payment?.deliveryNoteId||''),
+    amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),
+    disputeStatus:String(payment?.disputeStatus||'none'),disputeReason:String(payment?.disputeReason||''),
+    receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||''),updatedAt:String(payment?.updatedAt||'')
+  })).sort((a,b)=>a.id.localeCompare(b.id)));
+  async function refreshPartnerFinance(){
+    if(partnerFinanceLoading)return partnerFinanceLoading;
+    if(!session?.user?.id||!account?.id||!navigator.onLine)return null;
+    partnerFinanceLoading=(async()=>{
+      const rid=encodeURIComponent(account.id);
+      const [notes,payments]=await Promise.all([
+        api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),
+        api(`payments?restaurant_id=eq.${rid}&select=*`)
+      ]);
+      const currentOrders=read('panora-orders')||[];
+      const beforeNotes=read('panora-delivery-notes')||[];
+      const beforePayments=read('panora-payments')||[];
+      const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:currentOrders.find(o=>o.id===n.order_id)?.items||[],prices:currentOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
+      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      const notesChanged=partnerNoteSignature(beforeNotes)!==partnerNoteSignature(mappedNotes);
+      const paymentsChanged=partnerPaymentSignature(beforePayments)!==partnerPaymentSignature(mappedPayments);
+      savePortalNotesCache(mappedNotes);
+      savePortalPaymentsCache(mappedPayments);
+      const notesByOrder=new Map(mappedNotes.map(note=>[String(note.orderId),note]));
+      const nextOrders=currentOrders.map(order=>archiveMetaForOrder(order,notesByOrder.get(String(order.id))));
+      const archiveChanged=JSON.stringify(currentOrders.map(order=>[order.id,Boolean(order.archived),order.deliveryConfirmedAt||'',order.archiveReferenceAt||'']))!==JSON.stringify(nextOrders.map(order=>[order.id,Boolean(order.archived),order.deliveryConfirmedAt||'',order.archiveReferenceAt||'']));
+      if(archiveChanged)savePortalOrdersCache(nextOrders);
+      if(notesChanged||paymentsChanged||archiveChanged){
+        if(partnerWorkspaceEditing())schedulePartnerWorkspaceRender();
+        else renderAccountModal();
+        window.dispatchEvent(new CustomEvent('panora:partner-finance-updated',{detail:{notesChanged,paymentsChanged,archiveChanged}}));
+      }
+      return {notesChanged,paymentsChanged,archiveChanged};
+    })().finally(()=>partnerFinanceLoading=null);
+    return partnerFinanceLoading;
+  }
   async function refreshPartnerOrders(){
     if(partnerOrdersLoading)return partnerOrdersLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return [];
@@ -531,6 +593,7 @@
         const active=document.activeElement;
         const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
         if(!editingWorkspace)renderAccountModal();
+        else schedulePartnerWorkspaceRender();
         window.dispatchEvent(new CustomEvent('panora:partner-orders-updated',{detail:{count:next.length,changed}}));
         if(changed.some(change=>change.status==='shipped')){
           setTimeout(()=>loadAll(true).catch(()=>{}),80);
@@ -567,10 +630,13 @@
   function startPartnerOrderPolling(){
     clearInterval(partnerOrderPoll);
     if(!session?.user||!account)return;
-    const tick=()=>refreshPartnerOrders().catch(error=>{
-      if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
-      console.warn('Panora partner order refresh',error);
-    });
+    const tick=async()=>{
+      try{await refreshPartnerOrders();await refreshPartnerFinance()}
+      catch(error){
+        if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
+        console.warn('Panora partner live refresh',error);
+      }
+    };
     tick();
     partnerOrderPoll=setInterval(()=>{if(!document.hidden)tick()},2000);
   }
@@ -631,9 +697,10 @@
   }
   function stopPartnerPricingPolling(){clearInterval(partnerPricingPoll);partnerPricingPoll=0}
 
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
-  window.addEventListener('focus',()=>{if(session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
-  window.addEventListener('online',()=>{if(session?.user&&account){refreshPartnerOrders().catch(()=>{});refreshPartnerPricing().catch(()=>{})}});
+  const refreshPartnerLive=()=>refreshPartnerOrders().then(()=>refreshPartnerFinance()).catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
+  window.addEventListener('focus',()=>{if(session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
+  window.addEventListener('online',()=>{if(session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
 
   window.addEventListener('storage',event=>{
     if(!session?.user||!account)return;
@@ -1053,5 +1120,5 @@
     else{state('error',error.message);renderAccountModal()}
   }})();
   setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
-  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshPricing:refreshPartnerPricing};
+  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();

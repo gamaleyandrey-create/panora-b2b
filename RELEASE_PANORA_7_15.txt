@@ -1,0 +1,7 @@
+Panora 7.15 — live sync partner ↔ bakery hardening
+
+- Partner live polling now refreshes orders, delivery notes and payments.
+- Bakery live polling now refreshes orders, payments and delivery notes in one cycle.
+- Remote changes received while a user is editing are deferred, then rendered automatically after the interaction ends instead of remaining visually stale.
+- No schema or SQL change is required.
+- Archive set: Panora 9.0.
