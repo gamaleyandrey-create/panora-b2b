@@ -82,3 +82,20 @@
 .product-gallery-remove{position:absolute;right:5px;top:5px;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:#9b332c;font-size:21px;cursor:pointer}
 .product-gallery-item>span{position:absolute;left:6px;bottom:6px;min-width:24px;padding:2px 6px;border-radius:12px;background:rgba(255,255,255,.9);font-size:13px;text-align:center}
 .product-gallery-empty{grid-column:1/-1;color:#747b74;padding:8px 0}@media(max-width:760px){.product-gallery-preview{grid-template-columns:repeat(3,1fr)}}
+
+
+/* Panora 7.28 — real product-card removal UX: active list + recoverable archive */
+.product-admin-empty{grid-column:1/-1;padding:26px;border:1px dashed #cdd7cf;border-radius:16px;background:#fafbf9;color:#6f7b72;text-align:center}
+.product-archive-section{margin-top:24px;border:1px solid #d9e0da;border-radius:16px;background:#f7f9f6;overflow:hidden}
+.product-archive-section>summary{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;list-style:none;color:#344a3b}
+.product-archive-section>summary::-webkit-details-marker{display:none}
+.product-archive-section>summary span{font-weight:800}
+.product-archive-section>summary strong{margin-left:auto;color:#6f7b72;font-size:12px}
+.product-archive-section>summary i{font-style:normal;transition:transform .18s ease}
+.product-archive-section[open]>summary i{transform:rotate(180deg)}
+.product-archive-section>p{margin:0;padding:0 18px 14px;color:#77827a;font-size:12px;line-height:1.5}
+.product-archive-grid{padding:0 18px 18px}
+.product-admin-card-archived{opacity:.82;background:#fbfcfa}
+.product-restore-button{min-height:44px;border:1px solid #9aa99e;border-radius:12px;background:#fff;color:#365344;font-weight:750}
+.product-restore-button:hover{background:#f2f6f2}
+@media(max-width:620px){.product-archive-section{margin-top:18px}.product-archive-section>summary{padding:14px}.product-archive-section>p{padding:0 14px 12px}.product-archive-grid{padding:0 14px 14px}}
