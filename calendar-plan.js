@@ -72,7 +72,7 @@ function renderBakeCalendar(){
  document.querySelector('#calendarTitle').textContent=monthTitle();
  document.querySelector('#calendarWeekdays').innerHTML=weekdays.map((x,index)=>`<b class="${index>4?'weekend':''}">${x}</b>`).join('');
  const year=shownMonth.getFullYear(),month=shownMonth.getMonth(),days=new Date(year,month+1,0).getDate(),cells=[];
- // Panora 7.34: in the working view of the current month, do not keep invisible
+ // Panora 7.35: in the working view of the current month, do not keep invisible
  // past weeks in the CSS grid. Start the grid at the current week while preserving
  // Monday-Sunday alignment. This removes the large empty block above today's dates.
  const currentWorkingMonth=!history&&shownPrefix===currentMonth;

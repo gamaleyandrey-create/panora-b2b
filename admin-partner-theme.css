@@ -1221,7 +1221,10 @@ body.admin-page .stock-product-main b{
     padding-bottom:7px!important;
   }
   body.admin-page .purchase-date-option{
-    min-width:118px!important;
+    width:132px!important;
+    min-width:132px!important;
+    height:56px!important;
+    min-height:56px!important;
     padding:9px 10px!important;
     border-radius:12px!important;
   }

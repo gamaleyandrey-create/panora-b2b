@@ -29,7 +29,7 @@
 
 .calendar-grid .calendar-empty.calendar-filtered{height:0!important;min-height:0!important;padding:0!important;margin:0!important}
 
-/* Panora 7.34 — compact desktop bake calendar.
+/* Panora 7.35 — compact desktop bake calendar.
    Keep the calendar semantics, but remove oversized chrome and make production cards denser. */
 @media (min-width:901px){
   .bake-calendar{padding:14px 16px!important;border-radius:18px!important}

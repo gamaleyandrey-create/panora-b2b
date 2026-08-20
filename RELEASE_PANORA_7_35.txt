@@ -1,0 +1,11 @@
+Panora 7.35 / build 7350
+Archive bundle: Panora 9.20
+
+Purchase date selector:
+- date cards have identical dimensions and no geometry jump when selected
+- native checkboxes replaced with single-source pressed buttons and custom check indicators
+- selected count and visible indicators are rendered from the same authoritative date set
+- Select all / Clear all stays synchronized with every card
+- mobile cards also use fixed equal dimensions
+
+No SQL migration required.
