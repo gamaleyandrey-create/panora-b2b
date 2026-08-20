@@ -4,9 +4,6 @@ en:{locale:'en-GB',title:'Panora',hero:{eyebrow:'For restaurants',title:'Baked f
 es:{locale:'es-ES',title:'Panora',hero:{eyebrow:'Para socios',title:'Horneamos bajo<br>pedido.',text:'Elige el próximo día de horneado y prepararemos la cantidad exacta de pan fresco para tu negocio.',choose:'Elegir pan',repeat:'Repetir pedido',nextBake:'próximo horneado',cutoff:'pedidos hasta',twice:'2 veces',week:'por semana'},benefits:{orderTitle:'Solo bajo pedido',orderText:'Sin sobreproducción ni almacenamiento innecesario.',daysTitle:'Dos días de horneado',daysText:'Recogemos pedidos para miércoles y sábado.',freshTitle:'Pan siempre fresco',freshText:'Recibe tu pedido el mismo día del horneado.'},calendar:{kicker:'Calendario Panora',title:'Elige un día de horneado',text:'La cesta quedará vinculada a la fecha seleccionada.',orderUntil:'pedido hasta',selected:'Día de horneado seleccionado'},catalog:{kicker:'Catálogo',title:'Pan para tu menú',note:'Precios por unidad, sin IVA.',all:'Todos',piece:'por unidad',box:'caja',add:'Añadir',decrease:'Reducir',increase:'Aumentar',categories:{baguettes:'Baguettes',artisan:'Artesano',breakfast:'Desayuno',serving:'Para servir',burgers:'Hamburguesas'}},steps:{kicker:'Cómo funciona',title:'Tu primera entrega en tres pasos',oneTitle:'Elige el horneado',oneText:'Consulta las fechas y el cierre de pedidos.',twoTitle:'Prepara tu pedido',twoText:'Indica la cantidad que necesita tu negocio.',threeTitle:'Recíbelo fresco',threeText:'Recoge o recibe el pedido el día del horneado.'},nav:{home:'Inicio',catalog:'Catálogo',orders:'Pedidos',profile:'Perfil'},cart:{kicker:'Tu pedido',title:'Cesta',emptyTitle:'Tu cesta está vacía',emptyText:'Añade pan desde el catálogo.',goods:'Productos',delivery:'Entrega',free:'Gratis',total:'Total',checkout:'Preparar entrega',minimum:'Añade {amount} para alcanzar el pedido mínimo.',added:'Añadido a la cesta'},checkout:{kicker:'Último paso',title:'Preparar el pedido',restaurant:'Nombre del socio',restaurantPlaceholder:'Nombre del socio',contact:'Persona de contacto',contactPlaceholder:'Nombre y apellidos',phone:'Teléfono',address:'Dirección de entrega',addressPlaceholder:'Calle, número, entrada',bakeDay:'Día de horneado',interval:'Franja horaria',receiving:'Recepción',deliveryOption:'Entrega al socio',pickupOption:'Recogida el día de horneado',comment:'Comentario',commentPlaceholder:'Dónde entrar, a quién entregar…',invoice:'Total de la factura',confirm:'Confirmar pedido',legal:'Después de confirmar, elige un canal y envía el pedido preparado a Panora.'},profile:{kicker:'Socio',title:'Perfil del socio',wholesale:'Cliente mayorista',payment:'Condiciones de pago',invoice:'Por factura',discount:'Descuento personal',calculated:'Por calcular',manager:'Responsable',assigned:'Por asignar',done:'Listo'},success:{title:'Pedido preparado',text:'Elige un canal para enviarlo.'},share:{title:'Enviar pedido',email:'Email',telegram:'Telegram',whatsapp:'WhatsApp',copy:'Copiar',copied:'Pedido copiado'},messages:{noOrders:'Aún no hay pedidos anteriores',history:'El historial aparecerá después del primer pedido',repeat:'Pedido anterior añadido a la cesta'},order:{title:'Pedido anticipado Panora',number:'Pedido',restaurant:'Socio',contact:'Contacto',phone:'Teléfono',email:'Email',bake:'Horneado',receiving:'Recepción',address:'Dirección',time:'Horario',items:'Productos',total:'Total',boxes:'cajas'}}
 };
 
-I18N.ru.calendar={kicker:'Календарь Panora',title:'Выберите день выпечки и доставки',text:'Корзина будет закреплена за выбранной датой выпечки и доставки.',orderUntil:'заказ до',selected:'Дата выпечки и доставки выбрана'};
-I18N.en.calendar={kicker:'Panora calendar',title:'Choose a bake and delivery day',text:'Your basket will be linked to the selected bake and delivery date.',orderUntil:'order by',selected:'Bake and delivery date selected'};
-I18N.es.calendar={kicker:'Calendario Panora',title:'Elige el día de horneado y entrega',text:'La cesta quedará vinculada a la fecha de horneado y entrega seleccionada.',orderUntil:'pedido hasta',selected:'Fecha de horneado y entrega seleccionada'};
 I18N.ru.catalog.categories.yeastfree='Бездрожжевой хлеб';
 I18N.en.catalog.categories.yeastfree='Yeast-free bread';
 I18N.es.catalog.categories.yeastfree='Pan sin levadura';
@@ -15,12 +12,6 @@ I18N.en.catalog.privateNote='Personal prices are available after signing in.';
 I18N.en.catalog.retailPrice='Retail price';
 I18N.en.catalog.wholesalePrice='Your wholesale price';
 I18N.es.catalog.privateNote='Los precios personalizados están disponibles después de iniciar sesión.';
-I18N.ru.cart.deliveryDate='Дата поставки';
-I18N.en.cart.deliveryDate='Delivery date';
-I18N.es.cart.deliveryDate='Fecha de entrega';
-I18N.ru.cart.confirmDeliveryDate='Подтверждаю день выпечки';
-I18N.en.cart.confirmDeliveryDate='I confirm the bake day';
-I18N.es.cart.confirmDeliveryDate='Confirmo el día de horneado';
 I18N.ru.cart.deliveryDate='День выпечки';
 I18N.en.cart.deliveryDate='Bake day';
 I18N.es.cart.deliveryDate='Día de horneado';
@@ -39,12 +30,12 @@ I18N.es.hero.twice='Calendario';I18N.es.hero.week='de la panadería';
 I18N.ru.calendar.noDates='Пекарня пока не открыла новые даты выпечки.';I18N.ru.calendar.noCommonDate='Для выбранных товаров нет общей открытой даты выпечки.';
 I18N.en.calendar.noDates='The bakery has not opened new bake dates yet.';I18N.en.calendar.noCommonDate='There is no common open bake date for the selected products.';
 I18N.es.calendar.noDates='La panadería aún no ha abierto nuevas fechas de horneado.';I18N.es.calendar.noCommonDate='No hay una fecha de horneado abierta común para los productos seleccionados.';
-I18N.ru.calendar.title='Ближайшие дни выпечки и поставки';
-I18N.ru.calendar.text='Посмотрите расписание. Выбрать и подтвердить дату поставки можно в корзине.';
-I18N.en.calendar.title='Upcoming bake and delivery days';
-I18N.en.calendar.text='View the schedule. Choose and confirm your delivery date in the basket.';
-I18N.es.calendar.title='Próximos días de horneado y entrega';
-I18N.es.calendar.text='Consulta el calendario. Elige y confirma la fecha de entrega en la cesta.';
+I18N.ru.calendar.title='Ближайшие дни выпечки';
+I18N.ru.calendar.text='Посмотрите расписание. День выпечки выбирается один раз в корзине.';
+I18N.en.calendar.title='Upcoming bake days';
+I18N.en.calendar.text='View the schedule. Choose the bake day once in the basket.';
+I18N.es.calendar.title='Próximos días de horneado';
+I18N.es.calendar.text='Consulta el calendario. Elige el día de horneado una sola vez en la cesta.';
 
 const PRODUCTS=[
 {id:'plain',category:'yeastfree',price:4.5,pieces:12,weight:750,image:'bread-plain.jpg',bg:'#e9dfca',text:{ru:['Льняной бездрожжевой хлеб с семенами','Бездрожжевой льняной хлеб с семенами.','Бездрожжевой'],en:['Yeast-free flaxseed bread with seeds','Yeast-free flaxseed bread with seeds.','Yeast-free'],es:['Pan de lino sin levadura con semillas','Pan de lino sin levadura con semillas.','Sin levadura']}},
@@ -122,16 +113,13 @@ function compatibleBakeDatesForProducts(productIds,count=12){
  });
 }
 window.panoraCompatibleBakeDates=compatibleBakeDatesForProducts;
-function bakeDeliveryOptionLabel(date,deliveryDate){
- const bake=dateValue(date),delivery=String(deliveryDate||bake).slice(0,10);
- const bakeText=formatDate(new Date(`${bake}T12:00:00`),false);
- const deliveryText=formatDate(new Date(`${delivery}T12:00:00`),false);
- if(delivery===bake)return lang==='ru'?`Выпечка и поставка: ${bakeText}`:lang==='es'?`Horneado y entrega: ${bakeText}`:`Bake & delivery: ${bakeText}`;
- return lang==='ru'?`Выпечка: ${bakeText} · Поставка: ${deliveryText}`:lang==='es'?`Horneado: ${bakeText} · Entrega: ${deliveryText}`:`Bake: ${bakeText} · Delivery: ${deliveryText}`;
+function bakeDeliveryOptionLabel(date){
+ const bake=dateValue(date);
+ return formatDate(new Date(`${bake}T12:00:00`),false);
 }
 const formatDate=(d,weekday=true)=>new Intl.DateTimeFormat(I18N[lang].locale,{weekday:weekday?'long':undefined,day:'numeric',month:'long'}).format(d);
 const formatCutoff=(d,withDate=true)=>new Intl.DateTimeFormat(I18N[lang].locale,{timeZone:PANORA_BAKERY_TIME_ZONE,day:withDate?'numeric':undefined,month:withDate?'short':undefined,hour:'2-digit',minute:'2-digit'}).format(d);
-function renderBakeDates(){const dates=getBakeDates(),bakeDates=$('#bakeDates');if(!dates.length){selectedBakeDate='';localStorage.removeItem('panora-bake-date');if(bakeDates)bakeDates.innerHTML=`<article class="bake-date bake-date-info"><strong>${I18N[lang].calendar.noDates}</strong></article>`;if($('#nextBakeHero'))$('#nextBakeHero').textContent='—';if($('#cutoffHero'))$('#cutoffHero').textContent='—';syncDateSelect();renderProducts();renderCart();return}if(!dates.some(x=>dateValue(x.date)===selectedBakeDate))selectedBakeDate=dateValue(dates[0].date);localStorage.setItem('panora-bake-date',selectedBakeDate);if(bakeDates)bakeDates.innerHTML=dates.map(({date,cutoff,deliveryDate})=>`<article class="bake-date bake-date-info"><strong>${formatDate(date)}</strong><span>${lang==='ru'?'Доставка':lang==='es'?'Entrega':'Delivery'}: ${formatDate(new Date((deliveryDate||dateValue(date))+'T12:00:00'),false)}</span><span>${tr('calendar.orderUntil')} ${formatCutoff(cutoff)}</span></article>`).join('');$('#nextBakeHero').textContent=formatDate(dates[0].date);$('#cutoffHero').textContent=formatCutoff(dates[0].cutoff);syncDateSelect()}
+function renderBakeDates(){const dates=getBakeDates(),bakeDates=$('#bakeDates');if(!dates.length){selectedBakeDate='';localStorage.removeItem('panora-bake-date');if(bakeDates)bakeDates.innerHTML=`<article class="bake-date bake-date-info"><strong>${I18N[lang].calendar.noDates}</strong></article>`;if($('#nextBakeHero'))$('#nextBakeHero').textContent='—';if($('#cutoffHero'))$('#cutoffHero').textContent='—';syncDateSelect();renderProducts();renderCart();return}if(!dates.some(x=>dateValue(x.date)===selectedBakeDate))selectedBakeDate=dateValue(dates[0].date);localStorage.setItem('panora-bake-date',selectedBakeDate);if(bakeDates)bakeDates.innerHTML=dates.map(({date,cutoff})=>`<article class="bake-date bake-date-info"><strong>${formatDate(date)}</strong><span>${tr('calendar.orderUntil')} ${formatCutoff(cutoff)}</span></article>`).join('');$('#nextBakeHero').textContent=formatDate(dates[0].date);$('#cutoffHero').textContent=formatCutoff(dates[0].cutoff);syncDateSelect()}
 function syncCartDeliveryDate(){
  const s=$('#cartDeliveryDate');if(!s)return;
  const selectedProducts=Object.keys(cart).filter(id=>Number(cart[id]||0)>0);

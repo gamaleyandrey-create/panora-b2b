@@ -657,7 +657,7 @@ function renderOrders() {
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
             <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
-            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Чат</button></td>
+            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Чат по поставке</button></td>
           </tr>`;
         })
         .join("")

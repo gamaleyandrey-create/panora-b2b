@@ -1,0 +1,11 @@
+Panora 7.32 — one bake-day choice + delivery chat + clean bake calendar
+
+- Partner order flow now asks for the bake day only once: in the basket. The New Order screen no longer has its own date selector or confirmation checkbox.
+- The customer checkout form no longer shows or asks for a delivery date. Delivery date remains internal logistics/document data derived from the bakery schedule.
+- Partner-facing schedule wording now shows bake days only; delivery dates are no longer presented as another date to choose.
+- If authoritative server bake capacity changes before submit, the basket is automatically clamped to the remaining quantity (or removes a sold-out line) and immediately rerenders.
+- Order communication button is now “Чат по поставке” / “Delivery chat” / “Chat de entrega”, larger on desktop and mobile, with a stable unread-count badge restored from local cache before cloud reconciliation.
+- Tapping a message Push targets the exact order and opens its delivery chat directly when the Push payload identifies the order.
+- Bakery Bake Calendar no longer embeds the consolidated selected-date calculation / purchasing jump. Purchasing calculations remain in the dedicated “Закупка” section; the calendar stays focused on dates, planned, ordered and free quantities.
+- No SQL/schema change is required for this release.
+- Archive set: Panora 9.17.
