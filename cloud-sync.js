@@ -1123,26 +1123,71 @@
     const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':'confirmed',received_at:payment.receivedAt||`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmedAt||new Date().toISOString(),confirmed_by:session.user?.id||null,recorded_by:payment.recordedBy||session.user?.id||null,dispute_status:payment.disputeStatus||'none',dispute_reason:payment.disputeReason||null,disputed_at:payment.disputedAt||null,dispute_deadline:payment.disputeDeadline||null}));
     await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});status('Облако ✓');
   }
-  async function recordPaymentAtomic(input){
-    if(!ready)throw new Error('Облако ещё загружается.');
-    const rows=await request('rpc/panora_record_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({
-      p_restaurant_id:input.restaurantId,
-      p_amount:Number(input.amount),
-      p_method:input.method||'Наличные',
-      p_note:input.note||null,
-      p_delivery_note_id:input.deliveryNoteId||null,
-      p_received_at:input.receivedAt||new Date().toISOString()
-    })});
+  const paymentRpcMissing=error=>/panora_(?:record|confirm)_payment|PGRST202|does not exist|Could not find the function|schema cache/i.test(String(error?.message||error||''));
+  async function confirmPaymentDirect(paymentId){
+    const now=new Date().toISOString();
+    const rows=await request(`payments?id=eq.${encodeURIComponent(paymentId)}`,{
+      method:'PATCH',headers:{Prefer:'return=representation'},
+      body:JSON.stringify({status:'confirmed',confirmed_at:now,confirmed_by:session.user?.id||null})
+    });
     const row=Array.isArray(rows)?rows[0]:rows;
-    if(!row?.id)throw new Error('Сервер не вернул сохранённую оплату.');
-    status('Облако ✓');
-    return cachePayment(row);
+    if(!row?.id||String(row.status||'')!=='confirmed')throw new Error('Supabase не подтвердил получение оплаты.');
+    return row;
   }
   async function confirmPaymentAtomic(paymentId){
     if(!ready)throw new Error('Облако ещё загружается.');
-    const rows=await request('rpc/panora_confirm_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({p_payment_id:paymentId})});
-    const row=Array.isArray(rows)?rows[0]:rows;
-    if(!row?.id)throw new Error('Сервер не подтвердил оплату.');
+    let row;
+    try{
+      const rows=await request('rpc/panora_confirm_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({p_payment_id:paymentId})});
+      row=Array.isArray(rows)?rows[0]:rows;
+      if(!row?.id)throw new Error('Сервер не подтвердил оплату.');
+    }catch(error){
+      if(!paymentRpcMissing(error))throw error;
+      row=await confirmPaymentDirect(paymentId);
+    }
+    if(String(row.status||'')!=='confirmed')throw new Error('Оплата сохранена, но не получила статус «Подтверждена».');
+    status('Облако ✓');
+    return cachePayment(row);
+  }
+  async function recordPaymentAtomic(input){
+    if(!ready)throw new Error('Облако ещё загружается.');
+    const amount=Number(input.amount),restaurantId=String(input.restaurantId||'').trim(),receivedAt=input.receivedAt||new Date().toISOString();
+    if(!restaurantId)throw new Error('Выберите партнёра.');
+    if(!Number.isFinite(amount)||amount<=0)throw new Error('Введите сумму оплаты больше нуля.');
+    let row;
+    try{
+      const rows=await request('rpc/panora_record_payment',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({
+        p_restaurant_id:restaurantId,
+        p_amount:amount,
+        p_method:input.method||'Наличные',
+        p_note:input.note||null,
+        p_delivery_note_id:input.deliveryNoteId||null,
+        p_received_at:receivedAt
+      })});
+      row=Array.isArray(rows)?rows[0]:rows;
+      if(!row?.id)throw new Error('Сервер не вернул сохранённую оплату.');
+    }catch(error){
+      if(!paymentRpcMissing(error))throw error;
+      const now=new Date().toISOString();
+      const rows=await request('payments',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({
+        restaurant_id:restaurantId,
+        delivery_note_id:input.deliveryNoteId||null,
+        amount,
+        method:input.method||'Наличные',
+        note:input.note||null,
+        status:'confirmed',
+        received_at:receivedAt,
+        confirmed_at:now,
+        confirmed_by:session.user?.id||null
+      })});
+      row=Array.isArray(rows)?rows[0]:rows;
+      if(!row?.id||String(row.status||'')!=='confirmed')throw new Error('Supabase не сохранил подтверждённую оплату.');
+      status('Облако ✓');
+      return cachePayment(row);
+    }
+    // Bakery-entered money is already physically received. Do not leave it in
+    // the partner-reported «pending» state: confirm it before reporting success.
+    if(String(row.status||'')!=='confirmed')return confirmPaymentAtomic(row.id);
     status('Облако ✓');
     return cachePayment(row);
   }

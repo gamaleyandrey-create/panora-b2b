@@ -1686,7 +1686,10 @@ document.querySelector("#savePayment").onclick = async (e) => {
   const button = e.currentTarget,
     form = document.querySelector("#paymentForm"),
     f = new FormData(form),
-    amount = Number(f.get("amount"));
+    parsedAmount = typeof window.panoraParseDecimal === "function" ? window.panoraParseDecimal(f.get("amount")) : Number(String(f.get("amount")||"").replace(",",".")),
+    amount = parsedAmount === null ? NaN : Number(parsedAmount),
+    restaurantId = String(f.get("restaurant")||"").trim();
+  if (!restaurantId) return alert("Выберите партнёра.");
   if (!Number.isFinite(amount) || amount <= 0)
     return alert("Введите сумму оплаты больше нуля.");
   if (
@@ -1703,7 +1706,7 @@ document.querySelector("#savePayment").onclick = async (e) => {
     const deliveryNoteId=allocationMode==="note"?String(f.get("deliveryNoteId")||""):null;
     if(allocationMode==="note"&&!deliveryNoteId)throw new Error("Выберите накладную для оплаты.");
     await window.panoraCloud.recordPaymentAtomic({
-      restaurantId: f.get("restaurant"),
+      restaurantId,
       amount,
       method: f.get("method") || "Наличные",
       note: f.get("note") || "",
