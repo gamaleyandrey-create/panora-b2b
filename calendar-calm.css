@@ -28,3 +28,31 @@
 }
 
 .calendar-grid .calendar-empty.calendar-filtered{height:0!important;min-height:0!important;padding:0!important;margin:0!important}
+
+/* Panora 7.34 — compact desktop bake calendar.
+   Keep the calendar semantics, but remove oversized chrome and make production cards denser. */
+@media (min-width:901px){
+  .bake-calendar{padding:14px 16px!important;border-radius:18px!important}
+  .bake-calendar-modebar{margin-bottom:8px!important}
+  .bake-calendar-tabs button{min-height:34px!important;padding:0 12px!important;font-size:12px!important}
+  #calendarModeHint{font-size:11px!important}
+  .bake-calendar header{gap:8px!important;margin-bottom:8px!important}
+  .bake-calendar header h3{font-size:20px!important;line-height:1.1!important}
+  .bake-calendar header button{min-height:38px!important;padding:7px 11px!important;font-size:12px!important}
+  .calendar-weekdays{margin-bottom:2px!important}
+  .calendar-weekdays b{min-height:24px!important;padding:4px 3px!important;font-size:11px!important}
+  .calendar-grid{gap:5px!important}
+  .calendar-empty{height:50px!important;min-height:50px!important}
+  .calendar-grid .calendar-empty.calendar-filtered{height:0!important;min-height:0!important}
+  .calendar-grid .calendar-empty.calendar-leading{height:0!important;min-height:0!important}
+  .calendar-day{height:52px!important;min-height:52px!important;padding:5px 5px!important;border-radius:10px!important}
+  .calendar-day>em{height:40px!important}
+  .calendar-day .date-name{font-size:14px!important;line-height:40px!important}
+  .calendar-day.has-bake{min-height:94px!important;padding:7px!important;gap:4px!important;border-radius:12px!important}
+  .calendar-day.has-bake>em{height:28px!important;min-height:28px!important;padding:0 8px!important}
+  .calendar-day.has-bake .date-name{font-size:14px!important;line-height:28px!important}
+  .calendar-day.has-bake>span{padding:5px 5px!important;border-left-width:3px!important;border-radius:7px!important}
+  .calendar-day.has-bake>span strong{font-size:9.5px!important;line-height:1.12!important}
+  .calendar-day.has-bake>span i{margin-top:2px!important;font-size:8.5px!important;line-height:1.12!important}
+  .calendar-help{margin-top:8px!important;font-size:11px!important}
+}

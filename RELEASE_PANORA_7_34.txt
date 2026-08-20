@@ -1,0 +1,2 @@
+Panora 7.34 / build 7340
+Compact desktop bake calendar: current working month starts at current week; reduced desktop spacing and card heights.

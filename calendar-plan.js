@@ -71,9 +71,16 @@ function renderBakeCalendar(){
    :(l==='ru'?'Нажмите на пустую будущую дату, чтобы запланировать выпечку.':l==='es'?'Pulsa una fecha futura vacía para programar una hornada.':'Select an empty future date to schedule a bake.');
  document.querySelector('#calendarTitle').textContent=monthTitle();
  document.querySelector('#calendarWeekdays').innerHTML=weekdays.map((x,index)=>`<b class="${index>4?'weekend':''}">${x}</b>`).join('');
- const year=shownMonth.getFullYear(),month=shownMonth.getMonth(),first=new Date(year,month,1),offset=(first.getDay()+6)%7,days=new Date(year,month+1,0).getDate(),cells=[];
- for(let i=0;i<offset;i++)cells.push('<div class="calendar-empty"></div>');
- for(let day=1;day<=days;day++){
+ const year=shownMonth.getFullYear(),month=shownMonth.getMonth(),days=new Date(year,month+1,0).getDate(),cells=[];
+ // Panora 7.34: in the working view of the current month, do not keep invisible
+ // past weeks in the CSS grid. Start the grid at the current week while preserving
+ // Monday-Sunday alignment. This removes the large empty block above today's dates.
+ const currentWorkingMonth=!history&&shownPrefix===currentMonth;
+ const firstDay=currentWorkingMonth?Number(today.slice(8,10)):1;
+ const firstVisible=new Date(year,month,firstDay);
+ const offset=(firstVisible.getDay()+6)%7;
+ for(let i=0;i<offset;i++)cells.push('<div class="calendar-empty calendar-leading"></div>');
+ for(let day=firstDay;day<=days;day++){
    const d=new Date(year,month,day),date=iso(d),isPast=date<today,isVisible=history?isPast:!isPast;
    if(!isVisible){cells.push('<div class="calendar-empty calendar-filtered"></div>');continue}
    const weekdayLabel=new Intl.DateTimeFormat(locales[l],{weekday:'long'}).format(d),dateLabel=new Intl.DateTimeFormat(locales[l],{day:'numeric',month:'long'}).format(d),dayLabel=`${weekdayLabel}, ${dateLabel}`,entries=plans.filter(p=>p.bakeDate===date),details=entries.map(p=>`<span><strong>${productName(p.product)}</strong><i>${p.planned} шт. · ${p.ordered||0} заказано</i></span>`).join('');
