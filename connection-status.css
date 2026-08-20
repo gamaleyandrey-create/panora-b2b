@@ -40,7 +40,7 @@ body:not(.admin-page) #panoraConnectionState{display:none!important}
 #cartButton{overflow:visible!important}
 #partnerSyncInline{
   position:absolute!important;right:0!important;top:-31px!important;bottom:auto!important;left:auto!important;
-  display:inline-flex!important;align-items:center!important;gap:5px!important;
+  display:none!important;align-items:center!important;gap:5px!important;
   min-height:24px!important;max-width:180px!important;padding:4px 8px!important;
   border:1px solid #dce7de!important;border-radius:9px!important;background:rgba(249,252,249,.97)!important;
   box-shadow:0 3px 10px rgba(31,50,37,.08)!important;color:#5d7564!important;
