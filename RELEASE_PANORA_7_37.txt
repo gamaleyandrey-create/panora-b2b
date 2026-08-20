@@ -1,0 +1,9 @@
+Panora 7.37 / build 7370
+
+Mobile parity audit and fixes:
+- all recent shared logic remains active on mobile: order counters, one bake-day selection, delivery-chat naming/badges, push deep links, recipe archive/disclosure persistence, finance cost/expense hierarchy, finished-stock trust states, and unified purchase-date selection
+- product catalogue cards keep the same internal title/description/action zones on mobile instead of dropping the 7.36 alignment rules below 620 px
+- partner “New order” bread cards now use equal internal title/price/wholesale/quantity zones on desktop and mobile
+- mobile-specific layouts remain responsive; calendar compaction stays intentionally viewport-specific rather than forcing desktop geometry onto phones
+
+No Supabase schema migration required.
