@@ -100,20 +100,28 @@
 
  function fillFilter(){
   const dates=initialiseDateSelection();
+  const validSet=new Set(dates);
+  // Keep the visual selector and the calculation summary on one authoritative set.
+  // Native checkbox state could lag behind DOM redraws on some browsers, so dates are
+  // rendered as pressed buttons with a custom indicator instead.
+  pickedDates[purchaseView]=new Set([...pickedDates[purchaseView]].filter(date=>validSet.has(date)));
   const chosen=pickedDates[purchaseView];
-  const allSelected=Boolean(dates.length)&&dates.every(date=>chosen.has(date));
+  const selectedCount=dates.reduce((count,date)=>count+(chosen.has(date)?1:0),0);
+  const allSelected=Boolean(dates.length)&&selectedCount===dates.length;
 
   filter.innerHTML=dates.length?`
    <div class="purchase-date-selector-head">
-    <strong>Выбрано ${chosen.size} из ${dates.length}</strong>
+    <strong>Выбрано ${selectedCount} из ${dates.length}</strong>
     <button type="button" class="purchase-date-all" data-purchase-all aria-pressed="${allSelected?'true':'false'}">${allSelected?'Снять все':'Выбрать все'}</button>
    </div>
    <div class="purchase-date-options">
-    ${dates.map(date=>`
-     <label class="purchase-date-option ${chosen.has(date)?'selected':''}">
-      <input type="checkbox" data-purchase-date="${date}" ${chosen.has(date)?'checked':''}>
-      <span><b>${fmt(date,{day:'numeric',month:'short'})}</b><small>${fmt(date,{weekday:'short'})}</small></span>
-     </label>`).join('')}
+    ${dates.map(date=>{
+      const selected=chosen.has(date);
+      return `<button type="button" class="purchase-date-option ${selected?'selected':''}" data-purchase-date="${date}" aria-pressed="${selected?'true':'false'}">
+       <span class="purchase-date-state" aria-hidden="true">${selected?'✓':''}</span>
+       <span class="purchase-date-copy"><b>${fmt(date,{day:'numeric',month:'short'})}</b><small>${fmt(date,{weekday:'short'})}</small></span>
+      </button>`;
+    }).join('')}
    </div>`:`<div class="purchase-date-empty">${purchaseView==='archive'?'Архивных дат пока нет.':'Активных дат выпечки пока нет.'}</div>`;
 
   filter.querySelector('[data-purchase-all]')?.addEventListener('click',()=>{
@@ -122,10 +130,10 @@
    renderPurchase();
   });
 
-  filter.querySelectorAll('[data-purchase-date]').forEach(input=>input.addEventListener('change',()=>{
-   const date=input.dataset.purchaseDate;
-   if(input.checked)pickedDates[purchaseView].add(date);
-   else pickedDates[purchaseView].delete(date);
+  filter.querySelectorAll('[data-purchase-date]').forEach(button=>button.addEventListener('click',()=>{
+   const date=button.dataset.purchaseDate;
+   if(pickedDates[purchaseView].has(date))pickedDates[purchaseView].delete(date);
+   else pickedDates[purchaseView].add(date);
    persistActiveSelection();
    renderPurchase();
   }));

@@ -203,57 +203,73 @@
 }
 .purchase-date-all:hover{border-color:#bfcbbf;background:#f8faf7}
 .purchase-date-all:focus-visible{outline:2px solid #4f735c;outline-offset:2px}
-.purchase-date-option input{
-  width:16px!important;
-  height:16px!important;
-  min-height:0!important;
-  margin:0!important;
-  accent-color:#365e45;
-}
 .purchase-date-options{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(128px,1fr));
+  grid-auto-rows:58px;
   gap:8px;
   width:100%;
   max-width:1040px;
   padding:2px;
 }
 .purchase-date-option{
-  display:flex!important;
+  display:grid!important;
+  grid-template-columns:22px minmax(0,1fr);
   align-items:center;
   gap:9px;
+  width:100%;
   min-width:0;
-  min-height:54px;
+  height:58px;
+  min-height:58px;
+  box-sizing:border-box;
   margin:0!important;
   padding:9px 11px;
   border:1px solid #d9e0d9;
   border-radius:12px;
   background:#fff;
   color:#435148;
+  text-align:left;
   cursor:pointer;
-  transition:.15s ease;
+  transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease;
 }
-.purchase-date-option:hover{
-  border-color:#bfcbbf;
-  transform:translateY(-1px);
-}
+.purchase-date-option:hover{border-color:#bfcbbf;background:#f8faf7}
+.purchase-date-option:focus-visible{outline:2px solid #4f735c;outline-offset:2px}
 .purchase-date-option.selected{
   border-color:#c9dbc9;
   background:#eaf1e8;
   box-shadow:inset 0 -2px 0 #365e45;
 }
-.purchase-date-option>span{
-  display:grid;
+.purchase-date-state{
+  display:grid!important;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border:1.5px solid #89958d;
+  border-radius:6px;
+  background:#fff;
+  color:#fff;
+  font-size:14px;
+  font-weight:900;
+  line-height:1;
+}
+.purchase-date-option.selected .purchase-date-state{border-color:#365e45;background:#365e45}
+.purchase-date-copy{
+  display:grid!important;
+  min-width:0;
   gap:1px;
 }
 .purchase-date-option b{
+  overflow:hidden;
   color:#304b39;
   font-size:13px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .purchase-date-option small{
   color:#7a857d;
   font-size:9px;
   text-transform:capitalize;
+  white-space:nowrap;
 }
 .purchase-selection-summary{
   display:flex;
@@ -280,7 +296,7 @@
 @media(max-width:700px){
   .purchase-date-selector-head{align-items:flex-start;flex-direction:column}
   .purchase-date-options{display:flex;max-width:none;overflow-x:auto;padding:2px 2px 5px;scrollbar-width:thin}
-  .purchase-date-option{flex:0 0 auto;min-width:122px}
+  .purchase-date-option{flex:0 0 132px;width:132px;min-width:132px;height:56px;min-height:56px}
   .purchase-selection-summary{line-height:1.4}
 }
 
