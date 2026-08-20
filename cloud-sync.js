@@ -1015,6 +1015,10 @@
     id:String(note?.id||''),orderId:String(note?.orderId||''),number:Number(note?.number||0),
     date:String(note?.date||''),total:Number(note?.total||0),paid:Number(note?.paid||0),
     customerConfirmedAt:String(note?.customerConfirmedAt||''),customerReceiver:String(note?.customerReceiver||''),
+    customerTraysReceived:note?.customerTraysReceived==null?null:Number(note.customerTraysReceived),
+    customerTraysReturned:note?.customerTraysReturned==null?null:Number(note.customerTraysReturned),
+    offlineReceivedAt:String(note?.offlineProof?.receivedAt||''),offlineReceiver:String(note?.offlineProof?.receiver||''),
+    offlineSignaturePresent:Boolean(note?.offlineProof?.signature),offlinePending:Boolean(note?.offlineProof?.pending),
     traysDelivered:Number(note?.traysDelivered||0),traysReturned:Number(note?.traysReturned||0),
     trayBalanceAfter:Number(note?.trayBalanceAfter||0)
   })).sort((a,b)=>a.id.localeCompare(b.id)));
@@ -1170,14 +1174,15 @@ const isB2BReturnCreditPayment=payment=>/\[panora:b2b-return-credit:[^\]]+\]/.te
 function localFinishedStockMovements(){
   try{const rows=JSON.parse(localStorage.getItem('panora-stock-movements')||'[]');return Array.isArray(rows)?rows:[]}catch{return[]}
 }
-function b2bReturnCreditForNote(note,sourceMovements=localFinishedStockMovements()){
+function b2bReturnCreditForNote(note,sourceMovements=localFinishedStockMovements(),asOf=''){
   if(!note?.id)return{gross:0,net:0,tax:0,rows:[]};
+  const returnCutoff=String(asOf||'').slice(0,10);
   const items=Array.isArray(note.items)?note.items:[],prices=note.prices||{},remaining=new Map();
   items.forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)remaining.set(product,(remaining.get(product)||0)+qty)});
   const subtotalBasis=Math.max(0,Number(note.subtotal||0))||items.reduce((sum,item)=>sum+Math.max(0,Number(item?.quantity||0))*Math.max(0,Number(prices[item?.product]||0)),0);
   const grossBasis=Math.max(0,Number(note.total||0)),taxRate=Math.max(0,Number(note.taxRate||0));
   let gross=0,net=0,tax=0;const rows=[];
-  (Array.isArray(sourceMovements)?sourceMovements:[]).filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
+  (Array.isArray(sourceMovements)?sourceMovements:[]).filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)&&(!returnCutoff||localDate(m?.date||m?.createdAt)<=returnCutoff)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
     const product=String(movement?.product||''),left=Math.max(0,Number(remaining.get(product)||0)),requested=Math.max(0,Math.abs(Number(movement?.quantity||0))),qty=Math.min(left,requested);if(!product||qty<=0)return;
     remaining.set(product,Math.max(0,left-qty));
     const rowNet=qty*Math.max(0,Number(prices[product]||0));
@@ -1187,7 +1192,7 @@ function b2bReturnCreditForNote(note,sourceMovements=localFinishedStockMovements
   });
   return{gross:Math.min(grossBasis,gross),net:Math.min(subtotalBasis||net,net),tax,rows};
 }
-function b2bEffectiveNoteTotal(note){return Math.max(0,Number(note?.total||0)-Number(b2bReturnCreditForNote(note).gross||0))}
+function b2bEffectiveNoteTotal(note,asOf=''){return Math.max(0,Number(note?.total||0)-Number(b2bReturnCreditForNote(note,localFinishedStockMovements(),asOf).gross||0))}
 async function ensureB2BReturnCreditPayments(){
   if(!ready||typeof deliveryNotes==='undefined'||typeof payments==='undefined')return 0;
   const remoteRows=await request('finished_stock_movements?movement_type=eq.returned&select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at&order=movement_date.asc,created_at.asc');

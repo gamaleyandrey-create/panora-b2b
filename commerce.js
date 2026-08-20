@@ -192,7 +192,7 @@ function syncPlansFromOrders() {
       (x) => x.bakeDate === g.bakeDate && x.product === g.product,
     );
     if (!p) {
-      // Panora 7.24: a shipped order is history and must not recreate a bake day
+      // Panora 7.25: a shipped order is history and must not recreate a bake day
       // that the bakery already cancelled/removed. If an active order still exists,
       // auto-recovery remains available as before.
       if (!g.hasUnshippedOrder) return;
@@ -777,7 +777,7 @@ function accountingAllocationFor(restaurantId, { asOfToday = false } = {}) {
     const key = String(linked.id);
     const already = Number(paidByNote.get(key) || 0);
     const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
-      ? window.panoraB2BEffectiveNoteTotal(linked)
+      ? window.panoraB2BEffectiveNoteTotal(linked, asOf)
       : Math.max(0, Number(linked.total || 0));
     const applied = Math.min(Math.max(0, total - already), amount);
     paidByNote.set(key, already + applied);
@@ -789,7 +789,7 @@ function accountingAllocationFor(restaurantId, { asOfToday = false } = {}) {
     const key = String(note.id);
     const already = Number(paidByNote.get(key) || 0);
     const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
-      ? window.panoraB2BEffectiveNoteTotal(note)
+      ? window.panoraB2BEffectiveNoteTotal(note, asOf)
       : Math.max(0, Number(note.total || 0));
     const due = Math.max(0, total - already);
     const applied = Math.min(due, fifoPool);
@@ -801,7 +801,7 @@ function accountingAllocationFor(restaurantId, { asOfToday = false } = {}) {
 
   const rows = notes.map((note) => {
     const total = typeof window.panoraB2BEffectiveNoteTotal === "function"
-      ? window.panoraB2BEffectiveNoteTotal(note)
+      ? window.panoraB2BEffectiveNoteTotal(note, asOf)
       : Math.max(0, Number(note.total || 0));
     const paid = Math.min(total, Math.max(0, Number(paidByNote.get(String(note.id)) || 0)));
     const due = Math.max(0, total - paid);

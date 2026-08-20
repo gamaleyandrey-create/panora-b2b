@@ -1,0 +1,7 @@
+Panora 7.25 — debt-as-of-date + offline receipt live sync
+
+- Bakery “debt as of today” now applies only B2B returns whose economic date has already occurred; future-dated returns no longer reduce today’s debt early.
+- Existing current-state finance calculations remain unchanged when no as-of date is requested.
+- Bakery delivery-note live-sync signature now includes offline receipt time/receiver, customer tray confirmation and offline-proof state, so a second open bakery device rerenders after an offline receipt reaches Supabase.
+- No SQL/schema change is required.
+- Archive set: Panora 9.10.
