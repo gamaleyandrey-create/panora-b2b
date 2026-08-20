@@ -1,0 +1,8 @@
+Panora 7.19 — order-message read race hardening
+
+- Fixed a two-device messaging race in the open order conversation.
+- Previously the client loaded messages first and then marked every unread message in the order as read. A message arriving between those requests could be acknowledged before it was rendered.
+- The open conversation now acknowledges the already-existing unread set before fetching the next visible message snapshot, so newly arriving messages remain eligible for the following refresh instead of being silently consumed between requests.
+- Existing 5-second open-dialog polling and unread badge refresh remain unchanged.
+- No schema or SQL change is required.
+- Archive set: Panora 9.4.
