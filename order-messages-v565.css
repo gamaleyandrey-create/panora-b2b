@@ -101,7 +101,7 @@
 }
 
 
-/* Panora 7.30 — stable message buttons and unread badge across live rerenders */
+/* Panora 7.31 — stable message buttons and unread badge across live rerenders */
 .admin-order-message-button,.rw-order-message-button,.rw-current-order-actions [data-order-messages]{
   position:relative!important;
   box-sizing:border-box!important;

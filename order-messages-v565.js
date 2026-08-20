@@ -7,9 +7,9 @@
     return ["ru","en","es"].includes(value)?value:"ru";
   };
   const words={
-    ru:{title:"Сообщения по заказу",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Сообщения",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
-    en:{title:"Order messages",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Messages",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
-    es:{title:"Mensajes del pedido",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Mensajes",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
+    ru:{title:"Чат по заказу",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Чат",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
+    en:{title:"Order chat",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Chat",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
+    es:{title:"Chat del pedido",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Chat",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
   };
   const t=key=>words[language()]?.[key]||words.ru[key]||key;
 
@@ -38,6 +38,24 @@
   };
 
   let dialog=null,currentOrderId="",currentOrderLabel="",poll=0,lastUnreadMap=new Map(),unreadPaintQueued=false;
+  const MESSAGE_CACHE_KEY="panora-order-message-cache-v1";
+  const readMessageCache=orderId=>{
+    try{
+      const state=JSON.parse(localStorage.getItem(MESSAGE_CACHE_KEY)||"{}");
+      const rows=state&&typeof state==="object"&&!Array.isArray(state)?state[String(orderId)]?.rows:null;
+      return Array.isArray(rows)?rows:[];
+    }catch{return[]}
+  };
+  const writeMessageCache=(orderId,rows)=>{
+    try{
+      const state=JSON.parse(localStorage.getItem(MESSAGE_CACHE_KEY)||"{}");
+      const next=state&&typeof state==="object"&&!Array.isArray(state)?state:{};
+      next[String(orderId)]={rows:(Array.isArray(rows)?rows:[]).slice(-100),updatedAt:new Date().toISOString()};
+      const keys=Object.keys(next).sort((a,b)=>String(next[b]?.updatedAt||"").localeCompare(String(next[a]?.updatedAt||"")));
+      keys.slice(30).forEach(key=>delete next[key]);
+      localStorage.setItem(MESSAGE_CACHE_KEY,JSON.stringify(next));
+    }catch{}
+  };
   const ownRole=()=>window.panoraPartnerOrderMessages?"restaurant":"admin";
   const pushApi=()=>ownRole()==="restaurant"?window.panoraPartnerPush:window.panoraAdminWebPush;
   const pushAvailable=()=>Boolean(pushApi()?.status&&("Notification" in window)&&("serviceWorker" in navigator)&&("PushManager" in window));
@@ -95,20 +113,39 @@
     }).join(""):`<p class="order-message-empty">${t("empty")}</p>`;
     requestAnimationFrame(()=>{root.scrollTop=root.scrollHeight});
   };
-  const load=async({quiet=false}={})=>{
+  const load=async({quiet=false,fastOpen=false}={})=>{
     if(!dialog||!currentOrderId)return;
     const root=dialog.querySelector("[data-order-message-list]");
+    const targetOrderId=currentOrderId;
     if(!quiet)root.innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     try{
-      // Mark the messages that existed before this refresh, then fetch the list.
-      // This prevents a message arriving between list() and markRead() from being
-      // acknowledged before it has ever been rendered in the open conversation.
-      await api().markRead(currentOrderId).catch(()=>{});
-      const rows=await api().list(currentOrderId);
-      renderMessages(rows);
+      if(fastOpen){
+        // First paint waits for only one network request. The cached conversation is
+        // already visible when available; then the fresh list replaces it immediately.
+        const firstRows=await api().list(targetOrderId);
+        if(!dialog||currentOrderId!==targetOrderId)return;
+        renderMessages(firstRows);
+        writeMessageCache(targetOrderId,firstRows);
+        // Preserve the read-race protection from Panora 7.19 without keeping the
+        // initial dialog on “Loading…”: mark what is now visible, then reconcile once.
+        await api().markRead(targetOrderId).catch(()=>{});
+        if(!dialog||currentOrderId!==targetOrderId)return;
+        const reconciledRows=await api().list(targetOrderId).catch(()=>firstRows);
+        if(!dialog||currentOrderId!==targetOrderId)return;
+        renderMessages(reconciledRows);
+        writeMessageCache(targetOrderId,reconciledRows);
+      }else{
+        // Background refreshes keep the safe mark-read -> list ordering while the
+        // existing conversation stays on screen, so there is no visible loading wait.
+        await api().markRead(targetOrderId).catch(()=>{});
+        const rows=await api().list(targetOrderId);
+        if(!dialog||currentOrderId!==targetOrderId)return;
+        renderMessages(rows);
+        writeMessageCache(targetOrderId,rows);
+      }
       refreshUnread().catch(()=>{});
     }catch(error){
-      if(!quiet)root.innerHTML=`<p class="order-message-empty error">${t("error")}</p>`;
+      if(!quiet&&(!readMessageCache(targetOrderId).length))root.innerHTML=`<p class="order-message-empty error">${t("error")}</p>`;
       console.warn("Panora order messages",error);
     }
   };
@@ -149,8 +186,11 @@
       }
     };
     dialog.showModal();
+    const cachedRows=readMessageCache(currentOrderId);
+    if(cachedRows.length)renderMessages(cachedRows);
+    else dialog.querySelector("[data-order-message-list]").innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     syncPushState().catch(()=>{});
-    await load();
+    await load({quiet:cachedRows.length>0,fastOpen:true});
     poll=setInterval(()=>{if(dialog&&!document.hidden)load({quiet:true})},5000);
   };
 
