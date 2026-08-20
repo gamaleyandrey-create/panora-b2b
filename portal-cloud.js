@@ -381,6 +381,8 @@
     const day=row.bake_days||{},items=row.order_items||[];
     return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity),nameSnapshot:x.product_names_snapshot||null,imageSnapshot:x.product_image_snapshot||''})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
   }
+  const mapPartnerPlans=(days,orders)=>((days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:(orders||[]).filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items||[]).filter(x=>x.product===i.product_id).reduce((sum,x)=>sum+Number(x.quantity||0),0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
+  const partnerPlanSignature=list=>JSON.stringify((list||[]).map(p=>({id:String(p?.id||''),bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),ordered:Number(p?.ordered||0),cutoff:String(p?.cutoff||''),open:p?.open!==false})).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
 
   async function hydrateOrderRows(orderRows){
     const rows=Array.isArray(orderRows)?orderRows:[];
@@ -485,6 +487,7 @@
     loadPromise=(async()=>{
       const uid=session?.user?.id;if(!uid)return;
       const hadAccount=Boolean(account?.id);
+      const previousPartnerPlanSnapshot=partnerPlanSignature(read('panora-production-plans',[])||[]);
       const previousAccountSnapshot=account?JSON.stringify({
         id:account.id,name:account.name,email:account.email,phone:account.phone,address:account.address,
         language:account.language,prices:Object.entries(account.prices||{}).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))
@@ -515,7 +518,8 @@
       write('panora-restaurants',[own]);savePortalOrdersCache(orders);
       write('panora-delivery-notes',mappedNotes);
       write('panora-payments',mappedPayments);
-      write('panora-production-plans',(days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:orders.filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items).filter(x=>x.product===i.product_id).reduce((s,x)=>s+x.quantity,0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
+      const nextPartnerPlans=mapPartnerPlans(days,orders),partnerPlansChanged=previousPartnerPlanSnapshot!==partnerPlanSignature(nextPartnerPlans);
+      write('panora-production-plans',nextPartnerPlans);
       const initialRuleMap=new Map((orderRules||[]).map(row=>[String(row.id),Math.max(1,Number(row.wholesale_min_qty||8))]));
       const partnerProducts=(products||[]).map(p=>({id:p.id,builtIn:['plain','pumpkin'].includes(p.id),active:p.active,weight:Number(p.weight_g),wholesaleMinQty:initialRuleMap.get(String(p.id))||Math.max(1,Number(p.wholesale_min_qty||8)),image:p.image_url||'icon.svg',names:{ru:p.name_ru,en:p.name_en,es:p.name_es},descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}}))
         .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
@@ -534,6 +538,12 @@
       }else{
         window.panoraSyncAccountChrome?.();
         if(productsChanged||accountChanged)refreshRestaurantProducts?.();
+      }
+      if(partnerPlansChanged){
+        // Panora 7.23: cloud hydration used to update plan storage silently.
+        // Keep an already-open partner catalogue/date selector in sync with bakery bake-day changes.
+        try{renderBakeDates?.();renderProducts?.();renderCart?.()}catch(error){console.warn('Panora partner plan render',error)}
+        window.dispatchEvent(new CustomEvent('panora:partner-plans-updated',{detail:{count:nextPartnerPlans.length,source:'partner-load'}}));
       }
       if(productsChanged)window.dispatchEvent(new CustomEvent('panora:products-changed',{detail:{source:'partner-load'}}));
       // Panora 6.67: a no-op cloud hydration must not replace cart <img> nodes.
