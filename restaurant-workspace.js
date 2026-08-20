@@ -621,7 +621,7 @@
         <div class="rw-notification-settings"><h5>${t("notifications")}</h5><div>
           ${[["notifyOrder","notifyOrder"],["notifyShipment","notifyShipment"],["notifyInvoice","notifyInvoice"],["notifyPayment","notifyPayment"]].map(([name,label])=>`<label><input type="checkbox" name="${name}"${account[name]!==false?" checked":""}><span>${t(label)}</span></label>`).join("")}
         </div></div>
-        <div class="rw-partner-push"><div><strong>${t("pushDevice")}</strong><small>${t("pushDeviceHint")}</small></div><div class="rw-partner-push-actions"><button type="button" class="button button-ghost" data-rw-partner-push-enable>${t("pushEnable")}</button><button type="button" class="button button-ghost" data-rw-partner-push-test>${t("pushTest")}</button><button type="button" class="button button-ghost" data-rw-partner-push-disable hidden>${t("pushDisable")}</button></div><p data-rw-partner-push-state role="status"></p></div>
+        <div class="rw-partner-push"><div><strong>${t("pushDevice")}</strong><small>${t("pushDeviceHint")}</small></div><div class="rw-partner-push-actions"><button type="button" class="button button-ghost" data-rw-partner-push-enable>${t("pushEnable")}</button><button type="button" class="button button-ghost" data-rw-partner-push-test>${t("pushTest")}</button><button type="button" class="button button-ghost" data-rw-partner-push-disable hidden>${t("pushDisable")}</button></div><p class="rw-partner-push-state" data-rw-partner-push-state role="status"></p></div>
       </section>
       <div class="rw-profile-access"><span><strong>${t("accountAccess")}</strong><small>${t("emailLocked")}</small></span><b>${esc(account.email)}</b></div>
       <p class="rw-profile-result" data-rw-profile-result role="status"></p>
@@ -1382,13 +1382,13 @@
       if(!pushState)return;
       if(info?.active){
         pushState.textContent=t("pushReady");
-        pushState.className="success";
+        pushState.className="rw-partner-push-state rw-partner-push-state--success";
         if(pushEnableButton)pushEnableButton.hidden=true;
         if(pushDisableButton){pushDisableButton.hidden=false;pushDisableButton.disabled=false}
         if(pushTestButton)pushTestButton.disabled=false;
       }else{
         pushState.textContent=info?.browser&&!info?.server?t("pushServerMissing"):t("pushNotReady");
-        pushState.className=info?.browser&&!info?.server?"error":"";
+        pushState.className=info?.browser&&!info?.server?"rw-partner-push-state rw-partner-push-state--error":"rw-partner-push-state";
         if(pushEnableButton)pushEnableButton.hidden=false;
         if(pushDisableButton)pushDisableButton.hidden=true;
         if(pushTestButton)pushTestButton.disabled=true;
@@ -1406,7 +1406,7 @@
       partnerPushUiBusy=true;
       button.disabled=true;
       if(pushTestButton)pushTestButton.disabled=true;
-      if(pushState){pushState.textContent=t("pushConnecting");pushState.className=""}
+      if(pushState){pushState.textContent=t("pushConnecting");pushState.className="rw-partner-push-state"}
       try{
         if(!window.panoraPartnerPush?.enable)throw new Error(t("pushError"));
         await window.panoraPartnerPush.enable();
@@ -1416,7 +1416,7 @@
         applyPushState(info||{active:true});
       }catch(error){
         restorePartnerNotificationPrefs(profileForm,snapshot);
-        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}
+        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="rw-partner-push-state rw-partner-push-state--error"}
       }finally{
         restorePartnerNotificationPrefs(profileForm,snapshot);
         partnerPushUiBusy=false;
@@ -1435,7 +1435,7 @@
         applyPushState({active:false,browser:true,server:false,reason:'disabled'});
       }catch(error){
         restorePartnerNotificationPrefs(profileForm,snapshot);
-        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}
+        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="rw-partner-push-state rw-partner-push-state--error"}
       }finally{
         restorePartnerNotificationPrefs(profileForm,snapshot);
         partnerPushUiBusy=false;button.disabled=false;
@@ -1455,10 +1455,10 @@
         if(!window.panoraPartnerPush?.test)throw new Error(t("pushError"));
         await window.panoraPartnerPush.test();
         restorePartnerNotificationPrefs(profileForm,snapshot);
-        if(pushState){pushState.textContent=lang==="ru"?"Тест Push отправлен":lang==="es"?"Push de prueba enviado":"Test Push sent";pushState.className="success"}
+        if(pushState){pushState.textContent=lang==="ru"?"Тест Push отправлен":lang==="es"?"Push de prueba enviado":"Test Push sent";pushState.className="rw-partner-push-state rw-partner-push-state--success"}
       }catch(error){
         restorePartnerNotificationPrefs(profileForm,snapshot);
-        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="error"}
+        if(pushState){pushState.textContent=`${t("pushError")}: ${error.message||error}`;pushState.className="rw-partner-push-state rw-partner-push-state--error"}
       }finally{
         restorePartnerNotificationPrefs(profileForm,snapshot);
         partnerPushUiBusy=false;
@@ -1972,7 +1972,7 @@
     if(state){
       const active=Boolean(event.detail?.active);
       state.textContent=active?t("pushReady"):(event.detail?.reason?`${t("pushError")}: ${event.detail.reason}`:t("pushNotReady"));
-      state.className=active?"success":"error";
+      state.className=active?"rw-partner-push-state rw-partner-push-state--success":"rw-partner-push-state rw-partner-push-state--error";
       if(test)test.disabled=!active;
       return;
     }
