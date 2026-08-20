@@ -5,13 +5,21 @@
 .finance-dashboard-period{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:0 0 18px;padding:14px 16px;border:1px solid var(--finance-line);border-radius:14px;background:#fff}
 .finance-dashboard-period label{display:grid;gap:5px}.finance-dashboard-period label span{color:#6d786f;font-size:12px;font-weight:700}.finance-dashboard-period input{min-height:42px;padding:0 11px;border:1px solid #d7ddd7;border-radius:9px;background:#fff}
 
-.finance-main-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
-.finance-main-kpis article{min-height:126px;padding:18px;border:1px solid var(--finance-line);border-radius:16px;background:#fff}
+.finance-main-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.finance-main-kpis article,.finance-main-card-button{min-height:126px;padding:18px;border:1px solid var(--finance-line);border-radius:16px;background:#fff;text-align:left}
 .finance-main-kpis span,.finance-main-kpis strong,.finance-main-kpis small{display:block}
 .finance-main-kpis span{color:#647068;font-size:12px;font-weight:700}
 .finance-main-kpis strong{margin-top:11px;color:#294a36;font-size:29px;line-height:1.08}
 .finance-main-kpis small{margin-top:8px;color:#78827b;font-size:11px;line-height:1.35}
 .finance-main-kpis .finance-profit-card,.finance-main-kpis .finance-margin-card{border-color:#c9d9ca;background:#edf5ec}
+.finance-main-card-button{font:inherit;cursor:pointer}
+.finance-main-kpis .finance-cost-card{border-color:#ead6d2}
+.finance-main-kpis .finance-cost-card strong{color:var(--finance-red)}
+.finance-main-kpis .finance-expense-card{position:relative;border-color:#e6b9b4;background:#fffafa;overflow:hidden}
+.finance-main-kpis .finance-expense-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--finance-red)}
+.finance-main-kpis .finance-expense-card strong{color:var(--finance-red)}
+.finance-main-kpis .finance-expense-card:hover{border-color:#d8948d;background:#fff7f6}
+.finance-main-kpis .finance-expense-card:focus-visible{outline:3px solid rgba(168,70,62,.18);outline-offset:2px}
 .finance-main-kpis strong.is-positive,.finance-secondary-kpis strong.is-positive{color:#2f6b43}
 .finance-main-kpis strong.is-negative,.finance-secondary-kpis strong.is-negative{color:var(--finance-red)}
 .finance-main-kpis strong.is-zero,.finance-secondary-kpis strong.is-zero{color:#526159}
@@ -54,7 +62,7 @@
 
 /* Panora 6.05 — procurement is inventory, not a second P&L expense */
 @media(min-width:1101px){
-  .finance-secondary-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .finance-secondary-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 .finance-inventory-kpi{
   border-color:#d8dfce!important;

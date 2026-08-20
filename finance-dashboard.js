@@ -412,7 +412,9 @@
     setSignedState(grossProfit,x.grossProfit);
     document.querySelector('#financeGrossMargin').textContent=`Маржа: ${pct(grossMargin)}`;
 
-    document.querySelector('#financeExpensesNet').textContent=money(x.operatingCostsNet);
+    const expensesNet=document.querySelector('#financeExpensesNet');
+    expensesNet.textContent=money(-Math.abs(x.operatingCostsNet));
+    setSignedState(expensesNet,-Math.abs(x.operatingCostsNet));
     setText('#financeExpensesDetail',`Ручные: ${money(x.expensesNet)} · потери: ${money(x.stockLossesNet)} · перейти ↓`);
     const rawPurchases=document.querySelector('#financeRawPurchasesNet');
     if(rawPurchases)rawPurchases.textContent=money(x.rawPurchasesNet);
