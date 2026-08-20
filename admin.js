@@ -722,17 +722,30 @@ function stockEffectiveMovements(){
  const manual=movements.filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
  const source=[...manual,...stockAutoBakeMovements(),...stockShipmentMovements(),...stockRetailCompletedMovements()]
   .slice().sort((a,b)=>stockMovementOrderKey(a).localeCompare(stockMovementOrderKey(b)));
- const balances=new Map();
+ const balances=new Map(),retailOrdersById=new Map(readRetailOrders().filter(Boolean).map(order=>[String(order.id||''),order])),acceptedRetailReturns=new Map();
+ // Panora 7.14: linked retail returns are capped in the physical stock ledger itself,
+ // not only in Finance P&L. This prevents duplicate/stale cloud movements from creating
+ // phantom returned bread that could later be sold or written off with extra FIFO cost.
  return source.map(m=>{
   const product=String(m?.product||''),before=Number(balances.get(product)||0),target=m?.virtual?null:stockInventoryTarget(m);
   let effective=m;
   if(target!==null){
    const delta=target-before;
    effective={...m,type:delta<0?'correction_minus':'correction_plus',quantity:Math.abs(delta),inventorySet:true,inventoryTarget:target,inventoryDelta:delta};
+  }else if(!m?.virtual&&String(m?.type||'')==='returned'){
+   const marker=String(m?.note||'').match(/\[panora:retail-return:([^:\]]+):([^:\]]+):(\d+)\]/)||String(m?.id||'').match(/^retail-return:([^:]+):([^:]+):(\d+)$/);
+   if(marker){
+    const orderId=String(marker[1]||''),markerProduct=String(marker[2]||''),index=Number(marker[3]),order=retailOrdersById.get(orderId),item=Array.isArray(order?.items)?order.items[index]:null;
+    if(item&&String(item?.product||'')===markerProduct&&markerProduct===product){
+     const sold=Math.max(0,Number(item?.quantity||0)),key=`${orderId}\u0000${markerProduct}\u0000${index}`,used=Math.max(0,Number(acceptedRetailReturns.get(key)||0)),requested=Math.max(0,Math.abs(Number(m?.quantity||0))),accepted=Math.min(requested,Math.max(0,sold-used));
+     acceptedRetailReturns.set(key,used+accepted);
+     if(accepted+1e-9<requested)effective={...m,quantity:accepted,retailReturnCapped:true,retailReturnOriginalQuantity:requested};
+    }
+   }
   }
   balances.set(product,before+signed(effective));
   return effective;
- });
+ }).filter(m=>!(m?.retailReturnCapped&&Number(m?.quantity||0)<=1e-9));
 }
 function stockRawBalance(product){
  return stockEffectiveMovements().filter(m=>String(m.product)===String(product)).reduce((sum,m)=>sum+signed(m),0);

@@ -1,0 +1,7 @@
+Panora 7.14 — retail return caps aligned across physical stock and Finance FIFO
+
+- Linked retail return movements are capped by the original sold quantity inside the finished-stock ledger.
+- Duplicate/stale over-return movements can no longer create phantom returned bread.
+- Finance FIFO applies the same ceiling, so later sales and write-offs cannot consume extra returned cost layers.
+- Multi-product partial returns keep independent product quantities and historical sale COGS.
+- No SQL changes.
