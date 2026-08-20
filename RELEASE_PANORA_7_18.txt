@@ -1,0 +1,8 @@
+Panora 7.18 — partner document-role hardening
+
+- Partner workspace no longer exposes seller-side Factura/Albarán issuance controls.
+- Spanish commercial document issuance remains available only from the bakery/admin workflow.
+- A defensive partner-context guard prevents stale/cached partner UI from invoking the issuance library; it falls back to the standard partner delivery note.
+- Partial shipment behavior was re-audited against panora_ship_order: actual shipped quantities remain authoritative.
+- No schema or SQL change is required.
+- Archive set: Panora 9.3.
