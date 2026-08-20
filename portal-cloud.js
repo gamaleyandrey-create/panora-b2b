@@ -1238,7 +1238,25 @@
         const message=String(error?.message||'');
         if(capacityIssue){
           await loadAll(true).catch(()=>{});
-          const friendly=planCapacityMessage(capacityIssue);
+          const productId=String(capacityIssue.product||'');
+          const remaining=Math.max(0,Math.floor(Number(capacityIssue.remaining||0)));
+          const current=Math.max(0,Math.floor(Number(cart?.[productId]||0)));
+          if(productId&&current>remaining){
+            if(remaining>0)cart[productId]=remaining;else delete cart[productId];
+            try{localStorage.setItem('panora-cart',JSON.stringify(cart))}catch{}
+            try{syncCartDeliveryDate?.();renderProducts?.();renderCart?.()}catch{}
+          }
+          const friendly=labels(
+            remaining>0
+              ?`Свободный план изменился. Количество «${portalProduct(productId)}» обновлено до ${remaining} шт. Проверьте корзину и отправьте заказ снова.`
+              :`Свободный план для «${portalProduct(productId)}» закончился. Позиция убрана из корзины — выберите другую дату или товар.`,
+            remaining>0
+              ?`Bake-plan capacity changed. “${portalProduct(productId)}” was updated to ${remaining} pcs. Review the basket and send the order again.`
+              :`No bake-plan capacity remains for “${portalProduct(productId)}”. The item was removed from the basket — choose another date or product.`,
+            remaining>0
+              ?`La capacidad de horneado cambió. «${portalProduct(productId)}» se actualizó a ${remaining} uds. Revisa la cesta y vuelve a enviar el pedido.`
+              :`Ya no queda capacidad de horneado para «${portalProduct(productId)}». El producto se eliminó de la cesta; elige otra fecha o producto.`
+          );
           state('error',friendly);showToast(friendly);
           closePanels();setTimeout(()=>openPanel(document.querySelector('#cartDrawer')),120);
         }else{

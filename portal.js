@@ -586,16 +586,13 @@ function showOrderItemCosts() {
 const orderCostObserver = new MutationObserver(showOrderItemCosts);
 orderCostObserver.observe(modal, { childList: true, subtree: true });
 function enforceDateConfirmation() {
-  const confirmBox = $("#confirmDeliveryDate"),
-    button = $("#checkoutButton"),
-    count = cartData().count;
-  if (!count) confirmBox.checked = false;
+  const button = $("#checkoutButton"),
+    dateSelect = $("#cartDeliveryDate"),
+    count = cartData().count,
+    ready = Boolean(count && dateSelect && !dateSelect.disabled && dateSelect.value);
   button.disabled = false;
   button.classList.remove("needs-minimum");
-  button.classList.toggle(
-    "needs-date-confirmation",
-    !confirmBox.checked,
-  );
+  button.classList.toggle("needs-date-confirmation", !ready);
 }
 const baseRenderCart = renderCart;
 renderCart = function () {
@@ -605,11 +602,7 @@ renderCart = function () {
 document.addEventListener(
   "change",
   (e) => {
-    if (e.target.id === "confirmDeliveryDate") enforceDateConfirmation();
-    if (e.target.id === "cartDeliveryDate") {
-      $("#confirmDeliveryDate").checked = false;
-      enforceDateConfirmation();
-    }
+    if (e.target.id === "cartDeliveryDate") enforceDateConfirmation();
   },
   true,
 );
@@ -835,21 +828,18 @@ function openCheckoutForAccount() {
 const originalCheckout = $("#checkoutButton").onclick;
 $("#checkoutButton").onclick = () => {
   const count = cartData().count;
-  const mobile=window.matchMedia?.('(max-width:720px)')?.matches;
   const dateSelect=$("#cartDeliveryDate");
   const dateReady=Boolean(dateSelect?.value&&!dateSelect?.disabled);
-  if(mobile&&dateReady)$("#confirmDeliveryDate").checked=true;
-  if (!$("#confirmDeliveryDate").checked) {
+  if (!dateReady) {
     showToast(
       lang === "ru"
-        ? "Сначала выберите и подтвердите день выпечки"
+        ? "Выберите день выпечки"
         : lang === "es"
-          ? "Primero elige y confirma el día de horneado"
-          : "First choose and confirm the bake day",
+          ? "Elige el día de horneado"
+          : "Choose the bake day",
     );
-    const box = $("#confirmDeliveryDate");
-    box.closest("label")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    box.focus();
+    dateSelect?.closest("label")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    dateSelect?.focus();
     return;
   }
   if (!account) {

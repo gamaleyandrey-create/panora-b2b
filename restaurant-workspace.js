@@ -28,8 +28,8 @@
       close: "Закрыть",
       pending: "Ожидает подтверждения",
       activeOrders: "Рабочие", historyOrders: "Архив", noActiveOrders: "Рабочих заказов нет",
-      startOrder: "Выбрать хлеб и дату",
-      orderHelp: "Выберите хлеб, затем подтвердите дату поставки в корзине. Заказы принимаются не позднее чем за 48 часов до выпечки.",
+      startOrder: "Выбрать хлеб",
+      orderHelp: "Выберите хлеб, затем один раз выберите день выпечки в корзине. Заказы принимаются не позднее чем за 48 часов до выпечки.",
       phone: "Телефон",
       address: "Адрес доставки",
       partnerType: "Тип партнёра", restaurant: "Ресторан", shop: "Магазин", hotel: "Отель", cafe: "Кафе", catering: "Кейтеринг", other: "Другое",
@@ -83,8 +83,8 @@
       signOut: "Sign out",
       close: "Close",
       pending: "Awaiting confirmation",
-      startOrder: "Choose bread and date",
-      orderHelp: "Choose bread, then confirm the delivery date in the basket. Orders close 48 hours before baking.",
+      startOrder: "Choose bread",
+      orderHelp: "Choose bread, then choose the bake day once in the basket. Orders close 48 hours before baking.",
       phone: "Phone",
       address: "Delivery address",
       partnerType: "Partner type", restaurant: "Restaurant", shop: "Shop", hotel: "Hotel", cafe: "Cafe", catering: "Catering", other: "Other",
@@ -128,8 +128,8 @@
       close: "Cerrar",
       pending: "Pendiente de confirmación",
       activeOrders: "En curso", historyOrders: "Archivo", noActiveOrders: "No hay pedidos en curso",
-      startOrder: "Elegir pan y fecha",
-      orderHelp: "Elige el pan y confirma la fecha de entrega en la cesta. Los pedidos se aceptan hasta 48 horas antes del horneado.",
+      startOrder: "Elegir pan",
+      orderHelp: "Elige el pan y elige el día de horneado una sola vez en la cesta. Los pedidos se aceptan hasta 48 horas antes del horneado.",
       phone: "Teléfono",
       address: "Dirección de entrega",
       partnerType: "Tipo de socio", restaurant: "Restaurante", shop: "Tienda", hotel: "Hotel", cafe: "Cafetería", catering: "Catering", other: "Otro",
@@ -579,7 +579,7 @@
         <button type="button" class="rw-summary-card rw-home-finance-card${finance.advance>0?" has-advance":""}" data-rw-summary="payments"><span>${t("debt")}</span><strong>${portalMoney(finance.debt)}</strong><small>${finance.advance>0?`${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(finance.advance)}`:t("finance")}</small></button>
         <article><span>${t("trayBalance")}</span><strong>${trays}</strong><small>${t("pieces")}</small></article>
       </div>
-      ${active ? (()=>{const note=notes.find(n=>n.orderId===active.id);return `<article class="rw-current-order"><div class="rw-current-order-main"><span>${t("activeOrder")}</span><div class="rw-current-order-title"><strong>${esc(orderNumber(active))}</strong><em>${esc(status(active))}</em></div><small><b>${t("delivery")}:</b> ${esc(localDate(active.deliveryDate || active.date))}</small>${active.bakeDate?`<small><b>${t("bake")}:</b> ${esc(localDate(active.bakeDate))}</small>`:""}<ul class="rw-current-order-items">${(active.items||[]).map(item=>{const qty=Number(item.quantity||0),unit=orderItemUnitPrice(active,item.product);return `<li><span>${esc(orderItemName(active,item))}</span><strong>${qty} ${t("pieces")} × ${portalMoney(unit)} = ${portalMoney(qty*unit)}</strong></li>`}).join("")}</ul>${note?`<small><b>${t("notes")}:</b> ${esc(noteNumber(note))}</small>`:""}</div><div class="rw-current-order-total"><span>${lang==="ru"?"Итого":lang==="es"?"Total":"Total"}</span><b>${portalMoney(orderTotal(active))}</b></div><div class="rw-current-order-actions"><button class="button button-ghost" data-rw-open-order="${esc(active.id)}">${lang==="ru"?"Открыть заказ":lang==="es"?"Abrir pedido":"Open order"}</button><button type="button" class="button button-ghost" data-order-messages="${esc(active.id)}" data-order-label="${esc(orderNumber(active))}">✉ ${lang==="ru"?"Чат":lang==="es"?"Chat":"Chat"}</button></div></article>`})() : ""}
+      ${active ? (()=>{const note=notes.find(n=>n.orderId===active.id);return `<article class="rw-current-order"><div class="rw-current-order-main"><span>${t("activeOrder")}</span><div class="rw-current-order-title"><strong>${esc(orderNumber(active))}</strong><em>${esc(status(active))}</em></div><small><b>${t("delivery")}:</b> ${esc(localDate(active.deliveryDate || active.date))}</small>${active.bakeDate?`<small><b>${t("bake")}:</b> ${esc(localDate(active.bakeDate))}</small>`:""}<ul class="rw-current-order-items">${(active.items||[]).map(item=>{const qty=Number(item.quantity||0),unit=orderItemUnitPrice(active,item.product);return `<li><span>${esc(orderItemName(active,item))}</span><strong>${qty} ${t("pieces")} × ${portalMoney(unit)} = ${portalMoney(qty*unit)}</strong></li>`}).join("")}</ul>${note?`<small><b>${t("notes")}:</b> ${esc(noteNumber(note))}</small>`:""}</div><div class="rw-current-order-total"><span>${lang==="ru"?"Итого":lang==="es"?"Total":"Total"}</span><b>${portalMoney(orderTotal(active))}</b></div><div class="rw-current-order-actions"><button class="button button-ghost" data-rw-open-order="${esc(active.id)}">${lang==="ru"?"Открыть заказ":lang==="es"?"Abrir pedido":"Open order"}</button><button type="button" class="button button-ghost" data-order-messages="${esc(active.id)}" data-order-label="${esc(orderNumber(active))}">✉ ${lang==="ru"?"Чат по поставке":lang==="es"?"Chat de entrega":"Delivery chat"}</button></div></article>`})() : ""}
       <div class="rw-quick-actions">${active ? (last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : "") : `<button class="button button-primary" data-rw-start>${draftCount ? `${t("continueOrder")} · ${draftCount} ${t("pieces")}` : t("newOrder")}</button>${last ? `<button class="button button-ghost" data-rw-repeat="${esc(last.id)}">${t("repeatOrder")}</button>` : ""}`}</div>
     </section>`;
   }
@@ -651,42 +651,12 @@
        ?`Menos de ${product.wholesaleMinQty} uds.: precio minorista ${portalMoney(product.retailPrice)}/ud. El mayorista ${portalMoney(product.wholesalePrice)}/ud. se aplica desde ${product.wholesaleMinQty} uds.`
        :`Below ${product.wholesaleMinQty} pcs: retail ${portalMoney(product.retailPrice)}/pc applies. Wholesale ${portalMoney(product.wholesalePrice)}/pc applies from ${product.wholesaleMinQty} pcs.`;
   };
-  const newOrderDeliveryOptions=()=>{
-    try{
-      if(typeof getBakeDates==="function"){
-        const selectedIds=Object.keys(cart||{}).filter(id=>Number(cart?.[id]||0)>0);
-        const source=typeof window.panoraCompatibleBakeDates==="function"
-          ?window.panoraCompatibleBakeDates(selectedIds,12)
-          :getBakeDates(12);
-        return source.map(item=>{
-          const bakeDate=typeof dateValue==="function"?dateValue(item.date):String(item.date||"").slice(0,10);
-          const deliveryDate=String(item.deliveryDate||bakeDate||"").slice(0,10);
-          if(!bakeDate)return null;
-          const bakeLabel=localDate(bakeDate);
-          const deliveryLabel=localDate(deliveryDate||bakeDate);
-          const label=deliveryDate&&deliveryDate!==bakeDate
-            ?(lang==="ru"
-              ?`Выпечка: ${bakeLabel} · Поставка: ${deliveryLabel}`
-              :lang==="es"
-                ?`Horneado: ${bakeLabel} · Entrega: ${deliveryLabel}`
-                :`Bake: ${bakeLabel} · Delivery: ${deliveryLabel}`)
-            :deliveryLabel;
-          return {value:bakeDate,bakeDate,deliveryDate,label};
-        }).filter(Boolean);
-      }
-    }catch{}
-    return [];
-  };
-
   function newOrderHtml() {
     const products=newOrderProducts();
-    const options=newOrderDeliveryOptions();
     const count=cartCount();
     const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
-    const storedChosen=String(localStorage.getItem("panora-bake-date")||"");
-    const chosen=options.some(option=>option.value===storedChosen)?storedChosen:(options[0]?.value||"");
     return `<section class="rw-new-order-page">
-      <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. Ниже доступны только общие открытые дни выпечки для выбранных товаров.":lang==="es"?"Elige el pan y la cantidad. Abajo solo aparecen días de horneado abiertos comunes a los productos elegidos.":"Choose bread and quantity. Only common open bake days for the selected products appear below."}</p></div></header>
+      <header class="rw-new-order-head"><div><span class="kicker">Panora</span><h3>${t("newOrder")}</h3><p>${lang==="ru"?"Выберите хлеб и количество. День выпечки выберете один раз в корзине.":lang==="es"?"Elige el pan y la cantidad. Elegirás el día de horneado una sola vez en la cesta.":"Choose bread and quantity. You will choose the bake day once in the basket."}</p></div></header>
       <div class="rw-new-product-grid">
         ${products.map(product=>{
           const qty=Math.max(0,Math.min(NEW_ORDER_QTY_CAP,Number(cart?.[product.id]||0)));
@@ -716,9 +686,6 @@
       <aside class="rw-new-cart">
         <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong data-rw-new-count>${count} ${t("pieces")}</strong></div>
         <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
-        <label><span>${lang==="ru"?"День выпечки / поставка":lang==="es"?"Horneado / entrega":"Bake / delivery"}</span><select data-rw-new-date data-panora-no-draft="1" data-rw-stable-select="date">
-          ${options.length?options.map(option=>`<option value="${esc(option.value)}"${option.value===chosen?" selected":""}>${esc(option.label)}</option>`).join(""):`<option value="">${lang==="ru"?"Нет общего открытого дня выпечки":lang==="es"?"No hay un día de horneado abierto común":"No common open bake day"}</option>`}
-        </select></label>
         <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Продолжить":lang==="es"?"Continuar":"Continue"}</button>
       </aside>
     </section>`;
@@ -776,7 +743,7 @@
       <p class="rw-order-status-hint">${esc(orderStatusHint(order))}</p>
       ${lifecycle==="shipped"&&note&&!note.customerConfirmedAt&&!note.offlineProof?.receivedAt?`<button type="button" class="button button-primary rw-confirm-delivery-remote" data-rw-confirm-delivery="${esc(note.id)}" data-rw-confirm-order="${esc(order.id)}">${lang==="ru"?"Подтвердить получение":lang==="es"?"Confirmar recepción":"Confirm receipt"}</button>`:""}
       ${(order.items||[]).length?`<ul>${order.items.map((item) => `<li><span>${esc(orderItemName(order,item))}</span><strong>${item.quantity} ${t("pieces")}<small>× ${portalMoney(orderItemUnitPrice(order,item.product))}</small></strong></li>`).join("")}</ul>`:`<div class="rw-order-items-error" role="alert"><strong>${lang==="ru"?"Состав заказа не загружен":lang==="es"?"No se cargó la composición del pedido":"Order items were not loaded"}</strong><span>${lang==="ru"?"Обновите данные. Если состав не появится, заказ требует проверки пекарней.":lang==="es"?"Actualice los datos. Si los productos no aparecen, la panadería debe revisar el pedido.":"Refresh the data. If the items do not appear, the bakery must review the order."}</span></div>`}
-      <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span><div class="rw-order-footer-actions"><button type="button" class="rw-order-message-button" data-order-messages="${esc(order.id)}" data-order-label="${esc(orderNumber(order))}">✉ ${lang==="ru"?"Чат":lang==="es"?"Chat":"Chat"}</button>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</div></footer>
+      <footer><span>${t("bake")}: <strong>${esc(localDate(order.date))}</strong></span><div class="rw-order-footer-actions"><button type="button" class="rw-order-message-button" data-order-messages="${esc(order.id)}" data-order-label="${esc(orderNumber(order))}">✉ ${lang==="ru"?"Чат по поставке":lang==="es"?"Chat de entrega":"Delivery chat"}</button>${canRestaurantCancel(order) ? `<button class="rw-cancel" data-rw-cancel="${esc(order.id)}">${lang === "ru" ? "Отменить заказ" : lang === "es" ? "Cancelar pedido" : "Cancel order"}</button>` : ""}</div></footer>
     </article>`;
       }).join("")}</section><section class="rw-empty rw-filtered-empty" data-rw-order-empty hidden><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>` : `<section class="rw-empty rw-filtered-empty"><h3>${lang==="ru"?"По фильтру заказов нет":lang==="es"?"No hay pedidos con estos filtros":"No orders match these filters"}</h3>${orderView === "active" ? `<button class="button button-primary" data-rw-start>${t("newOrder")}</button>` : ""}</section>`}
     </section>`;
@@ -1750,33 +1717,9 @@
       if(countNode)countNode.textContent=`${count} ${t("pieces")}`;
       if(totalNode)totalNode.textContent=portalMoney(total);
       if(nextButton){
-        const dateSelect=modal.querySelector("[data-rw-new-date]");
-        const dateReady=Boolean(dateSelect&&!dateSelect.disabled&&dateSelect.value);
-        nextButton.toggleAttribute("disabled",!count||!dateReady);
-        nextButton.classList.toggle("is-disabled",!count||!dateReady);
+        nextButton.toggleAttribute("disabled",!count);
+        nextButton.classList.toggle("is-disabled",!count);
       }
-    };
-    const refreshNewOrderDateOptions=()=>{
-      const select=modal.querySelector("[data-rw-new-date]");
-      if(!select)return false;
-      const options=newOrderDeliveryOptions();
-      const previous=String(select.value||localStorage.getItem("panora-bake-date")||"");
-      if(!options.length){
-        select.innerHTML=`<option value="">${lang==="ru"?"Нет общего открытого дня выпечки":lang==="es"?"No hay un día de horneado abierto común":"No common open bake day"}</option>`;
-        select.value="";select.disabled=true;
-        selectedBakeDate="";
-        try{localStorage.removeItem("panora-bake-date")}catch{}
-        try{syncCartDeliveryDate?.()}catch{}
-        return false;
-      }
-      select.disabled=false;
-      select.innerHTML=options.map(option=>`<option value="${esc(option.value)}">${esc(option.label)}</option>`).join("");
-      const nextValue=options.some(option=>option.value===previous)?previous:options[0].value;
-      select.value=nextValue;
-      selectedBakeDate=nextValue;
-      try{localStorage.setItem("panora-bake-date",nextValue)}catch{}
-      try{syncCartDeliveryDate?.()}catch{}
-      return true;
     };
     modal.querySelectorAll("[data-rw-new-qty-select]").forEach(select=>{
       select.onchange=()=>{
@@ -1802,53 +1745,17 @@
         // Do not rebuild public product cards here: recreating <img> caused
         // visible mobile flicker. Only cart totals and this card are updated.
         try{renderCart()}catch{}
-        refreshNewOrderDateOptions();
         refreshNewOrderSummary();
       };
     });
-    const newDate=modal.querySelector("[data-rw-new-date]");
-    if(newDate){
-      refreshNewOrderDateOptions();
-      refreshNewOrderSummary();
-      newDate.onchange=()=>{
-        const valid=newOrderDeliveryOptions().some(option=>option.value===newDate.value);
-        if(!valid){refreshNewOrderDateOptions();refreshNewOrderSummary();return}
-        localStorage.setItem("panora-bake-date",newDate.value);
-        try{selectedBakeDate=newDate.value;syncCartDeliveryDate?.()}catch{}
-        const confirmBox=document.querySelector("#confirmDeliveryDate");
-        if(confirmBox){confirmBox.checked=true;try{enforceDateConfirmation?.()}catch{}}
-        refreshNewOrderSummary();
-      };
-    }
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        const dateSelect=modal.querySelector("[data-rw-new-date]");
-        const date=dateSelect?.value;
-        const validDate=Boolean(date&&!dateSelect?.disabled&&newOrderDeliveryOptions().some(option=>option.value===date));
-        if(!validDate){
-          refreshNewOrderDateOptions();refreshNewOrderSummary();
-          showToast?.(lang==="ru"?"Выберите доступный день выпечки для всех товаров заказа.":lang==="es"?"Elige un día de horneado disponible para todos los productos.":"Choose an available bake day for all products in the order.");
-          return;
-        }
-        if(date){
-          localStorage.setItem("panora-bake-date",date);
-          try{selectedBakeDate=date;syncCartDeliveryDate?.()}catch{}
-          const confirmBox=document.querySelector("#confirmDeliveryDate");
-          if(confirmBox){confirmBox.checked=true;try{enforceDateConfirmation?.()}catch{}}
-        }
-        const mobile=window.matchMedia?.("(max-width:720px)")?.matches;
         closePanels();
         try{
-          renderProducts();renderCart();
-          if(mobile){
-            // Panora 6.68: the first mobile screen already contains the cart
-            // composition and the validated bake day. Go straight to the final
-            // details form instead of asking the partner to confirm a third time.
-            window.setTimeout(()=>document.querySelector("#checkoutButton")?.click(),0);
-          }else{
-            openPanel(document.querySelector("#cartDrawer"));
-          }
+          renderProducts();renderCart();syncCartDeliveryDate?.();
+          // One date choice only: always continue through the cart on desktop and mobile.
+          openPanel(document.querySelector("#cartDrawer"));
         }catch{}
       };
     });

@@ -1,4 +1,4 @@
-const CACHE='panora-v7310';
+const CACHE='panora-v7320';
 const CORE=['./','index.html','retail.html','retail-order.html','admin.html','confirm.html','confirm.js','confirm.css','confirm-close.css','manifest.webmanifest','icon.svg','bread-plain.jpg','bread-pumpkin.jpg','styles.css','portal.css','admin.css','app.js','portal.js','admin.js','supabase-config.js','audit-log.js','cloud-sync.js','admin-auth.js','admin-localization.js','admin-mobile-tabs.js','admin-status-sync.js','account-detail.js','accounting-invoice.js','spanish-documents.js','calendar-plan.js','checkout-flow-fix.js','commerce.js','daily-order-summary.js','delivery-offline.js','delivery-qr.js','document-library.js','dynamic-products.js','input-stability.js','install-guide.js','invoice-close.js','invoice-preview.js','invoice-settings.js','invoice-tax-display.js','mobile-admin-nav.js','order-communication.js','order-notifications.js','portal-cloud.js','product-admin.js','purchase-costs.js','qrcode-browser.js','recipe-percent.js','restaurant-workspace.js','account-detail.css','account-documents.css','account-state.css','accounting-invoice.css','admin-auth.css','admin-mobile-tabs.css','admin-order-polish.css','desktop-orders-v22.css','desktop-orders-v23.css','desktop-orders-v24.css','desktop-orders-v25.css','desktop-orders-v27.css','admin-v247.css','bake-info.css','calendar-bake-highlight.css','calendar-calm.css','calendar-fun.css','calendar-labels.css','calendar-plan.css','calendar-text-restore.css','calendar-weekend.css','cart-date.css','checkout-feedback.css','commerce.css','daily-order-summary.css','daily-selection.css','date-jump.css','delivery-offline.css','delivery-qr.css','document-library.css','easy-plan.css','export.css','first-order.css','install-guide.css','invoice-preview.css','mobile-admin-all.css','mobile-admin-menu.css','mobile-admin-nav-fix.css','mobile-admin-orders.css','mobile-buttons.css','mobile-cart-button.css','mobile-cart-flex.css','mobile-cart-layout.css','mobile-catalog.css','mobile-checkout-stable.css','mobile-checkout.css','mobile-nav-icons.css','order-notifications.css','order-prices.css','product-admin.css','product-close.css','purchase-costs.css','purchase-filter-simple.css','purchase-filter.css','quantity.css','recipe-actions.css','recipe-percent.css','reminder-hours.css','responsive.css','restaurant-workspace.css','settings.css','unified-controls.css','desktop-orders-v28.css','desktop-order-date-filter-v28.js','desktop-orders-v29-final.css','mobile-orders-v30.css','mobile-orders-toolbar-v34-hotfix.css','mobile-orders-v35.css','mobile-orders-v36.css','mobile-orders-v37.css','mobile-orders-v38.css','notifications-v39.css','pricing-v40.css','stable-price-inputs-v42.js','price-inputs-v42.css','money-edit-lock-v43.js','pricing-sync-v44.js','public-catalog-cloud-v48.js','mobile-partner-prices-v49.css','mobile-partner-profile-v411.css','mobile-partner-workspace-v412.css','mobile-partner-profile-v415.css','mobile-partner-profile-v416.css','partner-no-bottom-bar-v422.css','admin-price-diagnostic-v424.js','admin-price-diagnostic-v424.css','admin-price-authority-v425.js','admin-partner-prices-direct-v426.js','admin-partner-prices-guard-v426.js','pwa-stable.js','connection-status.js','order-messages-v565.js','order-messages-v565.css','admin-partner-theme.css','audit-trail.css','audit-trail.js','connection-status.css','event-notifications.css','event-notifications.js','finance-dashboard.css','finance-dashboard.js','light-pro.css','mobile-header.css','mobile-partner-v20.css','pwa-stable.css','recovery-guard.js','stable-health.js'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.allSettled(CORE.map(url=>cache.add(new Request(url,{cache:'reload'}))));await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key!==CACHE)await caches.delete(key);await self.clients.claim()})()));
@@ -10,14 +10,30 @@ self.addEventListener('fetch',event=>{
 self.addEventListener('message',event=>{if(event.data?.type==='PANORA_SKIP_WAITING')self.skipWaiting()});
 
 
+const panoraPushTarget=data=>{
+ const title=String(data?.title||''),body=String(data?.body||''),kind=String(data?.kind||data?.type||data?.event_type||data?.tag||'');
+ const signal=`${kind} ${title} ${body}`.toLowerCase();
+ const messagePush=/(message|chat|сообщ|mensaje)/i.test(signal);
+ const raw=String(data?.url||data?.href||'retail.html');
+ try{
+  const url=new URL(raw,self.location.href);
+  const orderId=String(data?.order_id||data?.orderId||data?.order?.id||url.searchParams.get('order')||url.searchParams.get('orderId')||'');
+  if(messagePush&&orderId){
+   url.searchParams.set('order',orderId);url.searchParams.set('chat','1');
+   if(/(?:^|\/)admin\.html$/i.test(url.pathname))url.searchParams.set('panoraPush','orders');
+   if(/(?:^|\/)index\.html$/i.test(url.pathname)||url.pathname.endsWith('/'))url.searchParams.set('panoraPush','orders');
+  }
+  return url.href;
+ }catch{return raw}
+};
 self.addEventListener('push',event=>{
  let data={};try{data=event.data?event.data.json():{}}catch{try{data={body:event.data?.text?.()||''}}catch{}}
  const title=String(data.title||'Panora');
- const options={body:String(data.body||'Новое уведомление'),icon:'icon.svg',badge:'icon.svg',tag:String(data.tag||data.notification_id||'panora-retail'),renotify:true,data:{url:String(data.url||data.href||'retail.html')}};
+ const options={body:String(data.body||'Новое уведомление'),icon:'icon.svg',badge:'icon.svg',tag:String(data.tag||data.notification_id||'panora-retail'),renotify:true,data:{url:panoraPushTarget(data)}};
  event.waitUntil(self.registration.showNotification(title,options));
 });
 self.addEventListener('notificationclick',event=>{
  event.notification.close();const target=new URL(event.notification.data?.url||'retail.html',self.location.href).href;
  event.waitUntil((async()=>{const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const client of clients){if('focus' in client){try{await client.navigate(target)}catch{}const focused=await client.focus();try{focused?.postMessage?.({type:'PANORA_PUSH_OPENED',url:target})}catch{}return focused}}if(self.clients.openWindow){const opened=await self.clients.openWindow(target);try{opened?.postMessage?.({type:'PANORA_PUSH_OPENED',url:target})}catch{}return opened}})());
 });
-self.addEventListener('message',event=>{if(event.data?.type==='PANORA_SHOW_NOTIFICATION'){const d=event.data.payload||{};event.waitUntil(self.registration.showNotification(String(d.title||'Panora'),{body:String(d.body||''),icon:'icon.svg',badge:'icon.svg',tag:String(d.tag||'panora-local'),data:{url:String(d.url||'retail.html')}}))}});
+self.addEventListener('message',event=>{if(event.data?.type==='PANORA_SHOW_NOTIFICATION'){const d=event.data.payload||{};event.waitUntil(self.registration.showNotification(String(d.title||'Panora'),{body:String(d.body||''),icon:'icon.svg',badge:'icon.svg',tag:String(d.tag||'panora-local'),data:{url:panoraPushTarget(d)}}))}});

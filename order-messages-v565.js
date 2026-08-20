@@ -7,9 +7,9 @@
     return ["ru","en","es"].includes(value)?value:"ru";
   };
   const words={
-    ru:{title:"Чат по заказу",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Чат",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
-    en:{title:"Order chat",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Chat",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
-    es:{title:"Chat del pedido",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Chat",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
+    ru:{title:"Чат по поставке",empty:"Сообщений пока нет.",placeholder:"Написать сообщение…",send:"Отправить",close:"Закрыть",bakery:"Пекарня",partner:"Партнёр",loading:"Загрузка…",error:"Не удалось загрузить сообщения.",sending:"Отправляем…",message:"Чат по поставке",intro:"Сообщения сохраняются в заказе. Push только уведомляет о новых.",pushOn:"Включить Push",pushOff:"Отключить Push",pushActive:"Push включён ✓",pushInactive:"Push выключен",pushChecking:"Проверяем Push…",pushUnavailable:"Push недоступен",pushError:"Не удалось изменить Push"},
+    en:{title:"Delivery chat",empty:"No messages yet.",placeholder:"Write a message…",send:"Send",close:"Close",bakery:"Bakery",partner:"Partner",loading:"Loading…",error:"Could not load messages.",sending:"Sending…",message:"Delivery chat",intro:"Messages stay in the order. Push only alerts you about new ones.",pushOn:"Enable Push",pushOff:"Disable Push",pushActive:"Push enabled ✓",pushInactive:"Push disabled",pushChecking:"Checking Push…",pushUnavailable:"Push unavailable",pushError:"Could not change Push"},
+    es:{title:"Chat de entrega",empty:"Todavía no hay mensajes.",placeholder:"Escribe un mensaje…",send:"Enviar",close:"Cerrar",bakery:"Panadería",partner:"Socio",loading:"Cargando…",error:"No se pudieron cargar los mensajes.",sending:"Enviando…",message:"Chat de entrega",intro:"Los mensajes se guardan en el pedido. Push solo avisa de los nuevos.",pushOn:"Activar Push",pushOff:"Desactivar Push",pushActive:"Push activado ✓",pushInactive:"Push desactivado",pushChecking:"Comprobando Push…",pushUnavailable:"Push no disponible",pushError:"No se pudo cambiar Push"}
   };
   const t=key=>words[language()]?.[key]||words.ru[key]||key;
 
@@ -37,7 +37,14 @@
     };
   };
 
-  let dialog=null,currentOrderId="",currentOrderLabel="",poll=0,lastUnreadMap=new Map(),unreadPaintQueued=false;
+  const UNREAD_CACHE_KEY="panora-order-message-unread-v1";
+  const readUnreadCache=()=>{
+    try{return new Map(Object.entries(JSON.parse(localStorage.getItem(UNREAD_CACHE_KEY)||"{}")||{}).map(([id,count])=>[String(id),Number(count||0)]))}catch{return new Map()}
+  };
+  const writeUnreadCache=map=>{
+    try{localStorage.setItem(UNREAD_CACHE_KEY,JSON.stringify(Object.fromEntries([...(map instanceof Map?map:new Map())].filter(([,count])=>Number(count)>0))))}catch{}
+  };
+  let dialog=null,currentOrderId="",currentOrderLabel="",poll=0,lastUnreadMap=readUnreadCache(),unreadPaintQueued=false;
   const MESSAGE_CACHE_KEY="panora-order-message-cache-v1";
   const readMessageCache=orderId=>{
     try{
@@ -196,7 +203,7 @@
 
   const applyUnread=(map,{remember=true}={})=>{
     const source=map instanceof Map?map:new Map();
-    if(remember)lastUnreadMap=new Map(source);
+    if(remember){lastUnreadMap=new Map(source);writeUnreadCache(lastUnreadMap)}
     document.querySelectorAll("[data-order-messages]").forEach(button=>{
       const id=String(button.dataset.orderMessages||"");
       const count=Number(source.get(id)||0);
@@ -242,14 +249,42 @@
     }catch{return new Map()}
   }
 
+
+  const pushChatTarget=raw=>{
+    try{
+      const url=new URL(String(raw||location.href),location.href);
+      const wantsChat=url.searchParams.get("chat")==="1"||url.searchParams.get("panoraChat")==="1";
+      const orderId=String(url.searchParams.get("order")||url.searchParams.get("orderId")||"");
+      return wantsChat&&orderId?{orderId,url}:null;
+    }catch{return null}
+  };
+  let lastPushChatKey="";
+  const openPushChat=raw=>{
+    const target=pushChatTarget(raw);
+    if(!target)return false;
+    const key=`${target.orderId}|${target.url.search}`;
+    if(key===lastPushChatKey&&dialog&&currentOrderId===target.orderId)return true;
+    lastPushChatKey=key;
+    const button=[...document.querySelectorAll("[data-order-messages]")].find(node=>String(node.dataset.orderMessages||"")===target.orderId);
+    const label=button?.dataset.orderLabel||"";
+    open(target.orderId,{orderLabel:label});
+    return true;
+  };
+
   document.addEventListener("click",event=>{
     const button=event.target.closest?.("[data-order-messages]");
     if(!button)return;
     event.preventDefault();event.stopPropagation();
     open(button.dataset.orderMessages,{orderLabel:button.dataset.orderLabel||""});
   });
-  window.panoraOrderMessages={open,close,refreshUnread};
-  window.addEventListener("panora:authenticated",()=>setTimeout(()=>refreshUnread(),500));
+  window.panoraOrderMessages={open,close,refreshUnread,openPushChat};
+  const tryInitialPushChat=()=>{if(pushChatTarget(location.href))setTimeout(()=>openPushChat(location.href),250)};
+  window.addEventListener("panora:authenticated",()=>setTimeout(()=>{refreshUnread();openPushChat(location.href)},500));
+  navigator.serviceWorker?.addEventListener?.("message",event=>{
+    if(event.data?.type==="PANORA_PUSH_OPENED")openPushChat(event.data.url||location.href);
+  });
+  const initialMessagePaint=()=>{scheduleUnreadPaint();tryInitialPushChat()};
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initialMessagePaint,{once:true});else initialMessagePaint();
   window.addEventListener("panora:partner-data-updated",()=>setTimeout(()=>refreshUnread(),500));
   window.addEventListener("panora:partner-push-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   window.addEventListener("panora:admin-webpush-state",()=>{if(dialog)syncPushState().catch(()=>{})});
