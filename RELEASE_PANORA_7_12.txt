@@ -1,0 +1,10 @@
+Panora 7.12 / build 7120
+
+Finance retail refund / physical return period fix
+
+- Retail payment refund and physical bread return are now separate accounting events.
+- Revenue and VAT reverse on the refund timestamp/local economic day.
+- COGS and returned pieces reverse only on the linked finished-stock return movement day.
+- A refund just before midnight followed by physical return after midnight no longer moves COGS to the wrong day.
+- Same-day refund + physical return keeps the prior behaviour/result.
+- No SQL changes.
