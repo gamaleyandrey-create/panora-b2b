@@ -418,6 +418,16 @@
 
   const isActiveOrder = (order) => !isArchivedOrder(order);
 
+  const isArchivedNote = (note, orders=ownOrders()) => {
+    const order=orders.find((item)=>String(item.id)===String(note?.orderId));
+    if(order)return isArchivedOrder(order);
+    const confirmed=note?.customerConfirmedAt||note?.offlineProof?.receivedAt;
+    if(!confirmed)return false;
+    const d=new Date(confirmed);
+    return !Number.isNaN(d.getTime()) && archiveNextCalendarDayReached(d);
+  };
+  const isActiveNote = (note, orders=ownOrders()) => !isArchivedNote(note, orders);
+
   const orderLifecycleStatus = (order) => {
     if (order.status === "cancelled") return "cancelled";
     if (confirmedDeliveryAt(order) || ["completed","paid"].includes(order.status)) return "delivered";
@@ -651,6 +661,13 @@
        ?`Menos de ${product.wholesaleMinQty} uds.: precio minorista ${portalMoney(product.retailPrice)}/ud. El mayorista ${portalMoney(product.wholesalePrice)}/ud. se aplica desde ${product.wholesaleMinQty} uds.`
        :`Below ${product.wholesaleMinQty} pcs: retail ${portalMoney(product.retailPrice)}/pc applies. Wholesale ${portalMoney(product.wholesalePrice)}/pc applies from ${product.wholesaleMinQty} pcs.`;
   };
+  const newOrderSummaryLinesHtml=(products)=>products.map(product=>{
+    const qty=Math.max(0,Math.min(NEW_ORDER_QTY_CAP,Number(cart?.[product.id]||0)));
+    if(!qty)return "";
+    const unitPrice=newOrderTierPrice(product,qty);
+    return `<div class="rw-new-cart-line"><span><b>${esc(product.name)}</b><small>${qty} ${t("pieces")} × ${portalMoney(unitPrice)}</small></span><strong>${portalMoney(qty*unitPrice)}</strong></div>`;
+  }).join("");
+
   function newOrderHtml() {
     const products=newOrderProducts();
     const count=cartCount();
@@ -685,7 +702,8 @@
       </div>
       <aside class="rw-new-cart">
         <div><span>${lang==="ru"?"В заказе":lang==="es"?"En el pedido":"In order"}</span><strong data-rw-new-count>${count} ${t("pieces")}</strong></div>
-        <div><span>${lang==="ru"?"Сумма":lang==="es"?"Importe":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
+        <div class="rw-new-cart-lines" data-rw-new-lines${count?"":" hidden"}>${newOrderSummaryLinesHtml(products)}</div>
+        <div class="rw-new-cart-total"><span>${lang==="ru"?"Итого":lang==="es"?"Total":"Total"}</span><strong data-rw-new-total>${portalMoney(total)}</strong></div>
         <button type="button" class="button button-primary" data-rw-new-open-cart${count?"":" disabled"}>${lang==="ru"?"Продолжить":lang==="es"?"Continuar":"Continue"}</button>
       </aside>
     </section>`;
@@ -754,17 +772,8 @@
     if (!allNotes.length)
       return `<section class="rw-empty"><h3>${t("emptyNotes")}</h3></section>`;
 
-    const noteOrder=note=>orders.find((item)=>String(item.id)===String(note.orderId));
-    const noteArchived=note=>{
-      const order=noteOrder(note);
-      if(order)return isArchivedOrder(order);
-      const confirmed=note.customerConfirmedAt||note.offlineProof?.receivedAt;
-      if(!confirmed)return false;
-      const d=new Date(confirmed);
-      return !Number.isNaN(d.getTime()) && archiveNextCalendarDayReached(d);
-    };
-    const working=allNotes.filter(note=>!noteArchived(note));
-    const archive=allNotes.filter(noteArchived);
+    const working=allNotes.filter(note=>isActiveNote(note,orders));
+    const archive=allNotes.filter(note=>isArchivedNote(note,orders));
 
     const noteDebtMap=new Map(currentDebtItems().map(item=>[String(item.note.id),item]));
     const notePaymentSummary=note=>{
@@ -1712,9 +1721,11 @@
       const count=cartCount();
       const total=products.reduce((sum,product)=>{const qty=Number(cart?.[product.id]||0);return sum+qty*newOrderTierPrice(product,qty)},0);
       const countNode=modal.querySelector("[data-rw-new-count]");
+      const linesNode=modal.querySelector("[data-rw-new-lines]");
       const totalNode=modal.querySelector("[data-rw-new-total]");
       const nextButton=modal.querySelector("[data-rw-new-open-cart]");
       if(countNode)countNode.textContent=`${count} ${t("pieces")}`;
+      if(linesNode){linesNode.innerHTML=newOrderSummaryLinesHtml(products);linesNode.hidden=!count}
       if(totalNode)totalNode.textContent=portalMoney(total);
       if(nextButton){
         nextButton.toggleAttribute("disabled",!count);
@@ -1830,9 +1841,11 @@
       return;
     }
     updateMobileOrdersBadge();
+    const partnerOrders=ownOrders();
+    const partnerNotes=ownNotes();
     const counts = {
-      orders: ownOrders().length,
-      notes: ownNotes().length,
+      orders: partnerOrders.filter(isActiveOrder).length,
+      notes: partnerNotes.filter(note=>isActiveNote(note,partnerOrders)).length,
       payments: currentDebtItems().length,
     };
     modal.classList.add("restaurant-workspace");
