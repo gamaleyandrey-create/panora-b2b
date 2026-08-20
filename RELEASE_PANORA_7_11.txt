@@ -1,0 +1,10 @@
+Panora 7.11 / build 7110
+
+B2B reversal / settlement local-day chronology fix:
+- partner and bakery fallback histories convert dispute/cancellation UTC timestamps to the bakery-local economic day;
+- immutable payment-allocation history orders note/payment/reversal events by real local chronology instead of lexicographic UTC/date-only strings;
+- a surviving advance newly applied after a 00:30 local reversal is recorded on the actual local reversal day, not the previous UTC day;
+- current settlement closure dates use the same local-day rule, so an older DN paid just after local midnight archives on the correct day;
+- shared cloud Finance timeline already used local dates; 7.11 aligns offline/fallback and archive allocation paths with it.
+
+No SQL changes.

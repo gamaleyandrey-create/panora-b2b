@@ -1009,7 +1009,7 @@
     amount:Number(payment?.amount||0),status:String(payment?.status||''),confirmed:Boolean(payment?.confirmed),disputeStatus:String(payment?.disputeStatus||'none'),
     receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||'')
   })).sort((a,b)=>a.id.localeCompare(b.id)));
-  // Panora 7.10: Supabase timestamps are UTC, while Panora's economic dates are bakery-local.
+  // Panora 7.11: Supabase timestamps are UTC, while Panora's economic dates are bakery-local.
   // Around midnight, a payment received at 00:30 local time may still have yesterday's UTC date.
   // Preserve date-only values, but convert real timestamps through the browser's local calendar.
   const localDate=value=>{
