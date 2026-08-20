@@ -393,7 +393,7 @@
 
     document.querySelector('#financeRevenueNet').textContent=money(x.revenueNet);
     document.querySelector('#financeRevenueGross').textContent=`С НДС: ${money(x.grossRevenue)}`;
-    document.querySelector('#financeCogs').textContent=money(x.cogs);
+    document.querySelector('#financeCogs').textContent='−'+money(Math.abs(x.cogs));
     const setText=(id,value)=>{const el=document.querySelector(id);if(el)el.textContent=value};
     setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bReturns',money(x.b2b.returnsGross));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
     setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} завершённых продаж · ${x.retail.refunded} возвратов`);

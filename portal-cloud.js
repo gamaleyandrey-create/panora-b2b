@@ -1221,11 +1221,12 @@
         const message=String(error?.message||'');
         if(capacityIssue){
           const friendly=labels(
-            'Сервер использует старое правило ограничения планом. Корзина сохранена без изменения количества.',
-            'The server is still using the old bake-plan capacity rule. Your cart was preserved without changing quantities.',
-            'El servidor sigue usando la regla antigua de capacidad del plan. La cesta se conserva sin cambiar cantidades.'
+            'Нужно применить SQL Panora 9.30: сервер всё ещё использует старое ограничение планом. Корзина сохранена.',
+            'Apply the Panora 9.30 SQL update: the server is still using the old bake-plan capacity rule. Your cart is saved.',
+            'Aplica la actualización SQL Panora 9.30: el servidor aún usa la antigua limitación del plan. La cesta está guardada.'
           );
-          state('error',friendly);showToast(friendly);
+          // Keep one stable inline error. A second toast used to cover the submit button.
+          state('error',friendly);
         }else{
           if(/Product unavailable|Unknown product|inactive product/i.test(message)){
             const checked=validateCheckoutItems(rawItems);purgeUnavailableCart(checked.unavailable);showToast(unavailableCartError().message);
