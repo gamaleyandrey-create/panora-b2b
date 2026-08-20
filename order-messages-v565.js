@@ -100,9 +100,12 @@
     const root=dialog.querySelector("[data-order-message-list]");
     if(!quiet)root.innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     try{
+      // Mark the messages that existed before this refresh, then fetch the list.
+      // This prevents a message arriving between list() and markRead() from being
+      // acknowledged before it has ever been rendered in the open conversation.
+      await api().markRead(currentOrderId).catch(()=>{});
       const rows=await api().list(currentOrderId);
       renderMessages(rows);
-      await api().markRead(currentOrderId).catch(()=>{});
       refreshUnread().catch(()=>{});
     }catch(error){
       if(!quiet)root.innerHTML=`<p class="order-message-empty error">${t("error")}</p>`;

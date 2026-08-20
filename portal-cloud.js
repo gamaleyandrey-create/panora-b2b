@@ -6,6 +6,8 @@
   const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=250;
   const PORTAL_NOTES_CACHE_LIMIT=250;
   const PORTAL_PAYMENTS_CACHE_LIMIT=350;
+  const DELIVERY_CONFIRMATION_QUEUE_KEY='panora-delivery-confirmation-queue';
+  let partnerDeliveryConfirmationFlush=null;
 
   // Panora 7.11: use the partner device's local calendar for UTC cloud timestamps.
   // This keeps the partner history aligned with bakery Finance around local midnight.
@@ -318,6 +320,52 @@
       throw error;
     }
   }
+  function readPendingDeliveryConfirmations(){
+    try{const rows=JSON.parse(localStorage.getItem(DELIVERY_CONFIRMATION_QUEUE_KEY)||'[]');return Array.isArray(rows)?rows:[]}
+    catch{return[]}
+  }
+  function savePendingDeliveryConfirmations(rows){
+    const next=Array.isArray(rows)?rows:[];
+    try{if(next.length)localStorage.setItem(DELIVERY_CONFIRMATION_QUEUE_KEY,JSON.stringify(next));else localStorage.removeItem(DELIVERY_CONFIRMATION_QUEUE_KEY)}catch{}
+  }
+  async function flushPendingDeliveryConfirmations(){
+    if(partnerDeliveryConfirmationFlush)return partnerDeliveryConfirmationFlush;
+    if(!navigator.onLine||!session?.user||!account)return 0;
+    const queued=readPendingDeliveryConfirmations();
+    if(!queued.length)return 0;
+    partnerDeliveryConfirmationFlush=(async()=>{
+      const left=[];let sent=0;
+      for(let index=0;index<queued.length;index++){
+        const item=queued[index];
+        try{
+          const rows=await api('rpc/panora_confirm_delivery',{
+            method:'POST',
+            body:JSON.stringify({
+              p_token:String(item?.token||''),
+              p_receiver:String(item?.receiver||'').trim(),
+              p_trays_received:Math.max(0,Number(item?.traysReceived||0)),
+              p_trays_returned:Math.max(0,Number(item?.traysReturned||0))
+            })
+          });
+          if(!Array.isArray(rows)||!rows.length){left.push(item);continue}
+          sent++;
+        }catch(error){
+          left.push(item);
+          if(error?.code==='PANORA_SESSION_EXPIRED'){
+            left.push(...queued.slice(index+1));
+            break;
+          }
+        }
+      }
+      savePendingDeliveryConfirmations(left);
+      if(sent){
+        try{await refreshPartnerFinance()}catch{}
+        window.dispatchEvent(new CustomEvent('panora:partner-delivery-confirmations-flushed',{detail:{count:sent,pending:left.length}}));
+      }
+      return sent;
+    })().finally(()=>partnerDeliveryConfirmationFlush=null);
+    return partnerDeliveryConfirmationFlush;
+  }
   function state(type,text){lastState={type,text};window.panoraRestaurantSyncState=lastState;window.dispatchEvent(new CustomEvent('panora:restaurant-sync',{detail:lastState}));decorateState()}
   function decorateState(){
     if(!account)return;const modal=document.querySelector('#profileModal'),anchor=modal?.querySelector('.account-section');if(!anchor)return;
@@ -491,7 +539,7 @@
       // Panora 6.67: a no-op cloud hydration must not replace cart <img> nodes.
       if(!hadAccount||productsChanged||accountChanged)renderCart();
       if(!hadAccount||accountChanged)window.dispatchEvent(new CustomEvent('panora:partner-data-updated',{detail:{accountChanged,productsChanged}}));
-      startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>flushPendingDeliveryConfirmations().catch(()=>{}),120);setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -700,7 +748,7 @@
   const refreshPartnerLive=()=>refreshPartnerOrders().then(()=>refreshPartnerFinance()).catch(()=>{});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
   window.addEventListener('focus',()=>{if(session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
-  window.addEventListener('online',()=>{if(session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
+  window.addEventListener('online',()=>{if(session?.user&&account){flushPendingDeliveryConfirmations().catch(()=>{});refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
 
   window.addEventListener('storage',event=>{
     if(!session?.user||!account)return;
