@@ -132,3 +132,24 @@
   #productAdminGrid .product-admin-body p{min-height:0;display:block;overflow:visible}
   #productAdminGrid .product-storefront-control{margin-top:14px}
 }
+
+
+/* Panora 7.37 — mobile parity: keep product-card internal zones aligned too */
+@media(max-width:620px){
+  #productAdminGrid .product-admin-body h3{
+    min-height:2.6em;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+  }
+  #productAdminGrid .product-admin-body p{
+    min-height:3em;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+  }
+  #productAdminGrid .product-storefront-control{margin-top:auto}
+  #productAdminGrid .product-card-actions{margin-top:10px}
+}

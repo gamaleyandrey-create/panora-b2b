@@ -1784,3 +1784,33 @@
     line-height:1.25!important;
   }
 }
+
+
+/* Panora 7.37 — equal partner New order product-card geometry on desktop and mobile */
+.rw-new-product-grid{align-items:stretch}
+.rw-new-product-card{box-sizing:border-box;height:100%}
+.rw-new-product-body h4{
+  min-height:2.4em;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.rw-new-product-price{min-height:48px}
+.rw-new-wholesale-rule{display:block;min-height:2.7em;line-height:1.35}
+@media(max-width:720px){
+  .rw-new-product-card{height:auto;min-height:174px}
+  .rw-new-product-body h4{min-height:2.4em}
+  .rw-new-product-price{min-height:44px}
+  .rw-new-wholesale-rule{min-height:2.7em}
+}
+
+/* Panora 7.37 — keep wholesale rule height stable on narrow partner cards */
+.rw-new-wholesale-rule{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  min-height:2.7em;
+  max-height:2.7em;
+}
