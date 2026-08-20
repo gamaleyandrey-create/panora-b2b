@@ -1,0 +1,12 @@
+Panora 7.13 / build 7130
+
+Retail partial/repeated physical return fix
+
+- Linked retail stock returns now accumulate per original order item instead of stopping after the first movement.
+- A refunded completed order exposes a “Хлеб на склад” action until all sold pieces have physically returned.
+- Late returns can be entered partially per item and repeated on later days.
+- Each new return is capped by the still-unreturned sold quantity; an order cannot be returned twice through the normal workflow.
+- Finance applies every linked return movement in its own period and caps cumulative COGS/piece reversal at the original sold quantity.
+- Partial return progress is visible in the payment label.
+- Cloud stock movements are refreshed before a new late return to reduce stale-tab duplicate returns.
+- No SQL changes.
