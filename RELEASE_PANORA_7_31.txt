@@ -1,0 +1,15 @@
+Panora 7.31 — instant order counters + Chat naming
+
+- Bakery Orders no longer flash false 0 / 0 counters before the first Supabase read. Before hydration the UI shows the last reliable non-zero counters when available, otherwise an ellipsis, then replaces them with authoritative counts after cloud load.
+- The same loading behavior applies to the order status counters and empty-state text on desktop and mobile.
+- Bakery order counters now receive an authoritative active/archive event directly from the successful Supabase order read, so the header cannot stay at stale 0 / 0 while real order cards are already visible.
+- B2B Chat now paints the last locally cached conversation immediately when available. The first fresh server paint waits for one list request instead of the previous mark-read + list sequence, while a background reconciliation preserves the read-race protection.
+- B2B order action “Сообщения” is renamed to “Чат” for bakery and partner screens.
+- The conversation dialog title is now “Чат по заказу” in Russian; English/Spanish use “Chat”.
+- Existing stable unread-badge geometry and live-rerender preservation remain unchanged.
+- Recipe technology-card disclosure state is now preserved per product on this device: once a user collapses a technology card, background cloud rerenders, reloads and later visits keep it collapsed until the user opens it again.
+- No SQL/schema change is required.
+- Archive set: Panora 9.16.
+- Recipes now have a separate cloud-synced archive. Archiving a recipe hides it from the working recipe list without deactivating the product or deleting ingredients/technology data.
+- Archived recipes appear in a dedicated “Архив рецептур” section and can be restored. The archive state follows bakery devices through the product tech-card JSON/revision path.
+- Saving an edited technology card preserves its recipe-archive flag, and the existing per-product collapsed/open disclosure preference remains intact.

@@ -473,7 +473,7 @@
     if(!productId)throw new Error('Не удалось определить хлеб');
     if(!ready)throw new Error('Облако ещё загружается. Подождите несколько секунд и повторите.');
     if(!session?.access_token)throw new Error('Сессия пекарни истекла. Войдите повторно.');
-    const normalized={mix:String(techCard?.mix||''),fermentation:Number(techCard?.fermentation||0),proof:Number(techCard?.proof||0),bakeTemp:Number(techCard?.bakeTemp||0),bakeTime:Number(techCard?.bakeTime||0),steps:String(techCard?.steps||''),notes:String(techCard?.notes||'')};
+    const normalized={mix:String(techCard?.mix||''),fermentation:Number(techCard?.fermentation||0),proof:Number(techCard?.proof||0),bakeTemp:Number(techCard?.bakeTemp||0),bakeTime:Number(techCard?.bakeTime||0),steps:String(techCard?.steps||''),notes:String(techCard?.notes||''),recipeArchived:Boolean(techCard?.recipeArchived)};
     const local=typeof productRegistry!=='undefined'?productRegistry.find(item=>item.id===productId):null;
     const expectedRevision=Number(local?.techCardRevision||0);
     status('Сохранение технологической карты…');
@@ -792,11 +792,17 @@
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
     loadingOrders=(async()=>{
+      const firstHydration=!window.panoraAdminOrdersHydrated;
       const beforeSignature=orderUiSignature(typeof orders!=='undefined'?orders:[]);
       const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');
       const hydrated=await hydrateAdminOrderRows(fetched||[]);
       const rows=await repairTrueOrphanOrders(hydrated);
       orders=(rows||[]).map(rowOrder);
+      const activeOrderCount=orders.filter(order=>!['shipped','cancelled'].includes(String(order?.status||''))).length;
+      const archivedOrderCount=orders.length-activeOrderCount;
+      safeLocalSet('panora-order-counts-cache',JSON.stringify({active:activeOrderCount,archive:archivedOrderCount,updatedAt:new Date().toISOString()}),{quotaIsWarning:false});
+      window.panoraAdminOrdersHydrated=true;
+      window.dispatchEvent(new CustomEvent('panora:order-counts-updated',{detail:{active:activeOrderCount,archive:archivedOrderCount,authoritative:true}}));
       const afterOrders=JSON.stringify(orders);
       const afterSignature=orderUiSignature(orders);
       const changed=beforeSignature!==afterSignature;
@@ -808,7 +814,7 @@
       syncPlansFromOrders();
       if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}
 
-      if(changed)queueAdminCommerceRender(true);
+      if(changed||firstHydration)queueAdminCommerceRender(true);
       status(`Облако ✓ · ${rows?.length||0} заказов`);
     })().finally(()=>loadingOrders=null);
     return loadingOrders;

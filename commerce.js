@@ -239,6 +239,34 @@ const orderCompactDate=value=>{
   }catch{return orderDateLabel(value)}
 };
 let orderPartnerTypeFilter='all',orderPartnerNameFilter='all',orderDateFromFilter='',orderDateToFilter='',orderFilterOpen=false,orderStatusFilter='all',orderArchiveView='active';
+const orderCountSnapshot=(()=>{
+  try{
+    const value=JSON.parse(localStorage.getItem('panora-order-counts-cache')||'null');
+    if(value&&Number.isFinite(Number(value.active))&&Number.isFinite(Number(value.archive)))return{active:Math.max(0,Number(value.active)),archive:Math.max(0,Number(value.archive))};
+  }catch{}
+  return null;
+})();
+const orderCountsForHeader=()=>{
+  const actual={active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};
+  // Before the first authoritative cloud read, an empty full-order cache must not
+  // masquerade as a real zero. Reuse only last confirmed non-zero counters; a
+  // cached zero is intentionally rendered as an ellipsis until Supabase confirms it.
+  if(!window.panoraAdminOrdersHydrated&&orders.length===0){
+    return orderCountSnapshot?{active:orderCountSnapshot.active>0?orderCountSnapshot.active:'…',archive:orderCountSnapshot.archive>0?orderCountSnapshot.archive:'…',loading:true}:{active:'…',archive:'…',loading:true};
+  }
+  return actual;
+};
+const paintAuthoritativeOrderCounts=counts=>{
+  const active=Math.max(0,Number(counts?.active)||0),archive=Math.max(0,Number(counts?.archive)||0);
+  const tabs=document.querySelector('#orderArchiveTabs');
+  if(!tabs)return;
+  const activeEl=tabs.querySelector('[data-order-archive-view="active"] b');
+  const archiveEl=tabs.querySelector('[data-order-archive-view="archive"] b');
+  if(activeEl)activeEl.textContent=String(active);
+  if(archiveEl)archiveEl.textContent=String(archive);
+  tabs.classList.remove('is-loading');
+};
+window.addEventListener('panora:order-counts-updated',event=>paintAuthoritativeOrderCounts(event.detail||{}));
 const orderPartnerHtml=partner=>partner
   ? `<div class="order-partner"><strong class="order-partner-name">${commerceEscape(partner.name)}</strong><span class="partner-type partner-type-${normalizePartnerType(partner.partnerType)}">${partnerTypeLabel(partner.partnerType)}</span></div>`
   : '<span>—</span>';
@@ -501,11 +529,11 @@ function renderOrders() {
     if(tableWrap)tableWrap.before(archiveTabs);
   }
   if(archiveTabs){
-    const activeCount=orders.filter(order=>!orderIsArchived(order)).length;
-    const archiveCount=orders.filter(order=>orderIsArchived(order)).length;
+    const headerCounts=orderCountsForHeader();
+    archiveTabs.classList.toggle('is-loading',!!headerCounts.loading);
     archiveTabs.innerHTML=`
-      <button type="button" class="${orderArchiveView==='active'?'active':''}" data-order-archive-view="active"><span>Активные</span><b>${activeCount}</b></button>
-      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архив</span><b>${archiveCount}</b></button>`;
+      <button type="button" class="${orderArchiveView==='active'?'active':''}" data-order-archive-view="active"><span>Активные</span><b>${headerCounts.active}</b></button>
+      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архив</span><b>${headerCounts.archive}</b></button>`;
     archiveTabs.querySelectorAll('[data-order-archive-view]').forEach(button=>button.onclick=()=>{
       const next=button.dataset.orderArchiveView;
       if(next===orderArchiveView)return;
@@ -530,7 +558,9 @@ function renderOrders() {
   if(statusBar){
     const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
     const scopedOrders=orders.filter(orderArchiveMatches);
-    statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${scopedOrders.filter(statusGroups[key]).length}</b></button>`).join('');
+    const ordersStillLoading=!window.panoraAdminOrdersHydrated&&orders.length===0;
+    statusBar.classList.toggle('is-loading',ordersStillLoading);
+    statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${ordersStillLoading?'…':scopedOrders.filter(statusGroups[key]).length}</b></button>`).join('');
     statusBar.querySelectorAll('[data-order-status]').forEach(button=>button.onclick=()=>{orderStatusFilter=button.dataset.orderStatus;renderOrders()});
   }
   const filterPanel=document.querySelector('#orderFilterPanel');
@@ -627,11 +657,11 @@ function renderOrders() {
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
             <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
-            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Сообщения</button></td>
+            <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Чат</button></td>
           </tr>`;
         })
         .join("")
-    : `<tr><td class="empty-row" colspan="7">${orders.length?(orderArchiveView==='archive'?'В архиве по выбранным фильтрам заказов нет.':'Активных заказов по выбранным фильтрам нет.'):'Заказов пока нет.'}</td></tr>`;
+    : `<tr><td class="empty-row" colspan="7">${(!window.panoraAdminOrdersHydrated&&orders.length===0)?'Загружаем заказы из облака…':orders.length?(orderArchiveView==='archive'?'В архиве по выбранным фильтрам заказов нет.':'Активных заказов по выбранным фильтрам нет.'):'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
