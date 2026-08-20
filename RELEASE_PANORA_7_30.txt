@@ -1,0 +1,9 @@
+Panora 7.30 — bakery payment acceptance reliability
+
+- Bakery “Accept payment” now completes the whole acceptance flow: an admin-entered payment is confirmed before the UI reports success, so it immediately reduces debt.
+- If legacy panora_record_payment / panora_confirm_payment RPCs are absent from Supabase, the bakery has a verified admin-table fallback instead of a dead button.
+- The fallback is used only for missing-RPC/schema-cache errors; validation/auth errors are never bypassed.
+- Payment confirmation is verified from the returned Supabase row before local finance is updated.
+- Payment amount parsing accepts the localized decimal parser used elsewhere in Panora.
+- No SQL/schema change is required.
+- Archive set: Panora 9.15.
