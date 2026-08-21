@@ -142,7 +142,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;safeLocalSet(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminLeaderHeartbeat=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
   const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
@@ -227,7 +227,7 @@
     }).finally(()=>refreshing=null);
     return refreshing
   };
-  // Panora 9.36: collapse identical concurrent GETs into one network request.
+  // Panora 9.37: collapse identical concurrent GETs into one network request.
   // This protects against overlapping UI events without changing business behavior.
   const inflightReads=new Map();
   const request=async(path,options={},retried=false)=>{
@@ -254,6 +254,61 @@
     inflightReads.set(readKey,run);
     try{return await run}finally{if(inflightReads.get(readKey)===run)inflightReads.delete(readKey)}
   };
+
+  // Panora 9.37 — one visible admin tab owns background polling for this browser.
+  // User-triggered saves and wake refreshes still run immediately in the focused tab.
+  const adminLeaderKey='panora-admin-background-leader-v937';
+  const adminTabId=(()=>{try{const key='panora-admin-tab-id-v937';let id=sessionStorage.getItem(key);if(!id){id=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(key,id)}return id}catch{return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}})();
+  const readAdminLeader=()=>{try{return JSON.parse(localStorage.getItem(adminLeaderKey)||'null')}catch{return null}};
+  const claimAdminLeader=(force=false)=>{
+    const now=Date.now(),current=readAdminLeader();
+    if(force||!current||current.id===adminTabId||Number(current.until||0)<now){
+      try{localStorage.setItem(adminLeaderKey,JSON.stringify({id:adminTabId,until:now+45000}))}catch{}
+      return true;
+    }
+    return false;
+  };
+  const isAdminBackgroundLeader=()=>{
+    if(document.hidden)return false;
+    const current=readAdminLeader(),now=Date.now();
+    if(current?.id===adminTabId&&Number(current.until||0)>=now)return true;
+    return claimAdminLeader(false);
+  };
+  const startAdminLeaderHeartbeat=()=>{
+    clearInterval(adminLeaderHeartbeat);
+    claimAdminLeader(!document.hidden);
+    adminLeaderHeartbeat=setInterval(()=>{if(!document.hidden)claimAdminLeader(false)},15000);
+  };
+
+  // Panora 9.37 — tiny operational revision RPC gates plan/raw-stock/bake reads.
+  let adminOperationalRevisionUnavailable=false,adminOperationalRevisionPromise=null,adminOperationalRevisionCache=null,adminOperationalRevisionAt=0;
+  const adminOperationalSeen={plans:'',rawStock:'',bakeCompletions:''};
+  async function getAdminOperationalRevision(){
+    if(adminOperationalRevisionUnavailable)return null;
+    const now=Date.now();
+    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10000)return adminOperationalRevisionCache;
+    if(adminOperationalRevisionPromise)return adminOperationalRevisionPromise;
+    adminOperationalRevisionPromise=(async()=>{
+      try{
+        const rows=await request('rpc/panora_admin_operational_revision',{method:'POST',body:'{}'}),row=Array.isArray(rows)?rows[0]:rows;
+        adminOperationalRevisionCache={plans:String(row?.plans_revision||''),rawStock:String(row?.raw_stock_revision||''),bakeCompletions:String(row?.bake_revision||'')};
+        adminOperationalRevisionAt=Date.now();return adminOperationalRevisionCache;
+      }catch(error){
+        const raw=String(error?.message||error||'');
+        if(/panora_admin_operational_revision|PGRST202|does not exist|schema cache/i.test(raw)){adminOperationalRevisionUnavailable=true;return null}
+        throw error;
+      }
+    })().finally(()=>{adminOperationalRevisionPromise=null});
+    return adminOperationalRevisionPromise;
+  }
+  async function adminOperationalComponentChanged(component){
+    const current=await getAdminOperationalRevision();
+    if(!current)return true;
+    const next=String(current[component]||'');if(!next)return true;
+    if(!adminOperationalSeen[component]){adminOperationalSeen[component]=next;return false}
+    if(adminOperationalSeen[component]===next)return false;
+    adminOperationalSeen[component]=next;return true;
+  }
 
   /* Panora 6.07 — raw material movement sync.
      Automatic bake consumption remains deterministic/virtual, so it can never
@@ -1960,10 +2015,12 @@ window.panoraRecalculateBalances=recalculateBalances;
     errors.push(['рецептуры',error])}
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
-    // Panora 9.36: periodic cloud reads are scoped to the screen that can actually use them.
+    startAdminLeaderHeartbeat();
+    // Panora 9.37: periodic cloud reads are scoped to the screen that can actually use them,
+    // and only one visible tab owns background polling.
     // User actions still save/refresh immediately; this only removes background table downloads.
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{
-      // Panora 9.36: one tiny revision RPC replaces three table downloads while commerce data is unchanged.
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('orders','accounting','finance','reminders'))return;try{
+      // Panora 9.37: one tiny revision RPC replaces three table downloads while commerce data is unchanged.
       const changed=await adminCommerceRevisionChanged();if(!changed?.changed)return;
       if(changed.orders)await loadOrders();
       if(changed.payments)await loadPayments();
@@ -1971,18 +2028,25 @@ window.panoraRecalculateBalances=recalculateBalances;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},180000);
-    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('products','recipes'))return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},1800000);
-    clearInterval(planPoll);planPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','orders'))return;refreshPlansIfChanged().catch(error=>{
-      if(window.panoraHandleSessionError?.(error))return;
-      console.warn('Panora plan refresh',error);
-    })},300000);
-    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('rawstock','purchase','recipes'))return;syncRawStockNow({quiet:true,delta:true}).catch(error=>{
+    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},1800000);
+    clearInterval(planPoll);planPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','orders'))return;try{
+      if(!await adminOperationalComponentChanged('plans'))return;
+      await refreshPlansIfChanged();
+    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora plan refresh',error)}},300000);
+    clearInterval(rawStockPoll);rawStockPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('rawstock','purchase','recipes'))return;try{
+      if(!await adminOperationalComponentChanged('rawStock'))return;
+      await syncRawStockNow({quiet:true,delta:true});
+    }catch(error){
       if(window.panoraHandleSessionError?.(error))return;
       rawStockState('Ошибка облака','error',error?.message||String(error));
       console.warn('Panora raw stock refresh',error);
-    })},900000);
-    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','rawstock','finance'))return;syncBakeCompletionsNow({quiet:true,delta:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},900000);
+    }},900000);
+    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','rawstock','finance'))return;try{
+      if(!await adminOperationalComponentChanged('bakeCompletions'))return;
+      await syncBakeCompletionsNow({quiet:true,delta:true});
+    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)}},900000);
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
+      if(!isAdminBackgroundLeader())return;
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
       refreshRestaurantPricesDirect().catch(error=>{
@@ -2016,12 +2080,21 @@ window.panoraRecalculateBalances=recalculateBalances;
     adminWakeRefreshPromise=(async()=>{
       const view=activeAdminWakeView();
       if(['orders','accounting','finance','reminders'].includes(view)){
-        await loadOrders();await loadPayments();await loadDeliveryNotes();
-        window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view}}));
+        const changed=await adminCommerceRevisionChanged();
+        if(changed?.changed){
+          if(changed.orders)await loadOrders();
+          if(changed.payments)await loadPayments();
+          if(changed.notes)await loadDeliveryNotes();
+        }
+        window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view,changed:Boolean(changed?.changed)}}));
       }else if(view==='plan'){
-        await Promise.allSettled([refreshPlansIfChanged(),syncBakeCompletionsNow({quiet:true,delta:true})]);
+        const [plansChanged,bakeChanged]=await Promise.all([adminOperationalComponentChanged('plans'),adminOperationalComponentChanged('bakeCompletions')]);
+        const tasks=[];if(plansChanged)tasks.push(refreshPlansIfChanged());if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
+        if(tasks.length)await Promise.allSettled(tasks);
       }else if(view==='rawstock'){
-        await Promise.allSettled([syncRawStockNow({quiet:true,delta:true}),syncBakeCompletionsNow({quiet:true,delta:true})]);
+        const [rawChanged,bakeChanged]=await Promise.all([adminOperationalComponentChanged('rawStock'),adminOperationalComponentChanged('bakeCompletions')]);
+        const tasks=[];if(rawChanged)tasks.push(syncRawStockNow({quiet:true,delta:true}));if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
+        if(tasks.length)await Promise.allSettled(tasks);
       }else if(['recipes','purchase'].includes(view)){
         await loadIngredientCosts();
       }else if(view==='restaurants'){
