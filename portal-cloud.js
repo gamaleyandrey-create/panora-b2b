@@ -1,6 +1,6 @@
 /* Panora restaurant cloud v2. Supabase is the only source of truth for orders. */
 (()=>{
-  let partnerOrderPoll=0,partnerOrdersLoading=null,partnerFinanceLoading=null,partnerWorkspaceRenderTimer=0,partnerCancelabilitySignature='';
+  let partnerOrderPoll=0,partnerLeaderHeartbeat=0,partnerOrdersLoading=null,partnerFinanceLoading=null,partnerWorkspaceRenderTimer=0,partnerCancelabilitySignature='';
   'use strict';
   const PORTAL_ORDERS_CACHE_KEY="panora-portal-orders";
   const PORTAL_ORDERS_ARCHIVE_CACHE_LIMIT=250;
@@ -8,6 +8,14 @@
   const PORTAL_PAYMENTS_CACHE_LIMIT=350;
   const DELIVERY_CONFIRMATION_QUEUE_KEY='panora-delivery-confirmation-queue';
   let partnerDeliveryConfirmationFlush=null;
+
+  // Panora 9.37 — only one visible partner tab performs background polling.
+  const partnerLeaderKey='panora-partner-background-leader-v937';
+  const partnerTabId=(()=>{try{const key='panora-partner-tab-id-v937';let id=sessionStorage.getItem(key);if(!id){id=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(key,id)}return id}catch{return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}})();
+  const readPartnerLeader=()=>{try{return JSON.parse(localStorage.getItem(partnerLeaderKey)||'null')}catch{return null}};
+  const claimPartnerLeader=(force=false)=>{const now=Date.now(),current=readPartnerLeader();if(force||!current||current.id===partnerTabId||Number(current.until||0)<now){try{localStorage.setItem(partnerLeaderKey,JSON.stringify({id:partnerTabId,until:now+45000}))}catch{}return true}return false};
+  const isPartnerBackgroundLeader=()=>{if(document.hidden)return false;const current=readPartnerLeader(),now=Date.now();if(current?.id===partnerTabId&&Number(current.until||0)>=now)return true;return claimPartnerLeader(false)};
+  const startPartnerLeaderHeartbeat=()=>{clearInterval(partnerLeaderHeartbeat);claimPartnerLeader(!document.hidden);partnerLeaderHeartbeat=setInterval(()=>{if(!document.hidden)claimPartnerLeader(false)},15000)};
 
   // Panora 7.11: use the partner device's local calendar for UTC cloud timestamps.
   // This keeps the partner history aligned with bakery Finance around local midnight.
@@ -313,7 +321,7 @@
     }
     if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
   }
-  // Panora 9.36: identical concurrent partner GETs share one network response.
+  // Panora 9.37: identical concurrent partner GETs share one network response.
   const partnerInflightReads=new Map();
   async function api(path,options={},retry=true){
     await ensureSession();
@@ -781,9 +789,11 @@
     clearInterval(partnerOrderPoll);
     if(!session?.user||!account)return;
     partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
+    startPartnerLeaderHeartbeat();
     const tick=async()=>{
+      if(!isPartnerBackgroundLeader())return;
       try{
-        // Panora 9.36: skip order/finance table reads when the server revision is unchanged.
+        // Panora 9.37: skip order/finance table reads when the server revision is unchanged.
         const changed=await partnerCommerceRevisionChanged();if(!changed?.changed){refreshPartnerCancelabilityIfChanged();return}
         if(changed.orders)await refreshPartnerOrders();
         if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments});refreshPartnerCancelabilityIfChanged()
@@ -794,9 +804,9 @@
       }
     };
     tick();
-    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},180000);
+    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine&&isPartnerBackgroundLeader())tick()},180000);
   }
-  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceParts={orders:'',payments:'',notes:''};partnerCommerceRevisionUnavailable=false}
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);clearInterval(partnerLeaderHeartbeat);partnerOrderPoll=0;partnerLeaderHeartbeat=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceParts={orders:'',payments:'',notes:''};partnerCommerceRevisionUnavailable=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
   async function refreshPartnerPricing(){
     if(partnerPricingLoading)return partnerPricingLoading;
@@ -1341,6 +1351,8 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine)return;try{const changed=await partnerCommerceRevisionChanged();if(changed?.changed){if(changed.orders)await refreshPartnerOrders();if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments})}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
+  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine||!isPartnerBackgroundLeader())return;try{const changed=await partnerCommerceRevisionChanged();if(changed?.changed){if(changed.orders)await refreshPartnerOrders();if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments})}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)claimPartnerLeader(true)});
+  window.addEventListener('focus',()=>claimPartnerLeader(true),true);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();
