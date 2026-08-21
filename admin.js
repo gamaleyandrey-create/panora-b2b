@@ -292,13 +292,14 @@ async function loadRetailOrdersCloud(){
  try{
   const watermark=retailOrdersCloudHydrated?String(localStorage.getItem(RETAIL_ORDERS_WATERMARK_KEY)||''):'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
   const rows=await retailAdminApi(`retail_orders?select=id,order_number,public_token,source,fulfillment,bake_date,pickup_date,pickup_slot,customer_name,customer_phone,customer_email,comment,delivery_address,delivery_note,delivery_fee,status,payment_status,payment_method,payment_provider,total,created_at,updated_at,completed_at,cancelled_at,retail_order_items(product_id,quantity,unit_price)${deltaQuery}&order=created_at.desc`);
-  if(rows?.length||!retailOrdersCloudHydrated){
+  const cloudChanged=Boolean(rows?.length||!retailOrdersCloudHydrated);
+  if(cloudChanged){
    const changed=(rows||[]).map(retailOrderFromCloud),next=watermark?new Map(readRetailOrders().map(order=>[String(order.id),order])):new Map();
    changed.forEach(order=>next.set(String(order.id),order));
    saveRetailOrdersLocal([...next.values()].sort((a,b)=>String(b?.createdAt||'').localeCompare(String(a?.createdAt||''))));
    const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);if(newest)localStorage.setItem(RETAIL_ORDERS_WATERMARK_KEY,newest);
   }
-  retailOrdersCloudHydrated=true;await loadRetailUnreadMessagesCloud();if(status)status.textContent='Облако ✓';renderRetailOrderQueue();renderStock();renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();return true
+  retailOrdersCloudHydrated=true;await loadRetailUnreadMessagesCloud();if(status)status.textContent='Облако ✓';renderRetailOrderQueue();renderStock();renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();if(cloudChanged)window.dispatchEvent(new CustomEvent('panora:retail-orders-updated',{detail:{source:'cloud'}}));return true
  }catch(error){if(status)status.textContent='Выполните SQL 6.28';return false}
 }
 async function updateRetailOrderStatusCloud(id,nextStatus){
