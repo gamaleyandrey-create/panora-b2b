@@ -964,7 +964,7 @@
 /* Panora 5.37 · direct order builder and explicit required profile fields */
 .rw-required-field>span:first-child{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rw-required-mark{color:#b44e42;font-size:15px}
-.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#960047!important;font-size:10px!important;font-weight:700!important}
+.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#961047!important;font-size:10px!important;font-weight:700!important}
 .rw-new-order-page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .rw-new-order-head{grid-column:1/-1}
 .rw-new-order-head h3{margin:4px 0 6px;font:34px Georgia,serif}
@@ -1851,7 +1851,7 @@
 body.panora-partner-authenticated .cart-fab{display:none!important}
 
 
-/* Panora 9.60 — clearer mobile partner payment hierarchy. */
+/* Panora 9.61 — clearer mobile partner payment hierarchy. */
 .rw-finance-main-head .rw-finance-debt .rw-current-debt-value{
   color:#b43f38!important;
 }
@@ -1893,7 +1893,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   }
 }
 
-/* Panora 9.60 — mobile partner Payments use Prata monetary figures like bakery finance. */
+/* Panora 9.61 — mobile partner Payments use Prata monetary figures like bakery finance. */
 @media(max-width:720px){
   .restaurant-workspace .rw-finance{
     gap:14px!important;
