@@ -1497,23 +1497,26 @@
       try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
       catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
     };
-    // Panora 9.52: one delegated handler for the partner bottom navigation.
-    // On mobile the fixed bar can be rebuilt during cloud refresh; delegation
-    // keeps every tab (especially delivery notes) clickable after a repaint.
-    const workspaceNav = modal.querySelector(".rw-nav");
-    if (workspaceNav) workspaceNav.onclick = (event) => {
-      const button = event.target.closest("[data-rw-tab]");
-      if (!button || !workspaceNav.contains(button)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      activeTab = button.dataset.rwTab || "home";
-      openFilterMenu = "";
-      if (activeTab === "notes") {
-        noteFiltersOpen = false;
-        noteToReveal = "";
-      }
-      renderAccountModal();
-    };
+    // Panora 9.53: keep partner navigation on the persistent modal root.
+    // The inner workspace is rebuilt after cloud sync, while the modal element
+    // itself survives. Capture mode also wins over nested mobile handlers.
+    if (!modal.dataset.rwRootNavBound) {
+      modal.dataset.rwRootNavBound = "1";
+      modal.addEventListener("click", (event) => {
+        const button = event.target.closest?.("[data-rw-tab]");
+        if (!button || !modal.contains(button)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const nextTab = button.dataset.rwTab || "home";
+        activeTab = nextTab;
+        openFilterMenu = "";
+        if (nextTab === "notes") {
+          noteFiltersOpen = false;
+          noteToReveal = "";
+        }
+        renderAccountModal();
+      }, true);
+    }
     modal.querySelectorAll("[data-rw-order-view]").forEach(
       (button) =>
         (button.onclick = () => {
@@ -1805,7 +1808,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.52: orders started in the partner workspace skip the
+        // Panora 9.53: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1914,7 +1917,7 @@
                 const icon = badge === "__PROFILE__"
                   ? `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M3.6 20.5c.8-4.7 3.5-7 8.4-7s7.6 2.3 8.4 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>`
                   : badge;
-                return `<button class="${activeTab === key ? "active " : ""}rw-nav-${key}" data-rw-tab="${key}"><i>${icon}</i><span>${label}</span></button>`;
+                return `<button type="button" class="${activeTab === key ? "active " : ""}rw-nav-${key}" data-rw-tab="${key}"><i>${icon}</i><span>${label}</span></button>`;
               },
             )
             .join("")}
@@ -1988,7 +1991,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.52: only reveal the mobile route after the workspace is open.
+    // Panora 9.53: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');
