@@ -1,5 +1,5 @@
--- Panora 9.56 — Traffic Optimization X
--- Run once in Supabase SQL Editor after publishing Panora 9.56.
+-- Panora 9.57 — Traffic Optimization X
+-- Run once in Supabase SQL Editor after publishing Panora 9.57.
 -- Extends the lightweight reference revision gate to recipes and raw-material prices.
 -- The browser can now check four rarely-changing reference groups with one tiny RPC
 -- and download the corresponding rows only when that component actually changed.
@@ -62,7 +62,7 @@ $$;
 revoke all on function public.panora_admin_reference_revision() from public;
 grant execute on function public.panora_admin_reference_revision() to authenticated;
 comment on function public.panora_admin_reference_revision() is
-  'Panora 9.56: one lightweight revision gate for products, partners/prices, recipes and raw-material prices.';
+  'Panora 9.57: one lightweight revision gate for products, partners/prices, recipes and raw-material prices.';
 
 -- Support the delta/revision paths already used by Panora as reference history grows.
 create index if not exists raw_material_prices_updated_at_idx
