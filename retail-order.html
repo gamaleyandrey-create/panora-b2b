@@ -48,7 +48,7 @@
  </section>
  <div class="footer">Panora · Bakery · build 7310</div>
 </main>
-<script src="supabase-config.js?v=9500"></script>
+<script src="supabase-config.js?v=9510"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -156,5 +156,5 @@
  $('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();messagePoll=setInterval(()=>{if(!document.hidden&&order)loadMessages()},30000);setInterval(()=>{if(!document.hidden&&navigator.onLine)load({silent:true})},120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&order){loadMessages();syncCustomerPush({repair:true}).catch(()=>{})}});
 })();
 </script>
-<script src="pwa-stable.js?v=9500"></script>
+<script src="pwa-stable.js?v=9510"></script>
 </body></html>

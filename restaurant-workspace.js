@@ -1796,7 +1796,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.50: orders started in the partner workspace skip the
+        // Panora 9.51: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1979,7 +1979,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.50: only reveal the mobile route after the workspace is open.
+    // Panora 9.51: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');
