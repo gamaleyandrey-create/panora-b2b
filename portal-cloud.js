@@ -584,6 +584,15 @@
       // Panora 6.67: a no-op cloud hydration must not replace cart <img> nodes.
       if(!hadAccount||productsChanged||accountChanged)renderCart();
       if(!hadAccount||accountChanged)window.dispatchEvent(new CustomEvent('panora:partner-data-updated',{detail:{accountChanged,productsChanged}}));
+      // Panora 9.50: the mobile workspace may already be open while the
+      // authoritative partner payload is still hydrating. Always repaint an
+      // open workspace after orders / delivery notes / payments are installed;
+      // otherwise an early empty render can remain visible until the next sync.
+      const openPartnerWorkspace=document.querySelector('#profileModal.restaurant-workspace.open');
+      if(openPartnerWorkspace){
+        if(partnerWorkspaceEditing())schedulePartnerWorkspaceRender();
+        else try{renderAccountModal(true)}catch(error){console.warn('Panora partner hydrated workspace render',error)}
+      }
       startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>flushPendingDeliveryConfirmations().catch(()=>{}),120);setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
@@ -908,7 +917,7 @@
       const mobile=Boolean(window.matchMedia?.('(max-width: 760px)').matches);
       const modal=document.querySelector('#profileModal');
       if(mobile){
-        // Panora 9.49: portal-cloud loads before restaurant-workspace.js.
+        // Panora 9.50: portal-cloud loads before restaurant-workspace.js.
         // Keep the public page hidden until the workspace module confirms that
         // the authenticated partner cabinet has actually opened.
         root.classList.add('panora-partner-boot');
