@@ -24,7 +24,7 @@
  #view-plan.active>.page-head{margin-bottom:14px!important}
 }
 
-/* Panora 9.67 · bakery delivery-notes section, desktop + mobile */
+/* Panora 9.68 · bakery delivery-notes section, desktop + mobile */
 .delivery-note-view-tabs{display:flex;gap:8px;margin:0 0 14px}
 .delivery-note-view-tabs button{border:1px solid #d9e1d9;background:#fff;border-radius:999px;padding:9px 14px;font:700 13px/1 Manrope,Arial,sans-serif;color:#5f6c62}
 .delivery-note-view-tabs button.active{background:#e5efe7;border-color:#c5d8c9;color:#294c36}
@@ -48,4 +48,19 @@
  .admin-delivery-note-actions{justify-content:flex-end}
  .admin-delivery-notes-table td:last-child:before{display:none}
  .admin-delivery-notes-table td:last-child{padding-top:10px!important}
+}
+
+/* Panora 9.68 · compact bakery delivery-note cards on mobile */
+@media(max-width:720px){
+ #view-delivery-notes .admin-delivery-notes-wrap{border:0!important;background:transparent!important;box-shadow:none!important}
+ #view-delivery-notes .admin-delivery-notes-table tr{padding:14px 16px!important;border-radius:18px!important}
+ #view-delivery-notes .admin-delivery-notes-table td{min-height:34px!important;padding:6px 0!important;color:#22352a!important;font:600 14px/1.35 Manrope,Arial,sans-serif!important}
+ #view-delivery-notes .admin-delivery-notes-table td:before{flex:0 0 92px;font-size:12px!important;color:#7a837d!important}
+ #view-delivery-notes .admin-note-value{display:block!important;min-width:0!important;max-width:calc(100% - 106px)!important;margin-left:auto!important;color:#22352a!important;text-align:right!important;white-space:normal!important;overflow-wrap:anywhere!important}
+ #view-delivery-notes .admin-note-number{font-family:Prata,Georgia,serif!important;font-size:21px!important;font-weight:400!important;color:#21382a!important}
+ #view-delivery-notes .admin-note-money{font-family:Prata,Georgia,serif!important;font-size:19px!important;font-weight:400!important;color:#21382a!important}
+ #view-delivery-notes .admin-note-status{margin-left:auto!important}
+ #view-delivery-notes .admin-delivery-note-actions{width:100%!important;justify-content:flex-start!important;gap:8px!important;padding-top:2px!important}
+ #view-delivery-notes .admin-delivery-note-actions .action-small{min-height:40px!important;padding:0 14px!important}
+ #view-delivery-notes .admin-note-more{height:40px!important;min-width:44px!important}
 }

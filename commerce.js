@@ -1358,11 +1358,11 @@ function renderDeliveryNotes(){
     const archived=adminNoteArchived(note);
     const orderLabel=order?commerceOrderNumber(order):'—';
     return `<tr data-delivery-note-id="${commerceEscape(note.id||'')}">
-      <td data-label="Накладная"><strong>${commerceEscape(adminNoteNumber(note))}</strong></td>
-      <td data-label="Дата">${commerceEscape(orderDateLabel(note.date||order?.deliveryDate||order?.date||''))}</td>
-      <td data-label="Партнёр">${commerceEscape(partner.name||order?.partnerName||'—')}</td>
-      <td data-label="Заказ">${commerceEscape(orderLabel)}</td>
-      <td data-label="Сумма"><strong>${commerceEscape(adminNoteMoney(note.total||0))}</strong></td>
+      <td data-label="Накладная"><strong class="admin-note-value admin-note-number">${commerceEscape(adminNoteNumber(note))}</strong></td>
+      <td data-label="Дата"><span class="admin-note-value">${commerceEscape(orderDateLabel(note.date||order?.deliveryDate||order?.date||''))}</span></td>
+      <td data-label="Партнёр"><span class="admin-note-value">${commerceEscape(partner.name||order?.partnerName||'—')}</span></td>
+      <td data-label="Заказ"><span class="admin-note-value">${commerceEscape(orderLabel)}</span></td>
+      <td data-label="Сумма"><strong class="admin-note-value admin-note-money">${commerceEscape(adminNoteMoney(note.total||0))}</strong></td>
       <td data-label="Статус"><span class="admin-note-status${archived?' archived':''}">${archived?'Архив':'Рабочая'}</span></td>
       <td data-label="Действия"><div class="admin-delivery-note-actions">${order?`<button type="button" class="action-small" data-admin-print-note="${commerceEscape(order.id)}">Открыть</button>`:''}<button type="button" class="admin-note-more" data-admin-note-library="${commerceEscape(note.id||'')}" aria-label="Документы накладной">⋯</button></div></td>
     </tr>`;
