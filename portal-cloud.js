@@ -313,7 +313,7 @@
     }
     if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
   }
-  // Panora 9.34: identical concurrent partner GETs share one network response.
+  // Panora 9.35: identical concurrent partner GETs share one network response.
   const partnerInflightReads=new Map();
   async function api(path,options={},retry=true){
     await ensureSession();
@@ -754,12 +754,36 @@
     else try{renderAccountModal(true)}catch(error){console.warn('Panora partner cutoff render',error)}
     return true;
   }
+  let partnerCommerceRevision='',partnerCommerceRevisionUnavailable=false,partnerCommerceRevisionPromise=null;
+  async function partnerCommerceRevisionChanged(){
+    if(partnerCommerceRevisionUnavailable)return true;
+    if(partnerCommerceRevisionPromise)return partnerCommerceRevisionPromise;
+    partnerCommerceRevisionPromise=(async()=>{
+      try{
+        const rows=await api('rpc/panora_partner_commerce_revision',{method:'POST',body:'{}'});
+        const row=Array.isArray(rows)?rows[0]:rows,next=String(row?.revision||'');
+        if(!next)return true;
+        if(!partnerCommerceRevision){partnerCommerceRevision=next;return true}
+        if(next===partnerCommerceRevision)return false;
+        partnerCommerceRevision=next;return true;
+      }catch(error){
+        const raw=String(error?.message||error||'');
+        if(/panora_partner_commerce_revision|PGRST202|does not exist|schema cache/i.test(raw)){partnerCommerceRevisionUnavailable=true;return true}
+        throw error;
+      }
+    })().finally(()=>{partnerCommerceRevisionPromise=null});
+    return partnerCommerceRevisionPromise;
+  }
   function startPartnerOrderPolling(){
     clearInterval(partnerOrderPoll);
     if(!session?.user||!account)return;
     partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
     const tick=async()=>{
-      try{await refreshPartnerOrders();await refreshPartnerFinance();refreshPartnerCancelabilityIfChanged()}
+      try{
+        // Panora 9.35: skip order/finance table reads when the server revision is unchanged.
+        if(!(await partnerCommerceRevisionChanged())){refreshPartnerCancelabilityIfChanged();return}
+        await refreshPartnerOrders();await refreshPartnerFinance();refreshPartnerCancelabilityIfChanged()
+      }
       catch(error){
         if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
         console.warn('Panora partner live refresh',error);
@@ -768,7 +792,7 @@
     tick();
     partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},180000);
   }
-  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false}
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceRevisionUnavailable=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
   async function refreshPartnerPricing(){
     if(partnerPricingLoading)return partnerPricingLoading;
@@ -1313,6 +1337,6 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(()=>{if(session?.user&&!loadPromise&&!document.hidden&&navigator.onLine)loadAll().catch(()=>{})},1800000);
+  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine)return;try{if(await partnerCommerceRevisionChanged()){await refreshPartnerOrders();await refreshPartnerFinance()}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();
