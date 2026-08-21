@@ -227,7 +227,7 @@
     }).finally(()=>refreshing=null);
     return refreshing
   };
-  // Panora 9.34: collapse identical concurrent GETs into one network request.
+  // Panora 9.35: collapse identical concurrent GETs into one network request.
   // This protects against overlapping UI events without changing business behavior.
   const inflightReads=new Map();
   const request=async(path,options={},retried=false)=>{
@@ -824,8 +824,28 @@
     }
     return rows;
   }
-  const adminOrdersWatermarkKey='panora-admin-orders-watermark-v934';
-  const adminPaymentsWatermarkKey='panora-admin-payments-watermark-v934';
+  const adminOrdersWatermarkKey='panora-admin-orders-watermark-v935';
+  const adminPaymentsWatermarkKey='panora-admin-payments-watermark-v935';
+  let adminCommerceRevision='',adminCommerceRevisionUnavailable=false,adminCommerceRevisionPromise=null;
+  async function adminCommerceRevisionChanged(){
+    if(adminCommerceRevisionUnavailable)return true;
+    if(adminCommerceRevisionPromise)return adminCommerceRevisionPromise;
+    adminCommerceRevisionPromise=(async()=>{
+      try{
+        const rows=await request('rpc/panora_admin_commerce_revision',{method:'POST',body:'{}'});
+        const row=Array.isArray(rows)?rows[0]:rows,next=String(row?.revision||'');
+        if(!next)return true;
+        if(!adminCommerceRevision){adminCommerceRevision=next;return true}
+        if(next===adminCommerceRevision)return false;
+        adminCommerceRevision=next;return true;
+      }catch(error){
+        const raw=String(error?.message||error||'');
+        if(/panora_admin_commerce_revision|PGRST202|does not exist|schema cache/i.test(raw)){adminCommerceRevisionUnavailable=true;return true}
+        throw error;
+      }
+    })().finally(()=>{adminCommerceRevisionPromise=null});
+    return adminCommerceRevisionPromise;
+  }
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
@@ -1932,9 +1952,13 @@ window.panoraRecalculateBalances=recalculateBalances;
     errors.push(['рецептуры',error])}
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
-    // Panora 9.34: periodic cloud reads are scoped to the screen that can actually use them.
+    // Panora 9.35: periodic cloud reads are scoped to the screen that can actually use them.
     // User actions still save/refresh immediately; this only removes background table downloads.
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{
+      // Panora 9.35: one tiny revision RPC replaces three table downloads while commerce data is unchanged.
+      if(!(await adminCommerceRevisionChanged()))return;
+      await loadOrders();await loadPayments();await loadDeliveryNotes();
+    }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},180000);
     clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('products','recipes'))return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},1800000);
