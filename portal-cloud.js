@@ -908,7 +908,7 @@
       const mobile=Boolean(window.matchMedia?.('(max-width: 760px)').matches);
       const modal=document.querySelector('#profileModal');
       if(mobile){
-        // Panora 9.47: portal-cloud loads before restaurant-workspace.js.
+        // Panora 9.49: portal-cloud loads before restaurant-workspace.js.
         // Keep the public page hidden until the workspace module confirms that
         // the authenticated partner cabinet has actually opened.
         root.classList.add('panora-partner-boot');

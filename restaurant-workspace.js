@@ -547,9 +547,16 @@
       order.items.some(item=>String(itemName(item.product)).toLowerCase().includes(q));
   };
 
+  const isNavActiveOrder = (order) => ["submitted","confirmed","shipped"].includes(orderLifecycleStatus(order));
+  const isNavActiveNote = (note, orders=ownOrders()) => {
+    const order=orders.find((item)=>String(item.id)===String(note?.orderId));
+    if(order)return isNavActiveOrder(order);
+    return !(note?.customerConfirmedAt||note?.offlineProof?.receivedAt);
+  };
+
   function updateMobileOrdersBadge() {
     const button=document.querySelector("#mobileOrders");if(!button)return;
-    const count=account?ownOrders().filter(isActiveOrder).length:0;
+    const count=account?ownOrders().filter(isNavActiveOrder).length:0;
     let badge=button.querySelector(".mobile-orders-badge");
     if(!badge){badge=document.createElement("b");badge.className="mobile-orders-badge";button.appendChild(badge)}
     badge.textContent=String(count);badge.hidden=!count;
@@ -1789,7 +1796,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.47: orders started in the partner workspace skip the
+        // Panora 9.49: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1875,8 +1882,8 @@
     const partnerOrders=ownOrders();
     const partnerNotes=ownNotes();
     const counts = {
-      orders: partnerOrders.filter(isActiveOrder).length,
-      notes: partnerNotes.filter(note=>isActiveNote(note,partnerOrders)).length,
+      orders: partnerOrders.filter(isNavActiveOrder).length,
+      notes: partnerNotes.filter(note=>isNavActiveNote(note,partnerOrders)).length,
       payments: currentDebtItems().length,
     };
     modal.classList.add("restaurant-workspace");
@@ -1960,6 +1967,7 @@
     renderAccountModal();
     openPanel(document.querySelector("#profileModal"));
   };
+  window.panoraPartnerWorkspaceReady=true;
   window.panoraOpenPartnerCabinet = () => {
     const modal=document.querySelector("#profileModal");
     if(!modal)return;
@@ -1971,7 +1979,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.47: only reveal the mobile route after the workspace is open.
+    // Panora 9.49: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');
