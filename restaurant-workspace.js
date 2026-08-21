@@ -427,7 +427,7 @@
     return !Number.isNaN(d.getTime()) && archiveNextCalendarDayReached(d);
   };
   const isActiveNote = (note, orders=ownOrders()) => !isArchivedNote(note, orders);
-  // Panora 9.56: resolve the order linked to a delivery note.
+  // Panora 9.57: resolve the order linked to a delivery note.
   // notesHtml() uses this helper when rendering the delivery-note screen.
   const noteOrder = (note) => ownOrders().find(order => String(order.id || "") === String(note?.orderId || "")) || null;
 
@@ -1496,7 +1496,7 @@
       try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
       catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
     };
-    // Panora 9.56: keep partner navigation on the persistent modal root.
+    // Panora 9.57: keep partner navigation on the persistent modal root.
     // The inner workspace is rebuilt after cloud sync, while the modal element
     // itself survives. Capture mode also wins over nested mobile handlers.
     if (!modal.dataset.rwRootNavBound) {
@@ -1807,7 +1807,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.56: orders started in the partner workspace skip the
+        // Panora 9.57: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1990,7 +1990,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.56: only reveal the mobile route after the workspace is open.
+    // Panora 9.57: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');
