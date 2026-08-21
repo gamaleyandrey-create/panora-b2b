@@ -1266,7 +1266,7 @@
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     cacheDeliveryNotesLocal();status('Облако ✓');
   }
-  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,updatedAt:row.updated_at||null,recordedBy:row.recorded_by||row.confirmed_by||null});
+  const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,updatedAt:row.updated_at||null,recordedBy:row.confirmed_by||null});
   const paymentFinanciallyConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==='confirmed')&&payment?.disputeStatus!=='open';
   function cachePayment(row){
     const payment=rowPayment(row);
@@ -1283,7 +1283,7 @@
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
     const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const rows=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
+    const rows=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     if(rows?.length){
       const mapped=rows.map(rowPayment);
@@ -1305,7 +1305,7 @@
     const valid=payments.filter(payment=>restaurants.some(r=>r.id===payment.restaurantId)&&Number(payment.amount)>0);
     if(!valid.length)return;
     status('Синхронизация…');
-    const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':'confirmed',received_at:payment.receivedAt||`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmedAt||new Date().toISOString(),confirmed_by:session.user?.id||null,recorded_by:payment.recordedBy||session.user?.id||null,dispute_status:payment.disputeStatus||'none',dispute_reason:payment.disputeReason||null,disputed_at:payment.disputedAt||null,dispute_deadline:payment.disputeDeadline||null}));
+    const payload=valid.map(payment=>({id:payment.id,restaurant_id:payment.restaurantId,delivery_note_id:payment.deliveryNoteId||null,amount:Number(payment.amount),method:payment.method||'Не указан',note:payment.note||null,status:payment.status==='cancelled'?'cancelled':'confirmed',received_at:payment.receivedAt||`${localDate(payment.date)}T12:00:00Z`,confirmed_at:payment.confirmedAt||new Date().toISOString(),confirmed_by:session.user?.id||null,dispute_status:payment.disputeStatus||'none',dispute_reason:payment.disputeReason||null,disputed_at:payment.disputedAt||null,dispute_deadline:payment.disputeDeadline||null}));
     await request('payments?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});status('Облако ✓');
   }
   const paymentRpcMissing=error=>/panora_(?:record|confirm)_payment|PGRST202|does not exist|Could not find the function|schema cache/i.test(String(error?.message||error||''));
@@ -1436,7 +1436,7 @@ async function ensureB2BReturnCreditPayments(){
       const movementId=String(row.movement?.id||'');if(!movementId||Number(row.gross||0)<=0)continue;
       const existing=paymentById.get(movementId);
       if(existing&&isB2BReturnCreditPayment(existing)&&String(existing.deliveryNoteId||'')===String(note.id)&&Math.abs(Number(existing.amount||0)-Number(row.gross||0))<=0.01)continue;
-      payload.push({id:movementId,restaurant_id:note.restaurantId,delivery_note_id:note.id,amount:Number(row.gross||0),method:'Возврат товара',note:`${b2bReturnCreditPaymentMarker(movementId)} Возврат товара по DN-${String(note.number||'').padStart(4,'0')}`,status:'confirmed',received_at:row.movement?.createdAt||`${String(row.movement?.date||note.date||localDate(new Date().toISOString()))}T12:00:00Z`,confirmed_at:row.movement?.createdAt||new Date().toISOString(),confirmed_by:session.user?.id||null,recorded_by:session.user?.id||null,dispute_status:'none'});
+      payload.push({id:movementId,restaurant_id:note.restaurantId,delivery_note_id:note.id,amount:Number(row.gross||0),method:'Возврат товара',note:`${b2bReturnCreditPaymentMarker(movementId)} Возврат товара по DN-${String(note.number||'').padStart(4,'0')}`,status:'confirmed',received_at:row.movement?.createdAt||`${String(row.movement?.date||note.date||localDate(new Date().toISOString()))}T12:00:00Z`,confirmed_at:row.movement?.createdAt||new Date().toISOString(),confirmed_by:session.user?.id||null,dispute_status:'none'});
     }
   }
   if(!payload.length)return 0;
