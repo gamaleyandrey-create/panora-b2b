@@ -964,7 +964,7 @@
 /* Panora 5.37 · direct order builder and explicit required profile fields */
 .rw-required-field>span:first-child{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rw-required-mark{color:#b44e42;font-size:15px}
-.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#957047!important;font-size:10px!important;font-weight:700!important}
+.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#958047!important;font-size:10px!important;font-weight:700!important}
 .rw-new-order-page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .rw-new-order-head{grid-column:1/-1}
 .rw-new-order-head h3{margin:4px 0 6px;font:34px Georgia,serif}
@@ -1851,7 +1851,7 @@
 body.panora-partner-authenticated .cart-fab{display:none!important}
 
 
-/* Panora 9.57 — clearer mobile partner payment hierarchy. */
+/* Panora 9.58 — clearer mobile partner payment hierarchy. */
 .rw-finance-main-head .rw-finance-debt .rw-current-debt-value{
   color:#b43f38!important;
 }
@@ -1893,7 +1893,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   }
 }
 
-/* Panora 9.57 — mobile partner Payments aligned with bakery visual system. */
+/* Panora 9.58 — mobile partner Payments use Prata monetary figures like bakery finance. */
 @media(max-width:720px){
   .restaurant-workspace .rw-finance{
     gap:14px!important;
@@ -1922,7 +1922,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   .restaurant-workspace .rw-finance-main-head .rw-finance-debt .rw-current-debt-value{
     margin-top:3px!important;
     color:#b43f38!important;
-    font:700 27px/1.04 Manrope,Arial,sans-serif!important;
+    font:400 27px/1.04 Prata,Georgia,serif!important;
     letter-spacing:-.025em!important;
     font-variant-numeric:tabular-nums!important;
   }
@@ -2005,7 +2005,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   .restaurant-workspace .rw-debt-item>div:nth-child(2)>b{
     margin-top:3px!important;
     color:#26332b!important;
-    font:700 27px/1.02 Manrope,Arial,sans-serif!important;
+    font:400 27px/1.02 Prata,Georgia,serif!important;
     letter-spacing:-.025em!important;
     font-variant-numeric:tabular-nums!important;
   }
@@ -2016,7 +2016,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   .restaurant-workspace .rw-debt-item>div:nth-child(3)>b{
     margin-top:3px!important;
     color:#5c6760!important;
-    font:600 21px/1.05 Manrope,Arial,sans-serif!important;
+    font:400 21px/1.05 Prata,Georgia,serif!important;
     letter-spacing:-.015em!important;
     font-variant-numeric:tabular-nums!important;
   }
@@ -2033,7 +2033,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   .restaurant-workspace .rw-debt-due strong{
     margin-top:4px!important;
     color:#397a50!important;
-    font:700 31px/1.02 Manrope,Arial,sans-serif!important;
+    font:400 31px/1.02 Prata,Georgia,serif!important;
     letter-spacing:-.03em!important;
     font-variant-numeric:tabular-nums!important;
   }
