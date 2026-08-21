@@ -1317,6 +1317,60 @@ function renderReminders() {
 
   bindReminderCards(rows,paymentRows);
 }
+
+let adminNoteArchiveView="active";
+function adminNoteNextDayReached(value){
+  const d=value?new Date(value):null;
+  if(!d||Number.isNaN(d.getTime()))return false;
+  const next=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0);
+  return Date.now()>=next.getTime();
+}
+function adminNoteArchived(note){
+  const order=orders.find(item=>String(item.id)===String(note?.orderId));
+  if(order?.archived===true||order?.status==='cancelled')return true;
+  const confirmed=order?.deliveryConfirmedAt||note?.customerConfirmedAt||note?.offlineProof?.receivedAt||null;
+  if(confirmed)return adminNoteNextDayReached(confirmed);
+  if(order&&['completed','paid'].includes(String(order.status||''))){
+    const day=String(order.deliveryDate||order.date||note?.date||'').slice(0,10);
+    return day?adminNoteNextDayReached(`${day}T23:59:59`):false;
+  }
+  return false;
+}
+function adminNoteNumber(note){
+  const settings=(typeof bakerySettings!=='undefined'&&bakerySettings)||{};
+  const prefix=settings.notePrefix||'DN-';
+  const raw=Number(note?.number||0);
+  return raw?`${prefix}${String(raw).padStart(4,'0')}`:(note?.id||'—');
+}
+function adminNoteMoney(value){return Number(value||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
+function renderDeliveryNotes(){
+  const rows=document.querySelector('#adminDeliveryNoteRows'),tabs=document.querySelector('#adminNoteArchiveTabs');
+  const all=(Array.isArray(deliveryNotes)?deliveryNotes:[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.number||0)-Number(a.number||0));
+  const active=all.filter(note=>!adminNoteArchived(note)),archive=all.filter(adminNoteArchived);
+  document.querySelectorAll('[data-active-note-count]').forEach(badge=>{badge.textContent=String(active.length);badge.hidden=false});
+  if(!rows||!tabs)return;
+  tabs.innerHTML=`<button type="button" class="${adminNoteArchiveView==='active'?'active':''}" data-admin-note-view="active">Рабочие <b>${active.length}</b></button><button type="button" class="${adminNoteArchiveView==='archive'?'active':''}" data-admin-note-view="archive">Архив <b>${archive.length}</b></button>`;
+  tabs.querySelectorAll('[data-admin-note-view]').forEach(button=>button.onclick=()=>{adminNoteArchiveView=button.dataset.adminNoteView;renderDeliveryNotes()});
+  const source=adminNoteArchiveView==='archive'?archive:active;
+  rows.innerHTML=source.length?source.map(note=>{
+    const order=orders.find(item=>String(item.id)===String(note.orderId));
+    const partner=restaurant(note.restaurantId)||{};
+    const archived=adminNoteArchived(note);
+    const orderLabel=order?commerceOrderNumber(order):'—';
+    return `<tr data-delivery-note-id="${commerceEscape(note.id||'')}">
+      <td data-label="Накладная"><strong>${commerceEscape(adminNoteNumber(note))}</strong></td>
+      <td data-label="Дата">${commerceEscape(orderDateLabel(note.date||order?.deliveryDate||order?.date||''))}</td>
+      <td data-label="Партнёр">${commerceEscape(partner.name||order?.partnerName||'—')}</td>
+      <td data-label="Заказ">${commerceEscape(orderLabel)}</td>
+      <td data-label="Сумма"><strong>${commerceEscape(adminNoteMoney(note.total||0))}</strong></td>
+      <td data-label="Статус"><span class="admin-note-status${archived?' archived':''}">${archived?'Архив':'Рабочая'}</span></td>
+      <td data-label="Действия"><div class="admin-delivery-note-actions">${order?`<button type="button" class="action-small" data-admin-print-note="${commerceEscape(order.id)}">Открыть</button>`:''}<button type="button" class="admin-note-more" data-admin-note-library="${commerceEscape(note.id||'')}" aria-label="Документы накладной">⋯</button></div></td>
+    </tr>`;
+  }).join(''):`<tr><td class="empty-row" colspan="7">${adminNoteArchiveView==='archive'?'Архивных накладных пока нет.':'Рабочих накладных пока нет.'}</td></tr>`;
+  rows.querySelectorAll('[data-admin-print-note]').forEach(button=>button.onclick=()=>printNote(button.dataset.adminPrintNote));
+  rows.querySelectorAll('[data-admin-note-library]').forEach(button=>button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const note=deliveryNotes.find(item=>String(item.id)===String(button.dataset.adminNoteLibrary));if(note)window.openPanoraDocumentLibrary?.(note,{context:'admin'})});
+}
+
 function renderCommerce() {
   if(window.panoraMoneyEditing?.active){
     const active=window.panoraMoneyEditing.element;
@@ -1324,6 +1378,7 @@ function renderCommerce() {
   }
   renderRestaurants();
   renderOrders();
+  renderDeliveryNotes();
   renderAccounting();
   renderReminders();
 }
