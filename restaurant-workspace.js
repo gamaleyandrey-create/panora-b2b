@@ -427,7 +427,7 @@
     return !Number.isNaN(d.getTime()) && archiveNextCalendarDayReached(d);
   };
   const isActiveNote = (note, orders=ownOrders()) => !isArchivedNote(note, orders);
-  // Panora 9.55: resolve the order linked to a delivery note.
+  // Panora 9.56: resolve the order linked to a delivery note.
   // notesHtml() uses this helper when rendering the delivery-note screen.
   const noteOrder = (note) => ownOrders().find(order => String(order.id || "") === String(note?.orderId || "")) || null;
 
@@ -1158,7 +1158,7 @@
     const filteredHistory=history.filter(operation=>dateInRange(operation.date,paymentDateFrom,paymentDateTo));
 
     return `<section class="rw-finance">
-      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><button type="button" class="rw-finance-debt rw-finance-debt-button" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong>${portalMoney(debt)}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}<i aria-hidden="true">${financeSummaryOpen?"⌃":"⌄"}</i></button></div></header>
+      <header class="rw-finance-main-head"><div><h3>${t("finance")}</h3><button type="button" class="rw-finance-debt rw-finance-debt-button" data-rw-finance-summary-toggle aria-expanded="${financeSummaryOpen?"true":"false"}"><span>${lang==="ru"?"Актуальная задолженность":lang==="es"?"Deuda actual":"Current debt"}</span><strong class="rw-current-debt-value">${debt>0.005?`−${portalMoney(debt)}`:portalMoney(0)}</strong>${advance>0?`<small>${lang==="ru"?"Аванс":lang==="es"?"Anticipo":"Advance"}: ${portalMoney(advance)}</small>`:""}<i aria-hidden="true">${financeSummaryOpen?"⌃":"⌄"}</i></button></div></header>
 
 
       ${(()=>{
@@ -1496,7 +1496,7 @@
       try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
       catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
     };
-    // Panora 9.55: keep partner navigation on the persistent modal root.
+    // Panora 9.56: keep partner navigation on the persistent modal root.
     // The inner workspace is rebuilt after cloud sync, while the modal element
     // itself survives. Capture mode also wins over nested mobile handlers.
     if (!modal.dataset.rwRootNavBound) {
@@ -1807,7 +1807,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.55: orders started in the partner workspace skip the
+        // Panora 9.56: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1990,7 +1990,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.55: only reveal the mobile route after the workspace is open.
+    // Panora 9.56: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');

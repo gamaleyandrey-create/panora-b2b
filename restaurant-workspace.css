@@ -964,7 +964,7 @@
 /* Panora 5.37 · direct order builder and explicit required profile fields */
 .rw-required-field>span:first-child{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rw-required-mark{color:#b44e42;font-size:15px}
-.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#955047!important;font-size:10px!important;font-weight:700!important}
+.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#956047!important;font-size:10px!important;font-weight:700!important}
 .rw-new-order-page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .rw-new-order-head{grid-column:1/-1}
 .rw-new-order-head h3{margin:4px 0 6px;font:34px Georgia,serif}
@@ -1826,14 +1826,14 @@
 }
 
 
-/* Panora 9.55: partner product image opens the public product story/details. */
+/* Panora 9.56: partner product image opens the public product story/details. */
 .rw-product-details-link{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:inherit;cursor:pointer}
 .rw-product-details-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 .panora-partner-product-return{display:inline-flex;align-items:center;gap:.35rem;margin:0 0 .85rem;padding:.58rem .78rem;border:1px solid rgba(30,45,34,.18);border-radius:999px;background:#fff;color:inherit;font:600 .82rem/1.1 Manrope,system-ui,sans-serif;cursor:pointer}
 .product-card.panora-product-focus{animation:panoraProductFocus 1.2s ease both}
 @keyframes panoraProductFocus{0%,100%{box-shadow:inherit}35%{box-shadow:0 0 0 4px rgba(205,144,63,.22),0 18px 42px rgba(34,42,31,.14)}}
 
-/* Panora 9.55 — mobile partner product details from workspace */
+/* Panora 9.56 — mobile partner product details from workspace */
 @media(max-width:760px){
   body.panora-partner-authenticated .product-grid:has(.product-card.panora-product-focus){grid-template-columns:1fr!important}
   body.panora-partner-authenticated .product-grid:has(.product-card.panora-product-focus)>.product-card:not(.panora-product-focus){display:none!important}
@@ -1847,5 +1847,48 @@
   .panora-partner-product-return{position:sticky;top:8px;z-index:6;margin:0 0 12px;padding:10px 13px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(29,36,31,.08)}
 }
 
-/* Panora 9.55: authenticated partners order through the workspace; no duplicate basket FAB. */
+/* Panora 9.56: authenticated partners order through the workspace; no duplicate basket FAB. */
 body.panora-partner-authenticated .cart-fab{display:none!important}
+
+
+/* Panora 9.56 — clearer mobile partner payment hierarchy. */
+.rw-finance-main-head .rw-finance-debt .rw-current-debt-value{
+  color:#b43f38!important;
+}
+@media(max-width:720px){
+  .rw-debt-item{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    column-gap:18px!important;
+    row-gap:10px!important;
+    padding:15px 16px!important;
+  }
+  .rw-debt-item>div:first-child{grid-column:1/-1!important}
+  .rw-debt-item>div:nth-child(2){align-self:end}
+  .rw-debt-item>div:nth-child(2)>b{
+    font-size:30px!important;
+    line-height:1.05!important;
+    font-weight:700!important;
+    letter-spacing:-.02em;
+  }
+  .rw-debt-item>div:nth-child(3){align-self:end;text-align:right}
+  .rw-debt-item>div:nth-child(3)>b{
+    font-size:24px!important;
+    line-height:1.08!important;
+    font-weight:600!important;
+    color:#4e5b52!important;
+    letter-spacing:-.01em;
+  }
+  .rw-debt-due{
+    grid-column:1/-1!important;
+    margin-top:2px!important;
+    padding-top:10px!important;
+    border-top:1px solid #edf0eb!important;
+    text-align:left!important;
+  }
+  .rw-debt-due strong{
+    font-size:36px!important;
+    line-height:1!important;
+    font-weight:700!important;
+    letter-spacing:-.025em;
+  }
+}
