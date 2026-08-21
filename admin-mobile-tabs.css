@@ -24,7 +24,7 @@
  #view-plan.active>.page-head{margin-bottom:14px!important}
 }
 
-/* Panora 9.66 · bakery delivery-notes section, desktop + mobile */
+/* Panora 9.67 · bakery delivery-notes section, desktop + mobile */
 .delivery-note-view-tabs{display:flex;gap:8px;margin:0 0 14px}
 .delivery-note-view-tabs button{border:1px solid #d9e1d9;background:#fff;border-radius:999px;padding:9px 14px;font:700 13px/1 Manrope,Arial,sans-serif;color:#5f6c62}
 .delivery-note-view-tabs button.active{background:#e5efe7;border-color:#c5d8c9;color:#294c36}

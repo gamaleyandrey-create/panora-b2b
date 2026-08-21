@@ -1420,7 +1420,7 @@ body.admin-page .stock-product-main b{
     width:auto!important;
     height:64px!important;
     display:grid!important;
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
     gap:4px!important;
     padding:5px!important;
     border:1px solid rgba(210,219,211,.96)!important;
@@ -1674,3 +1674,6 @@ body.admin-page .stock-overview-grid .stock-kpi-inventory strong{color:#b2473e!i
 body.admin-page .stock-product-main-unconfirmed b{font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-size:17px!important;font-weight:800!important;line-height:1.25!important;color:#a9473f!important}
 body.admin-page .stock-inventory-button{border-color:#d88d84;background:#fff;color:#a63f36}
 body.admin-page .stock-inventory-button:hover{background:#fff4f2}
+
+/* Panora 9.67 — bakery mobile bar always exposes five primary actions, including More. */
+@media(max-width:720px){body.admin-page .admin-mobile-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}body.admin-page #adminMobileMore{display:grid!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}}
