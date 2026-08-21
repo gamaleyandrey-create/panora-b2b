@@ -24,7 +24,7 @@
  #view-plan.active>.page-head{margin-bottom:14px!important}
 }
 
-/* Panora 9.68 · bakery delivery-notes section, desktop + mobile */
+/* Panora 9.69 · bakery delivery-notes section, desktop + mobile */
 .delivery-note-view-tabs{display:flex;gap:8px;margin:0 0 14px}
 .delivery-note-view-tabs button{border:1px solid #d9e1d9;background:#fff;border-radius:999px;padding:9px 14px;font:700 13px/1 Manrope,Arial,sans-serif;color:#5f6c62}
 .delivery-note-view-tabs button.active{background:#e5efe7;border-color:#c5d8c9;color:#294c36}
@@ -50,7 +50,7 @@
  .admin-delivery-notes-table td:last-child{padding-top:10px!important}
 }
 
-/* Panora 9.68 · compact bakery delivery-note cards on mobile */
+/* Panora 9.69 · compact bakery delivery-note cards on mobile */
 @media(max-width:720px){
  #view-delivery-notes .admin-delivery-notes-wrap{border:0!important;background:transparent!important;box-shadow:none!important}
  #view-delivery-notes .admin-delivery-notes-table tr{padding:14px 16px!important;border-radius:18px!important}
@@ -63,4 +63,24 @@
  #view-delivery-notes .admin-delivery-note-actions{width:100%!important;justify-content:flex-start!important;gap:8px!important;padding-top:2px!important}
  #view-delivery-notes .admin-delivery-note-actions .action-small{min-height:40px!important;padding:0 14px!important}
  #view-delivery-notes .admin-note-more{height:40px!important;min-width:44px!important}
+}
+
+
+/* Panora 9.69 · dedicated bakery delivery-note cards on mobile; no table-to-card conversion */
+.admin-delivery-note-cards{display:none}
+@media(max-width:720px){
+ #view-delivery-notes .admin-delivery-notes-wrap{display:none!important}
+ #view-delivery-notes .admin-delivery-note-cards{display:grid!important;gap:12px;margin-top:12px}
+ #view-delivery-notes .admin-note-card{display:block!important;padding:16px!important;border:1px solid #dfe5df!important;border-radius:18px!important;background:#fff!important;box-shadow:0 6px 18px rgba(36,62,44,.06)!important;color:#22352a!important}
+ #view-delivery-notes .admin-note-card-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin:0 0 14px!important}
+ #view-delivery-notes .admin-note-card-head>strong{display:block!important;color:#21382a!important;font:400 23px/1.15 Prata,Georgia,serif!important}
+ #view-delivery-notes .admin-note-card-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px 18px!important;margin:0!important}
+ #view-delivery-notes .admin-note-card-grid>div{display:block!important;min-width:0!important;margin:0!important}
+ #view-delivery-notes .admin-note-card-grid dt{display:block!important;margin:0 0 4px!important;color:#7a837d!important;font:700 11px/1.2 Manrope,Arial,sans-serif!important}
+ #view-delivery-notes .admin-note-card-grid dd{display:block!important;margin:0!important;color:#22352a!important;font:650 15px/1.35 Manrope,Arial,sans-serif!important;overflow-wrap:anywhere!important}
+ #view-delivery-notes .admin-note-card-grid .admin-note-card-money{font:400 20px/1.2 Prata,Georgia,serif!important;color:#21382a!important}
+ #view-delivery-notes .admin-note-card-actions{display:flex!important;align-items:center!important;gap:8px!important;margin-top:16px!important;padding-top:12px!important;border-top:1px solid #e5e9e4!important}
+ #view-delivery-notes .admin-note-card-actions .action-small{min-height:40px!important;padding:0 15px!important}
+ #view-delivery-notes .admin-note-card-actions .admin-note-more{height:40px!important;min-width:44px!important}
+ #view-delivery-notes .admin-note-card-empty{padding:18px;border:1px solid #dfe5df;border-radius:16px;background:#fff;color:#7a837d;font:600 14px/1.4 Manrope,Arial,sans-serif}
 }

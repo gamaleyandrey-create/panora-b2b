@@ -1344,7 +1344,7 @@ function adminNoteNumber(note){
 }
 function adminNoteMoney(value){return Number(value||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
 function renderDeliveryNotes(){
-  const rows=document.querySelector('#adminDeliveryNoteRows'),tabs=document.querySelector('#adminNoteArchiveTabs');
+  const rows=document.querySelector('#adminDeliveryNoteRows'),cards=document.querySelector('#adminDeliveryNoteCards'),tabs=document.querySelector('#adminNoteArchiveTabs');
   const all=(Array.isArray(deliveryNotes)?deliveryNotes:[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.number||0)-Number(a.number||0));
   const active=all.filter(note=>!adminNoteArchived(note)),archive=all.filter(adminNoteArchived);
   document.querySelectorAll('[data-active-note-count]').forEach(badge=>{badge.textContent=String(active.length);badge.hidden=false});
@@ -1367,6 +1367,26 @@ function renderDeliveryNotes(){
       <td data-label="Действия"><div class="admin-delivery-note-actions">${order?`<button type="button" class="action-small" data-admin-print-note="${commerceEscape(order.id)}">Открыть</button>`:''}<button type="button" class="admin-note-more" data-admin-note-library="${commerceEscape(note.id||'')}" aria-label="Документы накладной">⋯</button></div></td>
     </tr>`;
   }).join(''):`<tr><td class="empty-row" colspan="7">${adminNoteArchiveView==='archive'?'Архивных накладных пока нет.':'Рабочих накладных пока нет.'}</td></tr>`;
+  if(cards){
+    cards.innerHTML=source.length?source.map(note=>{
+      const order=orders.find(item=>String(item.id)===String(note.orderId));
+      const partner=restaurant(note.restaurantId)||{};
+      const archived=adminNoteArchived(note);
+      const orderLabel=order?commerceOrderNumber(order):'—';
+      return `<article class="admin-note-card" data-delivery-note-id="${commerceEscape(note.id||'')}">
+        <header class="admin-note-card-head"><strong>${commerceEscape(adminNoteNumber(note))}</strong><span class="admin-note-status${archived?' archived':''}">${archived?'Архив':'Рабочая'}</span></header>
+        <dl class="admin-note-card-grid">
+          <div><dt>Дата</dt><dd>${commerceEscape(orderDateLabel(note.date||order?.deliveryDate||order?.date||''))}</dd></div>
+          <div><dt>Партнёр</dt><dd>${commerceEscape(partner.name||order?.partnerName||'—')}</dd></div>
+          <div><dt>Заказ</dt><dd>${commerceEscape(orderLabel)}</dd></div>
+          <div><dt>Сумма</dt><dd class="admin-note-card-money">${commerceEscape(adminNoteMoney(note.total||0))}</dd></div>
+        </dl>
+        <footer class="admin-note-card-actions">${order?`<button type="button" class="action-small" data-admin-print-note="${commerceEscape(order.id)}">Открыть</button>`:''}<button type="button" class="admin-note-more" data-admin-note-library="${commerceEscape(note.id||'')}" aria-label="Документы накладной">⋯</button></footer>
+      </article>`;
+    }).join(''):`<div class="admin-note-card-empty">${adminNoteArchiveView==='archive'?'Архивных накладных пока нет.':'Рабочих накладных пока нет.'}</div>`;
+    cards.querySelectorAll('[data-admin-print-note]').forEach(button=>button.onclick=()=>printNote(button.dataset.adminPrintNote));
+    cards.querySelectorAll('[data-admin-note-library]').forEach(button=>button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const note=deliveryNotes.find(item=>String(item.id)===String(button.dataset.adminNoteLibrary));if(note)window.openPanoraDocumentLibrary?.(note,{context:'admin'})});
+  }
   rows.querySelectorAll('[data-admin-print-note]').forEach(button=>button.onclick=()=>printNote(button.dataset.adminPrintNote));
   rows.querySelectorAll('[data-admin-note-library]').forEach(button=>button.onclick=(event)=>{event.preventDefault();event.stopPropagation();const note=deliveryNotes.find(item=>String(item.id)===String(button.dataset.adminNoteLibrary));if(note)window.openPanoraDocumentLibrary?.(note,{context:'admin'})});
 }
