@@ -481,7 +481,7 @@ function orderActions(o) {
   if (o.status === "cancelled")
     return `<div class="order-flow order-flow-cancelled"><span>Заказ отменён</span></div>`;
   if (o.status === "shipped")
-    return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
+    return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small panora-note-more" type="button" data-note-library="${o.id}" aria-label="Документы накладной">⋯</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
     return `<div class="order-flow">${step(1,'Подтвердить','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
   return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions">${pricing.valid
@@ -501,7 +501,7 @@ const orderArchiveMatches=o=>orderArchiveView==='archive'?orderIsArchived(o):!or
   window.panoraOrderInteractionLockInstalled=true;
   const lock=event=>{
     if(!event.target?.closest?.(
-      '[data-confirm],[data-ship],[data-cancel-order],[data-note],[data-delivery-qr],[data-order-messages]'
+      '[data-confirm],[data-ship],[data-cancel-order],[data-note],[data-note-library],[data-delivery-qr],[data-order-messages]'
     ))return;
     window.panoraAdminOrderInteractionUntil=Date.now()+2500;
   };
@@ -668,6 +668,13 @@ function renderOrders() {
   document
     .querySelectorAll("[data-note]")
     .forEach((b) => (b.onclick = () => printNote(b.dataset.note)));
+  document.querySelectorAll("[data-note-library]").forEach((b)=>{
+    b.onclick=(event)=>{
+      event.preventDefault();event.stopPropagation();
+      const note=deliveryNotes.find(item=>item.orderId===b.dataset.noteLibrary);
+      if(note)window.openPanoraDocumentLibrary?.(note,{context:"admin"});
+    };
+  });
   document
     .querySelectorAll("[data-delivery-qr]")
     .forEach(
