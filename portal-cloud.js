@@ -901,7 +901,7 @@
   }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();setTimeout(()=>openPanel(document.querySelector('#profileModal')),180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();setTimeout(()=>{if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function')window.panoraOpenPartnerCabinet();else openPanel(document.querySelector('#profileModal'))},180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(force=false){
@@ -1345,7 +1345,7 @@
         }else throw error;
       }
     }
-    if(session?.user){await loadAll(true);setTimeout(()=>openPanel(document.querySelector('#profileModal')),120)}
+    if(session?.user){await loadAll(true);setTimeout(()=>{if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function')window.panoraOpenPartnerCabinet();else openPanel(document.querySelector('#profileModal'))},120)}
     else renderAccountModal();
   }catch(error){
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);

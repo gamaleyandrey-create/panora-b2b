@@ -1779,8 +1779,7 @@
         };
         card.prepend(back);
         card.classList.add("panora-product-focus");
-        card.scrollIntoView({behavior:"smooth",block:"center"});
-        window.setTimeout(()=>card.classList.remove("panora-product-focus"),2200);
+        card.scrollIntoView({behavior:"smooth",block:"start"});
       });
     };
     modal.querySelectorAll("[data-rw-product-details]").forEach(button=>{
