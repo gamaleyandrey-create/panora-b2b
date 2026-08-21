@@ -113,7 +113,7 @@
    prunePending(orders);saveSnap(orders);
  }
 
- // Panora 9.45 — targeted Supabase Realtime for orders and delivery chat.
+ // Panora 9.46 — targeted Supabase Realtime for orders and delivery chat.
  // The existing revision polling remains a rare safety fallback. If the Realtime
  // library, publication or connection is unavailable, Panora simply continues
  // with the normal fallback sync and no working flow is blocked.

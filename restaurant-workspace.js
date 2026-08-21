@@ -1789,7 +1789,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.45: orders started in the partner workspace skip the
+        // Panora 9.46: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1970,7 +1970,7 @@
     }
     activeTab = "home";
     renderAccountModal();
-    requestAnimationFrame(()=>openPanel(modal));
+    openPanel(modal);
   };
   window.panoraOpenPartnerProfile = () => {
     const modal=document.querySelector("#profileModal");
