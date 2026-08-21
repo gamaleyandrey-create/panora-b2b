@@ -313,19 +313,27 @@
     }
     if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
   }
+  // Panora 9.33: identical concurrent partner GETs share one network response.
+  const partnerInflightReads=new Map();
   async function api(path,options={},retry=true){
     await ensureSession();
-    try{return await fetchJson(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}})}
-    catch(error){
-      if(error.status===401&&retry){
-        try{await refreshSession();return api(path,options,false)}
-        catch(refreshError){throw refreshError}
+    const method=String(options.method||'GET').toUpperCase(),readKey=retry&&method==='GET'?String(path):'';
+    if(readKey&&partnerInflightReads.has(readKey))return partnerInflightReads.get(readKey);
+    const run=(async()=>{
+      try{return await fetchJson(`${cfg.url}/rest/v1/${path}`,{...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}})}
+      catch(error){
+        if(error.status===401&&retry){
+          try{await refreshSession();return api(path,options,false)}
+          catch(refreshError){throw refreshError}
+        }
+        if(error.status===401){
+          const friendly=expiredSessionError(error);clearBrokenSession(error);throw friendly;
+        }
+        throw error;
       }
-      if(error.status===401){
-        const friendly=expiredSessionError(error);clearBrokenSession(error);throw friendly;
-      }
-      throw error;
-    }
+    })();
+    if(!readKey)return run;partnerInflightReads.set(readKey,run);
+    try{return await run}finally{if(partnerInflightReads.get(readKey)===run)partnerInflightReads.delete(readKey)}
   }
   function readPendingDeliveryConfirmations(){
     try{const rows=JSON.parse(localStorage.getItem(DELIVERY_CONFIRMATION_QUEUE_KEY)||'[]');return Array.isArray(rows)?rows:[]}
@@ -507,7 +515,7 @@
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&select=*`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),api(`payments?restaurant_id=eq.${rid}&select=*`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
+        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       if(restaurantRows[0].active===false){
@@ -602,8 +610,8 @@
     partnerFinanceLoading=(async()=>{
       const rid=encodeURIComponent(account.id);
       const [notes,payments]=await Promise.all([
-        api(`delivery_notes?restaurant_id=eq.${rid}&select=*`),
-        api(`payments?restaurant_id=eq.${rid}&select=*`)
+        api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),
+        api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`)
       ]);
       const currentOrders=read('panora-orders')||[];
       const beforeNotes=read('panora-delivery-notes')||[];
