@@ -683,7 +683,7 @@
           const displayWholesale=qty===0;
           const displayUnitPrice=displayWholesale?product.wholesalePrice:unitPrice;
           return `<article class="rw-new-product-card" data-rw-new-product="${esc(product.id)}">
-            <div class="rw-new-product-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" height="320" loading="eager" decoding="async" data-rw-product-image></div>
+            <button type="button" class="rw-new-product-photo rw-product-details-link" data-rw-product-details="${esc(product.id)}" aria-label="${esc(lang==="ru"?`Подробнее: ${product.name}`:lang==="es"?`Más información: ${product.name}`:`More about ${product.name}`)}"><img src="${esc(product.image)}" alt="${esc(product.name)}" width="320" height="320" loading="eager" decoding="async" data-rw-product-image></button>
             <div class="rw-new-product-body"><h4>${esc(product.name)}</h4>
               <div class="rw-new-product-price"><span data-rw-new-price-kind>${(displayWholesale||isWholesale)?(lang==="ru"?"Ваша оптовая цена":lang==="es"?"Tu precio mayorista":"Your wholesale price"):(lang==="ru"?"Розничная цена":lang==="es"?"Precio minorista":"Retail price")}</span><strong data-rw-new-unit-price>${portalMoney(displayUnitPrice)}</strong> <small>${lang==="ru"?"/ шт.":lang==="es"?"/ ud.":"/ pc."}</small></div>
               <small class="rw-new-wholesale-rule">${lang==="ru"?`Оптовая цена ${portalMoney(product.wholesalePrice)}/шт. от ${product.wholesaleMinQty} шт.`:lang==="es"?`Mayorista ${portalMoney(product.wholesalePrice)}/ud. desde ${product.wholesaleMinQty} uds.`:`Wholesale ${portalMoney(product.wholesalePrice)}/pc from ${product.wholesaleMinQty} pcs`}</small>
@@ -1759,6 +1759,34 @@
         refreshNewOrderSummary();
       };
     });
+    const openPublicProductDetails=(productId)=>{
+      const id=String(productId||"").trim();if(!id)return;
+      try{sessionStorage.setItem("panora-product-return-cabinet","1")}catch{}
+      try{history.pushState({panoraView:"product",productId:id},"",`#product=${encodeURIComponent(id)}`)}catch{}
+      closePanels();
+      try{renderProducts?.()}catch{}
+      requestAnimationFrame(()=>{
+        const selector=`[data-tier-product="${CSS.escape(id)}"]`;
+        const card=document.querySelector(selector);if(!card)return;
+        document.querySelectorAll(".panora-partner-product-return").forEach(node=>node.remove());
+        const back=document.createElement("button");
+        back.type="button";back.className="panora-partner-product-return";
+        back.textContent=lang==="ru"?"← Вернуться в кабинет":lang==="es"?"← Volver al área de socio":"← Back to partner area";
+        back.onclick=()=>{
+          try{sessionStorage.removeItem("panora-product-return-cabinet")}catch{}
+          if(location.hash.startsWith("#product=")){try{history.back();return}catch{}}
+          window.panoraOpenPartnerCabinet?.();
+        };
+        card.prepend(back);
+        card.classList.add("panora-product-focus");
+        card.scrollIntoView({behavior:"smooth",block:"center"});
+        window.setTimeout(()=>card.classList.remove("panora-product-focus"),2200);
+      });
+    };
+    modal.querySelectorAll("[data-rw-product-details]").forEach(button=>{
+      button.onclick=(event)=>{event.preventDefault();event.stopPropagation();openPublicProductDetails(button.dataset.rwProductDetails)};
+    });
+
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
@@ -1900,6 +1928,14 @@
       });
     }
   };
+  window.addEventListener("popstate",()=>{
+    let shouldReturn=false;try{shouldReturn=sessionStorage.getItem("panora-product-return-cabinet")==="1"}catch{}
+    if(!shouldReturn||!account||location.hash.startsWith("#product="))return;
+    try{sessionStorage.removeItem("panora-product-return-cabinet")}catch{}
+    document.querySelectorAll(".panora-partner-product-return").forEach(node=>node.remove());
+    window.panoraOpenPartnerCabinet?.();
+  });
+
   window.panoraOpenPartnerOrders = () => {
     if (!account) {
       openPanel(document.querySelector("#profileModal"));

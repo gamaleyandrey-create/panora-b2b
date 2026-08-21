@@ -1824,3 +1824,11 @@
   min-height:2.7em;
   max-height:2.7em;
 }
+
+
+/* Panora 9.42: partner product image opens the public product story/details. */
+.rw-product-details-link{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:inherit;cursor:pointer}
+.rw-product-details-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.panora-partner-product-return{display:inline-flex;align-items:center;gap:.35rem;margin:0 0 .85rem;padding:.58rem .78rem;border:1px solid rgba(30,45,34,.18);border-radius:999px;background:#fff;color:inherit;font:600 .82rem/1.1 Manrope,system-ui,sans-serif;cursor:pointer}
+.product-card.panora-product-focus{animation:panoraProductFocus 1.2s ease both}
+@keyframes panoraProductFocus{0%,100%{box-shadow:inherit}35%{box-shadow:0 0 0 4px rgba(205,144,63,.22),0 18px 42px rgba(34,42,31,.14)}}
