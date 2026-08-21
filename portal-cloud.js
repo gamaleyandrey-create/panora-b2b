@@ -227,7 +227,7 @@
       catch(retry){if(!isPortalStorageQuotaError(retry))throw retry;return false}
     }
   };
-  const saveSession=value=>{session=value;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
+  const saveSession=value=>{session=value;window.panoraPartnerSupabaseSession=value||null;if(value)write(SESSION_KEY,value);else localStorage.removeItem(SESSION_KEY)};
   const labels=(ru,en,es)=>lang==='es'?es:lang==='en'?en:ru;
   let loginCooldownTimer=0,loginCooldownUntil=0;
   function cooldownSeconds(message=''){
@@ -804,7 +804,7 @@
       }
     };
     tick();
-    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine&&isPartnerBackgroundLeader())tick()},180000);
+    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine&&isPartnerBackgroundLeader())tick()},1800000);
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);clearInterval(partnerLeaderHeartbeat);partnerOrderPoll=0;partnerLeaderHeartbeat=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceParts={orders:'',payments:'',notes:''};partnerCommerceRevisionUnavailable=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
@@ -1329,7 +1329,7 @@
     }finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
-  session=read(SESSION_KEY);
+  session=read(SESSION_KEY);window.panoraPartnerSupabaseSession=session||null;
   (async()=>{try{
     if(session?.access_token&&!session.user){
       try{

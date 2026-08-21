@@ -112,6 +112,68 @@
    });
    prunePending(orders);saveSnap(orders);
  }
+
+ // Panora 9.39 — targeted Supabase Realtime for orders and delivery chat.
+ // The existing revision polling remains a rare safety fallback. If the Realtime
+ // library, publication or connection is unavailable, Panora simply continues
+ // with the normal fallback sync and no working flow is blocked.
+ let realtimeClient=null,realtimeChannel=null,realtimeLoadPromise=null,realtimeRefreshTimer=0,realtimeLastEventAt=0;
+ function currentRealtimeSession(){return document.body.classList.contains('admin-page')?window.panoraSupabaseSession:window.panoraPartnerSupabaseSession}
+ function loadRealtimeLibrary(){
+   if(window.supabase?.createClient)return Promise.resolve(window.supabase);
+   if(realtimeLoadPromise)return realtimeLoadPromise;
+   realtimeLoadPromise=new Promise((resolve,reject)=>{
+     const existing=document.querySelector('script[data-panora-realtime-lib]');
+     if(existing){existing.addEventListener('load',()=>resolve(window.supabase),{once:true});existing.addEventListener('error',reject,{once:true});return}
+     const script=document.createElement('script');script.dataset.panoraRealtimeLib='1';script.async=true;
+     script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+     script.onload=()=>window.supabase?.createClient?resolve(window.supabase):reject(new Error('Supabase Realtime library unavailable'));
+     script.onerror=()=>reject(new Error('Supabase Realtime library failed to load'));document.head.append(script);
+   }).catch(error=>{console.warn('Panora Realtime disabled',error);return null});
+   return realtimeLoadPromise;
+ }
+ function scheduleRealtimeOrderRefresh(){
+   clearTimeout(realtimeRefreshTimer);realtimeRefreshTimer=setTimeout(()=>{
+     if(document.hidden||!navigator.onLine)return;
+     const admin=document.body.classList.contains('admin-page');
+     const fn=admin?window.panoraCloud?.refreshOrders:window.panoraPortalCloud?.refreshOrders;
+     Promise.resolve(fn?.()).catch(error=>console.warn('Panora Realtime order refresh',error));
+   },450);
+ }
+ async function startRealtime(){
+   const cfg=window.PANORA_SUPABASE||{},session=currentRealtimeSession();
+   if(!cfg.url||!cfg.publishableKey||!session?.access_token||!navigator.onLine)return false;
+   const lib=await loadRealtimeLibrary();if(!lib?.createClient)return false;
+   try{
+     if(realtimeChannel&&realtimeClient){await realtimeClient.removeChannel(realtimeChannel).catch(()=>{});realtimeChannel=null}
+     realtimeClient=realtimeClient||lib.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:4}}});
+     realtimeClient.realtime.setAuth(session.access_token);
+     const admin=document.body.classList.contains('admin-page'),restaurantId=!admin?String(localStorage.getItem('panora-account-id')||''):'';
+     const orderFilter=!admin&&restaurantId?`restaurant_id=eq.${restaurantId}`:undefined;
+     realtimeChannel=realtimeClient.channel(`panora-${admin?'admin':restaurantId||'partner'}-${Math.random().toString(36).slice(2)}`);
+     realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:'orders',...(orderFilter?{filter:orderFilter}:{})},payload=>{
+       realtimeLastEventAt=Date.now();scheduleRealtimeOrderRefresh();window.dispatchEvent(new CustomEvent('panora:realtime-order',{detail:payload}));
+     });
+     realtimeChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'order_messages',...(orderFilter?{filter:orderFilter}:{})},payload=>{
+       realtimeLastEventAt=Date.now();window.dispatchEvent(new CustomEvent('panora:realtime-message',{detail:payload}));
+       window.panoraOrderMessages?.refreshUnread?.();
+     });
+     realtimeChannel.subscribe(status=>{
+       const active=status==='SUBSCRIBED';window.panoraRealtimeActive=active;
+       if(active)window.panoraRealtimeConnectedAt=Date.now();
+       window.dispatchEvent(new CustomEvent('panora:realtime-status',{detail:{active,status}}));
+     });
+     return true;
+   }catch(error){window.panoraRealtimeActive=false;console.warn('Panora Realtime fallback',error);return false}
+ }
+ function stopRealtime(){window.panoraRealtimeActive=false;if(realtimeChannel&&realtimeClient)realtimeClient.removeChannel(realtimeChannel).catch(()=>{});realtimeChannel=null}
+ window.addEventListener('panora:authenticated',()=>setTimeout(startRealtime,700));
+ window.addEventListener('panora:partner-data-updated',()=>setTimeout(startRealtime,700));
+ window.addEventListener('online',()=>setTimeout(startRealtime,500));
+ window.addEventListener('offline',stopRealtime);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!window.panoraRealtimeActive||Date.now()-Number(window.panoraRealtimeConnectedAt||0)>3600000))startRealtime()});
+ setTimeout(()=>startRealtime(),1600);
+
  function settings(){/* no floating bell; header control is managed by order-notifications.js */}
  window.addEventListener('panora:notification-preference',event=>{sound=!!event.detail?.enabled;localStorage.setItem(SOUND_KEY,sound?'1':'0');if(sound)beep('success')});
  window.addEventListener('storage',e=>{if(e.key==='panora-orders')setTimeout(compare,0);if(e.key===PENDING_KEY)setTimeout(()=>restorePending(readOrders()),0)});

@@ -198,7 +198,7 @@
     else dialog.querySelector("[data-order-message-list]").innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     syncPushState().catch(()=>{});
     await load({quiet:cachedRows.length>0,fastOpen:true});
-    poll=setInterval(()=>{if(dialog&&!document.hidden)load({quiet:true})},30000);
+    poll=setInterval(()=>{if(dialog&&!document.hidden&&!window.panoraRealtimeActive)load({quiet:true})},30000);
   };
 
   const applyUnread=(map,{remember=true}={})=>{
@@ -285,10 +285,15 @@
   });
   const initialMessagePaint=()=>{scheduleUnreadPaint();tryInitialPushChat()};
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initialMessagePaint,{once:true});else initialMessagePaint();
+  window.addEventListener("panora:realtime-message",event=>{
+    const row=event.detail?.new||event.detail?.record||{};
+    refreshUnread().catch(()=>{});
+    if(dialog&&currentOrderId&&String(row.order_id||"")===String(currentOrderId))load({quiet:true});
+  });
   window.addEventListener("panora:partner-data-updated",()=>setTimeout(()=>refreshUnread(),500));
   window.addEventListener("panora:partner-push-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   window.addEventListener("panora:admin-webpush-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshUnread()});
-  setInterval(()=>{if(!document.hidden&&navigator.onLine)refreshUnread()},120000);
+  setInterval(()=>{if(!document.hidden&&navigator.onLine&&!window.panoraRealtimeActive)refreshUnread()},120000);
   setTimeout(()=>refreshUnread(),1200);
 })();
