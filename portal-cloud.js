@@ -1111,7 +1111,17 @@
     status:partnerPushStatus,
     repair:partnerPushRepairRegistration
   };
-  window.panoraRestaurantProfile={save:async details=>{
+  window.panoraRestaurantProfile={changePassword:async({currentPassword,newPassword})=>{
+    await ensureSession();
+    const email=String(session?.user?.email||account?.email||'').trim().toLowerCase();
+    if(!email)throw new Error(labels('Сессия входа устарела. Войдите заново.','Your sign-in session expired. Sign in again.','La sesión ha caducado. Inicia sesión de nuevo.'));
+    const verified=await fetchJson(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email,password:String(currentPassword||'')})}).catch(error=>{throw new Error(labels('Текущий пароль указан неверно.','The current password is incorrect.','La contraseña actual no es correcta.'))});
+    const next=verified?.access_token?verified:verified?.session;
+    if(!next?.access_token)throw new Error(labels('Не удалось подтвердить текущий пароль.','Could not verify the current password.','No se pudo verificar la contraseña actual.'));
+    saveSession(next);
+    await fetchJson(`${cfg.url}/auth/v1/user`,{method:'PUT',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${next.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({password:String(newPassword||'')})});
+    return true;
+  },save:async details=>{
     if(!account)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
     if(!navigator.onLine)throw new Error(labels('Для сохранения профиля подключитесь к интернету','Connect to the internet to save your profile','Conéctate a internet para guardar el perfil'));
     const patch={name:String(details.name||'').trim().slice(0,120),phone:String(details.phone||'').trim().slice(0,30),address:String(details.address||'').trim().slice(0,300),whatsapp:String(details.whatsapp||'').trim().slice(0,30)||null,telegram:String(details.telegram||'').trim().slice(0,120)||null,extra_messengers:safeMessengers(details.extraMessengers),legal_name:String(details.legalName||'').trim().slice(0,180)||null,tax_id:String(details.taxId||'').trim().toUpperCase().slice(0,25)||null,billing_address:String(details.billingAddress||'').trim().slice(0,300)||null,contact_person:String(details.contactPerson||'').trim().slice(0,120)||null,delivery_comment:String(details.deliveryComment||'').trim().slice(0,500)||null,receiving_hours:String(details.receivingHours||'').trim().slice(0,80)||null,receiving_days:String(details.receivingDays||'').trim().slice(0,120)||null,notify_order:details.notifyOrder==='on',notify_shipment:details.notifyShipment==='on',notify_invoice:details.notifyInvoice==='on',notify_payment:details.notifyPayment==='on',language:['ru','en','es'].includes(details.language)?details.language:'ru',partner_type:['restaurant','shop','hotel','cafe','catering','other'].includes(details.partnerType)?details.partnerType:'other',updated_at:new Date().toISOString()};
