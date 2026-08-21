@@ -4,7 +4,8 @@
  'use strict';
  const cfg=window.PANORA_SUPABASE;
  if(!cfg?.url||!cfg?.publishableKey)return;
- let loading=null,timer=0;
+ let loading=null,timer=0,lastAutoFetchAt=0;
+ const AUTO_FETCH_KEY='panora-public-catalog-auto-fetch-v932';
  const endpoint=()=>`${cfg.url}/rest/v1/rpc/panora_public_catalog`;
  async function fetchCatalog(){
   if(loading)return loading;
@@ -74,14 +75,24 @@
   })().finally(()=>loading=null);
   return loading;
  }
+ const autoFetchCatalog=({force=false}={})=>{
+  if(document.hidden||!navigator.onLine)return Promise.resolve([]);
+  const now=Date.now();
+  let sharedAt=0;try{sharedAt=Number(localStorage.getItem(AUTO_FETCH_KEY)||0)}catch{}
+  // localStorage is shared by tabs: a second catalogue tab reuses the first tab's fresh cache.
+  if(!force&&(now-lastAutoFetchAt<300000||now-sharedAt<300000))return loading||Promise.resolve([]);
+  lastAutoFetchAt=now;try{localStorage.setItem(AUTO_FETCH_KEY,String(now))}catch{}
+  return fetchCatalog().catch(error=>{console.warn('Panora retail catalog refresh',error);return[]});
+ };
  function start(){
   clearInterval(timer);
-  fetchCatalog().catch(error=>console.warn('Panora retail catalog refresh',error));
-  timer=setInterval(()=>{if(!document.hidden&&navigator.onLine)fetchCatalog().catch(()=>{})},600000);
+  autoFetchCatalog({force:true});
+  // Public catalogue changes rarely. User actions elsewhere still dispatch direct refresh events.
+  timer=setInterval(()=>autoFetchCatalog(),1800000);
  }
  window.panoraPublicCatalog={refresh:fetchCatalog,start};
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchCatalog().catch(()=>{})});
- window.addEventListener('focus',()=>fetchCatalog().catch(()=>{}));
- window.addEventListener('online',()=>fetchCatalog().catch(()=>{}));
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoFetchCatalog()});
+ window.addEventListener('focus',()=>autoFetchCatalog());
+ window.addEventListener('online',()=>autoFetchCatalog({force:true}));
  start();
 })();

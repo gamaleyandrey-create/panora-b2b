@@ -727,7 +727,7 @@
       }
     };
     tick();
-    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},120000);
+    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},180000);
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature=''}
   let partnerPricingPoll=0,partnerPricingLoading=null;
@@ -782,14 +782,28 @@
       console.warn('Panora partner pricing refresh',error);
     });
     tick();
-    partnerPricingPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},600000);
+    partnerPricingPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},1800000);
   }
   function stopPartnerPricingPolling(){clearInterval(partnerPricingPoll);partnerPricingPoll=0}
 
   const refreshPartnerLive=()=>refreshPartnerOrders().then(()=>refreshPartnerFinance()).catch(()=>{});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
-  window.addEventListener('focus',()=>{if(session?.user&&account){refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
-  window.addEventListener('online',()=>{if(session?.user&&account){flushPendingDeliveryConfirmations().catch(()=>{});refreshPartnerLive();refreshPartnerPricing().catch(()=>{})}});
+  let partnerWakeAt=0,partnerPricingWakeAt=0,partnerWakePromise=null;
+  const refreshPartnerOnWake=({forcePricing=false}={})=>{
+    if(!session?.user||!account||!navigator.onLine)return Promise.resolve(false);
+    if(partnerWakePromise)return partnerWakePromise;
+    const now=Date.now();
+    if(now-partnerWakeAt<15000)return Promise.resolve(false);
+    partnerWakeAt=now;
+    partnerWakePromise=(async()=>{
+      await refreshPartnerLive();
+      if(forcePricing||now-partnerPricingWakeAt>=300000){partnerPricingWakeAt=now;await refreshPartnerPricing().catch(()=>{})}
+      return true;
+    })().finally(()=>{partnerWakePromise=null});
+    return partnerWakePromise;
+  };
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPartnerOnWake()});
+  window.addEventListener('focus',()=>refreshPartnerOnWake());
+  window.addEventListener('online',()=>{if(session?.user&&account){flushPendingDeliveryConfirmations().catch(()=>{});refreshPartnerOnWake({forcePricing:true})}});
 
   window.addEventListener('storage',event=>{
     if(!session?.user||!account)return;
@@ -1260,6 +1274,6 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(()=>{if(session?.user&&!loadPromise&&!document.hidden&&navigator.onLine)loadAll().catch(()=>{})},600000);
+  setInterval(()=>{if(session?.user&&!loadPromise&&!document.hidden&&navigator.onLine)loadAll().catch(()=>{})},1800000);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();
