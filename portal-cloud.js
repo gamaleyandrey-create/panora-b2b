@@ -905,13 +905,24 @@
     window.setTimeout(()=>{
       const root=document.documentElement;
       if(!account){root.classList.remove('panora-partner-boot');root.classList.add('panora-mobile-route-ready');return;}
+      const mobile=Boolean(window.matchMedia?.('(max-width: 760px)').matches);
       const modal=document.querySelector('#profileModal');
-      if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function'){
-        window.panoraOpenPartnerCabinet();
-        requestAnimationFrame(()=>{root.classList.add('panora-mobile-route-ready');root.classList.remove('panora-partner-boot')});
+      if(mobile){
+        // Panora 9.47: portal-cloud loads before restaurant-workspace.js.
+        // Keep the public page hidden until the workspace module confirms that
+        // the authenticated partner cabinet has actually opened.
+        root.classList.add('panora-partner-boot');
+        root.classList.remove('panora-mobile-route-ready');
+        window.panoraPendingPartnerCabinetOpen=true;
+        if(typeof window.panoraOpenPartnerCabinet==='function'){
+          window.panoraOpenPartnerCabinet();
+        }else{
+          window.dispatchEvent(new CustomEvent('panora:open-partner-cabinet'));
+        }
         return;
       }
-      if(modal)openPanel(modal);
+      if(typeof window.panoraOpenPartnerCabinet==='function')window.panoraOpenPartnerCabinet();
+      else if(modal)openPanel(modal);
       root.classList.add('panora-mobile-route-ready');
       root.classList.remove('panora-partner-boot');
     },delay);
