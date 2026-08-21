@@ -610,7 +610,7 @@
       // Panora 6.67: a no-op cloud hydration must not replace cart <img> nodes.
       if(!hadAccount||productsChanged||accountChanged)renderCart();
       if(!hadAccount||accountChanged)window.dispatchEvent(new CustomEvent('panora:partner-data-updated',{detail:{accountChanged,productsChanged}}));
-      // Panora 9.51: the mobile workspace may already be open while the
+      // Panora 9.52: the mobile workspace may already be open while the
       // authoritative partner payload is still hydrating. Always repaint an
       // open workspace after orders / delivery notes / payments are installed;
       // otherwise an early empty render can remain visible until the next sync.
@@ -943,7 +943,7 @@
       const mobile=Boolean(window.matchMedia?.('(max-width: 760px)').matches);
       const modal=document.querySelector('#profileModal');
       if(mobile){
-        // Panora 9.51: portal-cloud loads before restaurant-workspace.js.
+        // Panora 9.52: portal-cloud loads before restaurant-workspace.js.
         // Keep the public page hidden until the workspace module confirms that
         // the authenticated partner cabinet has actually opened.
         root.classList.add('panora-partner-boot');

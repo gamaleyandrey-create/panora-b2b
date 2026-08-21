@@ -1497,14 +1497,23 @@
       try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
       catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
     };
-    modal.querySelectorAll("[data-rw-tab]").forEach(
-      (button) =>
-        (button.onclick = () => {
-          activeTab = button.dataset.rwTab;
-          openFilterMenu = "";
-          renderAccountModal();
-        }),
-    );
+    // Panora 9.52: one delegated handler for the partner bottom navigation.
+    // On mobile the fixed bar can be rebuilt during cloud refresh; delegation
+    // keeps every tab (especially delivery notes) clickable after a repaint.
+    const workspaceNav = modal.querySelector(".rw-nav");
+    if (workspaceNav) workspaceNav.onclick = (event) => {
+      const button = event.target.closest("[data-rw-tab]");
+      if (!button || !workspaceNav.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activeTab = button.dataset.rwTab || "home";
+      openFilterMenu = "";
+      if (activeTab === "notes") {
+        noteFiltersOpen = false;
+        noteToReveal = "";
+      }
+      renderAccountModal();
+    };
     modal.querySelectorAll("[data-rw-order-view]").forEach(
       (button) =>
         (button.onclick = () => {
@@ -1796,7 +1805,7 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.51: orders started in the partner workspace skip the
+        // Panora 9.52: orders started in the partner workspace skip the
         // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
@@ -1979,7 +1988,7 @@
     activeTab = "home";
     renderAccountModal();
     openPanel(modal);
-    // Panora 9.51: only reveal the mobile route after the workspace is open.
+    // Panora 9.52: only reveal the mobile route after the workspace is open.
     if(window.matchMedia?.('(max-width: 760px)').matches){
       window.panoraPendingPartnerCabinetOpen=false;
       document.documentElement.classList.add('panora-mobile-route-ready');
