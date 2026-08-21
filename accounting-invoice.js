@@ -330,6 +330,7 @@ ${lines}
     const order = findOrder(note.orderId);
     const meta = options.documentData || {};
     const variant = options.variant === "albaran" ? "albaran" : "factura";
+    const displayTitle = meta.displayTitle || text(variant);
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
     const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
@@ -351,12 +352,12 @@ ${lines}
     dialog.className = "accounting-dialog";
     const side = options.side || (options.context === "restaurant" ? "restaurant" : "bakery");
     dialog.innerHTML = `<div class="accounting-toolbar">
-      <span><strong>${esc(text(variant))}</strong><small>${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</small></span>
+      <span><strong>${esc(displayTitle)}</strong><small>${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</small></span>
       ${options.context !== "restaurant" ? `<label>${esc(text("choose"))}<select class="accounting-side"><option value="bakery"${side === "bakery" ? " selected" : ""}>${esc(text("bakeryCopy"))}</option><option value="restaurant"${side === "restaurant" ? " selected" : ""}>${esc(text("restaurantCopy"))}</option></select></label>` : ""}
       <button type="button" class="accounting-x" aria-label="${esc(text("close"))}">×</button>
     </div>
     <article class="accounting-sheet">
-      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(text(variant))}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Дата операции</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
+      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(displayTitle)}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Дата операции</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
       <section class="accounting-parties">
         <div><h2>${esc(text("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(text("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(text("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(text("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
         <div><h2>${esc(text("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(text("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(text("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(text("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
@@ -365,7 +366,7 @@ ${lines}
         const issued=(meta.lines||[]).find(x=>x.product_id===item.product),price=Number(issued?.unit_price_net ?? note.prices?.[item.product] ?? 0),amount=Number(issued?.tax_base ?? (Number(item.quantity)*price));
         return `<div class="accounting-line"><strong>${esc(issued?.name||productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(amount))}</strong></div>`;
       }).join("")}</div>
-      <section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
+      ${meta.aeatType?`<section class="accounting-tax-meta"><p><span>Tipo AEAT</span><strong>${esc(meta.aeatType)}</strong></p>${meta.rectifiesNumber?`<p><span>Rectifica</span><strong>${esc(meta.rectifiesNumber)}</strong></p>`:''}${meta.rectificationMode?`<p><span>Modalidad</span><strong>${esc(meta.rectificationMode)}</strong></p>`:''}</section>`:''}<section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
       <footer><span>${esc(text("bakerySignature"))} __________________</span><span>${esc(text("restaurantSignature"))} __________________</span></footer>
     </article>
 <div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(text("close"))}</button><button type="button" class="secondary accounting-csv">${esc(text("csv"))}</button>${variant === "factura" ? `<button type="button" class="secondary accounting-edi">${esc(text("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(text("print"))}</button></div>`;
