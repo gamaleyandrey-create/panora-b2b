@@ -313,7 +313,7 @@
     }
     if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
   }
-  // Panora 9.35: identical concurrent partner GETs share one network response.
+  // Panora 9.36: identical concurrent partner GETs share one network response.
   const partnerInflightReads=new Map();
   async function api(path,options={},retry=true){
     await ensureSession();
@@ -610,9 +610,9 @@
     receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||''),updatedAt:String(payment?.updatedAt||'')
   })).sort((a,b)=>a.id.localeCompare(b.id)));
   let partnerOrdersHydrated=false,partnerFinanceHydrated=false;
-  const partnerOrdersWatermarkKey=()=>`panora-partner-orders-watermark-v934:${String(account?.id||'none')}`;
-  const partnerPaymentsWatermarkKey=()=>`panora-partner-payments-watermark-v934:${String(account?.id||'none')}`;
-  async function refreshPartnerFinance(){
+  const partnerOrdersWatermarkKey=()=>`panora-partner-orders-watermark-v936:${String(account?.id||'none')}`;
+  const partnerPaymentsWatermarkKey=()=>`panora-partner-payments-watermark-v936:${String(account?.id||'none')}`;
+  async function refreshPartnerFinance({notes:wantNotes=true,payments:wantPayments=true}={}){
     if(partnerFinanceLoading)return partnerFinanceLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return null;
     partnerFinanceLoading=(async()=>{
@@ -620,14 +620,14 @@
       const paymentWatermark=partnerFinanceHydrated?String(localStorage.getItem(partnerPaymentsWatermarkKey())||''):'';
       const paymentDelta=paymentWatermark?`&updated_at=gt.${encodeURIComponent(paymentWatermark)}`:'';
       const [notes,paymentRows]=await Promise.all([
-        api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),
-        api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${paymentDelta}`)
+        wantNotes?api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`):Promise.resolve(null),
+        wantPayments?api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${paymentDelta}`):Promise.resolve(null)
       ]);
       const currentOrders=read('panora-orders')||[];
       const beforeNotes=read('panora-delivery-notes')||[];
       const beforePayments=read('panora-payments')||[];
-      const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:currentOrders.find(o=>o.id===n.order_id)?.items||[],prices:currentOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
-      const changedPayments=(paymentRows||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      const mappedNotes=wantNotes?(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:currentOrders.find(o=>o.id===n.order_id)?.items||[],prices:currentOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null})):beforeNotes;
+      const changedPayments=wantPayments?(paymentRows||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null})):[];
       let mappedPayments;
       if(paymentWatermark){
         const merged=new Map(beforePayments.map(payment=>[String(payment.id),payment]));
@@ -635,7 +635,7 @@
         mappedPayments=[...merged.values()].sort((a,b)=>String(a?.receivedAt||a?.date||'').localeCompare(String(b?.receivedAt||b?.date||'')));
       }else mappedPayments=changedPayments;
       const newestPayment=(paymentRows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,paymentWatermark);
-      if(newestPayment)localStorage.setItem(partnerPaymentsWatermarkKey(),newestPayment);
+      if(wantPayments&&newestPayment)localStorage.setItem(partnerPaymentsWatermarkKey(),newestPayment);
       partnerFinanceHydrated=true;
       const notesChanged=partnerNoteSignature(beforeNotes)!==partnerNoteSignature(mappedNotes);
       const paymentsChanged=partnerPaymentSignature(beforePayments)!==partnerPaymentSignature(mappedPayments);
@@ -754,21 +754,24 @@
     else try{renderAccountModal(true)}catch(error){console.warn('Panora partner cutoff render',error)}
     return true;
   }
-  let partnerCommerceRevision='',partnerCommerceRevisionUnavailable=false,partnerCommerceRevisionPromise=null;
+  let partnerCommerceRevision='',partnerCommerceParts={orders:'',payments:'',notes:''},partnerCommerceRevisionUnavailable=false,partnerCommerceRevisionPromise=null;
   async function partnerCommerceRevisionChanged(){
-    if(partnerCommerceRevisionUnavailable)return true;
+    if(partnerCommerceRevisionUnavailable)return {changed:true,orders:true,payments:true,notes:true};
     if(partnerCommerceRevisionPromise)return partnerCommerceRevisionPromise;
     partnerCommerceRevisionPromise=(async()=>{
       try{
         const rows=await api('rpc/panora_partner_commerce_revision',{method:'POST',body:'{}'});
         const row=Array.isArray(rows)?rows[0]:rows,next=String(row?.revision||'');
-        if(!next)return true;
-        if(!partnerCommerceRevision){partnerCommerceRevision=next;return true}
-        if(next===partnerCommerceRevision)return false;
-        partnerCommerceRevision=next;return true;
+        if(!next)return {changed:true,orders:true,payments:true,notes:true};
+        const parts={orders:String(row?.orders_revision||''),payments:String(row?.payments_revision||''),notes:String(row?.notes_revision||'')};
+        if(!partnerCommerceRevision){partnerCommerceRevision=next;partnerCommerceParts=parts;return {changed:true,orders:true,payments:true,notes:true}}
+        if(next===partnerCommerceRevision)return {changed:false,orders:false,payments:false,notes:false};
+        const componentAware=Boolean(parts.orders||parts.payments||parts.notes);
+        const changed={changed:true,orders:!componentAware||parts.orders!==partnerCommerceParts.orders,payments:!componentAware||parts.payments!==partnerCommerceParts.payments,notes:!componentAware||parts.notes!==partnerCommerceParts.notes};
+        partnerCommerceRevision=next;partnerCommerceParts=parts;return changed;
       }catch(error){
         const raw=String(error?.message||error||'');
-        if(/panora_partner_commerce_revision|PGRST202|does not exist|schema cache/i.test(raw)){partnerCommerceRevisionUnavailable=true;return true}
+        if(/panora_partner_commerce_revision|PGRST202|does not exist|schema cache/i.test(raw)){partnerCommerceRevisionUnavailable=true;return {changed:true,orders:true,payments:true,notes:true}}
         throw error;
       }
     })().finally(()=>{partnerCommerceRevisionPromise=null});
@@ -780,9 +783,10 @@
     partnerCancelabilitySignature=currentPartnerCancelabilitySignature();
     const tick=async()=>{
       try{
-        // Panora 9.35: skip order/finance table reads when the server revision is unchanged.
-        if(!(await partnerCommerceRevisionChanged())){refreshPartnerCancelabilityIfChanged();return}
-        await refreshPartnerOrders();await refreshPartnerFinance();refreshPartnerCancelabilityIfChanged()
+        // Panora 9.36: skip order/finance table reads when the server revision is unchanged.
+        const changed=await partnerCommerceRevisionChanged();if(!changed?.changed){refreshPartnerCancelabilityIfChanged();return}
+        if(changed.orders)await refreshPartnerOrders();
+        if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments});refreshPartnerCancelabilityIfChanged()
       }
       catch(error){
         if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))return;
@@ -792,7 +796,7 @@
     tick();
     partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},180000);
   }
-  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceRevisionUnavailable=false}
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceParts={orders:'',payments:'',notes:''};partnerCommerceRevisionUnavailable=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
   async function refreshPartnerPricing(){
     if(partnerPricingLoading)return partnerPricingLoading;
@@ -1337,6 +1341,6 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine)return;try{if(await partnerCommerceRevisionChanged()){await refreshPartnerOrders();await refreshPartnerFinance()}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
+  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine)return;try{const changed=await partnerCommerceRevisionChanged();if(changed?.changed){if(changed.orders)await refreshPartnerOrders();if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments})}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();

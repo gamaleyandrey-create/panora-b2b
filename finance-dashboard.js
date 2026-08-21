@@ -63,11 +63,26 @@
     expense_type:row.expenseType,gross_amount:Number(row.grossAmount||0),vat_rate:Number(row.vatRate||0),
     vat_deductible:row.vatDeductible!==false
   });
+  let financeExpenseRevision='',financeExpenseRevisionUnavailable=false,financeExpenseLoad=null;
   const loadCloud=async()=>{
-    try{
-      const rows=await request('finance_expenses?select=id,expense_date,category,description,expense_type,gross_amount,vat_rate,vat_deductible&order=expense_date.desc,created_at.desc');
-      if(Array.isArray(rows)){expenses=rows.map(rowFromCloud);save(KEY,expenses);render()}
-    }catch{}
+    if(financeExpenseLoad)return financeExpenseLoad;
+    financeExpenseLoad=(async()=>{
+      try{
+        if(!financeExpenseRevisionUnavailable){
+          try{
+            const revRows=await request('rpc/panora_admin_finance_expense_revision',{method:'POST',body:'{}'}),revRow=Array.isArray(revRows)?revRows[0]:revRows,next=String(revRow?.revision||'');
+            if(next&&next===financeExpenseRevision)return;
+            if(next)financeExpenseRevision=next;
+          }catch(error){
+            if(/panora_admin_finance_expense_revision|PGRST202|does not exist|schema cache/i.test(String(error?.message||error||'')))financeExpenseRevisionUnavailable=true;
+            else throw error;
+          }
+        }
+        const rows=await request('finance_expenses?select=id,expense_date,category,description,expense_type,gross_amount,vat_rate,vat_deductible&order=expense_date.desc,created_at.desc');
+        if(Array.isArray(rows)){expenses=rows.map(rowFromCloud);save(KEY,expenses);render()}
+      }catch{}
+    })().finally(()=>{financeExpenseLoad=null});
+    return financeExpenseLoad;
   };
   const retailOrderFromCloud=row=>({
     id:String(row.id||''),number:Number(row.order_number||0),source:String(row.source||'stock'),fulfillment:String(row.fulfillment||'pickup'),
@@ -517,7 +532,7 @@
   from.onchange=to.onchange=render;
   document.querySelector('#financeThisMonth').onclick=()=>{const d=new Date();from.value=iso(new Date(d.getFullYear(),d.getMonth(),1));to.value=iso(d);render()};
   document.querySelector('#financeThisYear').onclick=()=>{const d=new Date();from.value=`${d.getFullYear()}-01-01`;to.value=iso(d);render()};
-  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>{retailOrders=read('panora-retail-orders',[]);render();loadCloud();loadRetailCloud()},20)},true);
+  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>{retailOrders=read('panora-retail-orders',[]);render();loadCloud()},20)},true);
   window.addEventListener('panora:ingredient-costs-changed',render);
   window.addEventListener('panora:recipes-changed',render);
   window.addEventListener('panora:retail-orders-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
@@ -527,5 +542,5 @@
   window.addEventListener('panora:bake-completions-changed',render);
   window.addEventListener('panora:bake-completions-cloud-updated',render);
   window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
-  render();setTimeout(()=>{loadCloud();loadRetailCloud()},700);
+  render();setTimeout(()=>{if(document.querySelector('#view-finance')?.classList.contains('active'))loadCloud()},700);
 })();
