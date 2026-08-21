@@ -1871,20 +1871,24 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(recipeDirty)try{await flushRecipes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push(['рецептуры',error])}
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine)return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
+    const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
+    const viewIs=(...names)=>names.includes(activeAdminView());
+    // Panora 9.32: periodic cloud reads are scoped to the screen that can actually use them.
+    // User actions still save/refresh immediately; this only removes background table downloads.
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы, оплаты и накладные',error)}},120000);
-    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},600000);
-    clearInterval(planPoll);planPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;refreshPlansIfChanged().catch(error=>{
+    fail('заказы, оплаты и накладные',error)}},180000);
+    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('products','recipes'))return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},1800000);
+    clearInterval(planPoll);planPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','orders'))return;refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
-    })},120000);
-    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;syncRawStockNow({quiet:true}).catch(error=>{
+    })},300000);
+    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('rawstock','purchase','recipes'))return;syncRawStockNow({quiet:true}).catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       rawStockState('Ошибка облака','error',error?.message||String(error));
       console.warn('Panora raw stock refresh',error);
-    })},300000);
-    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;syncBakeCompletionsNow({quiet:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},300000);
+    })},900000);
+    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','rawstock','finance'))return;syncBakeCompletionsNow({quiet:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},900000);
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
@@ -1907,15 +1911,31 @@ window.panoraRecalculateBalances=recalculateBalances;
     });
   });
   window.addEventListener('panora:bake-completion-local-change',()=>{markPending('bakeCompletions');if(ready&&navigator.onLine)syncBakeCompletionsNow().catch(error=>console.warn('Panora bake completion save',error))});
+  const activeAdminWakeView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'orders';
   const refreshAdminCommerceOnWake=reason=>{
     if(!ready||!navigator.onLine)return Promise.resolve(false);
     const now=Date.now();
     if(adminWakeRefreshPromise)return adminWakeRefreshPromise;
-    if(now-adminWakeRefreshAt<700)return Promise.resolve(false);
+    // focus + visibilitychange + pageshow commonly fire together on mobile.
+    // One wake refresh per 15 seconds is enough; periodic timers cover the rest.
+    if(now-adminWakeRefreshAt<15000)return Promise.resolve(false);
     adminWakeRefreshAt=now;
     adminWakeRefreshPromise=(async()=>{
-      await loadOrders();await loadPayments();await loadDeliveryNotes();
-      window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason}}));
+      const view=activeAdminWakeView();
+      if(['orders','accounting','finance','reminders'].includes(view)){
+        await loadOrders();await loadPayments();await loadDeliveryNotes();
+        window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view}}));
+      }else if(view==='plan'){
+        await Promise.allSettled([refreshPlansIfChanged(),syncBakeCompletionsNow({quiet:true})]);
+      }else if(view==='rawstock'){
+        await Promise.allSettled([syncRawStockNow({quiet:true}),syncBakeCompletionsNow({quiet:true})]);
+      }else if(['recipes','purchase'].includes(view)){
+        await loadIngredientCosts();
+      }else if(view==='restaurants'){
+        await refreshRestaurantPricesDirect();
+      }else if(view==='products'){
+        await refreshProductsIfChanged();
+      }
       return true;
     })().finally(()=>{adminWakeRefreshPromise=null});
     return adminWakeRefreshPromise;
@@ -1937,10 +1957,10 @@ window.panoraRecalculateBalances=recalculateBalances;
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready){scheduleAdminCommerceWakeRefresh('visibility');loadIngredientCosts().catch(error=>console.warn('Panora ingredient price visibility refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price visibility refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock visibility refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion visibility refresh',error))}
+    if(!document.hidden&&ready)scheduleAdminCommerceWakeRefresh('visibility');
   });
   window.addEventListener('focus',()=>{
-    if(ready){scheduleAdminCommerceWakeRefresh('focus');loadIngredientCosts().catch(error=>console.warn('Panora ingredient price focus refresh',error));refreshRestaurantPricesDirect().catch(error=>console.warn('Panora restaurant price focus refresh',error));syncRawStockNow({quiet:true}).catch(error=>console.warn('Panora raw stock focus refresh',error));syncBakeCompletionsNow({quiet:true}).catch(error=>console.warn('Panora bake completion focus refresh',error))}
+    if(ready)scheduleAdminCommerceWakeRefresh('focus');
   });
   window.addEventListener('pageshow',()=>{if(ready)scheduleAdminCommerceWakeRefresh('pageshow',30)});
   navigator.serviceWorker?.addEventListener?.('message',event=>{
