@@ -1,5 +1,5 @@
--- Panora 9.30 — partner orders are NOT capped by bake-plan quantity.
--- Run once in Supabase SQL Editor after uploading Panora 9.30.
+-- Panora 9.31 — partner orders are NOT capped by bake-plan quantity.
+-- Run once in Supabase SQL Editor after uploading Panora 9.31.
 --
 -- Contract:
 -- * an open bake day is still required;
@@ -164,7 +164,7 @@ $$;
 revoke all on function public.panora_create_order(uuid,date,date,jsonb,text) from public;
 grant execute on function public.panora_create_order(uuid,date,date,jsonb,text) to authenticated;
 comment on function public.panora_create_order(uuid,date,date,jsonb,text) is
-  'Panora 9.30 partner order creation: scheduled bake day required; planned quantity does not cap partner order quantity.';
+  'Panora 9.31 partner order creation: scheduled bake day required; planned quantity does not cap partner order quantity.';
 
 notify pgrst,'reload schema';
 commit;

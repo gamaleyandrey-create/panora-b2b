@@ -1871,20 +1871,20 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(recipeDirty)try{await flushRecipes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     errors.push(['рецептуры',error])}
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
+    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine)return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы, оплаты и накладные',error)}},2000);
-    clearInterval(productPoll);productPoll=setInterval(()=>refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error)),3000);
-    clearInterval(planPoll);planPoll=setInterval(()=>refreshPlansIfChanged().catch(error=>{
+    fail('заказы, оплаты и накладные',error)}},120000);
+    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},600000);
+    clearInterval(planPoll);planPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;refreshPlansIfChanged().catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
-    }),2000);
-    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>syncRawStockNow({quiet:true}).catch(error=>{
+    })},120000);
+    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;syncRawStockNow({quiet:true}).catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       rawStockState('Ошибка облака','error',error?.message||String(error));
       console.warn('Panora raw stock refresh',error);
-    }),3000);
-    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>syncBakeCompletionsNow({quiet:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)}),2500);
+    })},300000);
+    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine)return;syncBakeCompletionsNow({quiet:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},300000);
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
@@ -1892,7 +1892,7 @@ window.panoraRecalculateBalances=recalculateBalances;
         if(window.panoraHandleSessionError?.(error))return;
         console.warn('Panora restaurant price refresh',error);
       });
-    },2000);
+    },600000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
@@ -1932,7 +1932,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       pending=readPending();
       if(!ready||retrying||!pendingCount())return;
       retrySync().catch(error=>console.warn('Panora pending retry',error));
-    },4000);
+    },30000);
   };
   startPendingWatchdog();
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
