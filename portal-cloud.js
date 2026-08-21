@@ -281,6 +281,7 @@
     saveSession(null);
     account=null;
     localStorage.removeItem('panora-account-id');
+    document.documentElement.classList.remove('panora-partner-boot');
     state('error',labels('Сессия истекла. Войдите снова.','Session expired. Sign in again.','La sesión ha caducado. Inicia sesión de nuevo.'));
     try{
       renderAccountModal();
@@ -899,9 +900,10 @@
     ));
     saveSession(next);await loadAll(true);
   }
-  function openMobilePartnerCabinetAfterAuth(delay=120){
+  function openMobilePartnerCabinetAfterAuth(delay=0){
     window.setTimeout(()=>{
-      if(!account)return;
+      if(!account){document.documentElement.classList.remove('panora-partner-boot');return;}
+      document.documentElement.classList.remove('panora-partner-boot');
       const modal=document.querySelector('#profileModal');
       if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function'){
         window.panoraOpenPartnerCabinet();
@@ -912,7 +914,7 @@
   }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();openMobilePartnerCabinetAfterAuth(180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(force=false){
@@ -1356,11 +1358,11 @@
         }else throw error;
       }
     }
-    if(session?.user){await loadAll(true);openMobilePartnerCabinetAfterAuth(120)}
-    else renderAccountModal();
+    if(session?.user){await loadAll(true);openMobilePartnerCabinetAfterAuth(0)}
+    else{document.documentElement.classList.remove('panora-partner-boot');renderAccountModal();}
   }catch(error){
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
-    else{state('error',error.message);renderAccountModal()}
+    else{document.documentElement.classList.remove('panora-partner-boot');state('error',error.message);renderAccountModal()}
   }})();
   setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine||!isPartnerBackgroundLeader())return;try{const changed=await partnerCommerceRevisionChanged();if(changed?.changed){if(changed.orders)await refreshPartnerOrders();if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments})}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)claimPartnerLeader(true)});

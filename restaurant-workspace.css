@@ -1826,14 +1826,14 @@
 }
 
 
-/* Panora 9.44: partner product image opens the public product story/details. */
+/* Panora 9.45: partner product image opens the public product story/details. */
 .rw-product-details-link{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:inherit;cursor:pointer}
 .rw-product-details-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 .panora-partner-product-return{display:inline-flex;align-items:center;gap:.35rem;margin:0 0 .85rem;padding:.58rem .78rem;border:1px solid rgba(30,45,34,.18);border-radius:999px;background:#fff;color:inherit;font:600 .82rem/1.1 Manrope,system-ui,sans-serif;cursor:pointer}
 .product-card.panora-product-focus{animation:panoraProductFocus 1.2s ease both}
 @keyframes panoraProductFocus{0%,100%{box-shadow:inherit}35%{box-shadow:0 0 0 4px rgba(205,144,63,.22),0 18px 42px rgba(34,42,31,.14)}}
 
-/* Panora 9.44 — mobile partner product details from workspace */
+/* Panora 9.45 — mobile partner product details from workspace */
 @media(max-width:760px){
   body.panora-partner-authenticated .product-grid:has(.product-card.panora-product-focus){grid-template-columns:1fr!important}
   body.panora-partner-authenticated .product-grid:has(.product-card.panora-product-focus)>.product-card:not(.panora-product-focus){display:none!important}
@@ -1846,3 +1846,6 @@
   body.panora-partner-authenticated .product-card.panora-product-focus .product-meta span:last-child{display:inline!important}
   .panora-partner-product-return{position:sticky;top:8px;z-index:6;margin:0 0 12px;padding:10px 13px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(29,36,31,.08)}
 }
+
+/* Panora 9.45: authenticated partners order through the workspace; no duplicate basket FAB. */
+body.panora-partner-authenticated .cart-fab{display:none!important}

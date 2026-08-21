@@ -1789,11 +1789,14 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
+        // Panora 9.45: orders started in the partner workspace skip the
+        // duplicate basket screen and go straight to final confirmation.
         closePanels();
         try{
-          renderProducts();renderCart();syncCartDeliveryDate?.();
-          // One date choice only: always continue through the cart on desktop and mobile.
-          openPanel(document.querySelector("#cartDrawer"));
+          renderProducts();
+          renderCart();
+          syncCartDeliveryDate?.();
+          document.querySelector("#checkoutButton")?.click();
         }catch{}
       };
     });
@@ -1863,6 +1866,7 @@
       return;
     }
     if (!account) {
+      document.body.classList.remove("panora-partner-authenticated");
       modal?.classList.remove("restaurant-workspace");
       previousRender();
       return;
