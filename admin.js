@@ -284,10 +284,22 @@ async function loadRetailProductSettingsCloud(){
 async function saveRetailProductSettingsCloud(map){const products=retailAdminProducts();const rows=products.map((product,index)=>{const item=retailProductSetting(product,map);return {product_id:item.productId,enabled:!!item.enabled,stock_sales:!!item.stockSales,preorders:!!item.preorders,retail_price:Number(item.retailPrice||0),sort_order:index,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}});if(!rows.length)return [];return retailAdminApi('retail_product_settings?on_conflict=product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(rows)})}
 function retailOrderFromCloud(row){return{id:String(row.id||''),number:Number(row.order_number||0),publicToken:String(row.public_token||''),source:String(row.source||'stock'),fulfillment:String(row.fulfillment||'pickup'),bakeDate:row.bake_date||'',pickupDate:row.pickup_date||'',slot:row.pickup_slot||'',customerName:row.customer_name||'',customerPhone:row.customer_phone||'',customerEmail:row.customer_email||'',comment:row.comment||'',deliveryAddress:row.delivery_address||'',deliveryNote:row.delivery_note||'',deliveryFee:Number(row.delivery_fee||0),status:String(row.status||'new'),paymentStatus:String(row.payment_status||'pending'),paymentMethod:String(row.payment_method||'pickup'),paymentProvider:String(row.payment_provider||'none'),total:Number(row.total||0),createdAt:row.created_at||'',updatedAt:row.updated_at||'',completedAt:row.completed_at||'',cancelledAt:row.cancelled_at||'',items:(row.retail_order_items||[]).map(item=>({product:String(item.product_id||''),quantity:Math.max(0,Number(item.quantity||0)),unitPrice:Number(item.unit_price||0)}))}}
 async function loadRetailUnreadMessagesCloud(){try{const rows=await retailAdminApi('retail_order_messages?sender_role=eq.customer&read_by_bakery_at=is.null&select=order_id');const map=new Map();(rows||[]).forEach(row=>{const id=String(row.order_id||'');if(id)map.set(id,(map.get(id)||0)+1)});retailUnreadMessages=map;return true}catch{return false}}
+let retailOrdersCloudHydrated=false,finishedStockCloudHydrated=false;
+const RETAIL_ORDERS_WATERMARK_KEY='panora-retail-orders-watermark-v934';
+const FINISHED_STOCK_WATERMARK_KEY='panora-finished-stock-watermark-v934';
 async function loadRetailOrdersCloud(){
  const status=$('#retailOrdersCloudStatus');
- try{const rows=await retailAdminApi('retail_orders?select=id,order_number,public_token,source,fulfillment,bake_date,pickup_date,pickup_slot,customer_name,customer_phone,customer_email,comment,delivery_address,delivery_note,delivery_fee,status,payment_status,payment_method,payment_provider,total,created_at,updated_at,completed_at,cancelled_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');saveRetailOrdersLocal((rows||[]).map(retailOrderFromCloud));await loadRetailUnreadMessagesCloud();if(status)status.textContent='Облако ✓';renderRetailOrderQueue();renderStock();renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();return true}
- catch(error){if(status)status.textContent='Выполните SQL 6.28';return false}
+ try{
+  const watermark=retailOrdersCloudHydrated?String(localStorage.getItem(RETAIL_ORDERS_WATERMARK_KEY)||''):'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+  const rows=await retailAdminApi(`retail_orders?select=id,order_number,public_token,source,fulfillment,bake_date,pickup_date,pickup_slot,customer_name,customer_phone,customer_email,comment,delivery_address,delivery_note,delivery_fee,status,payment_status,payment_method,payment_provider,total,created_at,updated_at,completed_at,cancelled_at,retail_order_items(product_id,quantity,unit_price)${deltaQuery}&order=created_at.desc`);
+  if(rows?.length||!retailOrdersCloudHydrated){
+   const changed=(rows||[]).map(retailOrderFromCloud),next=watermark?new Map(readRetailOrders().map(order=>[String(order.id),order])):new Map();
+   changed.forEach(order=>next.set(String(order.id),order));
+   saveRetailOrdersLocal([...next.values()].sort((a,b)=>String(b?.createdAt||'').localeCompare(String(a?.createdAt||''))));
+   const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);if(newest)localStorage.setItem(RETAIL_ORDERS_WATERMARK_KEY,newest);
+  }
+  retailOrdersCloudHydrated=true;await loadRetailUnreadMessagesCloud();if(status)status.textContent='Облако ✓';renderRetailOrderQueue();renderStock();renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();return true
+ }catch(error){if(status)status.textContent='Выполните SQL 6.28';return false}
 }
 async function updateRetailOrderStatusCloud(id,nextStatus){
  const now=new Date().toISOString(),payload={status:nextStatus,updated_at:now};
@@ -340,8 +352,10 @@ const finishedStockMovementSignature=list=>JSON.stringify((Array.isArray(list)?l
 async function loadFinishedStockMovementsCloud(){
  if(finishedStockCloudLoading)return finishedStockCloudLoading;
  finishedStockCloudLoading=(async()=>{try{
-  const before=finishedStockMovementSignature(movements),rows=await retailAdminApi('finished_stock_movements?select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at&order=movement_date.asc,created_at.asc'),allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),byId=new Map((Array.isArray(movements)?movements:[]).map(item=>[String(item?.id||''),item]));
+  const watermark=finishedStockCloudHydrated?String(localStorage.getItem(FINISHED_STOCK_WATERMARK_KEY)||''):'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+  const before=finishedStockMovementSignature(movements),rows=await retailAdminApi(`finished_stock_movements?select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at${deltaQuery}&order=movement_date.asc,created_at.asc`),allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),byId=new Map((Array.isArray(movements)?movements:[]).map(item=>[String(item?.id||''),item]));
   (Array.isArray(rows)?rows:[]).forEach(row=>{if(!row?.id||!row?.product_id||!allowed.has(String(row.movement_type||'')))return;byId.set(String(row.id),{id:String(row.id),date:String(row.movement_date||''),product:String(row.product_id),type:String(row.movement_type),quantity:Math.abs(Number(row.quantity||0)),note:row.note||'',createdAt:row.created_at||row.updated_at||''})});
+  const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);if(newest)localStorage.setItem(FINISHED_STOCK_WATERMARK_KEY,newest);finishedStockCloudHydrated=true;
   const next=[...byId.values()].filter(Boolean),changed=before!==finishedStockMovementSignature(next);movements=next;
   if(changed){localStorage.setItem('panora-stock-movements',JSON.stringify(movements));renderStock();window.dispatchEvent(new CustomEvent('panora:finished-stock-cloud-updated',{detail:{source:'cloud-live'}}))}
   return true;

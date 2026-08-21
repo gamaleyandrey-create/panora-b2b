@@ -227,7 +227,7 @@
     }).finally(()=>refreshing=null);
     return refreshing
   };
-  // Panora 9.33: collapse identical concurrent GETs into one network request.
+  // Panora 9.34: collapse identical concurrent GETs into one network request.
   // This protects against overlapping UI events without changing business behavior.
   const inflightReads=new Map();
   const request=async(path,options={},retried=false)=>{
@@ -282,7 +282,7 @@
     });
     return {merged:[...merged.values()],outgoing};
   }
-  const rawStockDeltaKey='panora-raw-stock-cloud-watermark-v933';
+  const rawStockDeltaKey='panora-raw-stock-cloud-watermark-v934';
   const latestTimestamp=(rows,field='updated_at')=>(rows||[]).map(row=>String(row?.[field]||row?.created_at||'')).filter(Boolean).sort().at(-1)||'';
   async function syncRawStockNow({quiet=false,delta=false}={}){
     if(!ready)return false;
@@ -319,7 +319,7 @@
   const bakeCompletionToCloud=item=>({id:String(item.id),bake_date:String(item.date||'').slice(0,10),items:Array.isArray(item.items)?item.items:[],note:item.note||null,source:item.source||'actual',device_id:item.deviceId||null,created_at:item.createdAt||new Date().toISOString(),updated_at:item.updatedAt||item.createdAt||new Date().toISOString(),deleted_at:item.deletedAt||null});
   const bakeCompletionFromCloud=row=>({id:String(row.id),date:row.bake_date,items:Array.isArray(row.items)?row.items:[],note:row.note||'',source:row.source||'actual',deviceId:row.device_id||'',createdAt:row.created_at||'',updatedAt:row.updated_at||row.created_at||'',deletedAt:row.deleted_at||''});
   function mergeBakeCompletions(remoteRows,localRows){const remote=new Map((remoteRows||[]).map(row=>[String(row.id),bakeCompletionFromCloud(row)])),merged=new Map(remote),outgoing=[];(localRows||[]).forEach(local=>{if(!local?.id)return;const id=String(local.id),cloud=merged.get(id),localAt=bakeCompletionTime(local),cloudAt=bakeCompletionTime(cloud);if(!cloud){merged.set(id,local);outgoing.push(local);return}if(localAt>cloudAt){merged.set(id,local);outgoing.push(local)}});return{merged:[...merged.values()],outgoing}}
-  const bakeCompletionDeltaKey='panora-bake-completion-cloud-watermark-v933';
+  const bakeCompletionDeltaKey='panora-bake-completion-cloud-watermark-v934';
   async function syncBakeCompletionsNow({quiet=false,delta=false}={}){
     if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}
     const useDelta=delta&&!pending.bakeCompletions;
@@ -824,16 +824,27 @@
     }
     return rows;
   }
+  const adminOrdersWatermarkKey='panora-admin-orders-watermark-v934';
+  const adminPaymentsWatermarkKey='panora-admin-payments-watermark-v934';
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
     loadingOrders=(async()=>{
       const firstHydration=!window.panoraAdminOrdersHydrated;
       const beforeSignature=orderUiSignature(typeof orders!=='undefined'?orders:[]);
-      const fetched=await request('orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc');
+      const watermark=!firstHydration?String(localStorage.getItem(adminOrdersWatermarkKey)||''):'';
+      const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+      const fetched=await request(`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
+      if(watermark&&!(fetched||[]).length){status('Облако ✓');return}
+      const newest=(fetched||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);
       const hydrated=await hydrateAdminOrderRows(fetched||[]);
-      const rows=await repairTrueOrphanOrders(hydrated);
-      orders=(rows||[]).map(rowOrder);
+      const changedRows=await repairTrueOrphanOrders(hydrated);
+      if(watermark){
+        const merged=new Map((orders||[]).map(order=>[String(order.id),order]));
+        (changedRows||[]).map(rowOrder).forEach(order=>merged.set(String(order.id),order));
+        orders=[...merged.values()].sort((a,b)=>Number(a?.number||0)-Number(b?.number||0));
+      }else orders=(changedRows||[]).map(rowOrder);
+      if(newest)localStorage.setItem(adminOrdersWatermarkKey,newest);
       const activeOrderCount=orders.filter(order=>!['shipped','cancelled'].includes(String(order?.status||''))).length;
       const archivedOrderCount=orders.length-activeOrderCount;
       safeLocalSet('panora-order-counts-cache',JSON.stringify({active:activeOrderCount,archive:archivedOrderCount,updatedAt:new Date().toISOString()}),{quotaIsWarning:false});
@@ -851,7 +862,7 @@
       if(financeLoaded){try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora finance repair skipped during order refresh',error)}}
 
       if(changed||firstHydration)queueAdminCommerceRender(true);
-      status(`Облако ✓ · ${rows?.length||0} заказов`);
+      status(`Облако ✓ · ${orders?.length||0} заказов`);
     })().finally(()=>loadingOrders=null);
     return loadingOrders;
   }
@@ -1148,14 +1159,26 @@
     return payment;
   }
   async function loadPayments(){
+    const firstHydration=!window.panoraAdminPaymentsHydrated;
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
-    const rows=await request('payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at&order=received_at.asc');
+    const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
+    const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+    const rows=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     if(rows?.length){
-      payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();
+      const mapped=rows.map(rowPayment);
+      if(watermark){
+        const merged=new Map((payments||[]).map(payment=>[String(payment.id),payment]));
+        mapped.forEach(payment=>merged.set(String(payment.id),payment));
+        payments=[...merged.values()].sort((a,b)=>String(a?.receivedAt||a?.date||'').localeCompare(String(b?.receivedAt||b?.date||'')));
+      }else payments=mapped;
+      const newest=rows.reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);
+      if(newest)localStorage.setItem(adminPaymentsWatermarkKey,newest);
+      cachePaymentsLocal();recalculateBalances();
       const changed=beforeSignature!==paymentUiSignature(payments);
       if(changed)queueAdminCommerceRender();
-    }else if(local.length){payments=local;ready=true;await savePaymentsNow()}
+    }else if(firstHydration&&local.length){payments=local;ready=true;await savePaymentsNow()}
+    window.panoraAdminPaymentsHydrated=true;
   }
   async function savePaymentsNow(){
     if(!ready||typeof payments==='undefined')return;
@@ -1909,7 +1932,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     errors.push(['рецептуры',error])}
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
-    // Panora 9.33: periodic cloud reads are scoped to the screen that can actually use them.
+    // Panora 9.34: periodic cloud reads are scoped to the screen that can actually use them.
     // User actions still save/refresh immediately; this only removes background table downloads.
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
