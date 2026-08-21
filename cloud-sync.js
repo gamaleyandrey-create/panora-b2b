@@ -176,7 +176,7 @@
   async function guardSection(section,path){
     if(forceSections.has(section)||!pending[section]||!revisions[section])return;
     const rows=section==='products'
-      ?await request('products?select=*&order=created_at.asc')
+      ?await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`)
       :await request(`${path}${path.includes('?')?'&':'?'}select=updated_at&order=updated_at.desc&limit=1`),
       remoteAt=(rows||[]).reduce((latest,row)=>String(row.updated_at||'')>latest?String(row.updated_at):latest,'');
     if(section==='products'){
@@ -280,7 +280,7 @@
     adminLeaderHeartbeat=setInterval(()=>{if(!document.hidden)claimAdminLeader(false)},15000);
   };
 
-  // Panora 9.37 — tiny operational revision RPC gates plan/raw-stock/bake reads.
+  // Panora 9.38 — tiny operational revision RPC gates plan/raw-stock/bake reads.
   let adminOperationalRevisionUnavailable=false,adminOperationalRevisionPromise=null,adminOperationalRevisionCache=null,adminOperationalRevisionAt=0;
   const adminOperationalSeen={plans:'',rawStock:'',bakeCompletions:''};
   async function getAdminOperationalRevision(){
@@ -308,6 +308,38 @@
     if(!adminOperationalSeen[component]){adminOperationalSeen[component]=next;return false}
     if(adminOperationalSeen[component]===next)return false;
     adminOperationalSeen[component]=next;return true;
+  }
+
+  // Panora 9.38 — tiny revisions for rarely changing reference data. Background
+  // product/partner checks no longer download their full payload just to discover
+  // that nothing changed. Falls back to the previous safe behavior until SQL 9.38 runs.
+  let adminReferenceRevisionUnavailable=false,adminReferenceRevisionPromise=null,adminReferenceRevisionCache=null,adminReferenceRevisionAt=0;
+  const adminReferenceSeen={products:'',restaurants:''};
+  async function getAdminReferenceRevision(){
+    if(adminReferenceRevisionUnavailable)return null;
+    const now=Date.now();
+    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10000)return adminReferenceRevisionCache;
+    if(adminReferenceRevisionPromise)return adminReferenceRevisionPromise;
+    adminReferenceRevisionPromise=(async()=>{
+      try{
+        const rows=await request('rpc/panora_admin_reference_revision',{method:'POST',body:'{}'}),row=Array.isArray(rows)?rows[0]:rows;
+        adminReferenceRevisionCache={products:String(row?.products_revision||''),restaurants:String(row?.restaurants_revision||'')};
+        adminReferenceRevisionAt=Date.now();return adminReferenceRevisionCache;
+      }catch(error){
+        const raw=String(error?.message||error||'');
+        if(/panora_admin_reference_revision|PGRST202|does not exist|schema cache/i.test(raw)){adminReferenceRevisionUnavailable=true;return null}
+        throw error;
+      }
+    })().finally(()=>{adminReferenceRevisionPromise=null});
+    return adminReferenceRevisionPromise;
+  }
+  async function adminReferenceComponentChanged(component){
+    const current=await getAdminReferenceRevision();
+    if(!current)return true;
+    const next=String(current[component]||'');if(!next)return true;
+    if(!adminReferenceSeen[component]){adminReferenceSeen[component]=next;return false}
+    if(adminReferenceSeen[component]===next)return false;
+    adminReferenceSeen[component]=next;return true;
   }
 
   /* Panora 6.07 — raw material movement sync.
@@ -422,6 +454,11 @@
   function hasTechCardLock(productId){const lock=techCardLocks.get(productId);return Boolean(lock?.token&&new Date(lock.expiresAt).getTime()>Date.now())}
   setInterval(()=>{for(const productId of techCardLocks.keys())renewTechCardLock(productId).catch(()=>{})},60000);
 
+  // Panora 9.38 — request only fields used by the client. This avoids moving
+  // unused product/partner columns on every authoritative refresh.
+  const PRODUCT_SELECT='id,name_ru,name_en,name_es,description_ru,description_en,description_es,weight_g,base_price,wholesale_min_qty,image_url,gallery_urls,active,storefront_visible,category,tech_card,tech_card_revision,created_at,updated_at';
+  const RESTAURANT_SELECT='id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,language,partner_type,active,created_at,updated_at,restaurant_prices(product_id,price)';
+
   // Ordinary product saves deliberately omit tech_card. A stale device must
   // never overwrite a newer card as a side effect of changing a name/price.
   const productRow=(p,{includeTechCard=false}={})=>({
@@ -481,7 +518,7 @@
     }finally{applyingCloud--}
   }
   async function reconcileProducts(rows=null,{allowManual=true}={}){
-    rows=rows||await request('products?select=*&order=created_at.asc');
+    rows=rows||await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`);
     if(!rows?.length)return'empty';
     const localSig=productSignature(localProducts()),remoteSig=productSignature(remoteProducts(rows)),baseSig=String(baselines.products||'');
     if(localSig===remoteSig){saveProductBaseline(remoteProducts(rows));productDirty=false;clearPending('products');delete conflicts.products;saveConflicts();rememberRevision('products',rows);return'equal'}
@@ -502,7 +539,7 @@
     return'local'
   }
   async function loadProducts(){
-    const rows=await request('products?select=*&order=created_at.asc');
+    const rows=await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`);
     if(!baselines.products||productDirty||savingProducts){
       const decision=await reconcileProducts(rows);
       if(decision==='local'){await flushProducts();return}
@@ -515,7 +552,7 @@
     // Device clocks are not a reliable revision source. Compare the complete,
     // canonical product payload so a tech-card change is detected even when
     // another row has a newer timestamp from a clock that is ahead.
-    const rows=await request('products?select=*&order=created_at.asc');
+    const rows=await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`);
     if(!rows?.length)return false;
     const remoteSig=productSignature(remoteProducts(rows)),localSig=productSignature(localProducts());
     if(remoteSig===localSig){rememberRevision('products',rows);saveProductBaseline(remoteProducts(rows));productDirty=false;clearPending('products');delete conflicts.products;saveConflicts();return false}
@@ -532,7 +569,7 @@
       status('Сохранение товара…');
       await guardSection('products','products');
       await request('products?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(snapshot.map(productRow))});
-      const confirmed=await request('products?select=*&order=created_at.asc');rememberRevision('products',confirmed);saveProductBaseline(snapshot);forceSections.delete('products');delete conflicts.products;saveConflicts();
+      const confirmed=await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`);rememberRevision('products',confirmed);saveProductBaseline(snapshot);forceSections.delete('products');delete conflicts.products;saveConflicts();
       productDirty=false;clearPending('products');status('Товар сохранён ✓');return true;
     })().finally(()=>savingProducts=null);
     return savingProducts;
@@ -576,8 +613,8 @@
     if(window.panoraHandleSessionError?.(error)) return;
     if(/PANORA_REVISION_CONFLICT/i.test(String(error?.message||error))){
         await releaseTechCardLock(productId);
-        const latest=await request(`products?id=eq.${encodeURIComponent(productId)}&select=*&limit=1`);
-        if(latest?.length)await applyProductRows((await request('products?select=*&order=created_at.asc'))||latest);
+        const latest=await request(`products?id=eq.${encodeURIComponent(productId)}&select=${PRODUCT_SELECT}&limit=1`);
+        if(latest?.length)await applyProductRows((await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`))||latest);
         throw new Error('Карта уже изменена на другом устройстве. Блокировка снята, новая облачная версия загружена; проверьте её и начните редактирование заново.');
       }
       if(/PANORA_LOCK_(REQUIRED|LOST|NOT_OWNER)/i.test(String(error?.message||error))){techCardLocks.delete(productId);window.dispatchEvent(new CustomEvent('panora:tech-card-lock-lost',{detail:{productId}}));throw new Error('Безопасная блокировка технологической карты потеряна. Начните редактирование заново.');}
@@ -767,7 +804,7 @@
 
   async function loadRestaurants(){
     if(pending.restaurants&&!window.panoraMoneyEditing?.active&&!restaurantTimer)clearPending('restaurants');
-    const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
+    const rows=await request(`restaurants?select=${RESTAURANT_SELECT}&order=created_at.asc`);
     rememberRevision('restaurants',rows);
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     if(rows?.length){
@@ -784,7 +821,7 @@
     if(window.panoraMoneyEditing?.active)return false;
     if(pending.restaurants)clearPending('restaurants');
 
-    const rows=await request('restaurants?select=*,restaurant_prices(product_id,price)&order=created_at.asc');
+    const rows=await request(`restaurants?select=${RESTAURANT_SELECT}&order=created_at.asc`);
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     const mapped=(rows||[]).map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
     const before=restaurantSignature(local);
@@ -1856,7 +1893,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       // otherwise MutationObserver can replay an older draft over fresh cloud
       // values immediately after loadProducts() renders the screen.
       if(section==='products'&&acceptedRemoteAt)await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
-      if(section==='products'){const rows=await request('products?select=*&order=created_at.asc');await applyProductRows(rows)}else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();
+      if(section==='products'){const rows=await request(`products?select=${PRODUCT_SELECT}&order=created_at.asc`);await applyProductRows(rows)}else if(section==='recipes')await loadRecipes();else if(section==='restaurants')await loadRestaurants();else if(section==='plans')await loadPlans();
       if(acceptedRemoteAt&&String(acceptedRemoteAt)>String(revisions[section]||''))revisions[section]=String(acceptedRemoteAt);
       localStorage.setItem(revisionKey,JSON.stringify(revisions));
       forceSections.delete(section);clearPending(section);delete conflicts[section];saveConflicts();
@@ -2028,7 +2065,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},180000);
-    clearInterval(productPoll);productPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;refreshProductsIfChanged().catch(error=>console.warn('Panora product refresh',error))},1800000);
+    clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{if(!await adminReferenceComponentChanged('products'))return;await refreshProductsIfChanged()}catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora product refresh',error)}},1800000);
     clearInterval(planPoll);planPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','orders'))return;try{
       if(!await adminOperationalComponentChanged('plans'))return;
       await refreshPlansIfChanged();
@@ -2045,14 +2082,18 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(!await adminOperationalComponentChanged('bakeCompletions'))return;
       await syncBakeCompletionsNow({quiet:true,delta:true});
     }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)}},900000);
-    clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
+    clearInterval(restaurantPoll);restaurantPoll=setInterval(async()=>{
       if(!isAdminBackgroundLeader())return;
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
-      refreshRestaurantPricesDirect().catch(error=>{
+      try{
+        if(!await adminReferenceComponentChanged('restaurants'))return;
+        await refreshRestaurantsIfChanged();
+        await refreshRestaurantPricesDirect();
+      }catch(error){
         if(window.panoraHandleSessionError?.(error))return;
-        console.warn('Panora restaurant price refresh',error);
-      });
+        console.warn('Panora restaurant refresh',error);
+      }
     },600000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
