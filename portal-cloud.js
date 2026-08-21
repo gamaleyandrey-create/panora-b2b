@@ -313,7 +313,7 @@
     }
     if(session.expires_at&&Date.now()>Number(session.expires_at)*1000-60000)await refreshSession();
   }
-  // Panora 9.33: identical concurrent partner GETs share one network response.
+  // Panora 9.34: identical concurrent partner GETs share one network response.
   const partnerInflightReads=new Map();
   async function api(path,options={},retry=true){
     await ensureSession();
@@ -515,7 +515,7 @@
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
+        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       if(restaurantRows[0].active===false){
@@ -553,6 +553,11 @@
       const accountChanged=previousAccountSnapshot!==nextAccountSnapshot;
       account=own;
       try{localStorage.setItem('panora-account-id',own.id)}catch{}
+      const initialOrderWatermark=(orderRows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,'');
+      const initialPaymentWatermark=(payments||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,'');
+      if(initialOrderWatermark)localStorage.setItem(partnerOrdersWatermarkKey(),initialOrderWatermark);
+      if(initialPaymentWatermark)localStorage.setItem(partnerPaymentsWatermarkKey(),initialPaymentWatermark);
+      partnerOrdersHydrated=true;partnerFinanceHydrated=true;
       if(!hadAccount){
         applyAccount();
       }else{
@@ -604,20 +609,34 @@
     disputeStatus:String(payment?.disputeStatus||'none'),disputeReason:String(payment?.disputeReason||''),
     receivedAt:String(payment?.receivedAt||''),method:String(payment?.method||''),updatedAt:String(payment?.updatedAt||'')
   })).sort((a,b)=>a.id.localeCompare(b.id)));
+  let partnerOrdersHydrated=false,partnerFinanceHydrated=false;
+  const partnerOrdersWatermarkKey=()=>`panora-partner-orders-watermark-v934:${String(account?.id||'none')}`;
+  const partnerPaymentsWatermarkKey=()=>`panora-partner-payments-watermark-v934:${String(account?.id||'none')}`;
   async function refreshPartnerFinance(){
     if(partnerFinanceLoading)return partnerFinanceLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return null;
     partnerFinanceLoading=(async()=>{
       const rid=encodeURIComponent(account.id);
-      const [notes,payments]=await Promise.all([
+      const paymentWatermark=partnerFinanceHydrated?String(localStorage.getItem(partnerPaymentsWatermarkKey())||''):'';
+      const paymentDelta=paymentWatermark?`&updated_at=gt.${encodeURIComponent(paymentWatermark)}`:'';
+      const [notes,paymentRows]=await Promise.all([
         api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),
-        api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`)
+        api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${paymentDelta}`)
       ]);
       const currentOrders=read('panora-orders')||[];
       const beforeNotes=read('panora-delivery-notes')||[];
       const beforePayments=read('panora-payments')||[];
       const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:currentOrders.find(o=>o.id===n.order_id)?.items||[],prices:currentOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
-      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      const changedPayments=(paymentRows||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      let mappedPayments;
+      if(paymentWatermark){
+        const merged=new Map(beforePayments.map(payment=>[String(payment.id),payment]));
+        changedPayments.forEach(payment=>merged.set(String(payment.id),payment));
+        mappedPayments=[...merged.values()].sort((a,b)=>String(a?.receivedAt||a?.date||'').localeCompare(String(b?.receivedAt||b?.date||'')));
+      }else mappedPayments=changedPayments;
+      const newestPayment=(paymentRows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,paymentWatermark);
+      if(newestPayment)localStorage.setItem(partnerPaymentsWatermarkKey(),newestPayment);
+      partnerFinanceHydrated=true;
       const notesChanged=partnerNoteSignature(beforeNotes)!==partnerNoteSignature(mappedNotes);
       const paymentsChanged=partnerPaymentSignature(beforePayments)!==partnerPaymentSignature(mappedPayments);
       savePortalNotesCache(mappedNotes);
@@ -639,10 +658,22 @@
     if(partnerOrdersLoading)return partnerOrdersLoading;
     if(!session?.user?.id||!account?.id||!navigator.onLine)return [];
     partnerOrdersLoading=(async()=>{
-      const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`);
-      const hydratedRows=await hydrateOrderRows(rows||[]);
-      const next=recoverZeroOrderPrices(preserveKnownOrderItems(hydratedRows.map(mapOrder)),account?.prices||{});
       const previous=read('panora-orders')||[];
+      const watermark=partnerOrdersHydrated?String(localStorage.getItem(partnerOrdersWatermarkKey())||''):'';
+      const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+      const rows=await api(`orders?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
+      if(watermark&&!(rows||[]).length){state('ok',labels('Синхронизировано','Synced','Sincronizado'));return previous}
+      const hydratedRows=await hydrateOrderRows(rows||[]);
+      const changedOrders=recoverZeroOrderPrices(preserveKnownOrderItems(hydratedRows.map(mapOrder)),account?.prices||{});
+      let next;
+      if(watermark){
+        const merged=new Map(previous.map(order=>[String(order.id),order]));
+        changedOrders.forEach(order=>merged.set(String(order.id),order));
+        next=[...merged.values()].sort((a,b)=>Number(a?.number||0)-Number(b?.number||0));
+      }else next=changedOrders;
+      const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);
+      if(newest)localStorage.setItem(partnerOrdersWatermarkKey(),newest);
+      partnerOrdersHydrated=true;
       const comparable=order=>({
         id:order.id,number:order.number,restaurantId:order.restaurantId,date:order.date,
         deliveryDate:order.deliveryDate,
@@ -737,7 +768,7 @@
     tick();
     partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},180000);
   }
-  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature=''}
+  function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
   async function refreshPartnerPricing(){
     if(partnerPricingLoading)return partnerPricingLoading;
