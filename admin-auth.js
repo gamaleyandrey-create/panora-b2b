@@ -44,6 +44,43 @@
       try{const profile=await getProfile(updated.access_token,updated.user.id);unlock(updated,profile);return true}catch{return false}
     }
   }
+  async function changePassword(currentPassword,newPassword){
+    const active=readSession();
+    const email=String(active?.user?.email||'').trim().toLowerCase();
+    if(!active?.access_token||!email)throw new Error('Сессия входа устарела. Войдите в пекарню заново.');
+    const verifyResponse=await fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email,password:currentPassword})});
+    const verified=await verifyResponse.json();
+    if(!verifyResponse.ok)throw new Error('Текущий пароль указан неверно.');
+    const updateResponse=await fetch(`${cfg.url}/auth/v1/user`,{method:'PUT',headers:{...headers(verified.access_token),'Content-Type':'application/json'},body:JSON.stringify({password:newPassword})});
+    const updated=await updateResponse.json();
+    if(!updateResponse.ok)throw new Error(updated?.msg||updated?.message||updated?.error_description||'Не удалось изменить пароль.');
+    saveSession(verified);
+    window.panoraSupabaseSession=verified;
+    return true;
+  }
+  const passwordForm=document.querySelector('#adminPasswordForm');
+  if(passwordForm){
+    passwordForm.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const status=document.querySelector('#adminPasswordStatus');
+      const button=passwordForm.querySelector('[type="submit"]');
+      const data=new FormData(passwordForm);
+      const current=String(data.get('currentPassword')||'');
+      const next=String(data.get('newPassword')||'');
+      const confirm=String(data.get('confirmPassword')||'');
+      if(status){status.textContent='';status.classList.remove('success','error')}
+      if(next.length<8){if(status){status.textContent='Новый пароль должен содержать не менее 8 символов.';status.classList.add('error')}return}
+      if(next!==confirm){if(status){status.textContent='Новый пароль и подтверждение не совпадают.';status.classList.add('error')}return}
+      if(current===next){if(status){status.textContent='Новый пароль должен отличаться от текущего.';status.classList.add('error')}return}
+      button.disabled=true;
+      try{
+        await changePassword(current,next);
+        passwordForm.reset();
+        if(status){status.textContent='Пароль изменён.';status.classList.add('success')}
+      }catch(err){if(status){status.textContent=err.message||'Не удалось изменить пароль.';status.classList.add('error')}}
+      finally{button.disabled=false}
+    });
+  }
   form.addEventListener('submit',async event=>{
     event.preventDefault();message('');const submit=form.querySelector('button');submit.disabled=true;
     const data=new FormData(form);
