@@ -2064,7 +2064,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(changed.notes)await loadDeliveryNotes();
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы, оплаты и накладные',error)}},180000);
+    fail('заказы, оплаты и накладные',error)}},1800000);
     clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{if(!await adminReferenceComponentChanged('products'))return;await refreshProductsIfChanged()}catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora product refresh',error)}},1800000);
     clearInterval(planPoll);planPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','orders'))return;try{
       if(!await adminOperationalComponentChanged('plans'))return;
