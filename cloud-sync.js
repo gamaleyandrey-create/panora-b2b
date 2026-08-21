@@ -314,7 +314,7 @@
   // product/partner checks no longer download their full payload just to discover
   // that nothing changed. Falls back to the previous safe behavior until SQL 9.38 runs.
   let adminReferenceRevisionUnavailable=false,adminReferenceRevisionPromise=null,adminReferenceRevisionCache=null,adminReferenceRevisionAt=0;
-  const adminReferenceSeen={products:'',restaurants:''};
+  const adminReferenceSeen={products:'',restaurants:'',recipes:'',ingredientCosts:''};
   async function getAdminReferenceRevision(){
     if(adminReferenceRevisionUnavailable)return null;
     const now=Date.now();
@@ -323,7 +323,7 @@
     adminReferenceRevisionPromise=(async()=>{
       try{
         const rows=await request('rpc/panora_admin_reference_revision',{method:'POST',body:'{}'}),row=Array.isArray(rows)?rows[0]:rows;
-        adminReferenceRevisionCache={products:String(row?.products_revision||''),restaurants:String(row?.restaurants_revision||'')};
+        adminReferenceRevisionCache={products:String(row?.products_revision||''),restaurants:String(row?.restaurants_revision||''),recipes:String(row?.recipes_revision||''),ingredientCosts:String(row?.ingredient_costs_revision||'')};
         adminReferenceRevisionAt=Date.now();return adminReferenceRevisionCache;
       }catch(error){
         const raw=String(error?.message||error||'');
@@ -700,7 +700,7 @@
   }
 
   async function loadRecipes(){
-    const rows=await request('recipe_items?select=*&order=product_id.asc,position.asc');
+    const rows=await request('recipe_items?select=product_id,position,ingredient_name,quantity,unit,stock,margin,source_ingredient_name,source_unit,source_yield_pct,updated_at&order=product_id.asc,position.asc');
     const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
     if(recipeDirty||savingRecipes){await flushRecipes();return}
     rememberRevision('recipes',rows);
@@ -2065,7 +2065,14 @@ window.panoraRecalculateBalances=recalculateBalances;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},1800000);
-    clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{if(!await adminReferenceComponentChanged('products'))return;await refreshProductsIfChanged()}catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora product refresh',error)}},1800000);
+    clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{
+      const productsChanged=await adminReferenceComponentChanged('products');
+      const recipesChanged=await adminReferenceComponentChanged('recipes');
+      const ingredientCostsChanged=await adminReferenceComponentChanged('ingredientCosts');
+      if(productsChanged)await refreshProductsIfChanged();
+      if(recipesChanged)await loadRecipes();
+      if(ingredientCostsChanged)await loadIngredientCosts();
+    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora reference refresh',error)}},1800000);
     clearInterval(planPoll);planPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','orders'))return;try{
       if(!await adminOperationalComponentChanged('plans'))return;
       await refreshPlansIfChanged();
