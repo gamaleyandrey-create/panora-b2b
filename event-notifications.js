@@ -113,7 +113,7 @@
    prunePending(orders);saveSnap(orders);
  }
 
- // Panora 9.43 — targeted Supabase Realtime for orders and delivery chat.
+ // Panora 9.44 — targeted Supabase Realtime for orders and delivery chat.
  // The existing revision polling remains a rare safety fallback. If the Realtime
  // library, publication or connection is unavailable, Panora simply continues
  // with the normal fallback sync and no working flow is blocked.
@@ -186,7 +186,12 @@
      state.textContent='План обновлён';state.dataset.syncState='synced';setTimeout(()=>{if(state.textContent==='План обновлён')state.textContent='Сохранено'},1400);
    }
  });
- window.addEventListener('panora:restaurant-sync',e=>{if(e.detail?.type==='error')toast('Ошибка синхронизации',e.detail.text||'Не удалось синхронизировать данные.','error','!',{priority:'critical',view:document.body.classList.contains('admin-page')?'settings':null,partnerCabinet:!document.body.classList.contains('admin-page')})});
+ window.addEventListener('panora:restaurant-sync',e=>{
+   if(e.detail?.type!=='error')return;
+   const text=e.detail.text||'Не удалось синхронизировать данные.';
+   const key='sync-error:'+String(text).toLowerCase().replace(/[^a-z0-9а-яё_-]+/gi,'_').slice(0,72);
+   toastOnce(key,'Ошибка синхронизации',text,'error','!',30000,{priority:'critical',view:document.body.classList.contains('admin-page')?'settings':null,partnerCabinet:!document.body.classList.contains('admin-page')});
+ });
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(compare,100)});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{settings();compare()},{once:true});else{settings();compare()}
  window.panoraEventNotifications={check:compare,toast,notifyTechnical:(title,text,options={})=>toast(title,text,'success','✓',{...options,priority:'technical'}),notify:(title,text,options={})=>toast(title,text,options.type||'order',options.icon||'🔔',{...options,priority:options.priority||'normal'}),setSound:value=>{sound=Boolean(value);localStorage.setItem(SOUND_KEY,sound?'1':'0')},clearOrderAlert:clearPending};

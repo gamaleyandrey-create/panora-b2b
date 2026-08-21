@@ -523,7 +523,7 @@
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
+        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`),api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at`),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       if(restaurantRows[0].active===false){
@@ -538,7 +538,7 @@
       const mappedNotes=(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:initialOrders.find(o=>o.id===n.order_id)?.items||[],prices:initialOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null}));
       const notesByOrder=new Map(mappedNotes.map(note=>[String(note.orderId),note]));
       const orders=initialOrders.map(order=>archiveMetaForOrder(order,notesByOrder.get(String(order.id))));
-      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null}));
+      const mappedPayments=(payments||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.confirmed_by||null}));
       setPortalRuntime('panora-restaurants',[own]);
       setPortalRuntime('panora-orders',orders);
       setPortalRuntime('panora-delivery-notes',mappedNotes);
@@ -629,13 +629,13 @@
       const paymentDelta=paymentWatermark?`&updated_at=gt.${encodeURIComponent(paymentWatermark)}`:'';
       const [notes,paymentRows]=await Promise.all([
         wantNotes?api(`delivery_notes?restaurant_id=eq.${rid}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`):Promise.resolve(null),
-        wantPayments?api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${paymentDelta}`):Promise.resolve(null)
+        wantPayments?api(`payments?restaurant_id=eq.${rid}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${paymentDelta}`):Promise.resolve(null)
       ]);
       const currentOrders=read('panora-orders')||[];
       const beforeNotes=read('panora-delivery-notes')||[];
       const beforePayments=read('panora-payments')||[];
       const mappedNotes=wantNotes?(notes||[]).map(n=>({id:n.id,number:Number(n.note_number),orderId:n.order_id,restaurantId:n.restaurant_id,date:portalEconomicDate(n.delivered_at),paymentDueDate:n.payment_due_date||'',items:currentOrders.find(o=>o.id===n.order_id)?.items||[],prices:currentOrders.find(o=>o.id===n.order_id)?.prices||{},total:Number(n.total),traysDelivered:Number(n.trays_delivered||0),traysReturned:Number(n.trays_returned||0),trayBalanceAfter:Number(n.tray_balance_after||0),customerTraysReceived:n.customer_trays_received==null?null:Number(n.customer_trays_received),customerTraysReturned:n.customer_trays_returned==null?null:Number(n.customer_trays_returned),qrToken:n.qr_token,customerConfirmedAt:n.customer_confirmed_at||null,customerReceiver:n.customer_receiver||'',offlineProof:n.offline_received_at?{receivedAt:n.offline_received_at,receiver:n.offline_receiver||'',pending:false}:null})):beforeNotes;
-      const changedPayments=wantPayments?(paymentRows||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.recorded_by||p.confirmed_by||null})):[];
+      const changedPayments=wantPayments?(paymentRows||[]).map(p=>({id:p.id,restaurantId:p.restaurant_id,deliveryNoteId:p.delivery_note_id||null,date:portalEconomicDate(p.received_at),receivedAt:p.received_at||null,amount:Number(p.amount),method:p.method,note:p.note||'',confirmed:p.status==null?true:p.status==='confirmed',status:p.status,disputeStatus:p.dispute_status||'none',disputeReason:p.dispute_reason||'',disputedAt:p.disputed_at||null,disputeDeadline:p.dispute_deadline||null,updatedAt:p.updated_at||null,recordedBy:p.confirmed_by||null})):[];
       let mappedPayments;
       if(paymentWatermark){
         const merged=new Map(beforePayments.map(payment=>[String(payment.id),payment]));
@@ -899,9 +899,20 @@
     ));
     saveSession(next);await loadAll(true);
   }
+  function openMobilePartnerCabinetAfterAuth(delay=120){
+    window.setTimeout(()=>{
+      if(!account)return;
+      const modal=document.querySelector('#profileModal');
+      if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function'){
+        window.panoraOpenPartnerCabinet();
+        return;
+      }
+      if(modal)openPanel(modal);
+    },delay);
+  }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();setTimeout(()=>{if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function')window.panoraOpenPartnerCabinet();else openPanel(document.querySelector('#profileModal'))},180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();openMobilePartnerCabinetAfterAuth(180);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(force=false){
@@ -1345,7 +1356,7 @@
         }else throw error;
       }
     }
-    if(session?.user){await loadAll(true);setTimeout(()=>{if(window.matchMedia?.('(max-width: 760px)').matches&&typeof window.panoraOpenPartnerCabinet==='function')window.panoraOpenPartnerCabinet();else openPanel(document.querySelector('#profileModal'))},120)}
+    if(session?.user){await loadAll(true);openMobilePartnerCabinetAfterAuth(120)}
     else renderAccountModal();
   }catch(error){
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
