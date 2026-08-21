@@ -227,22 +227,32 @@
     }).finally(()=>refreshing=null);
     return refreshing
   };
+  // Panora 9.33: collapse identical concurrent GETs into one network request.
+  // This protects against overlapping UI events without changing business behavior.
+  const inflightReads=new Map();
   const request=async(path,options={},retried=false)=>{
     if(!session?.access_token)throw new Error('Нет активной сессии');
-    const response=await fetch(`${cfg.url}/rest/v1/${path}`,{cache:'no-store',...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}});
-    if(response.status===401&&!retried){
-      await refreshSession();
-      return request(path,options,true);
-    }
-    if(response.status===401){
-      clearAdminSession();
-      const error=new Error('Сессия пекарни истекла. Войдите повторно.');
-      error.code='PANORA_ADMIN_SESSION_EXPIRED';
-      throw error;
-    }
-    if(!response.ok){const detail=await response.text();throw new Error(detail||`Supabase: ${response.status}`)}
-    if(response.status===204)return null;
-    const text=await response.text();return text?JSON.parse(text):null;
+    const method=String(options.method||'GET').toUpperCase(),readKey=!retried&&method==='GET'?String(path):'';
+    if(readKey&&inflightReads.has(readKey))return inflightReads.get(readKey);
+    const run=(async()=>{
+      const response=await fetch(`${cfg.url}/rest/v1/${path}`,{cache:'no-store',...options,headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json','Cache-Control':'no-cache',...(options.headers||{})}});
+      if(response.status===401&&!retried){
+        await refreshSession();
+        return request(path,options,true);
+      }
+      if(response.status===401){
+        clearAdminSession();
+        const error=new Error('Сессия пекарни истекла. Войдите повторно.');
+        error.code='PANORA_ADMIN_SESSION_EXPIRED';
+        throw error;
+      }
+      if(!response.ok){const detail=await response.text();throw new Error(detail||`Supabase: ${response.status}`)}
+      if(response.status===204)return null;
+      const text=await response.text();return text?JSON.parse(text):null;
+    })();
+    if(!readKey)return run;
+    inflightReads.set(readKey,run);
+    try{return await run}finally{if(inflightReads.get(readKey)===run)inflightReads.delete(readKey)}
   };
 
   /* Panora 6.07 — raw material movement sync.
@@ -272,12 +282,23 @@
     });
     return {merged:[...merged.values()],outgoing};
   }
-  async function syncRawStockNow({quiet=false}={}){
+  const rawStockDeltaKey='panora-raw-stock-cloud-watermark-v933';
+  const latestTimestamp=(rows,field='updated_at')=>(rows||[]).map(row=>String(row?.[field]||row?.created_at||'')).filter(Boolean).sort().at(-1)||'';
+  async function syncRawStockNow({quiet=false,delta=false}={}){
     if(!ready)return false;
     if(!navigator.onLine){markPending('rawStock');rawStockState('Офлайн · сохранено','local');return false}
     if(!quiet)rawStockState('Синхронизация…','syncing');
-    const remoteRows=await request('raw_material_movements?select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at&order=movement_date.asc,created_at.asc');
-    const localRows=readRawStockLocal(),{merged,outgoing}=mergeRawStock(remoteRows,localRows);
+    const useDelta=delta&&!pending.rawStock;
+    const watermark=useDelta?localStorage.getItem(rawStockDeltaKey)||'':'';
+    const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+    const remoteRows=await request(`raw_material_movements?select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
+    const localRows=readRawStockLocal();
+    let merged,outgoing;
+    if(useDelta&&watermark){
+      const map=new Map(localRows.map(item=>[String(item.id),item]));
+      (remoteRows||[]).forEach(row=>map.set(String(row.id),rawStockFromCloud(row)));
+      merged=[...map.values()];outgoing=[];
+    }else({merged,outgoing}=mergeRawStock(remoteRows,localRows));
     if(outgoing.length){
       await request('raw_material_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(rawStockToCloud))});
     }
@@ -287,6 +308,7 @@
       const cached=safeLocalSet(rawStockKey,JSON.stringify(canonical),{quotaIsWarning:false});
       if(cached)window.dispatchEvent(new CustomEvent('panora:raw-stock-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}));
     }
+    const newestRaw=latestTimestamp(remoteRows);if(newestRaw)localStorage.setItem(rawStockDeltaKey,newestRaw);
     clearPending('rawStock');rawStockState('Облако ✓','synced');return true;
   }
 
@@ -297,7 +319,21 @@
   const bakeCompletionToCloud=item=>({id:String(item.id),bake_date:String(item.date||'').slice(0,10),items:Array.isArray(item.items)?item.items:[],note:item.note||null,source:item.source||'actual',device_id:item.deviceId||null,created_at:item.createdAt||new Date().toISOString(),updated_at:item.updatedAt||item.createdAt||new Date().toISOString(),deleted_at:item.deletedAt||null});
   const bakeCompletionFromCloud=row=>({id:String(row.id),date:row.bake_date,items:Array.isArray(row.items)?row.items:[],note:row.note||'',source:row.source||'actual',deviceId:row.device_id||'',createdAt:row.created_at||'',updatedAt:row.updated_at||row.created_at||'',deletedAt:row.deleted_at||''});
   function mergeBakeCompletions(remoteRows,localRows){const remote=new Map((remoteRows||[]).map(row=>[String(row.id),bakeCompletionFromCloud(row)])),merged=new Map(remote),outgoing=[];(localRows||[]).forEach(local=>{if(!local?.id)return;const id=String(local.id),cloud=merged.get(id),localAt=bakeCompletionTime(local),cloudAt=bakeCompletionTime(cloud);if(!cloud){merged.set(id,local);outgoing.push(local);return}if(localAt>cloudAt){merged.set(id,local);outgoing.push(local)}});return{merged:[...merged.values()],outgoing}}
-  async function syncBakeCompletionsNow({quiet=false}={}){if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}const remoteRows=await request('bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at&order=bake_date.asc'),localRows=readBakeCompletionLocal(),{merged,outgoing}=mergeBakeCompletions(remoteRows,localRows);if(outgoing.length)await request('bake_completions?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(bakeCompletionToCloud))});const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));if(JSON.stringify(canonical)!==JSON.stringify(current)){const cached=safeLocalSet(bakeCompletionKey,JSON.stringify(canonical),{quotaIsWarning:false});if(cached)window.dispatchEvent(new CustomEvent('panora:bake-completions-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}))}clearPending('bakeCompletions');if(!quiet)status('Облако ✓');return true}
+  const bakeCompletionDeltaKey='panora-bake-completion-cloud-watermark-v933';
+  async function syncBakeCompletionsNow({quiet=false,delta=false}={}){
+    if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}
+    const useDelta=delta&&!pending.bakeCompletions;
+    const watermark=useDelta?localStorage.getItem(bakeCompletionDeltaKey)||'':'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
+    const remoteRows=await request(`bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=bake_date.asc`),localRows=readBakeCompletionLocal();
+    let merged,outgoing;
+    if(useDelta&&watermark){const map=new Map(localRows.map(item=>[String(item.id),item]));(remoteRows||[]).forEach(row=>map.set(String(row.id),bakeCompletionFromCloud(row)));merged=[...map.values()];outgoing=[]}
+    else({merged,outgoing}=mergeBakeCompletions(remoteRows,localRows));
+    if(outgoing.length)await request('bake_completions?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(bakeCompletionToCloud))});
+    const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+    if(JSON.stringify(canonical)!==JSON.stringify(current)){const cached=safeLocalSet(bakeCompletionKey,JSON.stringify(canonical),{quotaIsWarning:false});if(cached)window.dispatchEvent(new CustomEvent('panora:bake-completions-cloud-updated',{detail:{count:canonical.filter(item=>!item.deletedAt).length}}))}
+    const newestBake=latestTimestamp(remoteRows);if(newestBake)localStorage.setItem(bakeCompletionDeltaKey,newestBake);
+    clearPending('bakeCompletions');if(!quiet)status('Облако ✓');return true
+  }
 
   async function acquireTechCardLock(productId){
     if(!productId)throw new Error('Не удалось определить технологическую карту');
@@ -1057,7 +1093,7 @@
   async function repairMissingDeliveryNotes(){
     if(repairingFinance)return repairingFinance;
     repairingFinance=(async()=>{
-      const remoteRows=await request('delivery_notes?select=*');
+      const remoteRows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature');
       const remoteOrders=new Set((remoteRows||[]).map(row=>row.order_id));
       const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!remoteOrders.has(order.id));
       for(const order of missing){
@@ -1077,7 +1113,7 @@
   }
   async function loadDeliveryNotes(){
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
-    const rows=await request('delivery_notes?select=*&order=note_number.asc');
+    const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
@@ -1113,7 +1149,7 @@
   }
   async function loadPayments(){
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
-    const rows=await request('payments?select=*&order=received_at.asc');
+    const rows=await request('payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,recorded_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at&order=received_at.asc');
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     if(rows?.length){
       payments=rows.map(rowPayment);cachePaymentsLocal();recalculateBalances();
@@ -1873,7 +1909,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     errors.push(['рецептуры',error])}
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
-    // Panora 9.32: periodic cloud reads are scoped to the screen that can actually use them.
+    // Panora 9.33: periodic cloud reads are scoped to the screen that can actually use them.
     // User actions still save/refresh immediately; this only removes background table downloads.
     clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!viewIs('orders','accounting','finance','reminders'))return;try{await loadOrders();await loadPayments();await loadDeliveryNotes()}catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
@@ -1883,12 +1919,12 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(window.panoraHandleSessionError?.(error))return;
       console.warn('Panora plan refresh',error);
     })},300000);
-    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('rawstock','purchase','recipes'))return;syncRawStockNow({quiet:true}).catch(error=>{
+    clearInterval(rawStockPoll);rawStockPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('rawstock','purchase','recipes'))return;syncRawStockNow({quiet:true,delta:true}).catch(error=>{
       if(window.panoraHandleSessionError?.(error))return;
       rawStockState('Ошибка облака','error',error?.message||String(error));
       console.warn('Panora raw stock refresh',error);
     })},900000);
-    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','rawstock','finance'))return;syncBakeCompletionsNow({quiet:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},900000);
+    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(()=>{if(document.hidden||!navigator.onLine||!viewIs('plan','rawstock','finance'))return;syncBakeCompletionsNow({quiet:true,delta:true}).catch(error=>{if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)})},900000);
     clearInterval(restaurantPoll);restaurantPoll=setInterval(()=>{
       const view=document.querySelector('#view-restaurants');
       if(!view||view.hidden||!view.classList.contains('active'))return;
@@ -1926,9 +1962,9 @@ window.panoraRecalculateBalances=recalculateBalances;
         await loadOrders();await loadPayments();await loadDeliveryNotes();
         window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view}}));
       }else if(view==='plan'){
-        await Promise.allSettled([refreshPlansIfChanged(),syncBakeCompletionsNow({quiet:true})]);
+        await Promise.allSettled([refreshPlansIfChanged(),syncBakeCompletionsNow({quiet:true,delta:true})]);
       }else if(view==='rawstock'){
-        await Promise.allSettled([syncRawStockNow({quiet:true}),syncBakeCompletionsNow({quiet:true})]);
+        await Promise.allSettled([syncRawStockNow({quiet:true,delta:true}),syncBakeCompletionsNow({quiet:true,delta:true})]);
       }else if(['recipes','purchase'].includes(view)){
         await loadIngredientCosts();
       }else if(view==='restaurants'){
