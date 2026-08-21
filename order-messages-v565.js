@@ -198,7 +198,7 @@
     else dialog.querySelector("[data-order-message-list]").innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     syncPushState().catch(()=>{});
     await load({quiet:cachedRows.length>0,fastOpen:true});
-    poll=setInterval(()=>{if(dialog&&!document.hidden)load({quiet:true})},5000);
+    poll=setInterval(()=>{if(dialog&&!document.hidden)load({quiet:true})},30000);
   };
 
   const applyUnread=(map,{remember=true}={})=>{
@@ -289,6 +289,6 @@
   window.addEventListener("panora:partner-push-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   window.addEventListener("panora:admin-webpush-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshUnread()});
-  setInterval(()=>{if(!document.hidden)refreshUnread()},5000);
+  setInterval(()=>{if(!document.hidden&&navigator.onLine)refreshUnread()},120000);
   setTimeout(()=>refreshUnread(),1200);
 })();

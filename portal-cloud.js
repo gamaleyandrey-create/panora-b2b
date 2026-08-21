@@ -727,7 +727,7 @@
       }
     };
     tick();
-    partnerOrderPoll=setInterval(()=>{if(!document.hidden)tick()},2000);
+    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},120000);
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);partnerOrderPoll=0;partnerCancelabilitySignature=''}
   let partnerPricingPoll=0,partnerPricingLoading=null;
@@ -782,7 +782,7 @@
       console.warn('Panora partner pricing refresh',error);
     });
     tick();
-    partnerPricingPoll=setInterval(()=>{if(!document.hidden)tick()},2500);
+    partnerPricingPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},600000);
   }
   function stopPartnerPricingPolling(){clearInterval(partnerPricingPoll);partnerPricingPoll=0}
 
@@ -1221,9 +1221,9 @@
         const message=String(error?.message||'');
         if(capacityIssue){
           const friendly=labels(
-            'Нужно применить SQL Panora 9.30: сервер всё ещё использует старое ограничение планом. Корзина сохранена.',
-            'Apply the Panora 9.30 SQL update: the server is still using the old bake-plan capacity rule. Your cart is saved.',
-            'Aplica la actualización SQL Panora 9.30: el servidor aún usa la antigua limitación del plan. La cesta está guardada.'
+            'Нужно применить SQL Panora 9.31: сервер всё ещё использует старое ограничение планом. Корзина сохранена.',
+            'Apply the Panora 9.31 SQL update: the server is still using the old bake-plan capacity rule. Your cart is saved.',
+            'Aplica la actualización SQL Panora 9.31: el servidor aún usa la antigua limitación del plan. La cesta está guardada.'
           );
           // Keep one stable inline error. A second toast used to cover the submit button.
           state('error',friendly);
@@ -1260,6 +1260,6 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(()=>{if(session?.user&&!loadPromise)loadAll().catch(()=>{})},10000);
+  setInterval(()=>{if(session?.user&&!loadPromise&&!document.hidden&&navigator.onLine)loadAll().catch(()=>{})},600000);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
 })();

@@ -77,7 +77,7 @@
  function start(){
   clearInterval(timer);
   fetchCatalog().catch(error=>console.warn('Panora retail catalog refresh',error));
-  timer=setInterval(()=>{if(!document.hidden)fetchCatalog().catch(()=>{})},3000);
+  timer=setInterval(()=>{if(!document.hidden&&navigator.onLine)fetchCatalog().catch(()=>{})},600000);
  }
  window.panoraPublicCatalog={refresh:fetchCatalog,start};
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchCatalog().catch(()=>{})});

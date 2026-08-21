@@ -48,7 +48,7 @@
  </section>
  <div class="footer">Panora · Bakery · build 7310</div>
 </main>
-<script src="supabase-config.js?v=9300"></script>
+<script src="supabase-config.js?v=9310"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -153,8 +153,8 @@
  async function load({silent=false}={}){if(!token){showError();return}if(!silent){$('#loading').classList.remove('hidden');$('#orderView').classList.add('hidden');$('#error').classList.add('hidden')}try{const fresh=await rpc();if(!fresh?.order_number){if(!order)showError();return}order=fresh;$('#loading').classList.add('hidden');$('#orderView').classList.remove('hidden');$('#error').classList.add('hidden');render();await loadMessages();if(!customerPush.checked)syncCustomerPush({repair:true}).catch(()=>{})}catch{if(!order)showError()}}
  function showError(){$('#loading').classList.add('hidden');$('#orderView').classList.add('hidden');$('#error').classList.remove('hidden');$('#errorTitle').textContent=t('notFound');$('#errorText').textContent=t('notFoundText');$('#backStore').textContent=t('back')}
  $('#messageForm').addEventListener('submit',async e=>{e.preventDefault();const field=$('#messageText'),button=$('#messageSend'),state=$('#messagesState'),text=String(field.value||'').trim();if(!text)return;if(!navigator.onLine){state.textContent=lang==='ru'?'Нет сети · сообщение не отправлено':lang==='de'?'Offline · Nachricht nicht gesendet':lang==='en'?'Offline · message not sent':'Sin conexión · mensaje no enviado';state.classList.add('is-error');return}button.disabled=true;button.textContent=t('messageSending');state.classList.remove('is-error');try{await sendMessage(text);field.value='';await loadMessages();state.textContent='Panora'}catch{state.textContent=lang==='ru'?'Не удалось отправить · попробуйте ещё раз':lang==='de'?'Senden fehlgeschlagen · erneut versuchen':lang==='en'?'Could not send · try again':'No se pudo enviar · inténtalo de nuevo';state.classList.add('is-error')}finally{button.disabled=false;button.textContent=t('messageSend')}});
- $('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();messagePoll=setInterval(()=>{if(!document.hidden&&order)loadMessages()},5000);setInterval(()=>{if(!document.hidden)load({silent:true})},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&order){loadMessages();syncCustomerPush({repair:true}).catch(()=>{})}});
+ $('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();messagePoll=setInterval(()=>{if(!document.hidden&&order)loadMessages()},30000);setInterval(()=>{if(!document.hidden&&navigator.onLine)load({silent:true})},120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&order){loadMessages();syncCustomerPush({repair:true}).catch(()=>{})}});
 })();
 </script>
-<script src="pwa-stable.js?v=9300"></script>
+<script src="pwa-stable.js?v=9310"></script>
 </body></html>
