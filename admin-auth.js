@@ -71,7 +71,7 @@
   }
   window.panoraAuthNetworkCheck=async()=>{
     const result=await probeServer();
-    return {build:'9830',online:result.online,serverReachable:result.reachable,ios:isIOS(),standalone:!!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)};
+    return {build:'9840',online:result.online,serverReachable:result.reachable,ios:isIOS(),standalone:!!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)};
   };
   async function signOut(session=readSession()){
     try{if(session?.access_token)await request(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
@@ -135,7 +135,7 @@
       const next=String(data.get('newPassword')||'');
       const confirm=String(data.get('confirmPassword')||'');
       if(status){status.textContent='';status.classList.remove('success','error')}
-      if(next.length<8){if(status){status.textContent='Новый пароль должен содержать не менее 8 символов.';status.classList.add('error')}return}
+      if(next.length<6){if(status){status.textContent='Новый пароль должен содержать не менее 6 символов.';status.classList.add('error')}return}
       if(next!==confirm){if(status){status.textContent='Новый пароль и подтверждение не совпадают.';status.classList.add('error')}return}
       if(current===next){if(status){status.textContent='Новый пароль должен отличаться от текущего.';status.classList.add('error')}return}
       button.disabled=true;
