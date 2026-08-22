@@ -1,0 +1,5 @@
+Panora 9.72 (build 9720)
+Clean production package based on 9.71.
+Removed CLEAN_START SQL helper files from distributable package.
+Preserved one-time browser cleanup of training partner identity/history/cache data.
+Products, recipes, bakery settings and working configuration are preserved.
