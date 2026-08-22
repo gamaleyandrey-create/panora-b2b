@@ -973,8 +973,8 @@
     if(editingWorkspace&&!force)return;
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
-    form.querySelector('[data-cloud-signup]')?.remove();
-    form.querySelector('.account-confirm-hint')?.remove();
+    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
+    if(!form.querySelector('.account-confirm-hint')){const hint=document.createElement('p');hint.className='account-confirm-hint';hint.textContent=labels('При первом входе после создания пароля подтвердите email по письму Panora. Без подтверждения вход закрыт.','After creating a password for the first time, confirm your email using the Panora message. You cannot sign in until it is confirmed.','Después de crear la contraseña por primera vez, confirma tu email con el mensaje de Panora. No podrás entrar hasta confirmarlo.');form.querySelector('[data-cloud-signup]')?.before(hint)}
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;
@@ -1305,13 +1305,27 @@
         'No hay un día de horneado abierto común para los productos seleccionados.'
       ));
     }
-    const resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
+    let resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
+    // Panora 9.80: mobile partner checkout may be opened directly from the
+    // workspace (without the basket). Never block confirmation merely because
+    // the hidden/previous control did not carry its value forward. If there is
+    // an available compatible day, select the first one and mirror it into the
+    // visible final-confirmation select. Multiple dates remain user-selectable.
+    if(!resolvedDate&&compatibleDates.length){
+      resolvedDate=dateValue(compatibleDates[0].date);
+      const dateSelect=form.querySelector('#deliveryDate');
+      if(dateSelect){
+        try{syncCartDeliveryDate?.()}catch{}
+        dateSelect.disabled=false;
+        if([...dateSelect.options].some(option=>option.value===resolvedDate))dateSelect.value=resolvedDate;
+      }
+    }
     if(!resolvedDate&&productIds.length){
       try{syncCartDeliveryDate?.()}catch{}
       return showToast(labels(
-        'Выберите доступный день выпечки для всех товаров заказа.',
-        'Choose an available bake day for all products in the order.',
-        'Elige un día de horneado disponible para todos los productos del pedido.'
+        'Нет доступного дня выпечки для выбранных товаров.',
+        'There is no available bake day for the selected products.',
+        'No hay un día de horneado disponible para los productos seleccionados.'
       ));
     }
     if(resolvedDate){
@@ -1402,9 +1416,7 @@
     }finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
-  session=read(SESSION_KEY);
-  if(session&&typeof session==='object'&&!session.access_token&&!session.refresh_token){saveSession(null);localStorage.removeItem('panora-account-id')}
-  window.panoraPartnerSupabaseSession=session||null;
+  session=read(SESSION_KEY);window.panoraPartnerSupabaseSession=session||null;
   (async()=>{try{
     if(session?.access_token&&!session.user){
       try{
