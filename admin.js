@@ -1,8 +1,8 @@
-/* Panora 9.78 CLEAN BASE IV — one-time local operational reset.
+/* Panora 9.79 CLEAN BASE IV — one-time local operational reset.
    Supabase is authoritative. Do not recreate demo opening balances from legacy
    recipe stock values after the production database has been cleaned. */
 (()=>{
-  const resetMarker='panora-clean-production-v9780';
+  const resetMarker='panora-clean-production-v9790';
   try{
     if(localStorage.getItem(resetMarker)!=='1'){
       [
@@ -16,6 +16,8 @@
         'panora-raw-stock-cloud-watermark-v934',
         'panora-bake-completion-cloud-watermark-v934',
         'panora-orders',
+        'panora-retail-orders',
+        'panora-retail-orders-watermark-v934',
         'panora-payments',
         'panora-delivery-notes',
         'panora-restaurants',
@@ -28,6 +30,14 @@
   }catch{}
 })();
 
+const PANORA_PRODUCTION_EPOCH='2026-08-22T13:05:30.000Z';
+const PANORA_PRODUCTION_DAY='2026-08-22';
+function panoraProductionRecordAllowed(row){
+ const stamp=String(row?.createdAt||row?.created_at||row?.updatedAt||row?.updated_at||row?.occurredAt||'');
+ if(stamp){const d=new Date(stamp);if(!Number.isNaN(d.getTime()))return d.getTime()>=new Date(PANORA_PRODUCTION_EPOCH).getTime()}
+ const day=String(row?.date||row?.movement_date||row?.bakeDate||row?.bake_date||row?.pickupDate||'').slice(0,10);
+ return !day||day>=PANORA_PRODUCTION_DAY;
+}
 const PRODUCTS={plain:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Yeast-free flaxseed bread with seeds',es:'Pan de lino sin levadura con semillas'},pumpkin:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'}};
 const TEXT={
 ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Готовый хлеб приходуется только после подтверждения «Выпечка завершена»; выдача рознице и отгрузка партнёру уменьшают остаток.',movement:'+ Инвентаризация / корректировка',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Инвентаризация / корректировка склада',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
@@ -731,11 +741,11 @@ function stockManualProduced(date,product){
 }
 function stockAutoBakeMovements(){
  const today=stockLocalDate();
- return readBakeCompletions().filter(completion=>completion&&!completion.deletedAt&&String(completion.date||'')<=today).flatMap(completion=>(completion.items||[]).flatMap((item,index)=>{const product=String(item.product||''),good=Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))));if(!product||good<=0)return[];const legacyManual=completion.source==='legacy_inferred'?stockManualProduced(completion.date,product):0,auto=Math.max(0,good-legacyManual);if(auto<=0)return[];return[{id:`auto-bake:${completion.date}:${product}:${index}`,date:completion.date,product,type:'baked',quantity:auto,note:completion.source==='legacy_inferred'?'Перенесённый факт выпечки':'Фактическая выпечка завершена',bakeDate:completion.date,virtual:true,bakeCompletionId:completion.id,occurredAt:stockEconomicOccurredAt(completion.date,completion.createdAt)}]}));
+ return readBakeCompletions().filter(completion=>completion&&!completion.deletedAt&&panoraProductionRecordAllowed(completion)&&String(completion.date||'')<=today).flatMap(completion=>(completion.items||[]).flatMap((item,index)=>{const product=String(item.product||''),good=Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))));if(!product||good<=0)return[];const legacyManual=completion.source==='legacy_inferred'?stockManualProduced(completion.date,product):0,auto=Math.max(0,good-legacyManual);if(auto<=0)return[];return[{id:`auto-bake:${completion.date}:${product}:${index}`,date:completion.date,product,type:'baked',quantity:auto,note:completion.source==='legacy_inferred'?'Перенесённый факт выпечки':'Фактическая выпечка завершена',bakeDate:completion.date,virtual:true,bakeCompletionId:completion.id,occurredAt:stockEconomicOccurredAt(completion.date,completion.createdAt)}]}));
 }
 function stockCanonicalNotes(){
  const seen=new Set(),rows=[];
- stockNotes().slice().sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||''))).forEach(note=>{
+ stockNotes().filter(panoraProductionRecordAllowed).slice().sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||''))).forEach(note=>{
   const key=note.orderId?`order:${String(note.orderId)}`:`note:${String(note.id||'')}`;
   if(seen.has(key))return;
   seen.add(key);rows.push(note);
@@ -776,7 +786,7 @@ function stockRetailCompletedMovements(){
 }
 function stockEffectiveMovements(){
  const notes=stockCanonicalNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
- const manual=movements.filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
+ const manual=movements.filter(panoraProductionRecordAllowed).filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
  const source=[...manual,...stockAutoBakeMovements(),...stockShipmentMovements(),...stockRetailCompletedMovements()]
   .slice().sort((a,b)=>stockMovementOrderKey(a).localeCompare(stockMovementOrderKey(b)));
  const balances=new Map(),retailOrdersById=new Map(readRetailOrders().filter(Boolean).map(order=>[String(order.id||''),order])),acceptedRetailReturns=new Map();
