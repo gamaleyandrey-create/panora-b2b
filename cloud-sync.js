@@ -821,7 +821,7 @@
       await refreshRestaurantPricesDirect();
       if(typeof renderCommerce==='function')renderCommerce();
     }else{
-      // Panora 9.76 CLEAN BASE: Supabase is authoritative on first hydration.
+      // Panora 9.77 CLEAN BASE: Supabase is authoritative on first hydration.
       // Never resurrect partners from an old browser cache when the server is empty.
       restaurants=[];
       safeLocalSet('panora-restaurants','[]',{quotaIsWarning:false});
@@ -1262,7 +1262,7 @@
     const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote);
-    // Panora 9.76 CLEAN BASE: an arbitrary old local cache is never treated as
+    // Panora 9.77 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
@@ -1312,7 +1312,7 @@
       const changed=beforeSignature!==paymentUiSignature(payments);
       if(changed)queueAdminCommerceRender();
     }else if(firstHydration){
-      // Panora 9.76 CLEAN BASE: empty server means no payments. Do not upload
+      // Panora 9.77 CLEAN BASE: empty server means no payments. Do not upload
       // stale training/history rows from this browser.
       payments=[];
       cachePaymentsLocal();

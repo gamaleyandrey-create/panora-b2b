@@ -1,22 +1,24 @@
-/* Panora 9.76 CLEAN BASE III — one-time local operational reset.
-   Server remains authoritative; this prevents old training stock/bake caches from
-   being re-uploaded after the production-history cleanup. */
+/* Panora 9.77 CLEAN BASE IV — one-time local operational reset.
+   Supabase is authoritative. Do not recreate demo opening balances from legacy
+   recipe stock values after the production database has been cleaned. */
 (()=>{
-  const resetMarker='panora-clean-bakery-history-v9760';
+  const resetMarker='panora-clean-bakery-history-v9770';
   try{
-    if(localStorage.getItem(resetMarker)==='1')return;
-    [
-      'panora-stock-movements',
-      'panora-raw-stock-movements',
-      'panora-bake-completions',
-      'panora-production-plans',
-      'panora-cancelled-bake-dates',
-      'panora-purchase-selected-dates',
-      'panora-finished-stock-watermark-v934',
-      'panora-raw-stock-cloud-watermark-v934',
-      'panora-bake-completion-cloud-watermark-v934'
-    ].forEach(key=>localStorage.removeItem(key));
-    localStorage.setItem(resetMarker,'1');
+    if(localStorage.getItem(resetMarker)!=='1'){
+      [
+        'panora-stock-movements',
+        'panora-raw-stock-movements',
+        'panora-bake-completions',
+        'panora-production-plans',
+        'panora-cancelled-bake-dates',
+        'panora-purchase-selected-dates',
+        'panora-finished-stock-watermark-v934',
+        'panora-raw-stock-cloud-watermark-v934',
+        'panora-bake-completion-cloud-watermark-v934'
+      ].forEach(key=>localStorage.removeItem(key));
+      localStorage.setItem('panora-raw-stock-migration-v606','1');
+      localStorage.setItem(resetMarker,'1');
+    }
   }catch{}
 })();
 

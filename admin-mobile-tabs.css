@@ -24,7 +24,7 @@
  #view-plan.active>.page-head{margin-bottom:14px!important}
 }
 
-/* Panora 9.76 · bakery delivery-notes section, desktop + mobile */
+/* Panora 9.77 · bakery delivery-notes section, desktop + mobile */
 .delivery-note-view-tabs{display:flex;gap:8px;margin:0 0 14px}
 .delivery-note-view-tabs button{border:1px solid #d9e1d9;background:#fff;border-radius:999px;padding:9px 14px;font:700 13px/1 Manrope,Arial,sans-serif;color:#5f6c62}
 .delivery-note-view-tabs button.active{background:#e5efe7;border-color:#c5d8c9;color:#294c36}
@@ -50,7 +50,7 @@
  .admin-delivery-notes-table td:last-child{padding-top:10px!important}
 }
 
-/* Panora 9.76 · compact bakery delivery-note cards on mobile */
+/* Panora 9.77 · compact bakery delivery-note cards on mobile */
 @media(max-width:720px){
  #view-delivery-notes .admin-delivery-notes-wrap{border:0!important;background:transparent!important;box-shadow:none!important}
  #view-delivery-notes .admin-delivery-notes-table tr{padding:14px 16px!important;border-radius:18px!important}
@@ -66,7 +66,7 @@
 }
 
 
-/* Panora 9.76 · dedicated bakery delivery-note cards on mobile; no table-to-card conversion */
+/* Panora 9.77 · dedicated bakery delivery-note cards on mobile; no table-to-card conversion */
 .admin-delivery-note-cards{display:none}
 @media(max-width:720px){
  #view-delivery-notes .admin-delivery-notes-wrap{display:none!important}

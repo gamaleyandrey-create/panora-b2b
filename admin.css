@@ -358,7 +358,7 @@
 .stock-analytics-line small{color:#899188}
 @media(max-width:700px){.stock-warning-summary{align-items:stretch;flex-direction:column}.stock-warning-summary button{width:100%}.stock-analytics-line{align-items:flex-start;flex-wrap:wrap}}
 
-/* Panora 9.76 · editable partner profile */
+/* Panora 9.77 · editable partner profile */
 .partner-profile-settings{background:#f8faf7}
 .partner-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .partner-profile-grid .partner-profile-wide{grid-column:1/-1}
