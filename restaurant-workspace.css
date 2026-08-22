@@ -964,7 +964,7 @@
 /* Panora 5.37 · direct order builder and explicit required profile fields */
 .rw-required-field>span:first-child{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rw-required-mark{color:#b44e42;font-size:15px}
-.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#980047!important;font-size:10px!important;font-weight:700!important}
+.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#981047!important;font-size:10px!important;font-weight:700!important}
 .rw-new-order-page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .rw-new-order-head{grid-column:1/-1}
 .rw-new-order-head h3{margin:4px 0 6px;font:34px Georgia,serif}
