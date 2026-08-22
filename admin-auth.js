@@ -1,4 +1,4 @@
-/* Panora 9.81 — resilient mobile admin authentication transport */
+/* Panora 9.82 — mobile network diagnostics and resilient admin authentication */
 (()=>{
   const cfg=window.PANORA_SUPABASE;
   const layer=document.querySelector('#adminAuthLayer');
@@ -16,7 +16,28 @@
   const withTimeout=async(promise,ms=15000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Сервер не ответил. Проверьте интернет и повторите вход.')),ms)})])}finally{clearTimeout(timer)}};
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const fetchOptions=options=>({cache:'no-store',credentials:'omit',mode:'cors',referrerPolicy:'no-referrer',...options});
-  const isTransportError=err=>/load failed|failed to fetch|network|internet connection|network request failed/i.test(String(err?.message||err||''));
+  const isTransportError=err=>/load failed|failed to fetch|network|internet connection|network request failed|server panora unavailable|сервер panora недоступен/i.test(String(err?.message||err||''));
+  const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+  async function probeServer(timeoutMs=6500){
+    if(navigator.onLine===false)return {online:false,reachable:false};
+    const probeUrl=`${cfg.url}/auth/v1/health?panora_probe=${Date.now()}`;
+    try{
+      await withTimeout(fetch(probeUrl,{method:'GET',cache:'no-store',credentials:'omit',mode:'no-cors',referrerPolicy:'no-referrer'}),timeoutMs);
+      return {online:true,reachable:true};
+    }catch(error){
+      return {online:true,reachable:false,error};
+    }
+  }
+  async function transportMessage(){
+    const probe=await probeServer();
+    if(!probe.online)return 'Нет подключения к интернету. Подключитесь к сети и повторите вход.';
+    if(!probe.reachable)return isIOS()?
+      'Сервер Panora недоступен через текущую сеть. На iPhone при LTE/5G переключитесь на Wi‑Fi и повторите вход.':
+      'Сервер Panora недоступен через текущую сеть. Попробуйте другую сеть или Wi‑Fi.';
+    return isIOS()?
+      'Сервер Panora доступен, но запрос авторизации блокируется текущей сетью. На iPhone при LTE/5G переключитесь на Wi‑Fi и повторите вход.':
+      'Сервер Panora доступен, но запрос авторизации блокируется сетью. Попробуйте другую сеть.';
+  }
   function xhrRequest(url,options={},timeoutMs=15000){
     return new Promise((resolve,reject)=>{
       let xhr;
@@ -43,12 +64,15 @@
     try{return await withTimeout(fetch(url,prepared),timeoutMs)}catch(secondError){
       if(!isTransportError(secondError))throw secondError;
       try{return await xhrRequest(url,options,timeoutMs)}catch(xhrError){
-        const online=navigator.onLine!==false;
-        const err=new Error(online?'Сервер Panora недоступен с этого устройства. Проверьте мобильную сеть/VPN и повторите вход.':'Нет подключения к интернету. Подключитесь к сети и повторите вход.');
+        const err=new Error(await transportMessage());
         err.cause=xhrError||secondError||firstError;throw err;
       }
     }
   }
+  window.panoraAuthNetworkCheck=async()=>{
+    const result=await probeServer();
+    return {build:'9820',online:result.online,serverReachable:result.reachable,ios:isIOS(),standalone:!!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)};
+  };
   async function signOut(session=readSession()){
     try{if(session?.access_token)await request(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
     clearSession();location.reload();
