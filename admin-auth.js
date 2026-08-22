@@ -8,17 +8,6 @@
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(sessionKey)||'null')}catch{return null}};
   const saveSession=value=>localStorage.setItem(sessionKey,JSON.stringify(value));
   const clearSession=()=>localStorage.removeItem(sessionKey);
-  const cleanRemoteMark='panora-clean-production-cloud-v975';
-  async function cleanPartnerTrainingCloud(session){
-    // Panora 9.73: the production app excludes all partner/B2B records created before the cutover.
-    // Clear device caches before authenticated cloud modules start, so training data cannot flash or re-upload.
-    try{
-      const keys=['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-portal-restaurants','panora-portal-orders','panora-portal-payments','panora-portal-delivery-notes','panora-admin-restaurant-prices-v420','panora-order-counts-cache','panora-admin-orders-watermark-v936','panora-admin-payments-watermark-v936','panora-raw-stock-movements','panora-stock-movements','panora-raw-stock-cloud-watermark-v934','panora-finished-stock-watermark-v934','panora-production-plans','panora-bake-completions','panora-bake-completion-cloud-watermark-v934','panora-cancelled-bake-dates','panora-purchase-selected-dates'];
-      keys.forEach(key=>localStorage.removeItem(key));
-      localStorage.setItem(cleanRemoteMark,'1');
-    }catch{}
-    return true;
-  }
   async function signOut(session=readSession()){
     try{if(session?.access_token)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
     clearSession();location.reload();
@@ -41,6 +30,10 @@
   function unlock(session,profile){
     window.panoraSupabaseSession=session;
     window.panoraAdminProfile=profile;
+    // Panora 9.71: clear demo operational cache only after bakery auth succeeds,
+    // before cloud modules receive panora:authenticated. This prevents mobile
+    // CLEAN START from racing the login/session restore.
+    try{window.panoraCleanStartLocalCacheOnce?.()}catch{}
     document.body.classList.remove('auth-pending');
     document.body.classList.add('admin-authenticated');
     layer.hidden=true;
@@ -50,9 +43,9 @@
   }
   async function validate(session){
     if(!session)return false;
-    try{const profile=await getProfile(session.access_token,session.user.id);await cleanPartnerTrainingCloud(session);unlock(session,profile);return true}catch(err){console.error('Panora partner clean start',err);message('Не удалось очистить учебные данные партнёров: '+(err.message||err));
+    try{const profile=await getProfile(session.access_token,session.user.id);unlock(session,profile);return true}catch{
       const updated=await refresh(session);if(!updated)return false;
-      try{const profile=await getProfile(updated.access_token,updated.user.id);await cleanPartnerTrainingCloud(updated);unlock(updated,profile);return true}catch(err){console.error('Panora partner clean start',err);message('Не удалось очистить учебные данные партнёров: '+(err.message||err));return false}
+      try{const profile=await getProfile(updated.access_token,updated.user.id);unlock(updated,profile);return true}catch{return false}
     }
   }
   async function changePassword(currentPassword,newPassword){
@@ -99,7 +92,7 @@
       const response=await fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})});
       const session=await response.json();
       if(!response.ok)throw new Error(session.error_description||session.msg||'Неверный email или пароль.');
-      const profile=await getProfile(session.access_token,session.user.id);saveSession(session);await cleanPartnerTrainingCloud(session);unlock(session,profile);form.reset();
+      const profile=await getProfile(session.access_token,session.user.id);saveSession(session);unlock(session,profile);form.reset();
     }catch(err){message(err.message||'Не удалось войти. Проверьте соединение.')}finally{submit.disabled=false}
   });
   validate(readSession()).then(ok=>{if(!ok){clearSession();document.body.classList.remove('auth-pending');layer.hidden=false}});

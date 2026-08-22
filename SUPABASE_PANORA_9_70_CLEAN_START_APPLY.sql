@@ -1,4 +1,4 @@
--- Panora 9.70 CLEAN START — BACKUP + APPLY
+-- Panora 9.71 CLEAN START — BACKUP + APPLY
 -- Creates a reversible database snapshot BEFORE deleting demo/teaching data.
 -- Backup schema: panora_demo_backup_970
 -- Run PREVIEW first. Run this file only when you are ready to reset the demo history.
@@ -18,7 +18,7 @@ create schema panora_demo_backup_970;
 create table panora_demo_backup_970._manifest as
 select
   now() as backed_up_at,
-  'Panora 9.70 CLEAN START'::text as release,
+  'Panora 9.71 CLEAN START'::text as release,
   current_database()::text as database_name;
 
 -- Full operational tables. Missing optional tables are skipped safely.
