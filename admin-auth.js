@@ -71,7 +71,7 @@
   }
   window.panoraAuthNetworkCheck=async()=>{
     const result=await probeServer();
-    return {build:'9840',online:result.online,serverReachable:result.reachable,ios:isIOS(),standalone:!!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)};
+    return {build:'9850',online:result.online,serverReachable:result.reachable,ios:isIOS(),standalone:!!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)};
   };
   async function signOut(session=readSession()){
     try{if(session?.access_token)await request(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
