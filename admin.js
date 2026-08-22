@@ -1,8 +1,8 @@
-/* Panora 9.75 CLEAN BASE II — one-time local operational reset.
+/* Panora 9.76 CLEAN BASE III — one-time local operational reset.
    Server remains authoritative; this prevents old training stock/bake caches from
    being re-uploaded after the production-history cleanup. */
 (()=>{
-  const resetMarker='panora-clean-bakery-history-v9750';
+  const resetMarker='panora-clean-bakery-history-v9760';
   try{
     if(localStorage.getItem(resetMarker)==='1')return;
     [
