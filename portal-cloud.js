@@ -973,8 +973,8 @@
     if(editingWorkspace&&!force)return;
     legacyRender();if(account){decorateState();return}
     const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
-    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
-    if(!form.querySelector('.account-confirm-hint')){const hint=document.createElement('p');hint.className='account-confirm-hint';hint.textContent=labels('При первом входе после создания пароля подтвердите email по письму Panora. Без подтверждения вход закрыт.','After creating a password for the first time, confirm your email using the Panora message. You cannot sign in until it is confirmed.','Después de crear la contraseña por primera vez, confirma tu email con el mensaje de Panora. No podrás entrar hasta confirmarlo.');form.querySelector('[data-cloud-signup]')?.before(hint)}
+    form.querySelector('[data-cloud-signup]')?.remove();
+    form.querySelector('.account-confirm-hint')?.remove();
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;

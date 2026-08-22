@@ -1,0 +1,1 @@
+Deploy this Edge Function in the Panora Supabase project as: admin-partner-password. Required secrets are provided automatically by Supabase: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
