@@ -1,5 +1,8 @@
 (function(){
  const INGREDIENT_COSTS_KEY='panora-ingredient-costs';
+ const PANORA_PRODUCTION_EPOCH='2026-08-22T13:05:30.000Z';
+ const PANORA_PRODUCTION_DAY='2026-08-22';
+ const productionAllowed=row=>{const stamp=String(row?.createdAt||row?.created_at||row?.updatedAt||row?.updated_at||'');if(stamp){const d=new Date(stamp);if(!Number.isNaN(d.getTime()))return d.getTime()>=new Date(PANORA_PRODUCTION_EPOCH).getTime()}const day=String(row?.date||row?.bakeDate||row?.pickupDate||'').slice(0,10);return !day||day>=PANORA_PRODUCTION_DAY};
  const normalizeCostName=name=>String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ');
  const normalizeCostUnit=unit=>String(unit||'g').trim().toLowerCase()==='pcs'?'pcs':String(unit||'g').trim().toLowerCase()==='ml'?'ml':'g';
  const ingredientCostKey=(name,unit)=>`${normalizeCostName(name)}|${normalizeCostUnit(unit)}`;
@@ -41,8 +44,8 @@
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
  };
 
- const readBakeCompletions=()=>{try{const value=JSON.parse(localStorage.getItem('panora-bake-completions')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
- const readRetailOrders=()=>{try{const value=JSON.parse(localStorage.getItem('panora-retail-orders')||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+ const readBakeCompletions=()=>{try{const value=JSON.parse(localStorage.getItem('panora-bake-completions')||'[]');return Array.isArray(value)?value.filter(productionAllowed):[]}catch{return[]}};
+ const readRetailOrders=()=>{try{const value=JSON.parse(localStorage.getItem('panora-retail-orders')||'[]');return Array.isArray(value)?value.filter(productionAllowed):[]}catch{return[]}};
  const activeRetailPreorders=()=>readRetailOrders().filter(order=>order&&String(order.source||'')==='bake_preorder'&&String(order.status||'new')!=='cancelled');
  const completedBakeDates=()=>new Set(readBakeCompletions().filter(item=>item&&!item.deletedAt).map(item=>String(item.date||'')));
 
@@ -179,7 +182,7 @@
  const rawStockDeviceId=(()=>{let id=localStorage.getItem(RAW_STOCK_DEVICE_KEY);if(id)return id;id=crypto.randomUUID();localStorage.setItem(RAW_STOCK_DEVICE_KEY,id);return id})();
 
  const readRawMovements=()=>{
-  try{const value=JSON.parse(localStorage.getItem(RAW_STOCK_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return[]}
+  try{const value=JSON.parse(localStorage.getItem(RAW_STOCK_KEY)||'[]');return Array.isArray(value)?value.filter(productionAllowed):[]}catch{return[]}
  };
  const saveRawMovements=value=>{
   const rows=Array.isArray(value)?value:[],payload=JSON.stringify(rows);
