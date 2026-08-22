@@ -504,27 +504,27 @@
   }
   async function fetchPartnerDeliveryNotes(rid){
     const encoded=encodeURIComponent(rid);
-    const preferred=`delivery_notes?restaurant_id=eq.${encoded}&delivered_at=gte.2026-08-22T11%3A25%3A11Z&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`;
+    const preferred=`delivery_notes?restaurant_id=eq.${encoded}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver`;
     try{return await api(preferred)}catch(error){
       const raw=String(error?.message||error||'');
       if(!/column|does not exist|PGRST/i.test(raw))throw error;
       console.warn('Panora partner delivery-note compatibility fallback',error);
-      return api(`delivery_notes?restaurant_id=eq.${encoded}&delivered_at=gte.2026-08-22T11%3A25%3A11Z&select=*`);
+      return api(`delivery_notes?restaurant_id=eq.${encoded}&select=*`);
     }
   }
   async function fetchPartnerPayments(rid,delta=''){
     const encoded=encodeURIComponent(rid);
-    const preferred=`payments?restaurant_id=eq.${encoded}&received_at=gte.2026-08-22T11%3A25%3A11Z&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${delta}`;
+    const preferred=`payments?restaurant_id=eq.${encoded}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${delta}`;
     try{return await api(preferred)}catch(error){
       const raw=String(error?.message||error||'');
       if(!/column|does not exist|PGRST/i.test(raw))throw error;
       console.warn('Panora partner payment compatibility fallback',error);
-      const minimal=`payments?restaurant_id=eq.${encoded}&received_at=gte.2026-08-22T11%3A25%3A11Z&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,updated_at${delta}`;
+      const minimal=`payments?restaurant_id=eq.${encoded}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,updated_at${delta}`;
       try{return await api(minimal)}catch(secondError){
         const secondRaw=String(secondError?.message||secondError||'');
         if(!/column|does not exist|PGRST/i.test(secondRaw))throw secondError;
         console.warn('Panora partner payment wide compatibility fallback',secondError);
-        return api(`payments?restaurant_id=eq.${encoded}&received_at=gte.2026-08-22T11%3A25%3A11Z&select=*${delta}`);
+        return api(`payments?restaurant_id=eq.${encoded}&select=*${delta}`);
       }
     }
   }
@@ -551,7 +551,7 @@
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
-        api(`restaurants?id=eq.${rid}&created_at=gte.2026-08-22T11%3A25%3A11Z&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&created_at=gte.2026-08-22T11%3A25%3A11Z&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),fetchPartnerDeliveryNotes(rid),fetchPartnerPayments(rid),api('bake_days?created_at=gte.2026-08-22T11%3A25%3A11Z&select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
+        api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),fetchPartnerDeliveryNotes(rid),fetchPartnerPayments(rid),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
       if(!restaurantRows?.[0])throw new Error('Partner not found');
       if(restaurantRows[0].active===false){
