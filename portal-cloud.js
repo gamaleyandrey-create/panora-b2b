@@ -1306,7 +1306,7 @@
       ));
     }
     let resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
-    // Panora 9.80: mobile partner checkout may be opened directly from the
+    // Panora 9.81: mobile partner checkout may be opened directly from the
     // workspace (without the basket). Never block confirmation merely because
     // the hidden/previous control did not carry its value forward. If there is
     // an available compatible day, select the first one and mirror it into the

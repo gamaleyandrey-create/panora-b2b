@@ -1837,15 +1837,63 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=()=>{
         if(!cartCount())return;
-        // Panora 9.57: orders started in the partner workspace skip the
-        // duplicate basket screen and go straight to final confirmation.
-        closePanels();
+        // Panora 9.81: partner-workspace checkout is opened directly over the
+        // workspace. Do not close the cabinet and do not route through the
+        // public-page basket button (it can be disabled before a bake day is
+        // mirrored into the legacy public controls).
         try{
           renderProducts();
           renderCart();
-          syncCartDeliveryDate?.();
-          document.querySelector("#checkoutButton")?.click();
-        }catch{}
+          const productIds=Object.keys(cart||{}).filter(id=>Number(cart[id]||0)>0);
+          const dates=typeof window.panoraCompatibleBakeDates==="function"
+            ? window.panoraCompatibleBakeDates(productIds,50)
+            : [];
+          if(!dates.length){
+            showToast(lang==="ru"?"Для выбранных товаров нет общего открытого дня выпечки.":lang==="es"?"No hay un día de horneado abierto común para los productos seleccionados.":"There is no common open bake day for the selected products.");
+            return;
+          }
+          const values=dates.map(item=>({value:dateValue(item.date),item}));
+          let chosen=String(localStorage.getItem("panora-bake-date")||"");
+          if(!values.some(entry=>entry.value===chosen))chosen=values[0].value;
+          localStorage.setItem("panora-bake-date",chosen);
+          const optionHtml=values.map(({value,item})=>`<option value="${esc(value)}" ${value===chosen?"selected":""}>${esc(typeof bakeDeliveryOptionLabel==="function"?bakeDeliveryOptionLabel(item.date,item.deliveryDate):localDate(value))}</option>`).join("");
+          const checkoutDate=document.querySelector("#deliveryDate");
+          if(checkoutDate){
+            checkoutDate.innerHTML=optionHtml;
+            checkoutDate.disabled=false;
+            checkoutDate.required=true;
+            checkoutDate.value=chosen;
+            checkoutDate.onchange=()=>{
+              const value=String(checkoutDate.value||"");
+              if(!values.some(entry=>entry.value===value))return;
+              localStorage.setItem("panora-bake-date",value);
+              const cartDate=document.querySelector("#cartDeliveryDate");
+              if(cartDate&&[...cartDate.options].some(option=>option.value===value))cartDate.value=value;
+            };
+          }
+          const cartDate=document.querySelector("#cartDeliveryDate");
+          if(cartDate){cartDate.innerHTML=optionHtml;cartDate.disabled=false;cartDate.value=chosen}
+          const checkout=document.querySelector("#checkoutModal");
+          if(!checkout)return;
+          document.body.classList.add("panora-workspace-checkout");
+          openPanel(checkout);
+          // Closing the final confirmation returns to the still-open partner
+          // workspace instead of exposing the public catalogue.
+          const checkoutClose=checkout.querySelector("[data-close]");
+          if(checkoutClose)checkoutClose.onclick=()=>{
+            checkout.classList.remove("open");
+            checkout.setAttribute("aria-hidden","true");
+            document.body.classList.remove("panora-workspace-checkout");
+            const profile=document.querySelector("#profileModal");
+            if(profile?.classList.contains("open")){
+              document.querySelector("#overlay")?.classList.add("open");
+              document.body.style.overflow="hidden";
+            }else closePanels();
+          };
+        }catch(error){
+          console.warn("Panora partner checkout",error);
+          showToast(lang==="ru"?"Не удалось открыть подтверждение заказа.":lang==="es"?"No se pudo abrir la confirmación del pedido.":"Could not open order confirmation.");
+        }
       };
     });
 
