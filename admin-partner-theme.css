@@ -1675,5 +1675,5 @@ body.admin-page .stock-product-main-unconfirmed b{font-family:Manrope,-apple-sys
 body.admin-page .stock-inventory-button{border-color:#d88d84;background:#fff;color:#a63f36}
 body.admin-page .stock-inventory-button:hover{background:#fff4f2}
 
-/* Panora 9.69 — bakery mobile bar always exposes five primary actions, including More. */
+/* Panora 9.70 — bakery mobile bar always exposes five primary actions, including More. */
 @media(max-width:720px){body.admin-page .admin-mobile-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}body.admin-page #adminMobileMore{display:grid!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}}
