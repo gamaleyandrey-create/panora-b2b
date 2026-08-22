@@ -821,7 +821,7 @@
       await refreshRestaurantPricesDirect();
       if(typeof renderCommerce==='function')renderCommerce();
     }else{
-      // Panora 9.82 CLEAN BASE: Supabase is authoritative on first hydration.
+      // Panora 9.83 CLEAN BASE: Supabase is authoritative on first hydration.
       // Never resurrect partners from an old browser cache when the server is empty.
       restaurants=[];
       safeLocalSet('panora-restaurants','[]',{quotaIsWarning:false});
@@ -874,12 +874,12 @@
     clearPending('restaurants');writeRestaurantBaseline(restaurants);window.dispatchEvent(new CustomEvent('panora:restaurants-ui-refresh'));
     status('Облако ✓');
   }
-  const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,taxRate:Number(order.taxRate||0),comment:order.comment||''});
+  const orderMeta=order=>JSON.stringify({deliveryDate:order.deliveryDate||order.date,deliveryWindow:order.deliveryWindow||'',taxRate:Number(order.taxRate||0),comment:order.comment||'',createdSource:order.createdSource||'',createdByRole:order.createdByRole||'',createdByName:order.createdByName||'',createdByAt:order.createdByAt||'',confirmedByRole:order.confirmedByRole||'',confirmedByName:order.confirmedByName||'',confirmedAt:order.confirmedAt||''});
   const parseOrderMeta=value=>{try{return JSON.parse(value||'{}')}catch{return{comment:value||''}}};
   const rowOrder=row=>{
     const meta=parseOrderMeta(row.comment),day=row.bake_days||{},rawItems=row.order_items||[],items=rawItems.map(item=>({product:item.product_id,quantity:Number(item.quantity),nameSnapshot:item.product_names_snapshot||null,imageSnapshot:item.product_image_snapshot||''})),partnerPrices=restaurant(row.restaurant_id)?.prices||{};
     const orderPrices=Object.fromEntries(rawItems.map(item=>{const saved=Number(item.unit_price),fallback=Number(partnerPrices[item.product_id]);return[item.product_id,(Number.isFinite(saved)&&saved>0)?saved:(Number.isFinite(fallback)&&fallback>0?fallback:saved)]}));
-    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items,prices:orderPrices,taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
+    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,deliveryWindow:meta.deliveryWindow||'',items,prices:orderPrices,taxRate:Number(meta.taxRate||0),status:row.status,comment:meta.comment||'',createdSource:meta.createdSource||'',createdByRole:meta.createdByRole||'',createdByName:meta.createdByName||'',createdByAt:meta.createdByAt||'',confirmedByRole:meta.confirmedByRole||'',confirmedByName:meta.confirmedByName||'',confirmedAt:meta.confirmedAt||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at};
   };
   async function hydrateAdminOrderRows(orderRows){
     const rows=Array.isArray(orderRows)?orderRows:[];
@@ -1023,8 +1023,15 @@
     if(returned?.status&&String(returned.status)!==String(nextStatus))
       throw new Error(`Сервер сохранил статус «${returned.status}» вместо «${nextStatus}»`);
     await loadOrders();
-    window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
     const saved=orders.find(order=>String(order.id)===String(id));
+    if(saved&&String(nextStatus)==='confirmed'){
+      const confirmedAt=new Date().toISOString();
+      Object.assign(saved,{confirmedByRole:'admin',confirmedByName:'Пекарня',confirmedAt});
+      try{
+        await request(`orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({comment:orderMeta(saved),updated_at:confirmedAt})});
+      }catch(metaError){console.warn('Panora bakery confirmation audit meta',metaError)}
+    }
+    window.dispatchEvent(new CustomEvent('panora:order-status-local',{detail:{id,nextStatus}}));
     if(!saved||String(saved.status)!==String(nextStatus))
       throw new Error(`Supabase вернул статус «${saved?.status||'не найден'}» вместо «${nextStatus}»`);
     window.panoraRefreshNewOrderBadge?.();
@@ -1262,7 +1269,7 @@
     const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote);
-    // Panora 9.82 CLEAN BASE: an arbitrary old local cache is never treated as
+    // Panora 9.83 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
@@ -1312,7 +1319,7 @@
       const changed=beforeSignature!==paymentUiSignature(payments);
       if(changed)queueAdminCommerceRender();
     }else if(firstHydration){
-      // Panora 9.82 CLEAN BASE: empty server means no payments. Do not upload
+      // Panora 9.83 CLEAN BASE: empty server means no payments. Do not upload
       // stale training/history rows from this browser.
       payments=[];
       cachePaymentsLocal();

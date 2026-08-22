@@ -483,7 +483,7 @@ function orderActions(o) {
   if (o.status === "shipped")
     return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small panora-note-more" type="button" data-note-library="${o.id}" aria-label="Документы накладной">⋯</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
-    return `<div class="order-flow">${step(1,'Подтвердить','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить заказ</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
+    return `<div class="order-flow">${step(1,'Получение','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить получение</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
   return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions">${pricing.valid
     ? `<button class="action-small ship primary-flow" data-ship="${o.id}" title="После отгрузки будет создана накладная">Отгрузить заказ</button>`
     : `<button class="action-small ship primary-flow order-ship-disabled" type="button" disabled title="${pricing.reason==='empty'?'В заказе нет позиций':'Не рассчитана цена одной или нескольких позиций'}">Отгрузка недоступна</button>`}<button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
@@ -656,7 +656,7 @@ function renderOrders() {
             <td class="order-mobile-partner" data-label="Партнёр">${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td>
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
-            <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${customerConfirmationHtml(o)}</td>
+            <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${o.createdByRole==='admin'?`<small class="bakery-order-audit">Создан пекарней${o.confirmedAt?` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}))}`:''}</small>`:''}${o.confirmedByRole==='admin'&&o.createdByRole!=='admin'?`<small class="bakery-order-audit">Получение подтвердил: Пекарня${o.confirmedAt?` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}))}`:''}</small>`:''}${customerConfirmationHtml(o)}</td>
             <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Чат по поставке</button></td>
           </tr>`;
         })
@@ -710,7 +710,7 @@ async function confirmOrder(id) {
     renderCommerce();
     window.panoraRefreshNewOrderBadge?.();
   } catch (error) {
-    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Подтвердить заказ"}
+    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Подтвердить получение"}
     const raw=String(error?.message||error||"");
     const staleProcessing=/order_status[\s\S]*processing|processing[\s\S]*order_status/i.test(raw);
     const missingRpc=/RPC статусов Panora 6\.74|panora_admin_set_order_status|PGRST202/i.test(raw);

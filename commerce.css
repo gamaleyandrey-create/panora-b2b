@@ -772,3 +772,5 @@ body.admin-page #saveState{
   }
   .partner-price-save{width:100%;min-height:48px}
 }
+
+.bakery-order-audit{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:#6c756f;font-weight:600}
