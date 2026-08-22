@@ -3,11 +3,13 @@
   const layer=document.querySelector('#adminAuthLayer');
   const form=document.querySelector('#adminAuthForm');
   const error=document.querySelector('#adminAuthError');
-  const sessionKey='panora-supabase-session';
+  const sessionKey='panora-admin-supabase-session-v975';
+  const legacySessionKey='panora-supabase-session';
+  try{localStorage.removeItem(legacySessionKey)}catch{}
   const headers=token=>({apikey:cfg.publishableKey,Authorization:`Bearer ${token}`});
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(sessionKey)||'null')}catch{return null}};
   const saveSession=value=>localStorage.setItem(sessionKey,JSON.stringify(value));
-  const clearSession=()=>localStorage.removeItem(sessionKey);
+  const clearSession=()=>{localStorage.removeItem(sessionKey);try{localStorage.removeItem(legacySessionKey)}catch{}};
   let authUnlocked=false;
   let authGeneration=0;
   const withTimeout=async(promise,ms=15000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Сервер не ответил. Проверьте интернет и повторите вход.')),ms)})])}finally{clearTimeout(timer)}};
@@ -86,7 +88,7 @@
     });
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();const generation=++authGeneration;message('');const submit=form.querySelector('button');submit.disabled=true;
+    event.preventDefault();const generation=++authGeneration;message('');clearSession();const submit=form.querySelector('button[type="submit"]')||form.querySelector('button');submit.disabled=true;
     const data=new FormData(form);
     try{
       const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})}));
@@ -95,6 +97,8 @@
       const profile=await getProfile(session.access_token,session.user.id);if(generation!==authGeneration)return;saveSession(session);unlock(session,profile);form.reset();
     }catch(err){message(err.message||'Не удалось войти. Проверьте соединение.')}finally{submit.disabled=false}
   });
+  window.addEventListener('panora:admin-session-expired',()=>{authUnlocked=false;clearSession();document.body.classList.remove('admin-authenticated','auth-pending');layer.hidden=false;message('Сессия завершена. Войдите снова.');});
+  window.addEventListener('pageshow',()=>{if(!authUnlocked&&!readSession()){document.body.classList.remove('auth-pending');layer.hidden=false;}});
   const initialSession=readSession();
   const restoreGeneration=authGeneration;
   if(!initialSession){

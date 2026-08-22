@@ -194,6 +194,7 @@
   }
   const clearAdminSession=()=>{
     session=null;ready=false;
+    localStorage.removeItem('panora-admin-supabase-session-v975');
     localStorage.removeItem('panora-supabase-session');
     window.panoraSupabaseSession=null;
     try{window.dispatchEvent(new CustomEvent('panora:admin-session-expired'))}catch{}
@@ -221,7 +222,7 @@
         throw error;
       }
       session=await response.json();
-      localStorage.setItem('panora-supabase-session',JSON.stringify(session));
+      localStorage.setItem('panora-admin-supabase-session-v975',JSON.stringify(session));
       window.panoraSupabaseSession=session;
       return session;
     }).finally(()=>refreshing=null);
@@ -381,7 +382,11 @@
     const remoteRows=await request(`raw_material_movements?select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
     const localRows=readRawStockLocal();
     let merged,outgoing;
-    if(useDelta&&watermark){
+    if(!useDelta&&!pending.rawStock){
+      // Clean/normal bootstrap: Supabase is authoritative, including an empty table.
+      // Never resurrect stale training rows from local storage.
+      merged=(remoteRows||[]).map(rawStockFromCloud);outgoing=[];
+    }else if(useDelta&&watermark){
       const map=new Map(localRows.map(item=>[String(item.id),item]));
       (remoteRows||[]).forEach(row=>map.set(String(row.id),rawStockFromCloud(row)));
       merged=[...map.values()];outgoing=[];
@@ -413,7 +418,8 @@
     const watermark=useDelta?localStorage.getItem(bakeCompletionDeltaKey)||'':'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
     const remoteRows=await request(`bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=bake_date.asc`),localRows=readBakeCompletionLocal();
     let merged,outgoing;
-    if(useDelta&&watermark){const map=new Map(localRows.map(item=>[String(item.id),item]));(remoteRows||[]).forEach(row=>map.set(String(row.id),bakeCompletionFromCloud(row)));merged=[...map.values()];outgoing=[]}
+    if(!useDelta&&!pending.bakeCompletions){merged=(remoteRows||[]).map(bakeCompletionFromCloud);outgoing=[]}
+    else if(useDelta&&watermark){const map=new Map(localRows.map(item=>[String(item.id),item]));(remoteRows||[]).forEach(row=>map.set(String(row.id),bakeCompletionFromCloud(row)));merged=[...map.values()];outgoing=[]}
     else({merged,outgoing}=mergeBakeCompletions(remoteRows,localRows));
     if(outgoing.length)await request('bake_completions?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(outgoing.map(bakeCompletionToCloud))});
     const canonical=merged.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),current=localRows.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
@@ -815,7 +821,7 @@
       await refreshRestaurantPricesDirect();
       if(typeof renderCommerce==='function')renderCommerce();
     }else{
-      // Panora 9.73 CLEAN BASE: Supabase is authoritative on first hydration.
+      // Panora 9.75 CLEAN BASE: Supabase is authoritative on first hydration.
       // Never resurrect partners from an old browser cache when the server is empty.
       restaurants=[];
       safeLocalSet('panora-restaurants','[]',{quotaIsWarning:false});
@@ -1256,7 +1262,7 @@
     const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(rowNote);
-    // Panora 9.73 CLEAN BASE: an arbitrary old local cache is never treated as
+    // Panora 9.75 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
@@ -1306,7 +1312,7 @@
       const changed=beforeSignature!==paymentUiSignature(payments);
       if(changed)queueAdminCommerceRender();
     }else if(firstHydration){
-      // Panora 9.73 CLEAN BASE: empty server means no payments. Do not upload
+      // Panora 9.75 CLEAN BASE: empty server means no payments. Do not upload
       // stale training/history rows from this browser.
       payments=[];
       cachePaymentsLocal();

@@ -1,3 +1,25 @@
+/* Panora 9.75 CLEAN BASE II — one-time local operational reset.
+   Server remains authoritative; this prevents old training stock/bake caches from
+   being re-uploaded after the production-history cleanup. */
+(()=>{
+  const resetMarker='panora-clean-bakery-history-v9750';
+  try{
+    if(localStorage.getItem(resetMarker)==='1')return;
+    [
+      'panora-stock-movements',
+      'panora-raw-stock-movements',
+      'panora-bake-completions',
+      'panora-production-plans',
+      'panora-cancelled-bake-dates',
+      'panora-purchase-selected-dates',
+      'panora-finished-stock-watermark-v934',
+      'panora-raw-stock-cloud-watermark-v934',
+      'panora-bake-completion-cloud-watermark-v934'
+    ].forEach(key=>localStorage.removeItem(key));
+    localStorage.setItem(resetMarker,'1');
+  }catch{}
+})();
+
 const PRODUCTS={plain:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Yeast-free flaxseed bread with seeds',es:'Pan de lino sin levadura con semillas'},pumpkin:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'}};
 const TEXT={
 ru:{bakery:'Пекарня',plan:'План выпечки',recipes:'Рецептуры',purchase:'Закупка',stock:'Склад хлеба',planTitle:'План выпечки и доставки',planText:'Добавляйте даты и планируйте каждый хлеб в штуках.',addBake:'+ Добавить выпечку',today:'Сегодня',planned:'Запланировано',ordered:'Заказано',reserve:'Свободно',recipeTitle:'Рецептуры хлеба',recipeText:'Для каждого хлеба укажите вес готового остывшего изделия и закладку ингредиентов на 1 штуку.',purchaseTitle:'Список закупки',purchaseText:'Расчёт по плану выпечки с учётом остатков и страхового запаса.',print:'Печать',ingredient:'Ингредиент',required:'Нужно',ingredientStock:'Остаток',margin:'Запас',buy:'Купить',stockTitle:'Склад готового хлеба',stockText:'Готовый хлеб приходуется только после подтверждения «Выпечка завершена»; выдача рознице и отгрузка партнёру уменьшают остаток.',movement:'+ Инвентаризация / корректировка',date:'Дата',product:'Хлеб',operation:'Операция',quantity:'Количество',note:'Примечание',newBake:'Новая выпечка',bakeDate:'Дата выпечки',deliveryDate:'Дата доставки',plannedPiecesLabel:'План, шт.',cutoff:'Приём заказов до',accepting:'Принимать заказы',cancel:'Отмена',save:'Сохранить',newMovement:'Инвентаризация / корректировка склада',open:'Заказы открыты',closed:'Закрыто',delivery:'Доставка',cutoffShort:'Заказ до',empty:'На этой неделе выпечек нет',pcs:'шт.',orderedShort:'заказано'},
@@ -354,7 +376,9 @@ async function loadFinishedStockMovementsCloud(){
  if(finishedStockCloudLoading)return finishedStockCloudLoading;
  finishedStockCloudLoading=(async()=>{try{
   const watermark=finishedStockCloudHydrated?String(localStorage.getItem(FINISHED_STOCK_WATERMARK_KEY)||''):'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-  const before=finishedStockMovementSignature(movements),rows=await retailAdminApi(`finished_stock_movements?select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at${deltaQuery}&order=movement_date.asc,created_at.asc`),allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),byId=new Map((Array.isArray(movements)?movements:[]).map(item=>[String(item?.id||''),item]));
+  const before=finishedStockMovementSignature(movements),rows=await retailAdminApi(`finished_stock_movements?select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at${deltaQuery}&order=movement_date.asc,created_at.asc`),allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),byId=new Map((finishedStockCloudHydrated?Array.isArray(movements)?movements:[]:[]).map(item=>[String(item?.id||''),item]));
+  // First cloud hydration is authoritative, including an empty server table.
+  // This prevents old training stock from surviving a CLEAN BASE reset.
   (Array.isArray(rows)?rows:[]).forEach(row=>{if(!row?.id||!row?.product_id||!allowed.has(String(row.movement_type||'')))return;byId.set(String(row.id),{id:String(row.id),date:String(row.movement_date||''),product:String(row.product_id),type:String(row.movement_type),quantity:Math.abs(Number(row.quantity||0)),note:row.note||'',createdAt:row.created_at||row.updated_at||''})});
   const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);if(newest)localStorage.setItem(FINISHED_STOCK_WATERMARK_KEY,newest);finishedStockCloudHydrated=true;
   const next=[...byId.values()].filter(Boolean),changed=before!==finishedStockMovementSignature(next);movements=next;
@@ -363,7 +387,10 @@ async function loadFinishedStockMovementsCloud(){
  }catch{return false}finally{finishedStockCloudLoading=null}})();
  return finishedStockCloudLoading;
 }
-async function syncAndLoadFinishedStockMovementsCloud(){const synced=await syncFinishedStockMovementsCloud();if(!synced)return false;return loadFinishedStockMovementsCloud()}
+async function syncAndLoadFinishedStockMovementsCloud(){
+ if(!finishedStockCloudHydrated)return loadFinishedStockMovementsCloud();
+ const synced=await syncFinishedStockMovementsCloud();if(!synced)return false;return loadFinishedStockMovementsCloud()
+}
 function syncRetailSettingsForm(settings){const form=$('#retailSettingsForm');if(!form)return;['enabled','stockSales','preorders','pickup','delivery','onlinePayment','payOnPickup','notifyOrderReceived','notifyReady','notifyDelivery','notifyCancelled','pushCustomerEnabled','pushAdminEnabled','pushNewOrder','pushNewMessage','fallbackWhatsApp','fallbackTelegram','fallbackSms','fallbackEmail'].forEach(name=>{if(form.elements[name])form.elements[name].checked=!!settings[name]});['reservationMinutes','preorderCutoffHours','preorderHorizonDays','pickupLeadMinutes','maxOrdersPerSlot','deliveryMinTotal','deliveryFee','deliveryFreeFrom','maxDeliveriesPerSlot','contactPhone','contactEmail','contactWhatsApp','contactTelegram','pickupNote','paymentProvider','pushQuietFrom','pushQuietTo','pushVapidPublicKey'].forEach(name=>{if(form.elements[name])form.elements[name].value=String(settings[name]??'')});if(form.elements.pickupSlots)form.elements.pickupSlots.value=(settings.pickupSlots||[]).join('\n');if(form.elements.deliverySlots)form.elements.deliverySlots.value=(settings.deliverySlots||[]).join('\n');const label=$('#retailEnabledLabel');if(label)label.textContent=settings.enabled?'Включена':'Выключена'}
 function renderRetailCatalogSettings(){
  const grid=$('#retailCatalogGrid');if(!grid)return;const products=retailAdminProducts(),map=readRetailProductSettings();if(!products.length){grid.innerHTML='<div class="retail-catalog-empty">Нет активных карточек продукции.</div>';return}

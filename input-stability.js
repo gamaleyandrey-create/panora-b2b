@@ -28,7 +28,7 @@
     if (!value) { value = uuid(); localStorage.setItem(DEVICE_KEY, value); }
     return value;
   })();
-  const session = () => json(localStorage.getItem(location.pathname.includes("admin") ? "panora-supabase-session" : "panora-restaurant-cloud-session"), {});
+  const session = () => json(localStorage.getItem(location.pathname.includes("admin") ? "panora-admin-supabase-session-v975" : "panora-restaurant-cloud-session"), {});
   const userId = () => {
     if (session()?.user?.id) return session().user.id;
     try {
