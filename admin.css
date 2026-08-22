@@ -357,3 +357,10 @@
 .stock-analytics-line strong{color:#405047;font-size:12px}
 .stock-analytics-line small{color:#899188}
 @media(max-width:700px){.stock-warning-summary{align-items:stretch;flex-direction:column}.stock-warning-summary button{width:100%}.stock-analytics-line{align-items:flex-start;flex-wrap:wrap}}
+
+/* Panora 9.72 · editable partner profile */
+.partner-profile-settings{background:#f8faf7}
+.partner-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.partner-profile-grid .partner-profile-wide{grid-column:1/-1}
+.partner-profile-note{margin:8px 0 0!important;color:#788078!important;font-size:10px!important;line-height:1.4}
+@media(max-width:650px){.partner-profile-grid{grid-template-columns:1fr}.partner-profile-grid .partner-profile-wide{grid-column:auto}}

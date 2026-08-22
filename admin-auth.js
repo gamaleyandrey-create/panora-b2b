@@ -8,6 +8,7 @@
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(sessionKey)||'null')}catch{return null}};
   const saveSession=value=>localStorage.setItem(sessionKey,JSON.stringify(value));
   const clearSession=()=>localStorage.removeItem(sessionKey);
+  let authUnlocked=false;
   async function signOut(session=readSession()){
     try{if(session?.access_token)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
     clearSession();location.reload();
@@ -28,9 +29,10 @@
     const updated=await response.json();saveSession(updated);return updated;
   }
   function unlock(session,profile){
+    authUnlocked=true;
     window.panoraSupabaseSession=session;
     window.panoraAdminProfile=profile;
-    // Panora 9.71: clear demo operational cache only after bakery auth succeeds,
+    // Panora 9.72: clear demo operational cache only after bakery auth succeeds,
     // before cloud modules receive panora:authenticated. This prevents mobile
     // CLEAN START from racing the login/session restore.
     try{window.panoraCleanStartLocalCacheOnce?.()}catch{}
@@ -95,5 +97,19 @@
       const profile=await getProfile(session.access_token,session.user.id);saveSession(session);unlock(session,profile);form.reset();
     }catch(err){message(err.message||'Не удалось войти. Проверьте соединение.')}finally{submit.disabled=false}
   });
-  validate(readSession()).then(ok=>{if(!ok){clearSession();document.body.classList.remove('auth-pending');layer.hidden=false}});
+  const initialSession=readSession();
+  validate(initialSession).then(ok=>{
+    if(ok||authUnlocked)return;
+    // A slow stale-session validation must never erase a newer successful mobile login.
+    const current=readSession();
+    const sessionChanged=!!current&&!!initialSession&&(current.access_token!==initialSession.access_token||current.refresh_token!==initialSession.refresh_token);
+    if(sessionChanged||authUnlocked)return;
+    clearSession();
+    document.body.classList.remove('auth-pending');
+    layer.hidden=false;
+  }).catch(()=>{
+    if(authUnlocked)return;
+    document.body.classList.remove('auth-pending');
+    layer.hidden=false;
+  });
 })();

@@ -69,6 +69,24 @@
     };
   };
 
+  const profilePayload=card=>{
+    const get=name=>String(card.querySelector(`[data-partner-profile="${name}"]`)?.value||'').trim();
+    return {
+      name:get('name'),
+      email:get('email')||null,
+      phone:get('phone')||null,
+      address:get('address')||null,
+      legal_name:get('legal_name')||null,
+      tax_id:(get('tax_id')||'').toUpperCase()||null,
+      billing_address:get('billing_address')||null,
+      contact_person:get('contact_person')||null,
+      delivery_comment:get('delivery_comment')||null,
+      receiving_hours:get('receiving_hours')||null,
+      receiving_days:get('receiving_days')||null,
+      partner_type:get('partner_type')||'restaurant'
+    };
+  };
+
   const screen=()=>document.querySelector('#view-restaurants');
   const cards=()=>document.querySelector('#restaurantCards');
   const draftKey=(restaurantId,productId)=>`${restaurantId}:${productId}`;
@@ -153,6 +171,25 @@
         <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span><button type="button" class="restaurant-delete" data-direct-archive-partner="${esc(restaurantId)}">Архивировать</button></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
+        <details class="partner-contact-settings partner-profile-settings">
+          <summary>Данные партнёра</summary>
+          <div class="partner-contact-grid partner-profile-grid">
+            <label><span>Название</span><input data-partner-profile="name" value="${esc(r.name||'')}" maxlength="120"></label>
+            <label><span>Email</span><input data-partner-profile="email" type="email" value="${esc(r.email||'')}" autocomplete="off"></label>
+            <label><span>Телефон</span><input data-partner-profile="phone" type="tel" value="${esc(r.phone||'')}" placeholder="+34 600 000 000"></label>
+            <label><span>Контактное лицо</span><input data-partner-profile="contact_person" value="${esc(r.contact_person||'')}"></label>
+            <label class="partner-profile-wide"><span>Адрес</span><input data-partner-profile="address" value="${esc(r.address||'')}"></label>
+            <label><span>Юридическое название</span><input data-partner-profile="legal_name" value="${esc(r.legal_name||'')}"></label>
+            <label><span>NIF / CIF</span><input data-partner-profile="tax_id" value="${esc(r.tax_id||'')}"></label>
+            <label class="partner-profile-wide"><span>Адрес для документов</span><input data-partner-profile="billing_address" value="${esc(r.billing_address||'')}"></label>
+            <label><span>Часы приёмки</span><input data-partner-profile="receiving_hours" value="${esc(r.receiving_hours||'')}" placeholder="09:00–18:00"></label>
+            <label><span>Дни приёмки</span><input data-partner-profile="receiving_days" value="${esc(r.receiving_days||'')}"></label>
+            <label class="partner-profile-wide"><span>Комментарий к доставке</span><input data-partner-profile="delivery_comment" value="${esc(r.delivery_comment||'')}"></label>
+            <label><span>Тип партнёра</span><select data-partner-profile="partner_type">${[['restaurant','Ресторан'],['shop','Магазин'],['hotel','Отель'],['cafe','Кафе'],['catering','Кейтеринг'],['other','Другое']].map(([value,label])=>`<option value="${value}"${String(r.partner_type||'restaurant')===value?' selected':''}>${label}</option>`).join('')}</select></label>
+          </div>
+          <p class="partner-profile-note">Email здесь используется в карточке и документах. Email для входа партнёр меняет в своём профиле безопасности.</p>
+          <div class="partner-contact-save-row"><span data-partner-profile-status></span><button type="button" class="secondary" data-save-partner-profile="${esc(restaurantId)}">Сохранить данные</button></div>
+        </details>
         <details class="partner-contact-settings">
           <summary>Контакты и мессенджеры</summary>
           <div class="partner-contact-grid">
@@ -227,6 +264,37 @@
           select.disabled=false;
           alert(`Не удалось сохранить язык партнёра: ${error.message||error}`);
         }
+      });
+    });
+
+    root.querySelectorAll('[data-save-partner-profile]').forEach(button=>{
+      button.addEventListener('click',async()=>{
+        const restaurantId=String(button.dataset.savePartnerProfile||''),card=button.closest('[data-direct-restaurant]');
+        const partner=lastRows.find(r=>String(r.id)===restaurantId);if(!partner||!card)return;
+        const status=card.querySelector('[data-partner-profile-status]'),payload=profilePayload(card);
+        if(!payload.name){if(status)status.textContent='Укажите название';return}
+        button.disabled=true;if(status)status.textContent='Сохраняем…';
+        try{
+          const rows=await rest(`restaurants?id=eq.${encodeURIComponent(restaurantId)}`,{
+            method:'PATCH',headers:{Prefer:'return=representation'},
+            body:JSON.stringify({...payload,updated_at:new Date().toISOString()})
+          });
+          const saved=Array.isArray(rows)?rows[0]:null;
+          Object.assign(partner,payload,saved||{});
+          try{
+            const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
+            const next=(Array.isArray(local)?local:[]).map(r=>String(r.id)===restaurantId?{...r,...payload}:r);
+            localStorage.setItem('panora-restaurants',JSON.stringify(next));
+          }catch{}
+          const title=card.querySelector('h3'),summary=card.querySelector(':scope > p');
+          if(title)title.textContent=partner.name||payload.name;
+          if(summary)summary.innerHTML=`${esc(partner.email||'')}<br>${esc(partner.address||'')}`;
+          if(status){status.textContent='Сохранено ✓';setTimeout(()=>{if(status)status.textContent=''},1400)}
+          window.dispatchEvent(new CustomEvent('panora:partner-profile-changed',{detail:{restaurantId}}));
+        }catch(error){
+          if(status)status.textContent='Ошибка сохранения';
+          alert(`Не удалось сохранить данные партнёра: ${error.message||error}`);
+        }finally{button.disabled=false}
       });
     });
 
@@ -430,7 +498,7 @@
     if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
-      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,updated_at,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
+      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,partner_type,language,active,updated_at,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
       if(active)render(rows||[]);
     }catch(error){
       console.error('Panora direct partners refresh',error);

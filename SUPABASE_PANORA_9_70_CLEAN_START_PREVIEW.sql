@@ -1,4 +1,4 @@
--- Panora 9.71 CLEAN START — PREVIEW ONLY
+-- Panora 9.72 CLEAN START — PREVIEW ONLY
 -- Safe: this script does not change any data.
 -- Run first in Supabase SQL Editor to see what will be backed up and removed.
 

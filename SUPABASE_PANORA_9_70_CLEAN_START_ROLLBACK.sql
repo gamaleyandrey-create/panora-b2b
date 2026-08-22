@@ -1,4 +1,4 @@
--- Panora 9.71 CLEAN START — ROLLBACK
+-- Panora 9.72 CLEAN START — ROLLBACK
 -- Restores the exact demo snapshot created by SUPABASE_PANORA_9_70_CLEAN_START_APPLY.sql.
 -- SAFETY: refuses to run if new post-reset operational data already exists.
 
