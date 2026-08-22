@@ -1835,13 +1835,19 @@
     });
 
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
-      button.onclick=()=>{
+      button.onclick=async()=>{
         if(!cartCount())return;
-        // Panora 9.81: partner-workspace checkout is opened directly over the
+        // Panora 9.82: partner-workspace checkout is opened directly over the
         // workspace. Do not close the cabinet and do not route through the
         // public-page basket button (it can be disabled before a bake day is
         // mirrored into the legacy public controls).
         try{
+          // Panora 9.82: refresh the bakery schedule on the explicit checkout
+          // action. Traffic stays low because this is not polling; it prevents
+          // a newly opened bake day from being hidden by the partner cache.
+          if(typeof window.panoraRefreshPartnerBakePlans==="function"){
+            try{await window.panoraRefreshPartnerBakePlans()}catch(error){console.warn("Panora partner checkout plan refresh",error)}
+          }
           renderProducts();
           renderCart();
           const productIds=Object.keys(cart||{}).filter(id=>Number(cart[id]||0)>0);

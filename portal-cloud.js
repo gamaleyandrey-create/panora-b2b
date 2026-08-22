@@ -408,6 +408,17 @@
   }
   const mapPartnerPlans=(days,orders)=>((days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:(orders||[]).filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items||[]).filter(x=>x.product===i.product_id).reduce((sum,x)=>sum+Number(x.quantity||0),0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
   const partnerPlanSignature=list=>JSON.stringify((list||[]).map(p=>({id:String(p?.id||''),bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),ordered:Number(p?.ordered||0),cutoff:String(p?.cutoff||''),open:p?.open!==false})).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
+  async function refreshPartnerBakePlansNow(){
+    if(!account?.id)return productionPlans();
+    const days=await api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc');
+    const orders=read('panora-orders',[])||[];
+    const next=mapPartnerPlans(days||[],orders);
+    write('panora-production-plans',next);
+    try{renderBakeDates?.();renderProducts?.();renderCart?.()}catch(error){console.warn('Panora partner fresh bake plan render',error)}
+    window.dispatchEvent(new CustomEvent('panora:partner-plans-updated',{detail:{count:next.length,source:'partner-checkout'}}));
+    return next;
+  }
+  window.panoraRefreshPartnerBakePlans=refreshPartnerBakePlansNow;
 
   async function hydrateOrderRows(orderRows){
     const rows=Array.isArray(orderRows)?orderRows:[];
@@ -1306,7 +1317,7 @@
       ));
     }
     let resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
-    // Panora 9.81: mobile partner checkout may be opened directly from the
+    // Panora 9.82: mobile partner checkout may be opened directly from the
     // workspace (without the basket). Never block confirmation merely because
     // the hidden/previous control did not carry its value forward. If there is
     // an available compatible day, select the first one and mirror it into the
