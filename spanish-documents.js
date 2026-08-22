@@ -1,4 +1,4 @@
-/* Panora 9.76 — linked Spanish commercial documents. */
+/* Panora 9.77 — linked Spanish commercial documents. */
 (() => {
   "use strict";
   const cfg=window.PANORA_SUPABASE,round=v=>Math.round((Number(v)+Number.EPSILON)*100)/100;

@@ -227,21 +227,11 @@
 
  function migrateRawStock(){
   if(localStorage.getItem(RAW_STOCK_MIGRATION)==='1')return;
-  const existing=readRawMovements(),catalog=rawIngredientCatalog();
-  if(!existing.length){
-   catalog.forEach(row=>{
-    if(row.legacyStock<=0)return;
-    existing.push({
-     id:`opening:${row.key}`,date:'2000-01-01',key:row.key,name:row.name,unit:row.unit,
-     type:'opening',quantity:row.legacyStock,note:'Начальный остаток из Закупки',
-     createdAt:'2000-01-01T00:00:00.000Z',updatedAt:'2000-01-01T00:00:00.000Z',deviceId:rawStockDeviceId,system:true
-    });
-   });
-  }
+  // Panora CLEAN BASE: historical recipe `stock` fields belong to the training
+  // version and must never create production opening balances or archive rows.
   try{
-   localStorage.setItem(RAW_STOCK_KEY,JSON.stringify(existing));
    localStorage.setItem(RAW_STOCK_MIGRATION,'1');
-  }catch(error){console.warn('Panora raw stock migration',error)}
+  }catch(error){console.warn('Panora raw stock migration marker',error)}
  }
 
  function rawDemandByDate(dateSet){
