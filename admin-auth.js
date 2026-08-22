@@ -9,6 +9,8 @@
   const saveSession=value=>localStorage.setItem(sessionKey,JSON.stringify(value));
   const clearSession=()=>localStorage.removeItem(sessionKey);
   let authUnlocked=false;
+  let authGeneration=0;
+  const withTimeout=async(promise,ms=15000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Сервер не ответил. Проверьте интернет и повторите вход.')),ms)})])}finally{clearTimeout(timer)}};
   async function signOut(session=readSession()){
     try{if(session?.access_token)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
     clearSession();location.reload();
@@ -16,7 +18,7 @@
   const message=text=>{error.textContent=text||''};
   async function getProfile(token,userId){
     const url=`${cfg.url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,role,display_name`;
-    const response=await fetch(url,{headers:headers(token)});
+    const response=await withTimeout(fetch(url,{headers:headers(token)}));
     if(!response.ok)throw new Error('Не удалось проверить права пользователя.');
     const rows=await response.json();
     if(!rows[0]||rows[0].role!=='admin')throw new Error('У этого пользователя нет прав администратора.');
@@ -24,7 +26,7 @@
   }
   async function refresh(session){
     if(!session?.refresh_token)return null;
-    const response=await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})});
+    const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}));
     if(!response.ok)return null;
     const updated=await response.json();saveSession(updated);return updated;
   }
@@ -32,10 +34,6 @@
     authUnlocked=true;
     window.panoraSupabaseSession=session;
     window.panoraAdminProfile=profile;
-    // Panora 9.72: clear demo operational cache only after bakery auth succeeds,
-    // before cloud modules receive panora:authenticated. This prevents mobile
-    // CLEAN START from racing the login/session restore.
-    try{window.panoraCleanStartLocalCacheOnce?.()}catch{}
     document.body.classList.remove('auth-pending');
     document.body.classList.add('admin-authenticated');
     layer.hidden=true;
@@ -88,28 +86,32 @@
     });
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();message('');const submit=form.querySelector('button');submit.disabled=true;
+    event.preventDefault();const generation=++authGeneration;message('');const submit=form.querySelector('button');submit.disabled=true;
     const data=new FormData(form);
     try{
-      const response=await fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})});
+      const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})}));
       const session=await response.json();
       if(!response.ok)throw new Error(session.error_description||session.msg||'Неверный email или пароль.');
-      const profile=await getProfile(session.access_token,session.user.id);saveSession(session);unlock(session,profile);form.reset();
+      const profile=await getProfile(session.access_token,session.user.id);if(generation!==authGeneration)return;saveSession(session);unlock(session,profile);form.reset();
     }catch(err){message(err.message||'Не удалось войти. Проверьте соединение.')}finally{submit.disabled=false}
   });
   const initialSession=readSession();
-  validate(initialSession).then(ok=>{
-    if(ok||authUnlocked)return;
-    // A slow stale-session validation must never erase a newer successful mobile login.
-    const current=readSession();
-    const sessionChanged=!!current&&!!initialSession&&(current.access_token!==initialSession.access_token||current.refresh_token!==initialSession.refresh_token);
-    if(sessionChanged||authUnlocked)return;
-    clearSession();
+  const restoreGeneration=authGeneration;
+  if(!initialSession){
     document.body.classList.remove('auth-pending');
     layer.hidden=false;
-  }).catch(()=>{
-    if(authUnlocked)return;
-    document.body.classList.remove('auth-pending');
-    layer.hidden=false;
-  });
+  }else{
+    validate(initialSession).then(ok=>{
+      if(ok||authUnlocked||restoreGeneration!==authGeneration)return;
+      const current=readSession();
+      const unchanged=!!current&&current.access_token===initialSession.access_token&&current.refresh_token===initialSession.refresh_token;
+      if(unchanged)clearSession();
+      document.body.classList.remove('auth-pending');
+      layer.hidden=false;
+    }).catch(()=>{
+      if(authUnlocked||restoreGeneration!==authGeneration)return;
+      document.body.classList.remove('auth-pending');
+      layer.hidden=false;
+    });
+  }
 })();
