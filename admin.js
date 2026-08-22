@@ -2,7 +2,7 @@
    Supabase is authoritative. Do not recreate demo opening balances from legacy
    recipe stock values after the production database has been cleaned. */
 (()=>{
-  const resetMarker='panora-clean-production-v9820';
+  const resetMarker='panora-clean-production-v9830';
   try{
     if(localStorage.getItem(resetMarker)!=='1'){
       [
