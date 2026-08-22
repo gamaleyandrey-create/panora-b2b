@@ -1,6 +1,6 @@
-/* Panora 9.74 — runtime health + one-time CLEAN START partner data reset */
+/* Panora 9.75 — runtime health + one-time CLEAN START partner data reset */
 (function(){
- const CLEAN_MARK='panora-clean-start-local-v974';
+ const CLEAN_MARK='panora-clean-start-local-v975';
  const CLEAN_KEYS=[
   // Partner identity and B2B operational data from the training period.
   'panora-account','panora-account-id','panora-current-user','panora-partner-authenticated','panora-restaurant-cloud-session',
@@ -12,6 +12,8 @@
   'panora-order-counts-cache','panora-order-message-cache-v1','panora-order-message-unread-v1','panora-reminder-log','panora-48h-note',
   // B2B sync baselines/watermarks that must not re-introduce the training state.
   'panora-admin-orders-watermark-v936','panora-admin-payments-watermark-v936',
+  // Production training history must also start empty: it feeds Purchasing archive and finished bread stock.
+  'panora-production-plans','panora-bake-completions','panora-bake-completion-cloud-watermark-v934','panora-cancelled-bake-dates','panora-purchase-selected-dates',
   // Warehouse clean slate: raw materials + finished bread and their cloud watermarks.
   'panora-raw-stock-movements','panora-stock-movements','panora-raw-stock-cloud-watermark-v934','panora-finished-stock-watermark-v934',
   'panora-cloud-restaurants-baseline-v415','panora-cloud-revisions-v285','panora-cloud-baselines-v323','panora-cloud-backups-v286',
@@ -41,8 +43,8 @@
  }
  async function run(){
    const cleaned=cleanStartLocalCacheOnce();
-   const out={build:'9740',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false,cleanStartCacheReset:cleaned};
-   try{const k='panora-health-v9740';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
+   const out={build:'9750',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false,cleanStartCacheReset:cleaned};
+   try{const k='panora-health-v9750';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
    window.panoraStableHealth=out;
    window.dispatchEvent(new CustomEvent('panora:stable-health',{detail:out}));
    return out;

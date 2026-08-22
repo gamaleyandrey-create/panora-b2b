@@ -1,0 +1,10 @@
+Panora 9.75 (build 9750)
+22.08.2026
+
+Production clean-slate correction:
+- final production cutover: 2026-08-22T11:25:11Z;
+- partner orders, delivery notes and payments before cutover are excluded;
+- bake plans and bake completions before cutover are excluded;
+- raw-material and finished-bread movements before cutover are excluded;
+- one-time local reset clears production plans, bake completions, purchasing date selection and both warehouse caches;
+- products, recipes, ingredient prices and bakery settings are preserved.
