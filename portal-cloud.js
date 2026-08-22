@@ -1402,7 +1402,9 @@
     }finally{submitting=false;button.disabled=false}
   },true);
   const hash=new URLSearchParams(location.hash.replace(/^#/,''));if(hash.get('access_token')){saveSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token'),expires_at:Math.floor(Date.now()/1000)+Number(hash.get('expires_in')||3600),user:null});history.replaceState(null,'',location.pathname+location.search)}
-  session=read(SESSION_KEY);window.panoraPartnerSupabaseSession=session||null;
+  session=read(SESSION_KEY);
+  if(session&&typeof session==='object'&&!session.access_token&&!session.refresh_token){saveSession(null);localStorage.removeItem('panora-account-id')}
+  window.panoraPartnerSupabaseSession=session||null;
   (async()=>{try{
     if(session?.access_token&&!session.user){
       try{
