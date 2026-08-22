@@ -8,12 +8,12 @@
   const readSession=()=>{try{return JSON.parse(localStorage.getItem(sessionKey)||'null')}catch{return null}};
   const saveSession=value=>localStorage.setItem(sessionKey,JSON.stringify(value));
   const clearSession=()=>localStorage.removeItem(sessionKey);
-  const cleanRemoteMark='panora-clean-production-cloud-v974';
+  const cleanRemoteMark='panora-clean-production-cloud-v975';
   async function cleanPartnerTrainingCloud(session){
     // Panora 9.73: the production app excludes all partner/B2B records created before the cutover.
     // Clear device caches before authenticated cloud modules start, so training data cannot flash or re-upload.
     try{
-      const keys=['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-portal-restaurants','panora-portal-orders','panora-portal-payments','panora-portal-delivery-notes','panora-admin-restaurant-prices-v420','panora-order-counts-cache','panora-admin-orders-watermark-v936','panora-admin-payments-watermark-v936','panora-raw-stock-movements','panora-stock-movements','panora-raw-stock-cloud-watermark-v934','panora-finished-stock-watermark-v934'];
+      const keys=['panora-restaurants','panora-orders','panora-payments','panora-delivery-notes','panora-portal-restaurants','panora-portal-orders','panora-portal-payments','panora-portal-delivery-notes','panora-admin-restaurant-prices-v420','panora-order-counts-cache','panora-admin-orders-watermark-v936','panora-admin-payments-watermark-v936','panora-raw-stock-movements','panora-stock-movements','panora-raw-stock-cloud-watermark-v934','panora-finished-stock-watermark-v934','panora-production-plans','panora-bake-completions','panora-bake-completion-cloud-watermark-v934','panora-cancelled-bake-dates','panora-purchase-selected-dates'];
       keys.forEach(key=>localStorage.removeItem(key));
       localStorage.setItem(cleanRemoteMark,'1');
     }catch{}

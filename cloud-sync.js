@@ -378,7 +378,7 @@
     const useDelta=delta&&!pending.rawStock;
     const watermark=useDelta?localStorage.getItem(rawStockDeltaKey)||'':'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const remoteRows=await request(`raw_material_movements?created_at=gte.${encodeURIComponent('2026-08-22T11:14:00Z')}&select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
+    const remoteRows=await request(`raw_material_movements?created_at=gte.${encodeURIComponent('2026-08-22T11:25:11Z')}&select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
     const localRows=readRawStockLocal();
     let merged,outgoing;
     if(useDelta&&watermark){
@@ -411,7 +411,7 @@
     if(!ready)return false;if(!navigator.onLine){markPending('bakeCompletions');return false}
     const useDelta=delta&&!pending.bakeCompletions;
     const watermark=useDelta?localStorage.getItem(bakeCompletionDeltaKey)||'':'',deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const remoteRows=await request(`bake_completions?select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=bake_date.asc`),localRows=readBakeCompletionLocal();
+    const remoteRows=await request(`bake_completions?created_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,bake_date,items,note,source,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=bake_date.asc`),localRows=readBakeCompletionLocal();
     let merged,outgoing;
     if(useDelta&&watermark){const map=new Map(localRows.map(item=>[String(item.id),item]));(remoteRows||[]).forEach(row=>map.set(String(row.id),bakeCompletionFromCloud(row)));merged=[...map.values()];outgoing=[]}
     else({merged,outgoing}=mergeBakeCompletions(remoteRows,localRows));
@@ -458,7 +458,7 @@
   // unused product/partner columns on every authoritative refresh.
   const PRODUCT_SELECT='id,name_ru,name_en,name_es,description_ru,description_en,description_es,weight_g,base_price,wholesale_min_qty,image_url,gallery_urls,active,storefront_visible,category,tech_card,tech_card_revision,created_at,updated_at';
   const RESTAURANT_SELECT='id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,language,partner_type,active,created_at,updated_at,restaurant_prices(product_id,price)';
-  const PANORA_PRODUCTION_CUTOVER='2026-08-22T11:14:00Z';
+  const PANORA_PRODUCTION_CUTOVER='2026-08-22T11:25:11Z';
   const productionRestaurantIds=()=>new Set((restaurants||[]).map(r=>String(r.id)));
 
   // Ordinary product saves deliberately omit tech_card. A stale device must
@@ -1226,7 +1226,7 @@
   async function repairMissingDeliveryNotes(){
     if(repairingFinance)return repairingFinance;
     repairingFinance=(async()=>{
-      const remoteRows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature');
+      const remoteRows=await request(`delivery_notes?delivered_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature`);
       const remoteOrders=new Set((remoteRows||[]).map(row=>row.order_id));
       const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!remoteOrders.has(order.id));
       for(const order of missing){
@@ -1246,7 +1246,7 @@
   }
   async function loadDeliveryNotes(){
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
-    const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
+    const rows=await request(`delivery_notes?delivered_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc`);
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const activeIds=productionRestaurantIds(),remote=(rows||[]).filter(row=>activeIds.has(String(row.restaurant_id))).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
@@ -1285,7 +1285,7 @@
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
     const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const rowsRaw=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
+    const rowsRaw=await request(`payments?received_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
     const activeIds=productionRestaurantIds(),rows=(rowsRaw||[]).filter(row=>activeIds.has(String(row.restaurant_id)));
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     if(rows?.length){
@@ -1614,7 +1614,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const cutoffIso=value=>{const raw=String(value||'').trim();if(!raw)return null;const parsed=new Date(raw);return Number.isFinite(parsed.getTime())?parsed.toISOString():null};
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
   async function getRemotePlans(){
-    const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc');
+    const days=await request(`bake_days?created_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc`);
     rememberRevision('plans',days);
     return (days||[]).flatMap(day=>(day.bake_items||[]).map(item=>remotePlan({...day,...item})));
   }
