@@ -1,0 +1,9 @@
+Panora 9.74 (build 9740)
+
+Production clean slate update.
+- Partner/B2B training records before 2026-08-22 11:14 UTC remain excluded from production views.
+- Raw-material warehouse history before cutover is excluded from cloud synchronization.
+- Finished-bread stock history before cutover is excluded from cloud synchronization.
+- One-time local reset clears partner data plus raw/finished warehouse movements and sync watermarks.
+- Products, recipes and bakery settings are preserved.
+- CLEAN_START SQL helper files are not included in this distribution.

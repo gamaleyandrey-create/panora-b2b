@@ -430,7 +430,7 @@
     if(!active||loading||drafts.size||savingRestaurants.size)return;
     loading=true;
     try{
-      const rows=await rest('restaurants?select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,updated_at,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
+      const rows=await rest('restaurants?created_at=gte.2026-08-22T11%3A14%3A00Z&select=id,name,email,address,phone,whatsapp,telegram,extra_messengers,partner_type,language,active,updated_at,restaurant_prices(product_id,price,updated_at)&order=created_at.asc');
       if(active)render(rows||[]);
     }catch(error){
       console.error('Panora direct partners refresh',error);

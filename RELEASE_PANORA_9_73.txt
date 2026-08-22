@@ -1,0 +1,13 @@
+Panora 9.73 (build 9730)
+22.08.2026
+
+Production cutover after training period.
+Cutover timestamp: 2026-08-22T11:14:00Z.
+
+- Admin partner list loads only partners created at/after the production cutover.
+- Admin B2B orders load only orders created at/after the production cutover.
+- Delivery notes and payments are kept only for production partners in the working UI/cache.
+- Training partner accounts no longer resolve to a production partner card in the partner portal.
+- Related B2B local caches are cleared before authenticated cloud modules start.
+- Products, recipes, bakery/admin profile, bakery settings, production, stock and retail data are preserved.
+- CLEAN_START SQL helper files are not shipped in this release.

@@ -378,7 +378,7 @@
     const useDelta=delta&&!pending.rawStock;
     const watermark=useDelta?localStorage.getItem(rawStockDeltaKey)||'':'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const remoteRows=await request(`raw_material_movements?select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
+    const remoteRows=await request(`raw_material_movements?created_at=gte.${encodeURIComponent('2026-08-22T11:14:00Z')}&select=id,movement_date,ingredient_key,ingredient_name,unit,movement_type,quantity,note,device_id,created_at,updated_at,deleted_at${deltaQuery}&order=movement_date.asc,created_at.asc`);
     const localRows=readRawStockLocal();
     let merged,outgoing;
     if(useDelta&&watermark){
@@ -458,6 +458,8 @@
   // unused product/partner columns on every authoritative refresh.
   const PRODUCT_SELECT='id,name_ru,name_en,name_es,description_ru,description_en,description_es,weight_g,base_price,wholesale_min_qty,image_url,gallery_urls,active,storefront_visible,category,tech_card,tech_card_revision,created_at,updated_at';
   const RESTAURANT_SELECT='id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,language,partner_type,active,created_at,updated_at,restaurant_prices(product_id,price)';
+  const PANORA_PRODUCTION_CUTOVER='2026-08-22T11:14:00Z';
+  const productionRestaurantIds=()=>new Set((restaurants||[]).map(r=>String(r.id)));
 
   // Ordinary product saves deliberately omit tech_card. A stale device must
   // never overwrite a newer card as a side effect of changing a name/price.
@@ -804,7 +806,7 @@
 
   async function loadRestaurants(){
     if(pending.restaurants&&!window.panoraMoneyEditing?.active&&!restaurantTimer)clearPending('restaurants');
-    const rows=await request(`restaurants?select=${RESTAURANT_SELECT}&order=created_at.asc`);
+    const rows=await request(`restaurants?created_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=${RESTAURANT_SELECT}&order=created_at.asc`);
     rememberRevision('restaurants',rows);
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     if(rows?.length){
@@ -821,7 +823,7 @@
     if(window.panoraMoneyEditing?.active)return false;
     if(pending.restaurants)clearPending('restaurants');
 
-    const rows=await request(`restaurants?select=${RESTAURANT_SELECT}&order=created_at.asc`);
+    const rows=await request(`restaurants?created_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=${RESTAURANT_SELECT}&order=created_at.asc`);
     const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
     const mapped=(rows||[]).map(row=>rowRestaurant(row,local.find(r=>r.id===row.id||String(r.email).toLowerCase()===String(row.email).toLowerCase())));
     const before=restaurantSignature(local);
@@ -954,7 +956,7 @@
       const beforeSignature=orderUiSignature(typeof orders!=='undefined'?orders:[]);
       const watermark=!firstHydration?String(localStorage.getItem(adminOrdersWatermarkKey)||''):'';
       const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-      const fetched=await request(`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
+      const fetched=await request(`orders?created_at=gte.${encodeURIComponent(PANORA_PRODUCTION_CUTOVER)}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
       if(watermark&&!(fetched||[]).length){status('Облако ✓');return}
       const newest=(fetched||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);
       const hydrated=await hydrateAdminOrderRows(fetched||[]);
@@ -1234,7 +1236,7 @@
         const restored=rowNote(saved),index=deliveryNotes.findIndex(note=>note.orderId===order.id);
         if(index>=0)deliveryNotes[index]=restored;else deliveryNotes.push(restored);
       }
-      for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
+      for(const row of remoteRows||[]){if(productionRestaurantIds().has(String(row.restaurant_id))&&!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
       const changed=noteUiSignature(deliveryNotes)!==noteUiSignature(JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]'));
       recalculateBalances();cacheDeliveryNotesLocal();
       if(missing.length||changed)queueAdminCommerceRender();
@@ -1246,7 +1248,7 @@
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
     const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
-    const remote=(rows||[]).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
+    const activeIds=productionRestaurantIds(),remote=(rows||[]).filter(row=>activeIds.has(String(row.restaurant_id))).map(rowNote),remoteIds=new Set(remote.map(note=>note.id)),remoteOrders=new Set(remote.map(note=>note.orderId)),pending=local.filter(note=>!remoteIds.has(note.id)&&!remoteOrders.has(note.orderId));
     deliveryNotes=[...remote,...pending];
     financeLoaded=true;cacheDeliveryNotesLocal();
     if(pending.length){ready=true;try{await saveDeliveryNotesNow()}catch(error){
@@ -1283,7 +1285,8 @@
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
     const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const rows=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
+    const rowsRaw=await request(`payments?select=id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,dispute_status,dispute_reason,disputed_at,dispute_deadline,updated_at${deltaQuery}&order=received_at.asc`);
+    const activeIds=productionRestaurantIds(),rows=(rowsRaw||[]).filter(row=>activeIds.has(String(row.restaurant_id)));
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     if(rows?.length){
       const mapped=rows.map(rowPayment);
