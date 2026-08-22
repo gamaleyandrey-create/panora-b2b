@@ -475,7 +475,11 @@
     const raw=Array.isArray(order.statusHistory)?order.statusHistory.slice():[];
     const note=orderDeliveryNote(order);
     const has=status=>raw.some(event=>event.status===status);
-    if(!has("submitted")&&order.createdAt)raw.push({status:"submitted",occurredAt:order.createdAt,actorRole:"restaurant",actorName:account?.name||""});
+    if(order.createdByRole==="admin"){
+      if(order.status==="submitted"){
+        if(!has("submitted"))raw.push({status:"submitted",occurredAt:order.createdByAt||order.createdAt,actorRole:"admin",actorName:order.createdByName||"Panora",source:order.createdSource||"bakery_manual_order"});
+      }else if(!has("confirmed"))raw.push({status:"confirmed",occurredAt:order.confirmedAt||order.createdByAt||order.createdAt,actorRole:"admin",actorName:order.confirmedByName||order.createdByName||"Panora",source:order.createdSource||"bakery_manual_order"});
+    }else if(!has("submitted")&&order.createdAt)raw.push({status:"submitted",occurredAt:order.createdAt,actorRole:"restaurant",actorName:account?.name||""});
     const deliveredAt=note?.customerConfirmedAt||note?.offlineProof?.receivedAt;
     if(deliveredAt&&!has("delivered"))raw.push({status:"delivered",occurredAt:deliveredAt,actorRole:"restaurant_receiver",actorName:note?.customerReceiver||note?.offlineProof?.receiver||""});
     const normalized=raw.map(event=>({...event,status:["processing"].includes(event.status)?"confirmed":["completed","paid"].includes(event.status)?"delivered":event.status}));
@@ -770,6 +774,7 @@
         return `<article class="rw-order" data-rw-order="${esc(order.id)}" data-rw-order-search data-panora-no-draft="1"-text="${esc(searchText)}"${searchHidden?" hidden":""}>
       <header><span><strong>${orderNumber(order)}</strong><small>${t("delivery")}: ${esc(localDate(order.deliveryDate || order.date))}</small>${note?`<button type="button" class="rw-order-note rw-linked-document" data-rw-open-note="${esc(note.id)}">${lang==="ru"?"Накладная":lang==="es"?"Albarán":"Delivery note"}: ${esc(noteNumber(note))}</button>`:""}</span><b>${portalMoney(orderTotal(order))}</b></header>
       <div class="rw-order-status status-${esc(lifecycle)}">${esc(lifecycle==="delivered"?(lang==="ru"?"Доставлен":lang==="es"?"Entregado":"Delivered"):status(order))}</div>
+      ${order.createdByRole==="admin"?`<div class="rw-order-bakery-audit">${order.status==="submitted"?(lang==="ru"?"Создан пекарней":lang==="es"?"Creado por la panadería":"Created by the bakery"):(lang==="ru"?"Создан и подтверждён пекарней":lang==="es"?"Creado y confirmado por la panadería":"Created and confirmed by the bakery")}${order.confirmedAt||order.createdByAt?` · ${esc(formatStatusTime(order.confirmedAt||order.createdByAt))}`:""}</div>`:""}
       ${orderProgressHtml(order)}
       ${statusHistoryHtml(order)}
       ${receiptConfirmationHtml(order)}
@@ -1837,12 +1842,12 @@
     modal.querySelectorAll("[data-rw-new-open-cart]").forEach(button=>{
       button.onclick=async()=>{
         if(!cartCount())return;
-        // Panora 9.82: partner-workspace checkout is opened directly over the
+        // Panora 9.83: partner-workspace checkout is opened directly over the
         // workspace. Do not close the cabinet and do not route through the
         // public-page basket button (it can be disabled before a bake day is
         // mirrored into the legacy public controls).
         try{
-          // Panora 9.82: refresh the bakery schedule on the explicit checkout
+          // Panora 9.83: refresh the bakery schedule on the explicit checkout
           // action. Traffic stays low because this is not polling; it prevents
           // a newly opened bake day from being hidden by the partner cache.
           if(typeof window.panoraRefreshPartnerBakePlans==="function"){

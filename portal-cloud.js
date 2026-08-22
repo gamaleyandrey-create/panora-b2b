@@ -404,7 +404,7 @@
   function mapOrder(row){
     let meta={};try{meta=JSON.parse(row.comment||'{}')}catch{meta={comment:row.comment||''}}
     const day=row.bake_days||{},items=row.order_items||[];
-    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity),nameSnapshot:x.product_names_snapshot||null,imageSnapshot:x.product_image_snapshot||''})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
+    return{id:row.id,number:Number(row.order_number),restaurantId:row.restaurant_id,date:day.bake_date,deliveryDate:meta.deliveryDate||day.delivery_date||day.bake_date,deliveryWindow:meta.deliveryWindow||'',items:items.map(x=>({product:x.product_id,quantity:Number(x.quantity),nameSnapshot:x.product_names_snapshot||null,imageSnapshot:x.product_image_snapshot||''})),prices:Object.fromEntries(items.map(x=>[x.product_id,Number(x.unit_price)])),taxRate:0,status:row.status,comment:meta.comment||'',createdSource:meta.createdSource||'',createdByRole:meta.createdByRole||'',createdByName:meta.createdByName||'',createdByAt:meta.createdByAt||'',confirmedByRole:meta.confirmedByRole||'',confirmedByName:meta.confirmedByName||'',confirmedAt:meta.confirmedAt||'',cancellationReason:row.cancelled_reason||'',createdAt:row.created_at,statusHistory:[]};
   }
   const mapPartnerPlans=(days,orders)=>((days||[]).flatMap(d=>(d.bake_items||[]).map(i=>({id:`${d.id}:${i.product_id}`,bakeDayId:d.id,bakeDate:d.bake_date,deliveryDate:d.delivery_date,product:i.product_id,planned:Number(i.planned_quantity),ordered:(orders||[]).filter(o=>o.date===d.bake_date&&o.status!=='cancelled').flatMap(o=>o.items||[]).filter(x=>x.product===i.product_id).reduce((sum,x)=>sum+Number(x.quantity||0),0),cutoff:d.cutoff_at,open:d.accepting_orders}))));
   const partnerPlanSignature=list=>JSON.stringify((list||[]).map(p=>({id:String(p?.id||''),bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),ordered:Number(p?.ordered||0),cutoff:String(p?.cutoff||''),open:p?.open!==false})).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
@@ -1317,7 +1317,7 @@
       ));
     }
     let resolvedDate=[cartBakeDate,formBakeDate,storedBakeDate].find(candidate=>candidate&&validBakeDates.has(candidate))||'';
-    // Panora 9.82: mobile partner checkout may be opened directly from the
+    // Panora 9.83: mobile partner checkout may be opened directly from the
     // workspace (without the basket). Never block confirmation merely because
     // the hidden/previous control did not carry its value forward. If there is
     // an available compatible day, select the first one and mirror it into the
