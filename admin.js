@@ -1,8 +1,8 @@
-/* Panora 9.77 CLEAN BASE IV — one-time local operational reset.
+/* Panora 9.78 CLEAN BASE IV — one-time local operational reset.
    Supabase is authoritative. Do not recreate demo opening balances from legacy
    recipe stock values after the production database has been cleaned. */
 (()=>{
-  const resetMarker='panora-clean-bakery-history-v9770';
+  const resetMarker='panora-clean-production-v9780';
   try{
     if(localStorage.getItem(resetMarker)!=='1'){
       [
@@ -14,9 +14,15 @@
         'panora-purchase-selected-dates',
         'panora-finished-stock-watermark-v934',
         'panora-raw-stock-cloud-watermark-v934',
-        'panora-bake-completion-cloud-watermark-v934'
+        'panora-bake-completion-cloud-watermark-v934',
+        'panora-orders',
+        'panora-payments',
+        'panora-delivery-notes',
+        'panora-restaurants',
+        'panora-cloud-pending-v283'
       ].forEach(key=>localStorage.removeItem(key));
       localStorage.setItem('panora-raw-stock-migration-v606','1');
+      localStorage.setItem('panora-bake-completion-migration-v608','1');
       localStorage.setItem(resetMarker,'1');
     }
   }catch{}
@@ -584,12 +590,10 @@ function bakeSnapshot(date,existing=bakeCompletionFor(date)){
  return [...ids].map(product=>{const partnerOrdered=Math.max(0,Number(partnerMap.get(product)||0)),retailOrdered=Math.max(0,Number(retailMap.get(product)||0)),orderQty=partnerOrdered+retailOrdered,plan=planMap.get(product)||{planned:0,planOrdered:0},prior=existingMap.get(product),suggested=Math.max(0,orderQty||Number(plan.planOrdered||0)||Number(plan.planned||0)),produced=prior?Math.max(0,Number(prior.produced||0)):suggested,waste=prior?Math.max(0,Math.min(produced,Number(prior.waste||0))):0;return{product,ordered:orderQty,partnerOrdered,retailOrdered,planned:Math.max(0,Number(plan.planned||0)),produced,waste,good:Math.max(0,produced-waste),rawQuantity:prior?.rawQuantity===undefined?undefined:Math.max(0,Number(prior.rawQuantity||0)),recipeSnapshot:Array.isArray(prior?.recipeSnapshot)&&prior.recipeSnapshot.length?prior.recipeSnapshot:bakeRecipeSnapshot(product)}}).sort((a,b)=>stockProductName(a.product).localeCompare(stockProductName(b.product),'ru'));
 }
 function migrateLegacyBakeCompletions(){
- if(localStorage.getItem(BAKE_COMPLETION_MIGRATION)==='1')return;
- const today=stockLocalDate(),existing=readBakeCompletions(),byDate=new Map(existing.map(item=>[String(item.date||''),item])),dates=new Set();
- stockRead('panora-orders',[]).filter(order=>order&&order.status!=='cancelled'&&String(order.date||'')<today).forEach(order=>dates.add(String(order.date).slice(0,10)));
- plans.filter(plan=>String(plan?.bakeDate||'')<today).forEach(plan=>dates.add(String(plan.bakeDate)));
- [...dates].sort().forEach(date=>{if(byDate.has(date))return;const orderMap=new Map(),planMap=new Map();bakeOrdersForDate(date).forEach(order=>(order.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(product&&qty)orderMap.set(product,(orderMap.get(product)||0)+qty)}));plans.filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||'');if(product)planMap.set(product,(planMap.get(product)||0)+Math.max(0,Number(plan?.ordered||plan?.planned||0)))});const hasOrders=[...orderMap.values()].reduce((sum,value)=>sum+Number(value||0),0)>0,ids=new Set([...orderMap.keys(),...planMap.keys()]),deterministicTime=`${date}T23:59:59.000Z`;const items=[...ids].map(product=>{const ordered=Math.max(0,Number(orderMap.get(product)||0)),rawQuantity=hasOrders?ordered:Math.max(0,Number(planMap.get(product)||0)),recipeSnapshot=bakeRecipeSnapshot(product);return{product,ordered,planned:Math.max(0,Number(planMap.get(product)||0)),produced:ordered,waste:0,good:ordered,rawQuantity,recipeSnapshot,costSnapshot:bakeRecipeCostSnapshot(product,recipeSnapshot,deterministicTime,'migration_estimate')}}).filter(item=>item.produced>0||item.rawQuantity>0);if(!items.length)return;existing.push({id:`bake:${date}`,date,items,note:'Перенесено из учёта Panora до 6.08',source:'legacy_inferred',createdAt:deterministicTime,updatedAt:deterministicTime,deviceId:'migration-v608',deletedAt:''})});
- localStorage.setItem(BAKE_COMPLETION_KEY,JSON.stringify(existing));localStorage.setItem(BAKE_COMPLETION_MIGRATION,'1');
+ // Panora CLEAN BASE: never infer factual production from historical local
+ // orders/plans. That migration belonged to the training database and was the
+ // remaining source of archive/stock rows after the server had been cleaned.
+ try{localStorage.setItem(BAKE_COMPLETION_MIGRATION,'1')}catch{}
 }
 function upgradeBakeCompletionSnapshots(){
  const list=readBakeCompletions();let changed=false,now=new Date().toISOString();
