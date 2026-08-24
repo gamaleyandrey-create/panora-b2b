@@ -1,8 +1,8 @@
-/* Panora 9.83 CLEAN BASE IV — one-time local operational reset.
+/* Panora 9.85 CLEAN BASE IV — one-time local operational reset.
    Supabase is authoritative. Do not recreate demo opening balances from legacy
    recipe stock values after the production database has been cleaned. */
 (()=>{
-  const resetMarker='panora-clean-production-v9830';
+  const resetMarker='panora-clean-production-v9850';
   try{
     if(localStorage.getItem(resetMarker)!=='1'){
       [
