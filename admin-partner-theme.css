@@ -1678,12 +1678,12 @@ body.admin-page .stock-inventory-button:hover{background:#fff4f2}
 /* Panora 9.89 — bakery mobile bar always exposes five primary actions, including More. */
 @media(max-width:720px){body.admin-page .admin-mobile-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}body.admin-page #adminMobileMore{display:grid!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}}
 
-/* Panora 9.91 — partner invitation */
+/* Panora 9.92 — partner invitation */
 .partner-access-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
 .partner-access-actions span{font-size:12px;color:#5f6d63}
 .partner-access-actions .secondary{min-height:36px}
 
-/* Panora 9.91 — secure first-access delivery */
+/* Panora 9.92 — secure first-access delivery */
 .partner-invite-dialog{border:0;padding:0;border-radius:20px;max-width:min(620px,calc(100vw - 28px));width:100%;box-shadow:0 24px 80px rgba(35,45,39,.24)}
 .partner-invite-dialog::backdrop{background:rgba(20,28,24,.42);backdrop-filter:blur(3px)}
 .partner-invite-card{padding:22px;display:grid;gap:14px;background:#fff}
