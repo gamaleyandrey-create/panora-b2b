@@ -964,7 +964,7 @@
 /* Panora 5.37 · direct order builder and explicit required profile fields */
 .rw-required-field>span:first-child{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rw-required-mark{color:#b44e42;font-size:15px}
-.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#988047!important;font-size:10px!important;font-weight:700!important}
+.rw-required-word{min-height:0!important;padding:2px 6px;border-radius:999px;background:#f7ece9;color:#989047!important;font-size:10px!important;font-weight:700!important}
 .rw-new-order-page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .rw-new-order-head{grid-column:1/-1}
 .rw-new-order-head h3{margin:4px 0 6px;font:34px Georgia,serif}
@@ -1851,7 +1851,7 @@
 body.panora-partner-authenticated .cart-fab{display:none!important}
 
 
-/* Panora 9.88 — clearer mobile partner payment hierarchy. */
+/* Panora 9.89 — clearer mobile partner payment hierarchy. */
 .rw-finance-main-head .rw-finance-debt .rw-current-debt-value{
   color:#b43f38!important;
 }
@@ -1893,7 +1893,7 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   }
 }
 
-/* Panora 9.88 — mobile partner Payments use Prata monetary figures like bakery finance. */
+/* Panora 9.89 — mobile partner Payments use Prata monetary figures like bakery finance. */
 @media(max-width:720px){
   .restaurant-workspace .rw-finance{
     gap:14px!important;
@@ -2047,14 +2047,14 @@ body.panora-partner-authenticated .cart-fab{display:none!important}
   }
 }
 
-/* Panora 9.88 — partner password management */
+/* Panora 9.89 — partner password management */
 .rw-password-panel{margin-top:18px;padding:18px;border:1px solid rgba(42,57,50,.13);border-radius:18px;background:rgba(255,255,255,.72)}
 .rw-password-panel header h4{margin:0 0 4px;font:700 16px/1.25 Manrope,sans-serif}.rw-password-panel header p{margin:0;color:#6c756f;font:500 13px/1.45 Manrope,sans-serif}
 .rw-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}.rw-password-grid label{display:grid;gap:6px}.rw-password-grid label>span{font:600 13px/1.25 Manrope,sans-serif}.rw-password-grid input{min-height:44px}
 .rw-password-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}.rw-password-result{margin:0;font:600 13px/1.4 Manrope,sans-serif}.rw-password-result.success{color:#2f6a46}.rw-password-result.error{color:#a33b36}
 @media(max-width:720px){.rw-password-grid{grid-template-columns:1fr}.rw-password-panel{padding:16px}.rw-password-actions .button{width:100%}}
 
-/* Panora 9.88: final confirmation opened from the partner workspace stays
+/* Panora 9.89: final confirmation opened from the partner workspace stays
    above the workspace instead of exposing the public catalogue underneath. */
 body.panora-workspace-checkout #checkoutModal{z-index:120!important}
 
