@@ -134,9 +134,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=9860"></script>
-<script src="public-catalog-cloud-v48.js?v=9860"></script>
-<script src="pwa-stable.js?v=9860"></script>
+<script src="supabase-config.js?v=9870"></script>
+<script src="public-catalog-cloud-v48.js?v=9870"></script>
+<script src="pwa-stable.js?v=9870"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -237,5 +237,7 @@
  form?.addEventListener('submit',e=>{if(!navigator.onLine){e.preventDefault();e.stopImmediatePropagation();paint(false);return}if(submitting){e.preventDefault();e.stopImmediatePropagation();return}submitting=true;confirm?.classList.add('is-busy');if(confirm)confirm.textContent=(words[lang()]||words.en).wait;setTimeout(()=>{submitting=false;confirm?.classList.remove('is-busy')},12000)},true);if(confirm)new MutationObserver(()=>{if(!confirm.disabled){submitting=false;confirm.classList.remove('is-busy')}}).observe(confirm,{attributes:true,attributeFilter:['disabled']});
 })();
 </script>
+
+<script data-panora-title-lock="1">(function(){const wanted='Panora — Розница';const apply=()=>{if(document.title!==wanted)document.title=wanted;const el=document.querySelector('title');if(el&&el.textContent!==wanted)el.textContent=wanted};apply();document.addEventListener('DOMContentLoaded',apply,{once:true});window.addEventListener('load',apply,{once:true});const titleEl=document.querySelector('title');if(titleEl)new MutationObserver(apply).observe(titleEl,{childList:true,characterData:true,subtree:true});setTimeout(apply,0);setTimeout(apply,500);setTimeout(apply,2000)})();</script>
 </body>
 </html>

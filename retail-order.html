@@ -55,7 +55,7 @@
  </section>
  <div class="footer">Panora · Bakery · build 7310</div>
 </main>
-<script src="supabase-config.js?v=9860"></script>
+<script src="supabase-config.js?v=9870"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -163,5 +163,7 @@
  $('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();messagePoll=setInterval(()=>{if(!document.hidden&&order)loadMessages()},30000);setInterval(()=>{if(!document.hidden&&navigator.onLine)load({silent:true})},120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&order){loadMessages();syncCustomerPush({repair:true}).catch(()=>{})}});
 })();
 </script>
-<script src="pwa-stable.js?v=9860"></script>
+<script src="pwa-stable.js?v=9870"></script>
+
+<script data-panora-title-lock="1">(function(){const wanted='Panora — Розница';const apply=()=>{if(document.title!==wanted)document.title=wanted;const el=document.querySelector('title');if(el&&el.textContent!==wanted)el.textContent=wanted};apply();document.addEventListener('DOMContentLoaded',apply,{once:true});window.addEventListener('load',apply,{once:true});const titleEl=document.querySelector('title');if(titleEl)new MutationObserver(apply).observe(titleEl,{childList:true,characterData:true,subtree:true});setTimeout(apply,0);setTimeout(apply,500);setTimeout(apply,2000)})();</script>
 </body></html>
