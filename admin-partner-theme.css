@@ -1678,7 +1678,16 @@ body.admin-page .stock-inventory-button:hover{background:#fff4f2}
 /* Panora 9.89 — bakery mobile bar always exposes five primary actions, including More. */
 @media(max-width:720px){body.admin-page .admin-mobile-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}body.admin-page #adminMobileMore{display:grid!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}}
 
-/* Panora 9.90 — partner invitation */
+/* Panora 9.91 — partner invitation */
 .partner-access-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
 .partner-access-actions span{font-size:12px;color:#5f6d63}
 .partner-access-actions .secondary{min-height:36px}
+
+/* Panora 9.91 — secure first-access delivery */
+.partner-invite-dialog{border:0;padding:0;border-radius:20px;max-width:min(620px,calc(100vw - 28px));width:100%;box-shadow:0 24px 80px rgba(35,45,39,.24)}
+.partner-invite-dialog::backdrop{background:rgba(20,28,24,.42);backdrop-filter:blur(3px)}
+.partner-invite-card{padding:22px;display:grid;gap:14px;background:#fff}
+.partner-invite-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.partner-invite-head h3{margin:5px 0 0;font-family:Prata,serif;font-size:24px}.partner-invite-close{border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer}
+.partner-invite-card label{display:grid;gap:6px;font:600 12px Manrope,sans-serif;color:#59645d}.partner-invite-card input,.partner-invite-card textarea{width:100%;box-sizing:border-box;border:1px solid #d9dfda;border-radius:11px;padding:11px 12px;font:500 13px Manrope,sans-serif;color:#26322b;background:#fbfcfb}.partner-invite-secret{display:grid;grid-template-columns:1fr auto;gap:8px}.partner-invite-secret button{border:1px solid #cfd8d1;border-radius:10px;background:#fff;padding:0 12px;font-weight:700}
+.partner-invite-share-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.partner-invite-share-grid a,.partner-invite-share-grid button{min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid #cfd8d1;border-radius:11px;background:#fff;color:#26322b;text-decoration:none;font:700 13px Manrope,sans-serif;cursor:pointer}.partner-invite-help{margin:0;color:#6d786f;font:500 12px/1.5 Manrope,sans-serif}
+@media(max-width:560px){.partner-invite-card{padding:17px}.partner-invite-share-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.partner-invite-secret{grid-template-columns:1fr}.partner-invite-secret button{min-height:40px}}

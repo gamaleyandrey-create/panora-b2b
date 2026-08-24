@@ -239,18 +239,30 @@
       button.onclick=async()=>{
         const restaurantId=String(button.dataset.partnerInvite||''),partner=lastRows.find(r=>String(r.id)===restaurantId);
         const email=String(partner?.email||'').trim().toLowerCase();if(!email)return;
-        const link=`https://gamaleyandrey-create.github.io/panora-b2b/?invite=${encodeURIComponent(email)}`;
+        const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        const bytes=new Uint32Array(12);crypto.getRandomValues(bytes);
+        const tempPassword=Array.from(bytes,n=>alphabet[n%alphabet.length]).join('');
+        const raw=new TextEncoder().encode(`${email}|${tempPassword}`);
+        const digest=await crypto.subtle.digest('SHA-256',raw);
+        const token=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        const link=`https://gamaleyandrey-create.github.io/panora-b2b/?invite=${encodeURIComponent(email)}&token=${token}`;
         const subject='Panora — доступ для партнёра';
-        const body=`Здравствуйте!\n\nДля вашей компании открыт кабинет партнёра Panora.\n\nПервый вход: ${link}\n\nИспользуйте email ${email} и создайте пароль. После этого вход выполняется по email и паролю.`;
+        const body=`Здравствуйте!\n\nДля вашей компании открыт кабинет партнёра Panora.\n\nДля первого входа перейдите по ссылке или скопируйте её и вставьте в браузер:\n${link}\n\nEmail: ${email}\nПароль для первого входа: ${tempPassword}\n\nПосле первого входа Panora предложит создать ваш личный пароль. В дальнейшем вход выполняется по email и новому паролю.`;
         const status=root.querySelector(`[data-partner-invite-status="${CSS.escape(restaurantId)}"]`);
-        try{
-          if(navigator.share){await navigator.share({title:subject,text:body});if(status)status.textContent='Приглашение открыто ✓'}
-          else{location.href=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;if(status)status.textContent='Открыто письмо ✓'}
-        }catch(error){
-          if(error?.name==='AbortError')return;
-          try{await navigator.clipboard.writeText(link);if(status)status.textContent='Ссылка скопирована ✓'}catch{if(status)status.textContent=link}
-        }
-        setTimeout(()=>{if(status)status.textContent=''},2500);
+        const wa=`https://wa.me/?text=${encodeURIComponent(body)}`;
+        const tg=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(body.replace(link,'').trim())}`;
+        const smsTarget=String(partner?.phone||partner?.whatsapp||'').replace(/[^+\d]/g,'');
+        const sms=`sms:${smsTarget}?&body=${encodeURIComponent(body)}`;
+        const mail=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const popup=document.createElement('dialog');popup.className='partner-invite-dialog';
+        popup.innerHTML=`<form method="dialog" class="partner-invite-card"><div class="partner-invite-head"><div><span class="tag">Доступ Panora</span><h3>${esc(partner?.name||email)}</h3></div><button value="cancel" class="partner-invite-close" aria-label="Закрыть">×</button></div><label><span>Email</span><input readonly value="${esc(email)}"></label><label><span>Пароль для первого входа</span><div class="partner-invite-secret"><input readonly value="${esc(tempPassword)}"><button type="button" data-copy-password>Копировать</button></div></label><label><span>Ссылка первого входа</span><textarea readonly rows="3">${esc(link)}</textarea></label><div class="partner-invite-share-grid"><a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a><a href="${esc(tg)}" target="_blank" rel="noopener">Telegram</a><a href="${esc(sms)}">SMS</a><a href="${esc(mail)}">Email</a><button type="button" data-copy-invite>Скопировать текст</button>${navigator.share?'<button type="button" data-native-share>Поделиться…</button>':''}</div><p class="partner-invite-help">Временный пароль действует как пароль первого входа. После входа партнёр должен заменить его на личный.</p></form>`;
+        document.body.appendChild(popup);
+        const copied=text=>navigator.clipboard?.writeText(text);
+        popup.querySelector('[data-copy-password]').onclick=async()=>{await copied(tempPassword);popup.querySelector('[data-copy-password]').textContent='Скопировано ✓'};
+        popup.querySelector('[data-copy-invite]').onclick=async()=>{await copied(body);popup.querySelector('[data-copy-invite]').textContent='Скопировано ✓'};
+        popup.querySelector('[data-native-share]')?.addEventListener('click',async()=>{try{await navigator.share({title:subject,text:body})}catch(error){if(error?.name!=='AbortError')console.warn(error)}});
+        popup.addEventListener('close',()=>popup.remove(),{once:true});popup.showModal();
+        if(status)status.textContent='Доступ подготовлен ✓';setTimeout(()=>{if(status)status.textContent=''},2500);
       };
     });
     root.querySelectorAll('select[data-direct-partner-language]').forEach(select=>{
