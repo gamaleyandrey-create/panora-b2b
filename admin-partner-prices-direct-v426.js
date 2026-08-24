@@ -171,6 +171,7 @@
         <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span><button type="button" class="restaurant-delete" data-direct-archive-partner="${esc(restaurantId)}">Архивировать</button></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
+        ${r.email?`<div class="partner-access-actions"><button type="button" class="secondary" data-partner-invite="${esc(restaurantId)}">Пригласить в Panora</button><span data-partner-invite-status="${esc(restaurantId)}"></span></div>`:''}
         <details class="partner-contact-settings partner-profile-settings">
           <summary>Данные партнёра</summary>
           <div class="partner-contact-grid partner-profile-grid">
@@ -234,6 +235,24 @@
 
     root.querySelectorAll('[data-direct-archive-partner]').forEach(button=>button.onclick=()=>setPartnerActive(button.dataset.directArchivePartner,false));
     root.querySelectorAll('[data-direct-restore-partner]').forEach(button=>button.onclick=()=>setPartnerActive(button.dataset.directRestorePartner,true));
+    root.querySelectorAll('[data-partner-invite]').forEach(button=>{
+      button.onclick=async()=>{
+        const restaurantId=String(button.dataset.partnerInvite||''),partner=lastRows.find(r=>String(r.id)===restaurantId);
+        const email=String(partner?.email||'').trim().toLowerCase();if(!email)return;
+        const link=`https://gamaleyandrey-create.github.io/panora-b2b/?invite=${encodeURIComponent(email)}`;
+        const subject='Panora — доступ для партнёра';
+        const body=`Здравствуйте!\n\nДля вашей компании открыт кабинет партнёра Panora.\n\nПервый вход: ${link}\n\nИспользуйте email ${email} и создайте пароль. После этого вход выполняется по email и паролю.`;
+        const status=root.querySelector(`[data-partner-invite-status="${CSS.escape(restaurantId)}"]`);
+        try{
+          if(navigator.share){await navigator.share({title:subject,text:body});if(status)status.textContent='Приглашение открыто ✓'}
+          else{location.href=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;if(status)status.textContent='Открыто письмо ✓'}
+        }catch(error){
+          if(error?.name==='AbortError')return;
+          try{await navigator.clipboard.writeText(link);if(status)status.textContent='Ссылка скопирована ✓'}catch{if(status)status.textContent=link}
+        }
+        setTimeout(()=>{if(status)status.textContent=''},2500);
+      };
+    });
     root.querySelectorAll('select[data-direct-partner-language]').forEach(select=>{
       select.addEventListener('change',async()=>{
         const restaurantId=String(select.dataset.directPartnerLanguage||'');
