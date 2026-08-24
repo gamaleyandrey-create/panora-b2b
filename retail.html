@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#213b2b">
-  <title>Panora — Розница</title>
-  <meta name="application-name" content="Panora — Розница">
+  <title>Розница</title>
+  <meta name="application-name" content="Panora">
   <meta name="apple-mobile-web-app-title" content="Panora — Розница">
   <meta name="title" content="Panora — Розница">
   <meta property="og:title" content="Panora — Розница">
@@ -36,8 +36,9 @@
 @media(max-width:760px){.checkout-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);margin:auto;border-radius:18px}.checkout-dialog>div{max-height:calc(100dvh - 12px);overflow:auto}.dialog-head{position:sticky;top:0;z-index:3;padding-top:2px;background:#fff}.dialog-close{min-width:44px;min-height:44px}.checkout-form input,.checkout-form textarea,.checkout-form select{font-size:16px}.mode-card,.fulfillment-card,.date-chip,.slot-chip,.qty button,.checkout,.confirm-order{min-height:44px}.cart{padding-bottom:88px}.cart .checkout{position:sticky;bottom:10px;z-index:5;box-shadow:0 8px 28px rgba(31,51,39,.16)}.success-actions{display:grid;grid-template-columns:1fr}.success-actions>*{min-height:46px}.panora-net-state{top:max(8px,env(safe-area-inset-top))}}
 @media(max-width:430px){.form-grid{grid-template-columns:1fr}.checkout-dialog{width:calc(100vw - 8px);max-height:calc(100dvh - 8px)}.hero h1{font-size:34px}.product-card{scroll-margin-top:80px}}
 </style>
-  <script>document.title='Panora — Розница';</script>
-<meta property="og:site_name" content="Panora — Розница">
+  
+<meta property="og:site_name" content="Panora">
+  <link rel="manifest" href="manifest-retail-988.webmanifest?v=9880">
 </head>
 <body>
 <div id="panoraNetState" class="panora-net-state" role="status" aria-live="polite"></div>
@@ -134,9 +135,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=9870"></script>
-<script src="public-catalog-cloud-v48.js?v=9870"></script>
-<script src="pwa-stable.js?v=9870"></script>
+<script src="supabase-config.js?v=9880"></script>
+<script src="public-catalog-cloud-v48.js?v=9880"></script>
+<script src="pwa-stable.js?v=9880"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -185,7 +186,7 @@
   function fmtDate(value){return value?new Intl.DateTimeFormat(LOCALES[state.lang]||'es-ES',{weekday:'short',day:'numeric',month:'short'}).format(new Date(value+'T12:00:00')):''}
   function modeApiReady(){return state.mode==='preorder'?state.apiReady.bakes:state.apiReady.stock}
   function applyRetailAvailability(){const settings=retailSettings(),enabled=!!settings.enabled,apiReady=modeApiReady();$('#retailClosed').hidden=enabled;$('#retailExperience').hidden=!enabled;$('#retailStatusBanner').dataset.state=enabled?(apiReady?'on':'error'):'off';$('#retailStatusText').textContent=enabled?(apiReady?t('storeOn'):t('serverSetup')):t('storeOff');$('#retailClosedTitle').textContent=t('closedTitle');$('#retailClosedText').textContent=t('closedText');const stockButton=$('[data-mode="stock"]'),preorderButton=$('[data-mode="preorder"]');stockButton.hidden=settings.stockSales===false;preorderButton.hidden=settings.preorders===false;if(state.mode==='stock'&&settings.stockSales===false&&settings.preorders!==false)state.mode='preorder';if(state.mode==='preorder'&&settings.preorders===false&&settings.stockSales!==false)state.mode='stock';$$('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));$('#retailPickupOption').hidden=settings.pickup===false;$('#retailDeliveryOption').hidden=settings.delivery===false;if(state.fulfillment==='pickup'&&settings.pickup===false&&settings.delivery)state.fulfillment='delivery';if(state.fulfillment==='delivery'&&!settings.delivery&&settings.pickup!==false)state.fulfillment='pickup';$('#retailPickupOption').classList.toggle('active',state.fulfillment==='pickup');$('#retailDeliveryOption').classList.toggle('active',state.fulfillment==='delivery');const parts=[];if(settings.pickupNote)parts.push(`<strong>${esc(settings.pickupNote)}</strong>`);if(settings.contactPhone)parts.push(esc(settings.contactPhone));if(settings.contactEmail)parts.push(esc(settings.contactEmail));$('#retailContactNote').hidden=!parts.length;$('#retailContactNote').innerHTML=parts.join(' · ')}
-  function applyStaticTranslations(){document.documentElement.lang=state.lang;document.title=`Panora — ${t('bakery')}`;$('#langSelect').value=state.lang;$('#langSelect').setAttribute('aria-label',{es:'Idioma',en:'Language',de:'Sprache',ru:'Язык'}[state.lang]);$('#cartPanel').setAttribute('aria-label',t('cart'));$$('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});$$('[data-i18n-html]').forEach(el=>{el.innerHTML=t(el.dataset.i18nHtml)});applyRetailAvailability()}
+  function applyStaticTranslations(){document.documentElement.lang=state.lang;document.title=t('bakery');$('#langSelect').value=state.lang;$('#langSelect').setAttribute('aria-label',{es:'Idioma',en:'Language',de:'Sprache',ru:'Язык'}[state.lang]);$('#cartPanel').setAttribute('aria-label',t('cart'));$$('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});$$('[data-i18n-html]').forEach(el=>{el.innerHTML=t(el.dataset.i18nHtml)});applyRetailAvailability()}
   function renderDates(){const dates=bakeDates(),strip=$('#dateStrip');if(!state.date||!dates.includes(state.date))state.date=dates[0]||'';strip.innerHTML=dates.length?dates.map(d=>`<button type="button" class="date-button ${d===state.date?'active':''}" data-date="${esc(d)}"><strong>${esc(fmtDate(d))}</strong><span>${esc(t('freshBake'))}</span></button>`).join(''):`<div class="slot-empty">${esc(t('noBakeDates'))}</div>`;$$('#dateStrip [data-date]').forEach(b=>b.onclick=()=>{state.date=b.dataset.date;state.cart={};renderAll()})}
   function slotStartMinutes(value){const match=String(value||'').match(/(\d{1,2})[:.](\d{2})/);if(!match)return null;const h=Number(match[1]),m=Number(match[2]);return h>=0&&h<24&&m>=0&&m<60?h*60+m:null}
   function availablePickupSlots(){const slots=state.fulfillment==='delivery'?(Array.isArray(retailSettings().deliverySlots)?retailSettings().deliverySlots:[]):(Array.isArray(retailSettings().pickupSlots)?retailSettings().pickupSlots:DEFAULT_SLOTS),lead=Math.max(0,Number(retailSettings().pickupLeadMinutes||0)),selectedDate=state.mode==='preorder'?state.date:today();if(selectedDate!==today())return slots;const now=new Date(),limit=now.getHours()*60+now.getMinutes()+lead;return slots.filter(value=>{const start=slotStartMinutes(value);return start===null||start>=limit})}
@@ -238,6 +239,6 @@
 })();
 </script>
 
-<script data-panora-title-lock="1">(function(){const wanted='Panora — Розница';const apply=()=>{if(document.title!==wanted)document.title=wanted;const el=document.querySelector('title');if(el&&el.textContent!==wanted)el.textContent=wanted};apply();document.addEventListener('DOMContentLoaded',apply,{once:true});window.addEventListener('load',apply,{once:true});const titleEl=document.querySelector('title');if(titleEl)new MutationObserver(apply).observe(titleEl,{childList:true,characterData:true,subtree:true});setTimeout(apply,0);setTimeout(apply,500);setTimeout(apply,2000)})();</script>
+
 </body>
 </html>

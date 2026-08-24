@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#244333">
-<title>Panora — Розница</title>
-<meta name="application-name" content="Panora — Розница">
+<title>Розница</title>
+<meta name="application-name" content="Panora">
 <meta name="apple-mobile-web-app-title" content="Panora — Розница">
 <meta name="title" content="Panora — Розница">
 <meta property="og:title" content="Panora — Розница">
@@ -29,8 +29,9 @@
 @media(max-width:560px){.customer-push-inline{align-items:stretch;flex-direction:column}.customer-push-inline .button{width:100%}}
 
 </style>
-<script>document.title='Panora — Розница';</script>
-<meta property="og:site_name" content="Panora — Розница">
+
+<meta property="og:site_name" content="Panora">
+  <link rel="manifest" href="manifest-retail-988.webmanifest?v=9880">
 </head>
 <body>
 <header class="topbar"><a class="brand" href="retail.html"><span class="mark">P</span><span>Panora</span></a><select class="lang" id="langSelect" aria-label="Language"><option value="es">ES</option><option value="en">EN</option><option value="de">DE</option><option value="ru">RU</option></select></header>
@@ -55,7 +56,7 @@
  </section>
  <div class="footer">Panora · Bakery · build 7310</div>
 </main>
-<script src="supabase-config.js?v=9870"></script>
+<script src="supabase-config.js?v=9880"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -163,7 +164,7 @@
  $('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();messagePoll=setInterval(()=>{if(!document.hidden&&order)loadMessages()},30000);setInterval(()=>{if(!document.hidden&&navigator.onLine)load({silent:true})},120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&order){loadMessages();syncCustomerPush({repair:true}).catch(()=>{})}});
 })();
 </script>
-<script src="pwa-stable.js?v=9870"></script>
+<script src="pwa-stable.js?v=9880"></script>
 
-<script data-panora-title-lock="1">(function(){const wanted='Panora — Розница';const apply=()=>{if(document.title!==wanted)document.title=wanted;const el=document.querySelector('title');if(el&&el.textContent!==wanted)el.textContent=wanted};apply();document.addEventListener('DOMContentLoaded',apply,{once:true});window.addEventListener('load',apply,{once:true});const titleEl=document.querySelector('title');if(titleEl)new MutationObserver(apply).observe(titleEl,{childList:true,characterData:true,subtree:true});setTimeout(apply,0);setTimeout(apply,500);setTimeout(apply,2000)})();</script>
+
 </body></html>
