@@ -941,11 +941,67 @@
     const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
     const result=await fetchJson(`${cfg.url}${path}`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body)}),next=result.access_token?result:result.session;
     if(!next)throw new Error(labels(
-      'Учётная запись создана. Мы отправили письмо Panora: подтвердите email, затем вернитесь и нажмите «Войти». Проверьте папку «Спам».',
-      'Account created. We sent you a Panora email: confirm your address, return here, then select “Sign in”. Check your spam folder.',
-      'Cuenta creada. Te enviamos un correo de Panora: confirma tu email, vuelve aquí y pulsa «Entrar». Revisa la carpeta de spam.'
+      'Пароль создан. Откройте письмо Panora и подтвердите email. После подтверждения вернитесь сюда и войдите с email и паролем. Проверьте папку «Спам».',
+      'Password created. Open the Panora email and confirm your address. Then return and sign in with your email and password. Check your spam folder.',
+      'Contraseña creada. Abre el correo de Panora y confirma tu email. Después vuelve e inicia sesión con tu email y contraseña. Revisa la carpeta de spam.'
     ));
     saveSession(next);await loadAll(true);
+  }
+  async function sendPartnerPasswordReset(email){
+    if(!email)throw new Error(labels('Введите email.','Enter your email.','Introduce tu email.'));
+    await fetchJson(`${cfg.url}/auth/v1/recover?redirect_to=${encodeURIComponent(APP_URL)}`,{
+      method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email})
+    });
+  }
+  let partnerAuthMode='login';
+  let partnerInviteApplied=false;
+  const inviteEmailFromUrl=()=>{try{return String(new URL(location.href).searchParams.get('invite')||'').trim().toLowerCase()}catch{return''}};
+  function setPartnerAuthMode(mode){partnerAuthMode=mode==='first'?'first':'login';renderAccountModal(true)}
+  function decoratePartnerAuthForm(form){
+    if(!form)return;
+    const inviteEmail=inviteEmailFromUrl();
+    if(inviteEmail&&!partnerInviteApplied){partnerInviteApplied=true;partnerAuthMode='first'}
+    const emailValue=String(form.elements.email?.value||inviteEmail||'').trim().toLowerCase();
+    const heading=form.closest('.modal')?.querySelector('.modal-head h2');
+    if(heading)heading.textContent=partnerAuthMode==='first'
+      ?labels('Первый вход','First sign-in','Primer acceso')
+      :labels('Вход для партнёра','Partner sign in','Acceso de socio');
+    if(partnerAuthMode==='first'){
+      form.innerHTML=`<p class="account-auth-intro">${labels('Используйте email, который пекарня указала в вашей карточке партнёра. Придумайте пароль для дальнейшего входа.','Use the email the bakery added to your partner profile. Create a password for future sign-ins.','Usa el email que la panadería indicó en tu perfil de socio. Crea una contraseña para futuros accesos.')}</p>
+        <label><span>Email</span><input name="email" type="email" required autocomplete="email" value="${portalEscape(emailValue)}"${inviteEmail?' readonly':''}></label>
+        <label><span>${labels('Пароль','Password','Contraseña')}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+        <label><span>${labels('Повторите пароль','Confirm password','Repite la contraseña')}</span><input name="confirmPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+        <p class="account-auth-note">${labels('Минимум 8 символов. После создания пароля может потребоваться подтверждение email по письму Panora.','At least 8 characters. After creating the password, you may need to confirm your email from the Panora message.','Mínimo 8 caracteres. Después de crear la contraseña puede ser necesario confirmar el email desde el mensaje de Panora.')}</p>
+        <p class="account-error" id="accountError"></p>
+        <button class="button button-primary full" type="submit">${labels('Создать пароль','Create password','Crear contraseña')}</button>
+        <button class="button button-ghost full" type="button" data-auth-login>${labels('У меня уже есть пароль','I already have a password','Ya tengo contraseña')}</button>`;
+      form.onsubmit=async event=>{
+        event.preventDefault();const data=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
+        try{
+          const email=String(data.get('email')||'').trim().toLowerCase(),password=String(data.get('password')||''),confirmPassword=String(data.get('confirmPassword')||'');
+          if(password.length<8)throw new Error(labels('Пароль должен содержать минимум 8 символов.','Password must be at least 8 characters.','La contraseña debe tener al menos 8 caracteres.'));
+          if(password!==confirmPassword)throw new Error(labels('Пароли не совпадают.','Passwords do not match.','Las contraseñas no coinciden.'));
+          await signIn(email,password,true);closePanels();renderAccountModal();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account?.name||labels('Готово','Done','Listo'));
+        }catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+      };
+      form.querySelector('[data-auth-login]').onclick=()=>setPartnerAuthMode('login');
+      return;
+    }
+    form.innerHTML=`<p class="account-auth-intro">${labels('Войдите с email и паролем, которые используются для вашего кабинета Panora.','Sign in with the email and password for your Panora partner account.','Entra con el email y la contraseña de tu cuenta de socio Panora.')}</p>
+      <label><span>Email</span><input name="email" type="email" required autocomplete="email" value="${portalEscape(emailValue)}"></label>
+      <label><span>${labels('Пароль','Password','Contraseña')}</span><input name="code" type="password" required minlength="6" autocomplete="current-password"></label>
+      <p class="account-error" id="accountError"></p>
+      <button class="button button-primary full" type="submit">${labels('Войти','Sign in','Entrar')}</button>
+      <button class="account-auth-link" type="button" data-auth-forgot>${labels('Забыли пароль?','Forgot password?','¿Olvidaste la contraseña?')}</button>
+      <div class="account-auth-divider"><span>${labels('Первый вход','First sign-in','Primer acceso')}</span></div>
+      <button class="button button-ghost full" type="button" data-auth-first>${labels('Создать пароль','Create password','Crear contraseña')}</button>`;
+    form.onsubmit=loginAccount;
+    form.querySelector('[data-auth-first]').onclick=()=>setPartnerAuthMode('first');
+    form.querySelector('[data-auth-forgot]').onclick=async()=>{
+      const email=String(form.elements.email?.value||'').trim().toLowerCase(),button=form.querySelector('[data-auth-forgot]');button.disabled=true;
+      try{await sendPartnerPasswordReset(email);const error=form.querySelector('#accountError');error.textContent=labels('Письмо для восстановления пароля отправлено. Проверьте почту и папку «Спам».','Password recovery email sent. Check your inbox and spam folder.','Correo de recuperación enviado. Revisa tu bandeja de entrada y spam.');error.classList.add('show')}
+      catch(error){showLoginError(form,error)}finally{button.disabled=false}
+    };
   }
   function openMobilePartnerCabinetAfterAuth(delay=0){
     window.setTimeout(()=>{
@@ -983,9 +1039,8 @@
     const editingWorkspace=Boolean(active&&active.closest?.("#profileModal.restaurant-workspace")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName));
     if(editingWorkspace&&!force)return;
     legacyRender();if(account){decorateState();return}
-    const form=document.querySelector('#accountLogin');if(!form)return;form.onsubmit=loginAccount;const input=form.elements.code;input.type='password';input.minLength=6;
-    if(!form.querySelector('[data-cloud-signup]')){const button=document.createElement('button');button.type='button';button.className='button button-ghost full';button.dataset.cloudSignup='';button.textContent=labels('Первый вход — создать пароль','First sign-in — create password','Primer acceso — crear contraseña');button.onclick=async()=>{const data=new FormData(form);button.disabled=true;try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),true)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}};form.append(button)}
-    if(!form.querySelector('.account-confirm-hint')){const hint=document.createElement('p');hint.className='account-confirm-hint';hint.textContent=labels('При первом входе после создания пароля подтвердите email по письму Panora. Без подтверждения вход закрыт.','After creating a password for the first time, confirm your email using the Panora message. You cannot sign in until it is confirmed.','Después de crear la contraseña por primera vez, confirma tu email con el mensaje de Panora. No podrás entrar hasta confirmarlo.');form.querySelector('[data-cloud-signup]')?.before(hint)}
+    const form=document.querySelector('#accountLogin');if(!form)return;
+    decoratePartnerAuthForm(form);
     if(Date.now()<loginCooldownUntil)startLoginCooldown(form,Math.ceil((loginCooldownUntil-Date.now())/1000));
   };
   const legacyLogout=logoutAccount;
