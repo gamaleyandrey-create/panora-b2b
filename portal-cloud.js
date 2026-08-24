@@ -938,14 +938,31 @@
   });
 
   async function signIn(email,password,signup=false){
-    const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang}}:{})};
+    const path=signup?`/auth/v1/signup?redirect_to=${encodeURIComponent(APP_URL)}`:'/auth/v1/token?grant_type=password',body={email,password,...(signup?{data:{display_name:email,language:lang,panora_must_change_password:true}}:{})};
     const result=await fetchJson(`${cfg.url}${path}`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body)}),next=result.access_token?result:result.session;
     if(!next)throw new Error(labels(
-      'Пароль создан. Откройте письмо Panora и подтвердите email. После подтверждения вернитесь сюда и войдите с email и паролем. Проверьте папку «Спам».',
-      'Password created. Open the Panora email and confirm your address. Then return and sign in with your email and password. Check your spam folder.',
-      'Contraseña creada. Abre el correo de Panora y confirma tu email. Después vuelve e inicia sesión con tu email y contraseña. Revisa la carpeta de spam.'
+      'Первый доступ создан. Откройте письмо Panora и подтвердите email. После подтверждения вернитесь сюда и войдите временным паролем из приглашения. Затем Panora попросит создать личный пароль. Проверьте папку «Спам».',
+      'First access created. Open the Panora email and confirm your address. Then return and sign in with the temporary password from the invitation. Panora will then require a personal password. Check your spam folder.',
+      'Primer acceso creado. Abre el correo de Panora y confirma tu email. Después vuelve e inicia sesión con la contraseña temporal de la invitación. Panora te pedirá crear una contraseña personal. Revisa la carpeta de spam.'
     ));
-    saveSession(next);await loadAll(true);
+    saveSession(next);await loadAll(true);return next;
+  }
+  const partnerMustChangePassword=()=>Boolean(session?.user?.user_metadata?.panora_must_change_password);
+  async function updatePartnerPassword(password){
+    if(!session?.access_token)throw new Error(labels('Сессия истекла. Войдите снова.','Session expired. Sign in again.','La sesión ha caducado. Inicia sesión de nuevo.'));
+    const user=await fetchJson(`${cfg.url}/auth/v1/user`,{method:'PUT',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({password,data:{...(session.user?.user_metadata||{}),panora_must_change_password:false}})});
+    session.user=user;saveSession(session);return user;
+  }
+  function requirePartnerPasswordChange(){
+    if(!partnerMustChangePassword())return Promise.resolve(false);
+    const existing=document.querySelector('.partner-password-change-dialog');if(existing)return Promise.resolve(true);
+    return new Promise(resolve=>{
+      const dialog=document.createElement('dialog');dialog.className='partner-password-change-dialog';
+      dialog.innerHTML=`<form class="partner-password-change-card"><span class="account-auth-kicker">Panora</span><h2>${labels('Создайте личный пароль','Create your personal password','Crea tu contraseña personal')}</h2><p>${labels('Вы вошли с временным паролем от пекарни. Теперь замените его на пароль, который будете знать только вы.','You signed in with the temporary bakery password. Replace it with a password only you know.','Has entrado con la contraseña temporal de la panadería. Sustitúyela por una contraseña que solo tú conozcas.')}</p><label><span>${labels('Новый пароль','New password','Nueva contraseña')}</span><input name="password" type="password" minlength="8" required autocomplete="new-password"></label><label><span>${labels('Повторите пароль','Confirm password','Repite la contraseña')}</span><input name="confirm" type="password" minlength="8" required autocomplete="new-password"></label><p class="account-error" id="partnerPasswordChangeError"></p><button class="button button-primary full" type="submit">${labels('Сохранить новый пароль','Save new password','Guardar nueva contraseña')}</button></form>`;
+      document.body.appendChild(dialog);dialog.addEventListener('cancel',event=>event.preventDefault());
+      dialog.querySelector('form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button'),password=String(form.elements.password.value||''),confirm=String(form.elements.confirm.value||''),error=form.querySelector('#partnerPasswordChangeError');button.disabled=true;error.classList.remove('show');try{if(password.length<8)throw new Error(labels('Пароль должен содержать минимум 8 символов.','Password must be at least 8 characters.','La contraseña debe tener al menos 8 caracteres.'));if(password!==confirm)throw new Error(labels('Пароли не совпадают.','Passwords do not match.','Las contraseñas no coinciden.'));await updatePartnerPassword(password);try{const url=new URL(location.href);url.searchParams.delete('invite');url.searchParams.delete('token');history.replaceState(null,'',url.pathname+(url.searchParams.toString()?`?${url.searchParams}`:'')+url.hash)}catch{}dialog.close();dialog.remove();showToast(labels('Личный пароль сохранён','Personal password saved','Contraseña personal guardada'));resolve(true)}catch(e){error.textContent=e.message||String(e);error.classList.add('show');button.disabled=false}};
+      dialog.showModal();setTimeout(()=>dialog.querySelector('input')?.focus(),40);
+    });
   }
   async function sendPartnerPasswordReset(email){
     if(!email)throw new Error(labels('Введите email.','Enter your email.','Introduce tu email.'));
@@ -956,6 +973,8 @@
   let partnerAuthMode='login';
   let partnerInviteApplied=false;
   const inviteEmailFromUrl=()=>{try{return String(new URL(location.href).searchParams.get('invite')||'').trim().toLowerCase()}catch{return''}};
+  const inviteTokenFromUrl=()=>{try{return String(new URL(location.href).searchParams.get('token')||'').trim().toLowerCase()}catch{return''}};
+  async function validFirstAccessPassword(email,password){const expected=inviteTokenFromUrl();if(!expected)return false;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`${email}|${password}`));const actual=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');return actual===expected}
   function setPartnerAuthMode(mode){partnerAuthMode=mode==='first'?'first':'login';renderAccountModal(true)}
   function decoratePartnerAuthForm(form){
     if(!form)return;
@@ -967,21 +986,20 @@
       ?labels('Первый вход','First sign-in','Primer acceso')
       :labels('Вход для партнёра','Partner sign in','Acceso de socio');
     if(partnerAuthMode==='first'){
-      form.innerHTML=`<p class="account-auth-intro">${labels('Используйте email, который пекарня указала в вашей карточке партнёра. Придумайте пароль для дальнейшего входа.','Use the email the bakery added to your partner profile. Create a password for future sign-ins.','Usa el email que la panadería indicó en tu perfil de socio. Crea una contraseña para futuros accesos.')}</p>
+      form.innerHTML=`<p class="account-auth-intro">${labels('Используйте email и временный пароль, которые вы получили от пекарни.','Use the email and temporary password you received from the bakery.','Usa el email y la contraseña temporal que recibiste de la panadería.')}</p>
         <label><span>Email</span><input name="email" type="email" required autocomplete="email" value="${portalEscape(emailValue)}"${inviteEmail?' readonly':''}></label>
-        <label><span>${labels('Пароль','Password','Contraseña')}</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
-        <label><span>${labels('Повторите пароль','Confirm password','Repite la contraseña')}</span><input name="confirmPassword" type="password" required minlength="8" autocomplete="new-password"></label>
-        <p class="account-auth-note">${labels('Минимум 8 символов. После создания пароля может потребоваться подтверждение email по письму Panora.','At least 8 characters. After creating the password, you may need to confirm your email from the Panora message.','Mínimo 8 caracteres. Después de crear la contraseña puede ser necesario confirmar el email desde el mensaje de Panora.')}</p>
+        <label><span>${labels('Пароль для первого входа','First-access password','Contraseña de primer acceso')}</span><input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
+        <p class="account-auth-note">${labels('Этот временный пароль указан в приглашении от пекарни. После входа Panora обязательно попросит создать личный пароль.','This temporary password is in the bakery invitation. After sign-in, Panora will require you to create a personal password.','Esta contraseña temporal está en la invitación de la panadería. Después de entrar, Panora te pedirá crear una contraseña personal.')}</p>
         <p class="account-error" id="accountError"></p>
-        <button class="button button-primary full" type="submit">${labels('Создать пароль','Create password','Crear contraseña')}</button>
+        <button class="button button-primary full" type="submit">${labels('Войти первый раз','First sign-in','Primer acceso')}</button>
         <button class="button button-ghost full" type="button" data-auth-login>${labels('У меня уже есть пароль','I already have a password','Ya tengo contraseña')}</button>`;
       form.onsubmit=async event=>{
         event.preventDefault();const data=new FormData(form),button=form.querySelector('button[type="submit"]');button.disabled=true;
         try{
-          const email=String(data.get('email')||'').trim().toLowerCase(),password=String(data.get('password')||''),confirmPassword=String(data.get('confirmPassword')||'');
-          if(password.length<8)throw new Error(labels('Пароль должен содержать минимум 8 символов.','Password must be at least 8 characters.','La contraseña debe tener al menos 8 caracteres.'));
-          if(password!==confirmPassword)throw new Error(labels('Пароли не совпадают.','Passwords do not match.','Las contraseñas no coinciden.'));
-          await signIn(email,password,true);closePanels();renderAccountModal();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account?.name||labels('Готово','Done','Listo'));
+          const email=String(data.get('email')||'').trim().toLowerCase(),password=String(data.get('password')||'');
+          if(password.length<8)throw new Error(labels('Неверный пароль первого входа.','Invalid first-access password.','Contraseña de primer acceso no válida.'));
+          if(!await validFirstAccessPassword(email,password))throw new Error(labels('Пароль первого входа не совпадает с приглашением пекарни.','The first-access password does not match the bakery invitation.','La contraseña de primer acceso no coincide con la invitación de la panadería.'));
+          await signIn(email,password,true);closePanels();renderAccountModal();await requirePartnerPasswordChange();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account?.name||labels('Готово','Done','Listo'));
         }catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
       };
       form.querySelector('[data-auth-login]').onclick=()=>setPartnerAuthMode('login');
@@ -994,7 +1012,7 @@
       <button class="button button-primary full" type="submit">${labels('Войти','Sign in','Entrar')}</button>
       <button class="account-auth-link" type="button" data-auth-forgot>${labels('Забыли пароль?','Forgot password?','¿Olvidaste la contraseña?')}</button>
       <div class="account-auth-divider"><span>${labels('Первый вход','First sign-in','Primer acceso')}</span></div>
-      <button class="button button-ghost full" type="button" data-auth-first>${labels('Создать пароль','Create password','Crear contraseña')}</button>`;
+      <button class="button button-ghost full" type="button" data-auth-first>${labels('У меня есть приглашение','I have an invitation','Tengo una invitación')}</button>`;
     form.onsubmit=loginAccount;
     form.querySelector('[data-auth-first]').onclick=()=>setPartnerAuthMode('first');
     form.querySelector('[data-auth-forgot]').onclick=async()=>{
@@ -1031,7 +1049,7 @@
   }
   loginAccount=async event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),button=form.querySelector('button');button.disabled=true;
-    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
+    try{await signIn(String(data.get('email')).trim().toLowerCase(),String(data.get('code')),false);closePanels();renderAccountModal();await requirePartnerPasswordChange();document.documentElement.classList.add('panora-partner-boot');openMobilePartnerCabinetAfterAuth(0);showToast(account.name)}catch(error){showLoginError(form,error)}finally{if(Date.now()>=loginCooldownUntil)button.disabled=false}
   };
   const legacyRender=renderAccountModal;
   renderAccountModal=function(force=false){
@@ -1498,7 +1516,7 @@
         }else throw error;
       }
     }
-    if(session?.user){await loadAll(true);openMobilePartnerCabinetAfterAuth(0)}
+    if(session?.user){await loadAll(true);await requirePartnerPasswordChange();openMobilePartnerCabinetAfterAuth(0)}
     else{document.documentElement.classList.remove('panora-partner-boot');document.documentElement.classList.add('panora-mobile-route-ready');renderAccountModal();}
   }catch(error){
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
