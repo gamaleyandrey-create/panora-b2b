@@ -1,0 +1,36 @@
+{
+  "id": "panora-partner-998",
+  "name": "Panora — Партнёр",
+  "short_name": "Panora Партнёр",
+  "start_url": "./index.html?app=partner-998&build=9980",
+  "scope": "./index",
+  "display": "standalone",
+  "background_color": "#f4f6f2",
+  "theme_color": "#39764d",
+  "lang": "ru",
+  "description": "Panora — кабинет партнёра пекарни.",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  }
+}

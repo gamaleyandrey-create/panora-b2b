@@ -1,6 +1,6 @@
-/* Panora 9.97 — installed PWA name migration helper */
+/* Panora 9.98 — installed PWA role/scope migration helper */
 (function(){
-  const BUILD='9970';
+  const BUILD='9980';
   const isStandalone=window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone===true;
   if(!isStandalone)return;
   const path=(location.pathname||'').toLowerCase();
@@ -15,7 +15,7 @@
     const box=document.createElement('section');
     box.id='panoraPwaNameMigration';
     box.setAttribute('role','status');
-    box.innerHTML=`<div class="panora-pwa-name-card"><strong>Обновлено название приложения</strong><p>Новое имя: <b>${expected}</b>. Если в верхней системной строке всё ещё видно «Panora — хлеб для партнёров», это имя сохранено в ранее установленной оболочке приложения. Её нужно удалить один раз и установить Panora заново.</p><div><button type="button" data-pwa-name-ok>Понятно</button></div></div>`;
+    box.innerHTML=`<div class="panora-pwa-name-card"><strong>Обновлено название приложения</strong><p>Новое имя: <b>${expected}</b>. Версия 9.98 разделяет Партнёра, Пекарню и Розницу по отдельным областям PWA. Если в верхней системной строке всё ещё видно старое имя или имя другой роли, удалите прежнее установленное приложение один раз и установите нужную роль заново.</p><div><button type="button" data-pwa-name-ok>Понятно</button></div></div>`;
     document.body.appendChild(box);
     box.querySelector('[data-pwa-name-ok]')?.addEventListener('click',()=>{try{localStorage.setItem(key,'done')}catch{} box.remove()});
   },{once:true});
