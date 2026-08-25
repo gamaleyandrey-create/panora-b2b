@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <base href="../">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#39764d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9990">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=9990">
+  <meta name="description" content="Panora — bakery pre-orders for partners">
+  <script>try{if(localStorage.getItem('panora-restaurant-cloud-session')||localStorage.getItem('panora-account-id'))document.documentElement.classList.add('panora-partner-boot')}catch{}</script>
+  <style>html.panora-partner-boot .app-shell>.topbar,html.panora-partner-boot .app-shell>main,html.panora-partner-boot .cart-fab{visibility:hidden!important}@media(max-width:760px){html:not(.panora-mobile-route-ready) .app-shell>.topbar,html:not(.panora-mobile-route-ready) .app-shell>main,html:not(.panora-mobile-route-ready) .cart-fab{visibility:hidden!important}}</style>
+  <link rel="manifest" href="partner/manifest.webmanifest?v=9990">
+  <link rel="stylesheet" href="styles.css?v=9990">
+  <link rel="stylesheet" href="portal.css?v=9990">
+  <link rel="stylesheet" href="restaurant-workspace.css?v=9990">
+  <link rel="stylesheet" href="accounting-invoice.css?v=9990">
+  <link rel="stylesheet" href="document-library.css?v=9990">
+  <link rel="stylesheet" href="quantity.css?v=9990">
+  <link rel="stylesheet" href="account-state.css?v=9990">
+  <link rel="stylesheet" href="account-documents.css?v=9990">
+  <link rel="stylesheet" href="cart-date.css?v=9990">
+  <link rel="stylesheet" href="responsive.css?v=9990">
+  <link rel="stylesheet" href="mobile-catalog.css?v=9990">
+  <link rel="stylesheet" href="bake-info.css?v=9990">
+  <link rel="stylesheet" href="mobile-buttons.css?v=9990">
+  <link rel="stylesheet" href="first-order.css?v=9990">
+  <link rel="stylesheet" href="mobile-nav-icons.css?v=9990">
+  <link rel="stylesheet" href="mobile-checkout.css?v=9990">
+  <link rel="stylesheet" href="checkout-feedback.css?v=9990">
+  <link rel="stylesheet" href="mobile-cart-button.css?v=9990">
+  <link rel="stylesheet" href="mobile-checkout-stable.css?v=9990">
+  <link rel="stylesheet" href="install-guide.css?v=9990">
+  <link rel="stylesheet" href="mobile-cart-layout.css?v=9990">
+  <link rel="stylesheet" href="mobile-cart-flex.css?v=9990">
+  <link rel="stylesheet" href="unified-controls.css?v=9990">
+  <title>Panora — Партнёр</title>
+  <meta name="application-name" content="Panora — Партнёр">
+  <meta name="apple-mobile-web-app-title" content="Panora — Партнёр">
+  <meta name="title" content="Panora — Партнёр">
+  <meta property="og:title" content="Panora — Партнёр">
+  <meta name="twitter:title" content="Panora — Партнёр">
+
+
+
+<link rel="stylesheet" href="mobile-header.css?v=9990">
+<link rel="stylesheet" href="light-pro.css?v=9990">
+<link rel="stylesheet" href="connection-status.css?v=9990">
+<link rel="stylesheet" href="event-notifications.css?v=9990">
+<link rel="stylesheet" href="audit-trail.css?v=9990">
+<link rel="stylesheet" href="pwa-stable.css?v=9990">
+<link rel="stylesheet" href="mobile-partner-v20.css?v=9990">
+<link rel="stylesheet" href="pricing-v40.css?v=9990">
+<link rel="stylesheet" href="mobile-partner-profile-v411.css?v=9990">
+<link rel="stylesheet" href="mobile-partner-workspace-v412.css?v=9990">
+<link rel="stylesheet" href="mobile-partner-profile-v415.css?v=9990">
+<link rel="stylesheet" href="mobile-partner-profile-v416.css?v=9990">
+  <link rel="stylesheet" href="partner-no-bottom-bar-v422.css?v=9990">
+<link rel="stylesheet" href="order-messages-v565.css?v=9990">
+  <meta property="og:site_name" content="Panora">
+  
+  <link rel="stylesheet" href="pwa-name-migration.css?v=9990">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Panora">
+        <span class="brand-mark">P</span>
+        <span>Panora</span>
+      </a>
+      <div class="top-actions"><button class="icon-button account-entry" id="profileButton" aria-label="Кабинет партнёра" title="Кабинет партнёра"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.6" r="4.8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M2.8 21c.9-5.2 3.9-7.8 9.2-7.8s8.3 2.6 9.2 7.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span class="account-entry-label">Кабинет</span></button></div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="eyebrow"><span></span><i data-i18n="hero.eyebrow">Для партнёров</i></div>
+        <h1 data-i18n-html="hero.title">Печём под ваш<br>предзаказ.</h1>
+        <p data-i18n="hero.text">Выберите ближайший день выпечки — мы приготовим нужное количество свежего хлеба для вашей организации.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#catalog" data-i18n="hero.choose">Выбрать хлеб</a>
+          <button class="button button-ghost" id="repeatOrderButton" data-i18n="hero.repeat">Повторить заказ</button>
+        </div>
+        <div class="hero-meta">
+          <div><strong id="nextBakeHero">—</strong><span data-i18n="hero.nextBake">ближайшая выпечка</span></div>
+          <div><strong id="cutoffHero">—</strong><span data-i18n="hero.cutoff">приём заказов до</span></div>
+          <div><strong data-i18n="hero.twice">2 раза</strong><span data-i18n="hero.week">в неделю</span></div>
+        </div>
+      </section>
+      <section class="catalog-section" id="catalog">
+        <div class="section-heading">
+          <div><span class="kicker" data-i18n="catalog.kicker">Каталог</span><h2 data-i18n="catalog.title">Хлеб для вашего меню</h2></div>
+          <p class="panora-48h-note">Заказы принимаются не позднее чем за 48 часов до выпечки.</p><div class="catalog-partner-note"><p data-i18n="catalog.privateNote">Для партнёров действуют специальные цены. Войдите или зарегистрируйтесь, чтобы увидеть вашу цену.</p><button class="catalog-account-link" id="catalogAccountButton" type="button">Войти / зарегистрироваться</button></div>
+        </div>
+        <div class="chips" id="categoryChips" aria-label="Категории товаров"></div>
+        <div class="product-grid" id="productGrid"></div>
+      </section>
+
+      <section class="how-section">
+        <span class="kicker" data-i18n="steps.kicker">Как это работает</span>
+        <h2 data-i18n="steps.title">Первая поставка — за три шага</h2>
+        <div class="steps">
+          <article><b>1</b><h3 data-i18n="steps.oneTitle">Выберите выпечку</h3><p data-i18n="steps.oneText">Посмотрите ближайшие даты и срок предзаказа.</p></article>
+          <article><b>2</b><h3 data-i18n="steps.twoTitle">Соберите заказ</h3><p data-i18n="steps.twoText">Укажите нужное количество хлеба для партнёра.</p></article>
+          <article><b>3</b><h3 data-i18n="steps.threeTitle">Получите свежим</h3><p data-i18n="steps.threeText">Заберите или получите заказ в день выпечки.</p></article>
+        </div>
+      </section>
+    </main>
+    <button class="cart-fab" id="cartButton" aria-label="Открыть корзину">
+      <span data-i18n="cart.title">Корзина</span><b id="cartCount">0</b><strong id="cartTotal">0 €</strong>
+    </button>
+
+    <div class="overlay" id="overlay"></div>
+    <aside class="drawer" id="cartDrawer" aria-hidden="true" aria-label="Корзина">
+      <div class="drawer-head"><div><span class="kicker" data-i18n="cart.kicker">Ваш заказ</span><h2 data-i18n="cart.title">Корзина</h2></div><button class="close-button" data-close>×</button></div>
+      <div class="cart-items" id="cartItems"></div>
+      <div class="cart-empty" id="cartEmpty"><span>◇</span><h3 data-i18n="cart.emptyTitle">Корзина пока пустая</h3><p data-i18n="cart.emptyText">Добавьте хлеб из каталога.</p></div>
+      <div class="cart-summary" id="cartSummary">
+        <label class="cart-delivery-date"><span data-i18n="cart.deliveryDate">День выпечки</span><select id="cartDeliveryDate" required></select></label>
+        <div><span data-i18n="cart.goods">Товары</span><strong id="subtotal">0 €</strong></div>
+        <div><span data-i18n="cart.delivery">Доставка</span><strong data-i18n="cart.free">Бесплатно</strong></div>
+        <div class="summary-total"><span data-i18n="cart.total">Итого</span><strong id="summaryTotal">0 €</strong></div>
+        <p class="minimum-hint" id="minimumHint"></p>
+        <button class="button button-primary full" id="checkoutButton" type="button" data-i18n="cart.checkout">Оформить поставку</button>
+      </div>
+    </aside>
+
+    <section class="modal" id="checkoutModal" aria-hidden="true" aria-label="Оформление поставки">
+      <div class="modal-head"><div><span class="kicker" data-i18n="checkout.kicker">Последний шаг</span><h2 data-i18n="checkout.title">Оформление поставки</h2></div><button class="close-button" data-close>×</button></div>
+      <form id="checkoutForm">
+        <label><span data-i18n="checkout.restaurant">Название партнёра</span><input name="restaurant" required data-i18n-placeholder="checkout.restaurantPlaceholder" placeholder="Название партнёра"></label>
+        <label><span data-i18n="checkout.contact">Контактное лицо</span><input name="contact" required autocomplete="name" data-i18n-placeholder="checkout.contactPlaceholder" placeholder="Имя и фамилия"></label>
+        <label><span data-i18n="checkout.phone">Телефон</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+34 …"></label>
+        <label><span>Email</span><input name="email" type="email" placeholder="partner@example.com"></label>
+        <label id="deliveryAddressLabel"><span data-i18n="checkout.address">Адрес доставки</span><input name="address" required autocomplete="street-address" data-i18n-placeholder="checkout.addressPlaceholder" placeholder="Улица, дом, вход"></label>
+        <label class="checkout-bake-date-field"><span data-i18n="checkout.bakeDay">Дата выпечки</span><select name="date" id="deliveryDate"></select></label>
+        <div class="form-row checkout-time-row">
+          <label id="deliveryTimeLabel"><span data-i18n="checkout.interval">Интервал</span><select name="time"><option>08:00–09:00</option><option>09:00–10:00</option><option>10:00–11:00</option><option>11:00–12:00</option><option>12:00–13:00</option><option>13:00–14:00</option><option>14:00–15:00</option><option>15:00–16:00</option><option>16:00–17:00</option><option>17:00–18:00</option><option>18:00–19:00</option></select></label>
+        </div>
+        <input type="hidden" name="fulfillment" id="fulfillmentSelect" value="delivery">
+        <label><span data-i18n="checkout.comment">Комментарий</span><textarea name="comment" rows="3" data-i18n-placeholder="checkout.commentPlaceholder" placeholder="Куда подойти, кому передать…"></textarea></label>
+        <div class="checkout-total"><span data-i18n="checkout.invoice">К оплате по счёту</span><strong id="checkoutTotal">0 €</strong></div>
+        <button class="button button-primary full" type="submit" data-i18n="checkout.confirm">Подтвердить заказ</button>
+        <p class="legal-note" data-i18n="checkout.legal">Нажимая кнопку, вы подтверждаете заказ. Менеджер свяжется с вами для проверки реквизитов.</p>
+      </form>
+    </section>
+
+    <section class="modal compact" id="profileModal" aria-hidden="true" aria-label="Профиль партнёра">
+      <div class="modal-head"><div><span class="kicker" data-i18n="profile.kicker">Партнёр</span><h2 data-i18n="profile.title">Профиль партнёра</h2></div><button class="close-button" data-close>×</button></div>
+      <div class="profile-card"><div class="profile-logo">P</div><div><strong>Panora B2B</strong><span data-i18n="profile.wholesale">Оптовый покупатель</span></div></div>
+      <div class="profile-list"><div><span data-i18n="profile.payment">Условия оплаты</span><strong data-i18n="profile.invoice">По счёту</strong></div><div><span data-i18n="profile.discount">Персональная скидка</span><strong data-i18n="profile.calculated">Будет рассчитана</strong></div><div><span data-i18n="profile.manager">Менеджер</span><strong data-i18n="profile.assigned">Назначается</strong></div></div>
+      <button class="button button-ghost full" data-close data-i18n="profile.done">Готово</button>
+    </section>
+
+    <div class="success" id="successMessage" role="status">
+      <span>✓</span><div><strong data-i18n="success.title">Заказ принят</strong><p id="successText" data-i18n="success.text">Мы свяжемся с вами.</p></div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+  <script src="pricing-sync-v44.js?v=9990"></script>
+<script src="app.js?v=9990"></script>
+<script src="portal.js?v=9990"></script>
+<script src="supabase-config.js?v=9990"></script>
+<script src="public-catalog-cloud-v48.js?v=9990"></script>
+<script src="portal-cloud.js?v=9990"></script>
+<script src="accounting-invoice.js?v=9990"></script>
+<script src="spanish-documents.js?v=9990"></script>
+<script src="document-library.js?v=9990"></script>
+<script src="dynamic-products.js?v=9990"></script>
+<script src="invoice-close.js?v=9990"></script>
+<script src="install-guide.js?v=9990"></script>
+<script src="restaurant-workspace.js?v=9990"></script>
+<script src="checkout-flow-fix.js?v=9990"></script>
+<script src="input-stability.js?v=9990"></script>
+<script src="recovery-guard.js?v=9990"></script>
+<script src="connection-status.js?v=9990"></script>
+<script src="event-notifications.js?v=9990"></script>
+<script src="audit-trail.js?v=9990"></script>
+<script src="stable-health.js?v=9990"></script>
+<script src="pwa-stable.js?v=9990"></script>
+<script src="order-messages-v565.js?v=9990"></script>
+<script>
+(()=>{
+  const mobile=()=>Boolean(window.matchMedia?.('(max-width: 760px)').matches);
+  const savedPartner=()=>{try{return Boolean(localStorage.getItem('panora-restaurant-cloud-session')||localStorage.getItem('panora-account-id'))}catch{return false}};
+  if(!mobile()||!savedPartner())return;
+  const root=document.documentElement;
+  root.classList.add('panora-partner-boot');
+  root.classList.remove('panora-mobile-route-ready');
+  let stopped=false,tries=0;
+  const revealPublic=()=>{if(stopped)return;stopped=true;root.classList.remove('panora-partner-boot');root.classList.add('panora-mobile-route-ready')};
+  const ensureCabinet=()=>{
+    if(stopped||!mobile())return revealPublic();
+    tries+=1;
+    let hasAccount=false;
+    try{hasAccount=(typeof account!=='undefined'&&Boolean(account))}catch{}
+    if(hasAccount&&typeof window.panoraOpenPartnerCabinet==='function'){
+      try{window.panoraOpenPartnerCabinet()}catch{}
+      const modal=document.querySelector('#profileModal');
+      if(modal?.classList.contains('restaurant-workspace')&&modal?.classList.contains('open')){
+        stopped=true;
+        root.classList.add('panora-mobile-route-ready');
+        root.classList.remove('panora-partner-boot');
+        return;
+      }
+    }
+    let cloudSession=true;
+    try{cloudSession=Boolean(localStorage.getItem('panora-restaurant-cloud-session'))}catch{}
+    if(!cloudSession&&tries>40)return revealPublic();
+    if(tries<300)window.setTimeout(ensureCabinet,50);
+    else revealPublic();
+  };
+  window.addEventListener('panora:open-partner-cabinet',()=>window.setTimeout(ensureCabinet,0));
+  window.addEventListener('pageshow',()=>{if(savedPartner()&&mobile()){stopped=false;tries=0;root.classList.add('panora-partner-boot');root.classList.remove('panora-mobile-route-ready');ensureCabinet()}});
+  ensureCabinet();
+})();
+</script>
+
+
+  <script src="pwa-name-migration.js?v=9990"></script>
+</body>
+</html>
