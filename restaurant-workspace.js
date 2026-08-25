@@ -535,7 +535,7 @@
     const lifecycle=orderLifecycleStatus(order);
     if(lifecycle==="submitted")return lang==="ru"?"Пекарня получила заказ. Ожидайте подтверждения.":lang==="es"?"La panadería recibió el pedido. Espera la confirmación.":"The bakery received the order. Awaiting confirmation.";
     if(lifecycle==="confirmed")return lang==="ru"?"Заказ подтверждён пекарней и готовится к поставке.":lang==="es"?"El pedido está confirmado y se prepara para la entrega.":"The order is confirmed and being prepared for delivery.";
-    if(lifecycle==="shipped")return lang==="ru"?"Заказ отгружен. После подтверждения получения он останется в рабочих до конца текущего дня.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá en curso hasta el final del día actual.":"The order has shipped. After receipt confirmation it remains in Working until the end of the current day.";
+    if(lifecycle==="shipped")return lang==="ru"?"Поставка ожидает вашего подтверждения. Нажмите «Подтвердить получение». Если ссылка или QR недоступны, сообщите пекарне — получение можно зафиксировать подписью.":lang==="es"?"El pedido fue enviado. Tras confirmar la recepción permanecerá en curso hasta el final del día actual.":"The order has shipped. After receipt confirmation it remains in Working until the end of the current day.";
     if(lifecycle==="delivered")return lang==="ru"?"Поставка завершена. Заказ автоматически перейдёт в архив на следующий календарный день.":lang==="es"?"Entrega completada. El pedido pasará al archivo automáticamente el siguiente día natural.":"Delivery completed. The order moves to Archive automatically on the next calendar day.";
     return "";
   }
@@ -734,6 +734,7 @@
 
     const working = all.filter(isActiveOrder);
     const archive = all.filter(isArchivedOrder);
+    const pendingReceipts = working.filter(order=>{const note=orderDeliveryNote(order);return orderLifecycleStatus(order)==="shipped"&&note&&!note.customerConfirmedAt&&!note.offlineProof?.receivedAt});
     const source = orderView === "history" ? archive : working;
     const rows = source.filter(orderMatchesStatus).filter(orderMatchesPeriod);
 
@@ -748,6 +749,7 @@
 
 
     return `<section class="rw-orders-page">
+      ${orderView==="active"&&pendingReceipts.length?`<aside class="rw-receipt-alert"><strong>${lang==="ru"?(pendingReceipts.length===1?"Поставка ожидает подтверждения":`${pendingReceipts.length} поставки ожидают подтверждения`):lang==="es"?"Entrega pendiente de confirmación":"Delivery awaiting confirmation"}</strong><span>${lang==="ru"?"Подтвердите фактическое получение — это займёт меньше минуты.":lang==="es"?"Confirme la recepción real.":"Confirm actual receipt."}</span></aside>`:""}
       <header class="rw-orders-toolbar">
         <div class="rw-order-view-tabs" role="tablist">
           <button type="button" class="${orderView === "active" ? "active" : ""}" data-rw-order-view="active"><span>${t("activeOrders")}</span><b>${working.length}</b></button>
