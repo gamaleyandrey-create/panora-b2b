@@ -1,0 +1,5 @@
+.delivery-followup-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid rgba(25,55,38,.12)}
+.delivery-followup-status{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:#eef1ec;color:#334238}
+.delivery-followup-status.is-ok{background:#e5f4e9;color:#27623a}.delivery-followup-status.is-pending{background:#fff3cf;color:#71520b}.delivery-followup-status.is-warn{background:#ffe5b8;color:#7a4300}.delivery-followup-status.is-late{background:#fde1dd;color:#8e2c21}.delivery-followup-status.is-manual{background:#eee8d9;color:#645126}
+.delivery-followup-dialog .dialog-card{max-width:560px}.delivery-followup-dialog textarea{width:100%;resize:vertical}.delivery-followup-share,.delivery-followup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.delivery-followup-last,.delivery-followup-manual-note{padding:10px 12px;border-radius:12px;background:#f4f3ed}.delivery-followup-dialog select{width:100%}
+@media(max-width:640px){.delivery-followup-row>*{flex:1 1 auto}.delivery-followup-dialog .dialog-card{width:min(94vw,560px)}}
