@@ -1,7 +1,7 @@
 
 /* Panora 7.33 — stable install/update controller */
 (function(){
-  const BUILD='9990';
+  const BUILD='10000';
   let deferredPrompt=null;
 
   function ensure(){
@@ -48,7 +48,10 @@
   async function register(){
     if(!('serviceWorker' in navigator))return null;
     try{
-      const reg=await navigator.serviceWorker.register(`sw.js?v=${BUILD}`,{scope:'./',updateViaCache:'none'});
+      const roleMatch=location.pathname.match(/\/(partner|bakery|retail)\/(?:index\.html)?$/i);
+      const swUrl=roleMatch?new URL('./sw.js?v='+BUILD,location.href).href:new URL('sw.js?v='+BUILD,document.baseURI).href;
+      const swScope=roleMatch?new URL('./',location.href).pathname:new URL('./',document.baseURI).pathname;
+      const reg=await navigator.serviceWorker.register(swUrl,{scope:swScope,updateViaCache:'none'});
       reg.update().catch(()=>{});
       const offer=worker=>show('Доступно обновление Panora.','update',{label:'Обновить',run:button=>applyUpdate(worker,reg,button)});
       if(reg.waiting)offer(reg.waiting);
