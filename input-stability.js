@@ -28,7 +28,7 @@
     if (!value) { value = uuid(); localStorage.setItem(DEVICE_KEY, value); }
     return value;
   })();
-  const session = () => json(localStorage.getItem(location.pathname.includes("admin") ? "panora-admin-supabase-session-v975" : "panora-restaurant-cloud-session"), {});
+  const session = () => json(localStorage.getItem((location.pathname.includes("admin")||location.pathname.includes("/bakery/")) ? "panora-admin-supabase-session-v975" : "panora-restaurant-cloud-session"), {});
   const userId = () => {
     if (session()?.user?.id) return session().user.id;
     try {
@@ -36,7 +36,7 @@
       return json(atob(part.replace(/-/g, "+").replace(/_/g, "/")), {})?.sub || "anonymous";
     } catch { return "anonymous"; }
   };
-  const role = () => location.pathname.includes("admin") ? "bakery" : location.pathname.includes("confirm") ? "confirmation" : "partner";
+  const role = () => (location.pathname.includes("admin")||location.pathname.includes("/bakery/")) ? "bakery" : location.pathname.includes("confirm") ? "confirmation" : "partner";
   const esc = (value) => globalThis.CSS?.escape ? CSS.escape(value) : String(value).replace(/["\\]/g, "\\$&");
   const isTransient = (node) => {
     if (!(node instanceof Element)) return false;
