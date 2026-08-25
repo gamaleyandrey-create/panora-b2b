@@ -1,4 +1,4 @@
-/* Panora 9.95 — shipment receipt follow-up for B2B partners.
+/* Panora 9.96 — shipment receipt follow-up for B2B partners.
    Financial shipment remains final at dispatch. These records only describe receipt evidence/follow-up. */
 (function(){
   const STORE='panora-delivery-followups';
