@@ -8,7 +8,7 @@
     window.panoraCloud?.queueFinance?.();
     return note.qrToken;
   }
-  function url(note){const value=new URL('confirm.html',location.href);value.searchParams.set('t',token(note));return value.href}
+  function url(note){const value=new URL('confirm.html',document.baseURI);value.searchParams.set('t',token(note));return value.href}
   async function qr(note){
     const link=url(note);
     if(!window.PanoraQRCode?.toDataURL)throw new Error('QR module is not loaded');
