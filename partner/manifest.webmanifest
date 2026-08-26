@@ -1,8 +1,8 @@
 {
-  "id": "./panora-partner-1000",
+  "id": "./panora-partner-1001",
   "name": "Panora — Партнёр",
   "short_name": "Panora Партнёр",
-  "start_url": "./?app=partner-1000&build=10000",
+  "start_url": "./?app=partner-1001&build=10010",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6f2",
