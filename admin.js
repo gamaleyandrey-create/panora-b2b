@@ -89,12 +89,15 @@ function setLocalStorageSafely(key,payload){
 const PANORA_ORDERS_CACHE_ARCHIVE_LIMIT=20;
 function isArchivedAdminOrder(row){
  const status=String(row?.status||'').toLowerCase();
- return Boolean(
-  row?.archived ||
-  row?.isArchived ||
-  row?.archive ||
-  ['delivered','cancelled','canceled','closed','archived'].includes(status)
- );
+ if(['cancelled','canceled','closed','archived'].includes(status))return true;
+ if(['delivered'].includes(status))return true;
+ if(status!=='shipped')return Boolean(row?.archived||row?.isArchived||row?.archive);
+ const notes=typeof deliveryNotes!=='undefined'&&Array.isArray(deliveryNotes)?deliveryNotes:[];
+ const note=notes.find(item=>String(item?.orderId||'')===String(row?.id||''));
+ if(!note)return false;
+ let manual=false;
+ try{const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};manual=Boolean(all[String(note.id||note.orderId||'')]?.manualClosedAt)}catch{}
+ return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||manual);
 }
 function compactAdminOrderForCache(row){
  const copy={...(row||{})};

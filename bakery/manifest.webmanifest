@@ -2,7 +2,7 @@
   "id": "./panora-bakery-1005",
   "name": "Panora — Пекарня",
   "short_name": "Panora Пекарня",
-  "start_url": "./?app=bakery-1005&build=10070",
+  "start_url": "./?app=bakery-1005&build=10080",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6f2",

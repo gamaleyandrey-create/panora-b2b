@@ -3,3 +3,13 @@
 .delivery-followup-status.is-ok{background:#e5f4e9;color:#27623a}.delivery-followup-status.is-pending{background:#fff3cf;color:#71520b}.delivery-followup-status.is-warn{background:#ffe5b8;color:#7a4300}.delivery-followup-status.is-late{background:#fde1dd;color:#8e2c21}.delivery-followup-status.is-manual{background:#eee8d9;color:#645126}
 .delivery-followup-dialog .dialog-card{max-width:560px}.delivery-followup-dialog textarea{width:100%;resize:vertical}.delivery-followup-share,.delivery-followup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.delivery-followup-last,.delivery-followup-manual-note{padding:10px 12px;border-radius:12px;background:#f4f3ed}.delivery-followup-dialog select{width:100%}
 @media(max-width:640px){.delivery-followup-row>*{flex:1 1 auto}.delivery-followup-dialog .dialog-card{width:min(94vw,560px)}}
+
+/* Panora 10.08 — compact shipped receipt controls */
+#orderRows .order-flow-actions.shipped-actions{display:grid!important;grid-template-columns:minmax(0,1fr) 52px!important;gap:8px!important;align-items:stretch!important;width:100%!important;min-height:0!important}
+#orderRows .order-flow-actions.shipped-actions>[data-note]{grid-column:1!important;width:100%!important;min-width:0!important}
+#orderRows .order-flow-actions.shipped-actions>.panora-note-more{grid-column:2!important;width:52px!important;min-width:52px!important;max-width:52px!important;padding:0!important;margin:0!important}
+#orderRows .order-flow-actions.shipped-actions>.shipped-qr{grid-column:1 / -1!important;width:100%!important;min-width:0!important}
+#orderRows .delivery-followup-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:10px!important;padding-top:10px!important}
+#orderRows .delivery-followup-row .delivery-followup-status{grid-column:1 / -1!important;display:block!important;width:100%!important;margin:0!important;padding:9px 11px!important;border-radius:11px!important;line-height:1.3!important}
+#orderRows .delivery-followup-row .action-small{width:100%!important;min-width:0!important;margin:0!important;min-height:38px!important}
+@media(max-width:700px){#orderRows .delivery-followup-row{grid-template-columns:1fr!important}#orderRows .delivery-followup-row .delivery-followup-status{grid-column:1!important}#orderRows .order-flow-actions.shipped-actions{grid-template-columns:minmax(0,1fr) 48px!important}#orderRows .order-flow-actions.shipped-actions>.panora-note-more{width:48px!important;min-width:48px!important;max-width:48px!important}}

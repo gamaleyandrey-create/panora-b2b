@@ -257,7 +257,8 @@ const orderCountsForHeader=()=>{
   return actual;
 };
 const paintAuthoritativeOrderCounts=counts=>{
-  const active=Math.max(0,Number(counts?.active)||0),archive=Math.max(0,Number(counts?.archive)||0);
+  const local=window.panoraAdminOrdersHydrated?{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length}:null;
+  const active=local?local.active:Math.max(0,Number(counts?.active)||0),archive=local?local.archive:Math.max(0,Number(counts?.archive)||0);
   const tabs=document.querySelector('#orderArchiveTabs');
   if(!tabs)return;
   const activeEl=tabs.querySelector('[data-order-archive-view="active"] b');
@@ -481,7 +482,7 @@ function orderActions(o) {
   if (o.status === "cancelled")
     return `<div class="order-flow order-flow-cancelled"><span>Заказ отменён</span></div>`;
   if (o.status === "shipped")
-    return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small panora-note-more" type="button" data-note-library="${o.id}" aria-label="Документы накладной">⋯</button><button class="action-small" data-delivery-qr="${o.id}">QR-код</button></div>`;
+    return `<div class="order-flow order-flow-shipped">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions shipped-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small panora-note-more" type="button" data-note-library="${o.id}" aria-label="Документы накладной">⋯</button><button class="action-small shipped-qr" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
     return `<div class="order-flow">${step(1,'Получение','current')}${step(2,'Отгрузить','next')}${step(3,'Накладная','next')}</div><div class="order-flow-actions"><button class="action-small primary-flow" data-confirm="${o.id}">Подтвердить получение</button><button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
   return `<div class="order-flow">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','current')}${step(3,'Накладная','next')}</div><div class="order-flow-actions">${pricing.valid
@@ -489,7 +490,26 @@ function orderActions(o) {
     : `<button class="action-small ship primary-flow order-ship-disabled" type="button" disabled title="${pricing.reason==='empty'?'В заказе нет позиций':'Не рассчитана цена одной или нескольких позиций'}">Отгрузка недоступна</button>`}<button class="action-small danger-quiet" data-cancel-order="${o.id}"><span class="cancel-label-desktop">Отменить</span><span class="cancel-label-mobile">Отменить заказ</span></button></div>`;
 }
 
-const orderIsArchived=o=>['shipped','cancelled'].includes(String(o?.status||''));
+const orderDeliveryNote=o=>(Array.isArray(deliveryNotes)?deliveryNotes:[]).find(note=>String(note?.orderId||'')===String(o?.id||''));
+const orderFollowupMeta=o=>{
+  const note=orderDeliveryNote(o);
+  if(!note)return {};
+  try{
+    const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};
+    return all[String(note.id||note.orderId||'')]||{};
+  }catch{return {}}
+};
+const orderReceiptFinalized=o=>{
+  if(String(o?.status||'')!=='shipped')return false;
+  const note=orderDeliveryNote(o);
+  if(!note)return false;
+  return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||orderFollowupMeta(o).manualClosedAt);
+};
+const orderIsArchived=o=>{
+  const status=String(o?.status||'');
+  if(status==='cancelled')return true;
+  return status==='shipped'&&orderReceiptFinalized(o);
+};
 const orderArchiveMatches=o=>orderArchiveView==='archive'?orderIsArchived(o):!orderIsArchived(o);
 
 
@@ -553,7 +573,7 @@ function renderOrders() {
     new:o=>o.status==='submitted',
     confirmed:o=>!['submitted','shipped','cancelled'].includes(o.status),
     shipped:o=>o.status==='shipped',
-    completed:o=>['shipped','cancelled'].includes(o.status)
+    completed:o=>o.status==='cancelled'||orderReceiptFinalized(o)
   };
   if(statusBar){
     const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
@@ -689,7 +709,7 @@ function renderOrders() {
   setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),0);
 }
 async function confirmOrder(id) {
-  window.panoraAdminOrderInteractionUntil=Date.now()+10070;
+  window.panoraAdminOrderInteractionUntil=Date.now()+10080;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status !== "submitted") return;
   const button=document.querySelector(`[data-confirm="${CSS.escape(id)}"]`);
@@ -723,7 +743,7 @@ async function confirmOrder(id) {
   }
 }
 async function cancelOrder(id) {
-  window.panoraAdminOrderInteractionUntil=Date.now()+10070;
+  window.panoraAdminOrderInteractionUntil=Date.now()+10080;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status === "shipped" || o.status === "cancelled") return;
   if (!confirm("Отменить заказ и вернуть количество в свободный план?")) return;
