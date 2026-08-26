@@ -168,7 +168,7 @@
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
       document.querySelector('#panoraConflictChoice')?.remove();
-      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10120;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
+      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10130;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
       modal.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="panoraConflictTitle" style="width:min(520px,100%);background:#fff;color:#17251d;border-radius:18px;padding:24px;box-shadow:0 20px 70px #0005"><h2 id="panoraConflictTitle" style="margin:0 0 12px">Есть изменения на другом устройстве</h2><p>В облаке сохранена другая версия раздела: <strong>${String(names).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Выберите, какую версию использовать.</p><button type="button" data-choice="cloud" style="width:100%;margin-top:10px;padding:12px">Загрузить обновления из облака</button><p style="margin:6px 0 14px;color:#607066">Текущие поля будут заменены последней версией из облака.</p><button type="button" data-choice="local" style="width:100%;padding:12px">Сохранить версию этого устройства в облако</button><p style="margin:6px 0 14px;color:#607066">Данные с этого устройства заменят облачную версию.</p><button type="button" data-choice="later" style="width:100%;padding:10px;background:transparent;border:0;text-decoration:underline">Решить позже</button><p style="margin:14px 0 0;color:#42684d">Ваши данные не пропадут: перед заменой Panora сохранит резервную копию.</p></section>`;
       modal.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;modal.remove();resolve(choice)});document.body.append(modal);modal.querySelector('[data-choice="cloud"]')?.focus();
     })
@@ -287,7 +287,7 @@
   async function getAdminOperationalRevision(){
     if(adminOperationalRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10120)return adminOperationalRevisionCache;
+    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10130)return adminOperationalRevisionCache;
     if(adminOperationalRevisionPromise)return adminOperationalRevisionPromise;
     adminOperationalRevisionPromise=(async()=>{
       try{
@@ -319,7 +319,7 @@
   async function getAdminReferenceRevision(){
     if(adminReferenceRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10120)return adminReferenceRevisionCache;
+    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10130)return adminReferenceRevisionCache;
     if(adminReferenceRevisionPromise)return adminReferenceRevisionPromise;
     adminReferenceRevisionPromise=(async()=>{
       try{
@@ -1557,7 +1557,7 @@ function financeTimeline(restaurantId){
       date:String(payment.date||localDate(payment.receivedAt)||''),
       occurredAt:String(payment.receivedAt||`${payment.date||''}T12:00:00`),
       kind:'payment',
-      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1012000,
+      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1013000,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -1572,7 +1572,7 @@ function financeTimeline(restaurantId){
       date:String(localDate(stateAt)||payment.date||''),
       occurredAt:String(stateAt||`${payment.date||''}T23:59:59`),
       kind:'payment_reversal',
-      sequence:1012001,
+      sequence:1013001,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -2150,10 +2150,9 @@ window.panoraRecalculateBalances=recalculateBalances;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},1800000);
-    clearInterval(receiptPoll);receiptPoll=setInterval(async()=>{
-      if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('orders','delivery-notes'))return;
-      try{await refreshDeliveryReceipts()}catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora delivery receipt refresh',error)}
-    },15000);
+    // Panora 10.13: receipt updates are event/on-demand driven.
+    // No 15-second polling: refresh on Orders open, app wake/focus and manual Refresh.
+    clearInterval(receiptPoll);receiptPoll=0;
     clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{
       const productsChanged=await adminReferenceComponentChanged('products');
       const recipesChanged=await adminReferenceComponentChanged('recipes');
@@ -2193,7 +2192,26 @@ window.panoraRecalculateBalances=recalculateBalances;
     },600000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  async function refreshAdminOrdersOnDemand(reason='manual'){
+    if(!ready||!navigator.onLine)return false;
+    const button=document.querySelector('#refreshOrdersCloud');
+    if(button){button.disabled=true;button.dataset.loading='1';button.textContent='Обновляем…'}
+    try{
+      await refreshDeliveryReceipts();
+      const changed=await adminCommerceRevisionChanged();
+      if(changed?.changed){
+        if(changed.orders)await loadOrders();
+        if(changed.payments)await loadPayments();
+        if(changed.notes)await loadDeliveryNotes();
+      }
+      if(typeof renderCommerce==='function')renderCommerce();
+      window.dispatchEvent(new CustomEvent('panora:admin-orders-refreshed',{detail:{reason,changed:Boolean(changed?.changed)}}));
+      return true;
+    }finally{
+      if(button){button.disabled=false;delete button.dataset.loading;button.textContent='Обновить'}
+    }
+  }
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
@@ -2267,6 +2285,12 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(ready)scheduleAdminCommerceWakeRefresh('focus');
   });
   window.addEventListener('pageshow',()=>{if(ready)scheduleAdminCommerceWakeRefresh('pageshow',30)});
+  document.addEventListener('click',event=>{
+    const refresh=event.target.closest?.('#refreshOrdersCloud');
+    if(refresh){event.preventDefault();refreshAdminOrdersOnDemand('manual').catch(error=>{console.warn('Panora manual orders refresh',error);status('Ошибка обновления')});return}
+    const ordersNav=event.target.closest?.('.admin-nav button[data-view="orders"], [data-view="orders"]');
+    if(ordersNav&&ready)setTimeout(()=>refreshAdminOrdersOnDemand('orders-open').catch(error=>console.warn('Panora orders open refresh',error)),40);
+  },true);
   navigator.serviceWorker?.addEventListener?.('message',event=>{
     if(event.data?.type==='PANORA_PUSH_OPENED'&&ready)scheduleAdminCommerceWakeRefresh('push',0);
   });
