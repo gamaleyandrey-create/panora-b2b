@@ -1,8 +1,23 @@
 
 /* Panora 7.33 — stable install/update controller */
 (function(){
-  const BUILD='10020';
+  const BUILD='10040';
+  const INSTALL_SNOOZE_MS=10*24*60*60*1000;
   let deferredPrompt=null;
+
+  function installSnoozeKey(){
+    const role=(location.pathname.match(/\/(partner|bakery|retail)\//i)||[])[1]||'root';
+    return 'panora-pwa-install-snooze-until:'+role.toLowerCase();
+  }
+  function installSnoozed(){
+    try{return Number(localStorage.getItem(installSnoozeKey())||0)>Date.now()}catch{return false}
+  }
+  function snoozeInstall(){
+    try{localStorage.setItem(installSnoozeKey(),String(Date.now()+INSTALL_SNOOZE_MS))}catch{}
+  }
+  function clearInstallSnooze(){
+    try{localStorage.removeItem(installSnoozeKey())}catch{}
+  }
 
   function ensure(){
     let el=document.getElementById('panoraPwaStatus');
@@ -21,7 +36,7 @@
     el.querySelector('.panora-pwa-text').textContent=text;
     const btn=el.querySelector('.panora-pwa-action');
     if(action){btn.textContent=action.label;btn.onclick=()=>action.run(btn)}else btn.hidden=true;
-    el.querySelector('.panora-pwa-close').onclick=()=>{el.hidden=true};
+    el.querySelector('.panora-pwa-close').onclick=()=>{if(type==='install')snoozeInstall();el.hidden=true};
   }
   let updateReloading=false;
   function reloadWithBuild(){
@@ -64,11 +79,18 @@
   }
   window.addEventListener('beforeinstallprompt',event=>{
     event.preventDefault();deferredPrompt=event;
+    if(installSnoozed())return;
     show('Panora можно установить как приложение.','install',{label:'Установить',run:async()=>{
-      if(!deferredPrompt)return;deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch{}deferredPrompt=null;
+      if(!deferredPrompt)return;
+      deferredPrompt.prompt();
+      try{
+        const choice=await deferredPrompt.userChoice;
+        if(choice?.outcome==='dismissed')snoozeInstall();
+      }catch{}
+      deferredPrompt=null;
     }});
   });
-  window.addEventListener('appinstalled',()=>{deferredPrompt=null;show('Panora установлена.','success')});
+  window.addEventListener('appinstalled',()=>{deferredPrompt=null;clearInstallSnooze();show('Panora установлена.','success')});
   navigator.serviceWorker?.addEventListener?.('controllerchange',reloadWithBuild);
   window.addEventListener('load',()=>{
     const url=new URL(location.href);
