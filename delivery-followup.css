@@ -92,7 +92,7 @@
 }
 
 
-/* Panora 10.16 — completed receipt is read-only even if stale markup survives. */
+/* Panora 10.17 — completed receipt is read-only even if stale markup survives. */
 #orderRows .delivery-followup-row.is-complete .action-small,
 #orderRows .delivery-followup-row:has(.delivery-followup-status.is-ok) .action-small{display:none!important}
 #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{
@@ -103,7 +103,7 @@
 }
 
 
-/* Panora 10.16 — mobile orders always expose Active + Archived tabs */
+/* Panora 10.17 — mobile orders always expose Active + Archived tabs */
 @media (max-width:720px){
   body.admin-page #view-orders .order-archive-tabs{
     display:grid!important;
@@ -125,5 +125,42 @@
     padding:0 14px!important;
     justify-content:center!important;
     font-size:14px!important;
+  }
+}
+
+/* Panora 10.17 — invoice action matches QR width and always keeps its label inside. */
+@media (min-width:721px){
+  #orderRows .order-flow-actions.shipped-actions{
+    grid-template-columns:minmax(0,1fr) 52px!important;
+    grid-template-rows:auto auto auto!important;
+  }
+  #orderRows .order-flow-actions.shipped-actions>.panora-note-more{
+    grid-column:2!important;
+    grid-row:1!important;
+    justify-self:end!important;
+  }
+  #orderRows .order-flow-actions.shipped-actions>[data-note]{
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:14px 18px!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+    text-align:center!important;
+    line-height:1.18!important;
+  }
+  #orderRows .order-flow-actions.shipped-actions>.shipped-qr{
+    grid-column:1 / -1!important;
+    grid-row:3!important;
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box!important;
   }
 }
