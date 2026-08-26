@@ -1694,3 +1694,17 @@ body.admin-page .stock-inventory-button:hover{background:#fff4f2}
 
 /* 9.94 receipt confirmation alert */
 .rw-receipt-alert{display:flex;gap:8px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(171,111,20,.22);border-radius:14px;background:#fff7df;color:#684609}.rw-receipt-alert strong{font-weight:800}.rw-receipt-alert span{font-size:13px}
+
+/* Panora 10.10 — dock mobile navigation to the viewport edge */
+@media(max-width:720px){
+  body.admin-page .admin-mobile-tabs{
+    left:0!important;right:0!important;bottom:0!important;width:100%!important;
+    height:calc(72px + env(safe-area-inset-bottom))!important;
+    padding:5px 8px calc(5px + env(safe-area-inset-bottom))!important;
+    border-left:0!important;border-right:0!important;border-bottom:0!important;
+    border-radius:18px 18px 0 0!important;
+    box-shadow:0 -8px 24px rgba(28,48,35,.14)!important;
+  }
+  body.admin-page .admin-content{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
+  body.admin-page .panora-connection-state{bottom:calc(82px + env(safe-area-inset-bottom))!important}
+}
