@@ -1,7 +1,7 @@
 
 /* Panora 7.33 — stable install/update controller */
 (function(){
-  const BUILD='10160';
+  const BUILD='10170';
   const INSTALL_SNOOZE_MS=10*24*60*60*1000;
   let deferredPrompt=null;
 

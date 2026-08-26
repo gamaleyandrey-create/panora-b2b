@@ -2,7 +2,7 @@
   "id": "./panora-retail-1005",
   "name": "Panora — Розница",
   "short_name": "Panora Розница",
-  "start_url": "./?app=retail-1005&build=10160",
+  "start_url": "./?app=retail-1005&build=10170",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6f2",
