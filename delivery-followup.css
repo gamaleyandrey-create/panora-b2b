@@ -4,7 +4,7 @@
 .delivery-followup-dialog .dialog-card{max-width:560px}.delivery-followup-dialog textarea{width:100%;resize:vertical}.delivery-followup-share,.delivery-followup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.delivery-followup-last,.delivery-followup-manual-note{padding:10px 12px;border-radius:12px;background:#f4f3ed}.delivery-followup-dialog select{width:100%}
 @media(max-width:640px){.delivery-followup-row>*{flex:1 1 auto}.delivery-followup-dialog .dialog-card{width:min(94vw,560px)}}
 
-/* Panora 10.08 — compact shipped receipt controls */
+/* Panora 10.09 — compact shipped receipt controls */
 #orderRows .order-flow-actions.shipped-actions{display:grid!important;grid-template-columns:minmax(0,1fr) 52px!important;gap:8px!important;align-items:stretch!important;width:100%!important;min-height:0!important}
 #orderRows .order-flow-actions.shipped-actions>[data-note]{grid-column:1!important;width:100%!important;min-width:0!important}
 #orderRows .order-flow-actions.shipped-actions>.panora-note-more{grid-column:2!important;width:52px!important;min-width:52px!important;max-width:52px!important;padding:0!important;margin:0!important}
@@ -13,3 +13,60 @@
 #orderRows .delivery-followup-row .delivery-followup-status{grid-column:1 / -1!important;display:block!important;width:100%!important;margin:0!important;padding:9px 11px!important;border-radius:11px!important;line-height:1.3!important}
 #orderRows .delivery-followup-row .action-small{width:100%!important;min-width:0!important;margin:0!important;min-height:38px!important}
 @media(max-width:700px){#orderRows .delivery-followup-row{grid-template-columns:1fr!important}#orderRows .delivery-followup-row .delivery-followup-status{grid-column:1!important}#orderRows .order-flow-actions.shipped-actions{grid-template-columns:minmax(0,1fr) 48px!important}#orderRows .order-flow-actions.shipped-actions>.panora-note-more{width:48px!important;min-width:48px!important;max-width:48px!important}}
+
+
+/* Panora 10.09 — clearer shipped-order hierarchy without changing workflow */
+#orderRows .delivery-followup-title{
+  grid-column:1 / -1!important;margin:0 0 1px!important;color:#516158!important;
+  font-size:11px!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.045em!important;text-transform:uppercase!important
+}
+#orderRows .order-flow-actions.shipped-actions>[data-note]{
+  background:#fff!important;color:#315b42!important;border:1px solid #b9cbbf!important;box-shadow:none!important
+}
+#orderRows .order-flow-actions.shipped-actions>.shipped-qr{
+  background:#f7faf7!important;color:#315b42!important;border:1px solid #9fb8a7!important;box-shadow:none!important;font-weight:800!important
+}
+#orderRows .delivery-followup-row{
+  padding:11px!important;border:1px solid #e0e7e1!important;border-radius:12px!important;background:#f8faf7!important
+}
+#orderRows .delivery-followup-row .delivery-followup-status{
+  border:1px solid transparent!important;box-shadow:none!important;font-size:11px!important;font-weight:800!important
+}
+#orderRows .delivery-followup-row .delivery-followup-status.is-pending{background:#fff7dc!important;border-color:#f2df9f!important;color:#6f5213!important}
+#orderRows .delivery-followup-row .delivery-followup-status.is-warn{border-color:#efcb8f!important}
+#orderRows .delivery-followup-row .delivery-followup-status.is-late{border-color:#ebbbb4!important}
+#orderRows .delivery-followup-row .action-small{
+  background:#fff!important;color:#315b42!important;border:1px solid #c8d5cb!important;border-radius:9px!important;font-weight:750!important;box-shadow:none!important
+}
+#orderRows .delivery-followup-row [data-delivery-remind]{background:#edf5ef!important;border-color:#bfd2c3!important}
+
+@media(max-width:720px){
+  /* Keep the order number and shipped badge from colliding. */
+  #view-orders #orderRows tr.order-row td:first-child{min-height:54px!important;padding-right:112px!important}
+  #view-orders #orderRows tr.order-row td:nth-child(6){top:14px!important;right:14px!important}
+  #view-orders #orderRows tr.order-row td:nth-child(6) .tag{
+    min-width:0!important;max-width:104px!important;min-height:28px!important;padding:6px 9px!important;
+    border-radius:999px!important;font-size:10px!important;letter-spacing:.035em!important
+  }
+  #view-orders #orderRows .order-mobile-status .bakery-order-audit{
+    display:block!important;position:absolute!important;top:38px!important;right:14px!important;width:150px!important;
+    margin:0!important;color:#7b857f!important;font-size:9px!important;line-height:1.25!important;text-align:right!important
+  }
+  #view-orders #orderRows .order-mobile-dates .order-dates{display:grid!important;gap:8px!important}
+  #view-orders #orderRows .order-date-line{display:grid!important;grid-template-columns:82px minmax(0,1fr)!important;align-items:baseline!important;gap:8px!important}
+  #view-orders #orderRows .order-date-line em{margin:0!important;color:#68766d!important;font-size:12px!important;line-height:1.2!important}
+  #view-orders #orderRows .order-date-line strong{margin:0!important;font-size:16px!important;line-height:1.2!important}
+  #orderRows .order-flow-actions.shipped-actions{gap:7px!important}
+  #orderRows .order-flow-actions.shipped-actions>[data-note]{min-height:46px!important}
+  #orderRows .order-flow-actions.shipped-actions>.shipped-qr{min-height:46px!important}
+  #orderRows .delivery-followup-row{gap:8px!important;padding:12px!important;border-radius:13px!important}
+  #orderRows .delivery-followup-title{font-size:10px!important}
+  #orderRows .delivery-followup-row .delivery-followup-status{padding:10px 11px!important;font-size:12px!important;line-height:1.3!important}
+  #orderRows .delivery-followup-row .action-small{min-height:44px!important;font-size:12px!important}
+  .panora-connection-state[data-state="error"]{
+    left:50%!important;right:auto!important;bottom:calc(86px + env(safe-area-inset-bottom))!important;
+    transform:translateX(-50%)!important;max-width:min(270px,calc(100vw - 34px))!important;min-height:34px!important;
+    padding:7px 12px!important;border-radius:12px!important;font-size:11px!important;line-height:1.2!important;
+    white-space:normal!important;text-align:center!important;box-shadow:0 5px 18px rgba(83,35,29,.10)!important
+  }
+}
