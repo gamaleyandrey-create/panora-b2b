@@ -553,7 +553,7 @@ function renderOrders() {
     archiveTabs.classList.toggle('is-loading',!!headerCounts.loading);
     archiveTabs.innerHTML=`
       <button type="button" class="${orderArchiveView==='active'?'active':''}" data-order-archive-view="active"><span>Активные</span><b>${headerCounts.active}</b></button>
-      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архив</span><b>${headerCounts.archive}</b></button>`;
+      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архивные</span><b>${headerCounts.archive}</b></button>`;
     archiveTabs.querySelectorAll('[data-order-archive-view]').forEach(button=>button.onclick=()=>{
       const next=button.dataset.orderArchiveView;
       if(next===orderArchiveView)return;

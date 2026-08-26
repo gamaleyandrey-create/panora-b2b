@@ -92,7 +92,7 @@
 }
 
 
-/* Panora 10.15 — completed receipt is read-only even if stale markup survives. */
+/* Panora 10.16 — completed receipt is read-only even if stale markup survives. */
 #orderRows .delivery-followup-row.is-complete .action-small,
 #orderRows .delivery-followup-row:has(.delivery-followup-status.is-ok) .action-small{display:none!important}
 #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{
@@ -100,4 +100,30 @@
 }
 @media(max-width:720px){
   #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{min-height:58px!important;font-size:17px!important}
+}
+
+
+/* Panora 10.16 — mobile orders always expose Active + Archived tabs */
+@media (max-width:720px){
+  body.admin-page #view-orders .order-archive-tabs{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:8px!important;
+    width:100%!important;
+    max-width:none!important;
+    overflow:visible!important;
+    padding:2px 0 6px!important;
+    margin:0 0 14px!important;
+  }
+  body.admin-page #view-orders .order-archive-tabs button{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    flex:1 1 0!important;
+    min-height:54px!important;
+    padding:0 14px!important;
+    justify-content:center!important;
+    font-size:14px!important;
+  }
 }
