@@ -13,7 +13,27 @@
     ['pointerdown','touchstart'].forEach(x=>canvas.addEventListener(x,start,{passive:false}));['pointermove','touchmove'].forEach(x=>canvas.addEventListener(x,move,{passive:false}));['pointerup','pointerleave','touchend'].forEach(x=>canvas.addEventListener(x,end));
     dialog.querySelector('.clear-signature').onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false};dialog.querySelector('.modal-close').onclick=closeProof;dialog.onclick=e=>{if(e.target===dialog)closeProof()};
     if(typeof dialog.showModal==='function'){try{dialog.showModal()}catch(_){dialog.setAttribute('open','')}}else dialog.setAttribute('open','');
-    dialog.querySelector('form').onsubmit=e=>{e.preventDefault();if(!signed)return alert('Попросите получателя поставить подпись.');const f=new FormData(e.currentTarget);note.offlineProof={receivedAt:new Date().toISOString(),receiver:String(f.get('receiver')).trim(),signature:canvas.toDataURL('image/webp',.65),pending:true};localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));window.panoraCloud?.queueFinance?.();closeProof();typeof renderCommerce==='function'&&renderCommerce();window.dispatchEvent(new CustomEvent('panora:delivery-receipt-updated'));alert(navigator.onLine?'Получение сохранено и отправляется в облако.':'Получение сохранено на этом устройстве. Оно отправится в облако после появления интернета.')};
+    dialog.querySelector('form').onsubmit=async e=>{
+      e.preventDefault();if(!signed)return alert('Попросите получателя поставить подпись.');
+      const form=e.currentTarget,submit=form.querySelector('button[type=\"submit\"]'),f=new FormData(form);
+      note.offlineProof={receivedAt:new Date().toISOString(),receiver:String(f.get('receiver')).trim(),signature:canvas.toDataURL('image/webp',.65),pending:true};
+      localStorage.setItem('panora-delivery-notes',JSON.stringify(deliveryNotes));
+      typeof renderCommerce==='function'&&renderCommerce();
+      window.dispatchEvent(new CustomEvent('panora:delivery-receipt-updated',{detail:{orderId:String(orderId),source:'signature',cloud:false}}));
+      if(submit){submit.disabled=true;submit.textContent=navigator.onLine?'Сохраняем в облако…':'Сохранено на устройстве'}
+      if(!navigator.onLine){window.panoraCloud?.queueFinance?.();closeProof();alert('Получение сохранено на этом устройстве. Оно отправится в облако после появления интернета.');return}
+      try{
+        if(window.panoraCloud?.saveDeliveryReceiptConfirmed)await window.panoraCloud.saveDeliveryReceiptConfirmed(orderId);
+        else{window.panoraCloud?.queueFinance?.();throw new Error('Фоновая синхронизация подписи запущена')}
+        closeProof();
+        typeof renderCommerce==='function'&&renderCommerce();
+        alert('Получение по подписи сохранено в облаке. Накладная и заказ обновлены.');
+      }catch(error){
+        console.error('Panora delivery signature cloud save',error);
+        if(submit){submit.disabled=false;submit.textContent='Повторить сохранение в облако'}
+        alert('Подпись сохранена на устройстве, но облако пока не подтвердило запись. Panora продолжит синхронизацию автоматически.');
+      }
+    };
   }
   window.panoraOpenRecipientProof=openProof;
   window.showDeliveryQr=async function(orderId){await oldShow(orderId);const actions=document.querySelector('#deliveryQrDialog .delivery-qr-actions');if(actions){actions.insertAdjacentHTML('beforeend','<button type="button" class="secondary qr-offline">Принять подпись получателя</button>');actions.querySelector('.qr-offline').onclick=()=>{document.querySelector('#deliveryQrDialog')?.remove();openProof(orderId)}}};

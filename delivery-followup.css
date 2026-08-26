@@ -4,7 +4,7 @@
 .delivery-followup-dialog .dialog-card{max-width:560px}.delivery-followup-dialog textarea{width:100%;resize:vertical}.delivery-followup-share,.delivery-followup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.delivery-followup-last,.delivery-followup-manual-note{padding:10px 12px;border-radius:12px;background:#f4f3ed}.delivery-followup-dialog select{width:100%}
 @media(max-width:640px){.delivery-followup-row>*{flex:1 1 auto}.delivery-followup-dialog .dialog-card{width:min(94vw,560px)}}
 
-/* Panora 10.10 — compact shipped receipt controls */
+/* Panora 10.11 — compact shipped receipt controls */
 #orderRows .order-flow-actions.shipped-actions{display:grid!important;grid-template-columns:minmax(0,1fr) 52px!important;gap:8px!important;align-items:stretch!important;width:100%!important;min-height:0!important}
 #orderRows .order-flow-actions.shipped-actions>[data-note]{grid-column:1!important;width:100%!important;min-width:0!important}
 #orderRows .order-flow-actions.shipped-actions>.panora-note-more{grid-column:2!important;width:52px!important;min-width:52px!important;max-width:52px!important;padding:0!important;margin:0!important}
@@ -15,7 +15,7 @@
 @media(max-width:700px){#orderRows .delivery-followup-row{grid-template-columns:1fr!important}#orderRows .delivery-followup-row .delivery-followup-status{grid-column:1!important}#orderRows .order-flow-actions.shipped-actions{grid-template-columns:minmax(0,1fr) 48px!important}#orderRows .order-flow-actions.shipped-actions>.panora-note-more{width:48px!important;min-width:48px!important;max-width:48px!important}}
 
 
-/* Panora 10.10 — clearer shipped-order hierarchy without changing workflow */
+/* Panora 10.11 — clearer shipped-order hierarchy without changing workflow */
 #orderRows .delivery-followup-title{
   grid-column:1 / -1!important;margin:0 0 1px!important;color:#516158!important;
   font-size:11px!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.045em!important;text-transform:uppercase!important
@@ -71,7 +71,7 @@
   }
 }
 
-/* Panora 10.10 — mobile delivery controls */
+/* Panora 10.11 — mobile delivery controls */
 @media(max-width:720px){
   #orderRows .delivery-followup-row{grid-template-columns:1fr!important}
   #orderRows .delivery-followup-row .action-small{width:100%!important;max-width:none!important}

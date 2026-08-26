@@ -265,7 +265,7 @@
     box.dataset.panoraConflict = 'true';
     box.setAttribute('role', 'alertdialog');
     box.setAttribute('aria-live', 'assertive');
-    box.style.cssText = 'position:fixed;z-index:101000;left:12px;right:12px;bottom:12px;max-width:620px;margin:auto;padding:18px;border-radius:16px;background:#fff;color:#17251d;box-shadow:0 12px 45px #0005;border:2px solid #b7791f;font:15px/1.45 system-ui';
+    box.style.cssText = 'position:fixed;z-index:101100;left:12px;right:12px;bottom:12px;max-width:620px;margin:auto;padding:18px;border-radius:16px;background:#fff;color:#17251d;box-shadow:0 12px 45px #0005;border:2px solid #b7791f;font:15px/1.45 system-ui';
     const title = document.createElement('strong');
     title.textContent = role() === 'partner' ? 'Данные изменены на другом устройстве' : 'Обнаружен конфликт данных';
     const help = document.createElement('p');

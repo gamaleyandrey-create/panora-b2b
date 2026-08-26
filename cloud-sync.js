@@ -168,7 +168,7 @@
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
       document.querySelector('#panoraConflictChoice')?.remove();
-      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10100;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
+      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10110;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
       modal.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="panoraConflictTitle" style="width:min(520px,100%);background:#fff;color:#17251d;border-radius:18px;padding:24px;box-shadow:0 20px 70px #0005"><h2 id="panoraConflictTitle" style="margin:0 0 12px">Есть изменения на другом устройстве</h2><p>В облаке сохранена другая версия раздела: <strong>${String(names).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Выберите, какую версию использовать.</p><button type="button" data-choice="cloud" style="width:100%;margin-top:10px;padding:12px">Загрузить обновления из облака</button><p style="margin:6px 0 14px;color:#607066">Текущие поля будут заменены последней версией из облака.</p><button type="button" data-choice="local" style="width:100%;padding:12px">Сохранить версию этого устройства в облако</button><p style="margin:6px 0 14px;color:#607066">Данные с этого устройства заменят облачную версию.</p><button type="button" data-choice="later" style="width:100%;padding:10px;background:transparent;border:0;text-decoration:underline">Решить позже</button><p style="margin:14px 0 0;color:#42684d">Ваши данные не пропадут: перед заменой Panora сохранит резервную копию.</p></section>`;
       modal.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;modal.remove();resolve(choice)});document.body.append(modal);modal.querySelector('[data-choice="cloud"]')?.focus();
     })
@@ -287,7 +287,7 @@
   async function getAdminOperationalRevision(){
     if(adminOperationalRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10100)return adminOperationalRevisionCache;
+    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10110)return adminOperationalRevisionCache;
     if(adminOperationalRevisionPromise)return adminOperationalRevisionPromise;
     adminOperationalRevisionPromise=(async()=>{
       try{
@@ -319,7 +319,7 @@
   async function getAdminReferenceRevision(){
     if(adminReferenceRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10100)return adminReferenceRevisionCache;
+    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10110)return adminReferenceRevisionCache;
     if(adminReferenceRevisionPromise)return adminReferenceRevisionPromise;
     adminReferenceRevisionPromise=(async()=>{
       try{
@@ -1557,7 +1557,7 @@ function financeTimeline(restaurantId){
       date:String(payment.date||localDate(payment.receivedAt)||''),
       occurredAt:String(payment.receivedAt||`${payment.date||''}T12:00:00`),
       kind:'payment',
-      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1010000,
+      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1011000,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -1572,7 +1572,7 @@ function financeTimeline(restaurantId){
       date:String(localDate(stateAt)||payment.date||''),
       occurredAt:String(stateAt||`${payment.date||''}T23:59:59`),
       kind:'payment_reversal',
-      sequence:1010001,
+      sequence:1011001,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -1889,6 +1889,36 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(typeof renderCommerce==='function')renderCommerce();
     return true;
   }
+  async function saveDeliveryReceiptConfirmed(orderId){
+    const note=(deliveryNotes||[]).find(item=>String(item?.orderId)===String(orderId));
+    if(!note||!note.offlineProof?.receivedAt)throw new Error('Подпись получения не найдена');
+    markPending('finance');
+    if(!navigator.onLine){queueFinance();return false}
+    try{
+      status('Сохраняем подпись…');
+      const rows=await request('delivery_notes?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(deliveryNoteRow(note))});
+      const saved=(rows||[])[0];
+      if(!saved||String(saved.order_id)!==String(note.orderId)||!saved.offline_received_at){
+        throw new Error('Облако не подтвердило получение по подписи');
+      }
+      const restored=rowNote(saved);
+      const index=deliveryNotes.findIndex(item=>String(item?.orderId)===String(orderId));
+      if(index>=0)deliveryNotes[index]={...deliveryNotes[index],...restored,offlineProof:{...restored.offlineProof,pending:false}};
+      cacheDeliveryNotesLocal();
+      clearPending('finance');
+      status('Облако ✓');
+      recalculateBalances();
+      queueAdminCommerceRender();
+      window.dispatchEvent(new CustomEvent('panora:delivery-receipt-updated',{detail:{orderId:String(orderId),source:'signature',cloud:true}}));
+      return true;
+    }catch(error){
+      note.offlineProof.pending=true;
+      cacheDeliveryNotesLocal();
+      queueFinance();
+      fail('подпись получения',error);
+      throw error;
+    }
+  }
   function queueFinance(){
     markPending('finance');
     clearTimeout(financeTimer);
@@ -2132,7 +2162,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     },600000);
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
