@@ -8,8 +8,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" sizes="180x180" href="bakery/apple-touch-icon.png?v=10140">
-  <link rel="icon" type="image/png" sizes="192x192" href="bakery/icon-192.png?v=10140">
+  <link rel="apple-touch-icon" sizes="180x180" href="bakery/apple-touch-icon.png?v=10150">
+  <link rel="icon" type="image/png" sizes="192x192" href="bakery/icon-192.png?v=10150">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora — Пекарня">
   <meta name="apple-mobile-web-app-title" content="Panora — Пекарня">
@@ -61,86 +61,95 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v10140').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>(/^panora-v/i.test(k)||/^panora-bakery-v/i.test(k))&&k!=='panora-v10150'&&k!=='panora-bakery-v10150').map(k=>caches.delete(k)))).catch(()=>{});
+  }catch{}
+  try{
+    const buildMarker='panora-bakery-runtime-build';
+    if(localStorage.getItem(buildMarker)!=='10150'&&'serviceWorker' in navigator){
+      localStorage.setItem(buildMarker,'10150');
+      navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(reg=>{try{return new URL(reg.scope).pathname.includes('/bakery/')}catch{return false}}).map(reg=>reg.unregister()))).then(()=>{
+        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','10150');location.replace(u.href)}
+      }).catch(()=>{});
+    }
   }catch{}
 })();
 </script>
-<link rel="stylesheet" href="admin.css?v=10140">
-<link rel="stylesheet" href="admin-v247.css?v=10140">
-  <link rel="stylesheet" href="commerce.css?v=10140">
-  <link rel="stylesheet" href="settings.css?v=10140">
-  <link rel="stylesheet" href="export.css?v=10140">
-  <link rel="stylesheet" href="recipe-actions.css?v=10140">
-    <link rel="stylesheet" href="date-jump.css?v=10140">
-  <link rel="stylesheet" href="easy-plan.css?v=10140">
-  <link rel="stylesheet" href="product-admin.css?v=10140">
-  <link rel="stylesheet" href="product-close.css?v=10140">
-  <link rel="stylesheet" href="calendar-plan.css?v=10140">
-  <link rel="stylesheet" href="calendar-weekend.css?v=10140">
-  <link rel="stylesheet" href="calendar-bake-highlight.css?v=10140">
-  <link rel="stylesheet" href="calendar-labels.css?v=10140">
-  <link rel="stylesheet" href="calendar-text-restore.css?v=10140">
-  <link rel="stylesheet" href="mobile-admin-orders.css?v=10140">
-  <link rel="stylesheet" href="mobile-admin-all.css?v=10140">
-  <link rel="stylesheet" href="mobile-admin-menu.css?v=10140">
-  <link rel="stylesheet" href="responsive.css?v=10140">
-  <link rel="stylesheet" href="calendar-fun.css?v=10140">
-  <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=10140">
-  <link rel="stylesheet" href="calendar-calm.css?v=10140">
-  <link rel="stylesheet" href="admin-mobile-tabs.css?v=10140">
-  <link rel="stylesheet" href="purchase-costs.css?v=10140">
-  <link rel="stylesheet" href="purchase-filter-simple.css?v=10140">
-  <link rel="stylesheet" href="daily-order-summary.css?v=10140">
-  <link rel="stylesheet" href="daily-selection.css?v=10140">
-  <link rel="stylesheet" href="account-detail.css?v=10140">
-  <link rel="stylesheet" href="order-prices.css?v=10140">
-  <link rel="stylesheet" href="admin-order-polish.css?v=10140">
-  <link rel="stylesheet" href="desktop-orders-v22.css?v=10140">
-  <link rel="stylesheet" href="desktop-orders-v23.css?v=10140">
-  <link rel="stylesheet" href="desktop-orders-v24.css?v=10140">
-  <link rel="stylesheet" href="desktop-orders-v25.css?v=10140">
-<link rel="stylesheet" href="desktop-orders-v27.css?v=10140">
-<link rel="stylesheet" href="desktop-orders-v28.css?v=10140">
-<link rel="stylesheet" href="desktop-orders-v29-final.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-v30.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-toolbar-v34-hotfix.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-v35.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-v36.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-v37.css?v=10140">
-<link rel="stylesheet" href="mobile-orders-v38.css?v=10140">
-<link rel="stylesheet" href="notifications-v39.css?v=10140">
-  <link rel="stylesheet" href="order-notifications.css?v=10140">
-  <link rel="stylesheet" href="reminder-hours.css?v=10140">
-  <link rel="stylesheet" href="admin-auth.css?v=10140">
-  <link rel="stylesheet" href="delivery-qr.css?v=10140">
-  <link rel="stylesheet" href="delivery-offline.css?v=10140">
-  <link rel="stylesheet" href="invoice-preview.css?v=10140">
-  <link rel="stylesheet" href="accounting-invoice.css?v=10140">
-  <link rel="stylesheet" href="document-library.css?v=10140">
-  <link rel="stylesheet" href="recipe-percent.css?v=10140">
-  <link rel="stylesheet" href="unified-controls.css?v=10140">
+<link rel="stylesheet" href="admin.css?v=10150">
+<link rel="stylesheet" href="admin-v247.css?v=10150">
+  <link rel="stylesheet" href="commerce.css?v=10150">
+  <link rel="stylesheet" href="settings.css?v=10150">
+  <link rel="stylesheet" href="export.css?v=10150">
+  <link rel="stylesheet" href="recipe-actions.css?v=10150">
+    <link rel="stylesheet" href="date-jump.css?v=10150">
+  <link rel="stylesheet" href="easy-plan.css?v=10150">
+  <link rel="stylesheet" href="product-admin.css?v=10150">
+  <link rel="stylesheet" href="product-close.css?v=10150">
+  <link rel="stylesheet" href="calendar-plan.css?v=10150">
+  <link rel="stylesheet" href="calendar-weekend.css?v=10150">
+  <link rel="stylesheet" href="calendar-bake-highlight.css?v=10150">
+  <link rel="stylesheet" href="calendar-labels.css?v=10150">
+  <link rel="stylesheet" href="calendar-text-restore.css?v=10150">
+  <link rel="stylesheet" href="mobile-admin-orders.css?v=10150">
+  <link rel="stylesheet" href="mobile-admin-all.css?v=10150">
+  <link rel="stylesheet" href="mobile-admin-menu.css?v=10150">
+  <link rel="stylesheet" href="responsive.css?v=10150">
+  <link rel="stylesheet" href="calendar-fun.css?v=10150">
+  <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=10150">
+  <link rel="stylesheet" href="calendar-calm.css?v=10150">
+  <link rel="stylesheet" href="admin-mobile-tabs.css?v=10150">
+  <link rel="stylesheet" href="purchase-costs.css?v=10150">
+  <link rel="stylesheet" href="purchase-filter-simple.css?v=10150">
+  <link rel="stylesheet" href="daily-order-summary.css?v=10150">
+  <link rel="stylesheet" href="daily-selection.css?v=10150">
+  <link rel="stylesheet" href="account-detail.css?v=10150">
+  <link rel="stylesheet" href="order-prices.css?v=10150">
+  <link rel="stylesheet" href="admin-order-polish.css?v=10150">
+  <link rel="stylesheet" href="desktop-orders-v22.css?v=10150">
+  <link rel="stylesheet" href="desktop-orders-v23.css?v=10150">
+  <link rel="stylesheet" href="desktop-orders-v24.css?v=10150">
+  <link rel="stylesheet" href="desktop-orders-v25.css?v=10150">
+<link rel="stylesheet" href="desktop-orders-v27.css?v=10150">
+<link rel="stylesheet" href="desktop-orders-v28.css?v=10150">
+<link rel="stylesheet" href="desktop-orders-v29-final.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-v30.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-toolbar-v34-hotfix.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-v35.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-v36.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-v37.css?v=10150">
+<link rel="stylesheet" href="mobile-orders-v38.css?v=10150">
+<link rel="stylesheet" href="notifications-v39.css?v=10150">
+  <link rel="stylesheet" href="order-notifications.css?v=10150">
+  <link rel="stylesheet" href="reminder-hours.css?v=10150">
+  <link rel="stylesheet" href="admin-auth.css?v=10150">
+  <link rel="stylesheet" href="delivery-qr.css?v=10150">
+  <link rel="stylesheet" href="delivery-offline.css?v=10150">
+  <link rel="stylesheet" href="invoice-preview.css?v=10150">
+  <link rel="stylesheet" href="accounting-invoice.css?v=10150">
+  <link rel="stylesheet" href="document-library.css?v=10150">
+  <link rel="stylesheet" href="recipe-percent.css?v=10150">
+  <link rel="stylesheet" href="unified-controls.css?v=10150">
 
 
 
 
-<link rel="stylesheet" href="mobile-header.css?v=10140">
-<link rel="stylesheet" href="light-pro.css?v=10140">
-<link rel="stylesheet" href="connection-status.css?v=10140">
-<link rel="stylesheet" href="event-notifications.css?v=10140">
-<link rel="stylesheet" href="audit-trail.css?v=10140">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=10140">
-<link rel="stylesheet" href="install-guide.css?v=10140">
-<link rel="stylesheet" href="pwa-stable.css?v=10140">
-<link rel="stylesheet" href="pricing-v40.css?v=10140">
-<link rel="stylesheet" href="price-inputs-v42.css?v=10140">
-<link rel="stylesheet" href="mobile-partner-prices-v49.css?v=10140">
-<link rel="stylesheet" href="order-messages-v565.css?v=10140">
+<link rel="stylesheet" href="mobile-header.css?v=10150">
+<link rel="stylesheet" href="light-pro.css?v=10150">
+<link rel="stylesheet" href="connection-status.css?v=10150">
+<link rel="stylesheet" href="event-notifications.css?v=10150">
+<link rel="stylesheet" href="audit-trail.css?v=10150">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=10150">
+<link rel="stylesheet" href="install-guide.css?v=10150">
+<link rel="stylesheet" href="pwa-stable.css?v=10150">
+<link rel="stylesheet" href="pricing-v40.css?v=10150">
+<link rel="stylesheet" href="price-inputs-v42.css?v=10150">
+<link rel="stylesheet" href="mobile-partner-prices-v49.css?v=10150">
+<link rel="stylesheet" href="order-messages-v565.css?v=10150">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=10140">
-<link rel="stylesheet" href="admin-partner-theme.css?v=10140">
+<link rel="stylesheet" href="finance-dashboard.css?v=10150">
+<link rel="stylesheet" href="admin-partner-theme.css?v=10150">
   <meta property="og:site_name" content="Panora">
   
-<link rel="stylesheet" href="delivery-followup.css?v=10140">
+<link rel="stylesheet" href="delivery-followup.css?v=10150">
 
 </head>
 <body class="auth-pending admin-page">
@@ -744,49 +753,49 @@
     </div>
   </dialog>
 
-  <script src="pricing-sync-v44.js?v=10140"></script>
-<script src="supabase-config.js?v=10140"></script>
-<script src="stable-health.js?v=10140"></script>
-<script src="admin-auth.js?v=10140"></script>
-<script src="admin.js?v=10140"></script>
-<script src="stable-price-inputs-v42.js?v=10140"></script>
-<script src="money-edit-lock-v43.js?v=10140"></script>
-<script src="commerce.js?v=10140"></script>
-<script src="desktop-order-date-filter-v28.js?v=10140"></script>
-<script src="invoice-settings.js?v=10140"></script>
-<script src="invoice-tax-display.js?v=10140"></script>
-<script src="accounting-invoice.js?v=10140"></script>
-<script src="spanish-documents.js?v=10140"></script>
-<script src="document-library.js?v=10140"></script>
-<script src="invoice-preview.js?v=10140"></script>
-<script src="admin-localization.js?v=10140"></script>
-<script src="product-admin.js?v=10140"></script>
-<script src="calendar-plan.js?v=10140"></script>
-<script src="qrcode-browser.js?v=10140"></script>
-<script src="delivery-qr.js?v=10140"></script>
-<script src="delivery-offline.js?v=10140"></script>
-<script src="delivery-followup.js?v=10140"></script>
-<script src="mobile-admin-nav.js?v=10140"></script>
-<script src="admin-status-sync.js?v=10140"></script>
-<script src="admin-mobile-tabs.js?v=10140"></script>
-<script src="purchase-costs.js?v=10140"></script>
-<script src="invoice-close.js?v=10140"></script>
-<script src="account-detail.js?v=10140"></script>
-<script src="order-notifications.js?v=10140"></script>
-<script src="order-communication.js?v=10140"></script>
-<script src="audit-log.js?v=10140"></script>
-<script src="input-stability.js?v=10140"></script>
-<script src="cloud-sync.js?v=10140"></script>
-<script src="recipe-percent.js?v=10140"></script>
-<script src="daily-order-summary.js?v=10140"></script>
-<script src="recovery-guard.js?v=10140"></script>
-<script src="connection-status.js?v=10140"></script>
-<script src="event-notifications.js?v=10140"></script>
-<script src="audit-trail.js?v=10140"></script>
-<script src="pwa-stable.js?v=10140"></script>
-<script src="admin-partner-prices-guard-v426.js?v=10140"></script>
-<script src="admin-partner-prices-direct-v426.js?v=10140"></script>
-<script src="order-messages-v565.js?v=10140"></script>
+  <script src="pricing-sync-v44.js?v=10150"></script>
+<script src="supabase-config.js?v=10150"></script>
+<script src="stable-health.js?v=10150"></script>
+<script src="admin-auth.js?v=10150"></script>
+<script src="admin.js?v=10150"></script>
+<script src="stable-price-inputs-v42.js?v=10150"></script>
+<script src="money-edit-lock-v43.js?v=10150"></script>
+<script src="commerce.js?v=10150"></script>
+<script src="desktop-order-date-filter-v28.js?v=10150"></script>
+<script src="invoice-settings.js?v=10150"></script>
+<script src="invoice-tax-display.js?v=10150"></script>
+<script src="accounting-invoice.js?v=10150"></script>
+<script src="spanish-documents.js?v=10150"></script>
+<script src="document-library.js?v=10150"></script>
+<script src="invoice-preview.js?v=10150"></script>
+<script src="admin-localization.js?v=10150"></script>
+<script src="product-admin.js?v=10150"></script>
+<script src="calendar-plan.js?v=10150"></script>
+<script src="qrcode-browser.js?v=10150"></script>
+<script src="delivery-qr.js?v=10150"></script>
+<script src="delivery-offline.js?v=10150"></script>
+<script src="delivery-followup.js?v=10150"></script>
+<script src="mobile-admin-nav.js?v=10150"></script>
+<script src="admin-status-sync.js?v=10150"></script>
+<script src="admin-mobile-tabs.js?v=10150"></script>
+<script src="purchase-costs.js?v=10150"></script>
+<script src="invoice-close.js?v=10150"></script>
+<script src="account-detail.js?v=10150"></script>
+<script src="order-notifications.js?v=10150"></script>
+<script src="order-communication.js?v=10150"></script>
+<script src="audit-log.js?v=10150"></script>
+<script src="input-stability.js?v=10150"></script>
+<script src="cloud-sync.js?v=10150"></script>
+<script src="recipe-percent.js?v=10150"></script>
+<script src="daily-order-summary.js?v=10150"></script>
+<script src="recovery-guard.js?v=10150"></script>
+<script src="connection-status.js?v=10150"></script>
+<script src="event-notifications.js?v=10150"></script>
+<script src="audit-trail.js?v=10150"></script>
+<script src="pwa-stable.js?v=10150"></script>
+<script src="admin-partner-prices-guard-v426.js?v=10150"></script>
+<script src="admin-partner-prices-direct-v426.js?v=10150"></script>
+<script src="order-messages-v565.js?v=10150"></script>
 
 
   <dialog id="retailOrderMessagesDialog" class="retail-events-dialog retail-messages-dialog">
@@ -832,7 +841,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=10140"></script>
+<script src="finance-dashboard.js?v=10150"></script>
 
 
 

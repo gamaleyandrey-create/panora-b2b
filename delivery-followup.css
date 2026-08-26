@@ -90,3 +90,14 @@
 @media(max-width:720px){
   #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{min-height:54px!important;font-size:16px!important}
 }
+
+
+/* Panora 10.15 — completed receipt is read-only even if stale markup survives. */
+#orderRows .delivery-followup-row.is-complete .action-small,
+#orderRows .delivery-followup-row:has(.delivery-followup-status.is-ok) .action-small{display:none!important}
+#orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{
+  min-height:64px!important;padding:16px 22px!important;font-size:17px!important;line-height:1.15!important;border-radius:12px!important
+}
+@media(max-width:720px){
+  #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{min-height:58px!important;font-size:17px!important}
+}
