@@ -1698,7 +1698,7 @@ function createData (version, errorCorrectionLevel, segments) {
 
   // Add pad bytes if the string is still shorter than the total number of required bits.
   // Extend the buffer to fill the data capacity of the symbol corresponding to
-  // the Version and Error Correction Level by adding the Pad Codewords 11101100 (0xEC)
+  // the Version and Error Correction Level by adding the Pad Codewords 11101200 (0xEC)
   // and 00010001 (0x11) alternately.
   const remainingByte = (dataTotalCodewordsBits - buffer.getLengthInBits()) / 8
   for (let i = 0; i < remainingByte; i++) {
