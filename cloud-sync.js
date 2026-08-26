@@ -168,7 +168,7 @@
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
       document.querySelector('#panoraConflictChoice')?.remove();
-      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10130;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
+      const modal=document.createElement('div');modal.id='panoraConflictChoice';modal.style.cssText='position:fixed;inset:0;z-index:10140;background:rgba(16,27,20,.58);display:grid;place-items:center;padding:20px';
       modal.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="panoraConflictTitle" style="width:min(520px,100%);background:#fff;color:#17251d;border-radius:18px;padding:24px;box-shadow:0 20px 70px #0005"><h2 id="panoraConflictTitle" style="margin:0 0 12px">Есть изменения на другом устройстве</h2><p>В облаке сохранена другая версия раздела: <strong>${String(names).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Выберите, какую версию использовать.</p><button type="button" data-choice="cloud" style="width:100%;margin-top:10px;padding:12px">Загрузить обновления из облака</button><p style="margin:6px 0 14px;color:#607066">Текущие поля будут заменены последней версией из облака.</p><button type="button" data-choice="local" style="width:100%;padding:12px">Сохранить версию этого устройства в облако</button><p style="margin:6px 0 14px;color:#607066">Данные с этого устройства заменят облачную версию.</p><button type="button" data-choice="later" style="width:100%;padding:10px;background:transparent;border:0;text-decoration:underline">Решить позже</button><p style="margin:14px 0 0;color:#42684d">Ваши данные не пропадут: перед заменой Panora сохранит резервную копию.</p></section>`;
       modal.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;modal.remove();resolve(choice)});document.body.append(modal);modal.querySelector('[data-choice="cloud"]')?.focus();
     })
@@ -287,7 +287,7 @@
   async function getAdminOperationalRevision(){
     if(adminOperationalRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10130)return adminOperationalRevisionCache;
+    if(adminOperationalRevisionCache&&now-adminOperationalRevisionAt<10140)return adminOperationalRevisionCache;
     if(adminOperationalRevisionPromise)return adminOperationalRevisionPromise;
     adminOperationalRevisionPromise=(async()=>{
       try{
@@ -319,7 +319,7 @@
   async function getAdminReferenceRevision(){
     if(adminReferenceRevisionUnavailable)return null;
     const now=Date.now();
-    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10130)return adminReferenceRevisionCache;
+    if(adminReferenceRevisionCache&&now-adminReferenceRevisionAt<10140)return adminReferenceRevisionCache;
     if(adminReferenceRevisionPromise)return adminReferenceRevisionPromise;
     adminReferenceRevisionPromise=(async()=>{
       try{
@@ -1557,7 +1557,7 @@ function financeTimeline(restaurantId){
       date:String(payment.date||localDate(payment.receivedAt)||''),
       occurredAt:String(payment.receivedAt||`${payment.date||''}T12:00:00`),
       kind:'payment',
-      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1013000,
+      sequence:paidAtShipment?Number(linkedNote.number||0)*2+1:1014000,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -1572,7 +1572,7 @@ function financeTimeline(restaurantId){
       date:String(localDate(stateAt)||payment.date||''),
       occurredAt:String(stateAt||`${payment.date||''}T23:59:59`),
       kind:'payment_reversal',
-      sequence:1013001,
+      sequence:1014001,
       payment,
       amount,
       linkedNote:linkedNote||null,
@@ -2150,7 +2150,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return;
     fail('заказы, оплаты и накладные',error)}},1800000);
-    // Panora 10.13: receipt updates are event/on-demand driven.
+    // Panora 10.14: receipt updates are event/on-demand driven.
     // No 15-second polling: refresh on Orders open, app wake/focus and manual Refresh.
     clearInterval(receiptPoll);receiptPoll=0;
     clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{
@@ -2205,6 +2205,10 @@ window.panoraRecalculateBalances=recalculateBalances;
         if(changed.notes)await loadDeliveryNotes();
       }
       if(typeof renderCommerce==='function')renderCommerce();
+      // Panora 10.14: a successful orders/receipt refresh clears only a stale
+      // order-related error. Do not hide errors from recipes, stock, partners, etc.
+      const saveState=document.querySelector('#saveState');
+      if(saveState?.dataset?.syncState==='error'&&/(заказ|наклад|подпис|получен|обновлен)/i.test(String(saveState.textContent||'')+' '+String(saveState.title||''))&&!pendingCount()&&!conflictCount())status('Облако ✓');
       window.dispatchEvent(new CustomEvent('panora:admin-orders-refreshed',{detail:{reason,changed:Boolean(changed?.changed)}}));
       return true;
     }finally{

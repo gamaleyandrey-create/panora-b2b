@@ -55,7 +55,7 @@
   const oldActions=typeof orderActions==='function'?orderActions:null;
   if(oldActions)orderActions=function(order){
     const html=oldActions(order);if(order?.status!=='shipped')return html;const note=noteForOrder(order.id);if(!note)return html;
-    const follow=`<div class="delivery-followup-row"><div class="delivery-followup-title">Получение поставки</div>${statusHtml(note)}<button type="button" class="action-small" data-delivery-followup="${esc(order.id)}">Контроль</button>${pending(note)?`<button type="button" class="action-small" data-delivery-remind="${esc(order.id)}">Напомнить</button>`:''}</div>`;
+    const follow=`<div class="delivery-followup-row${pending(note)?' is-pending':' is-complete'}"><div class="delivery-followup-title">Получение поставки</div>${statusHtml(note)}${pending(note)?`<button type="button" class="action-small" data-delivery-followup="${esc(order.id)}">Контроль</button><button type="button" class="action-small" data-delivery-remind="${esc(order.id)}">Напомнить</button>`:''}</div>`;
     return html+follow;
   };
   const oldConfirmation=typeof customerConfirmationHtml==='function'?customerConfirmationHtml:null;
