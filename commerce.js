@@ -689,7 +689,7 @@ function renderOrders() {
   setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),0);
 }
 async function confirmOrder(id) {
-  window.panoraAdminOrderInteractionUntil=Date.now()+10040;
+  window.panoraAdminOrderInteractionUntil=Date.now()+10050;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status !== "submitted") return;
   const button=document.querySelector(`[data-confirm="${CSS.escape(id)}"]`);
@@ -723,7 +723,7 @@ async function confirmOrder(id) {
   }
 }
 async function cancelOrder(id) {
-  window.panoraAdminOrderInteractionUntil=Date.now()+10040;
+  window.panoraAdminOrderInteractionUntil=Date.now()+10050;
   const o = orders.find((x) => x.id === id);
   if (!o || o.status === "shipped" || o.status === "cancelled") return;
   if (!confirm("Отменить заказ и вернуть количество в свободный план?")) return;
