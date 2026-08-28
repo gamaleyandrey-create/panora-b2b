@@ -364,3 +364,19 @@
 .partner-profile-grid .partner-profile-wide{grid-column:1/-1}
 .partner-profile-note{margin:8px 0 0!important;color:#788078!important;font-size:10px!important;line-height:1.4}
 @media(max-width:650px){.partner-profile-grid{grid-template-columns:1fr}.partner-profile-grid .partner-profile-wide{grid-column:auto}}
+
+/* Panora 10.18 — controlled allocation of finished bread to Retail */
+.stock-product-card .stock-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+.stock-product-card .stock-retail-available{background:#edf6ef;}
+.stock-product-card .stock-retail-available dd{color:#2f6f48;}
+.stock-retail-allocation{margin-top:10px;padding:10px;border:1px solid #dfe8df;border-radius:12px;background:#fbfcfa;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;align-items:end;}
+.stock-retail-allocation label{display:grid;gap:5px;min-width:0;}
+.stock-retail-allocation label span{font-size:10px;font-weight:800;color:#66756b;}
+.stock-retail-allocation input{width:100%;min-height:42px;border:1px solid #cfdacf;border-radius:10px;background:#fff;padding:8px 10px;font:inherit;font-weight:800;color:#263a2e;box-sizing:border-box;}
+.stock-retail-allocation button{min-height:42px;white-space:nowrap;}
+.stock-retail-allocation>small{grid-column:1/-1;color:#758178;font-size:10px;line-height:1.4;}
+@media(max-width:700px){
+ .stock-retail-allocation{grid-template-columns:1fr;}
+ .stock-retail-allocation button{width:100%;}
+ .stock-product-card .stock-channel-grid{grid-template-columns:1fr 1fr;}
+}

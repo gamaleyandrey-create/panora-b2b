@@ -92,7 +92,7 @@
 }
 
 
-/* Panora 10.17 — completed receipt is read-only even if stale markup survives. */
+/* Panora 10.18 — completed receipt is read-only even if stale markup survives. */
 #orderRows .delivery-followup-row.is-complete .action-small,
 #orderRows .delivery-followup-row:has(.delivery-followup-status.is-ok) .action-small{display:none!important}
 #orderRows .order-row-shipped .order-flow-actions.shipped-actions>[data-note]{
@@ -103,7 +103,7 @@
 }
 
 
-/* Panora 10.17 — mobile orders always expose Active + Archived tabs */
+/* Panora 10.18 — mobile orders always expose Active + Archived tabs */
 @media (max-width:720px){
   body.admin-page #view-orders .order-archive-tabs{
     display:grid!important;
@@ -128,7 +128,7 @@
   }
 }
 
-/* Panora 10.17 — invoice action matches QR width and always keeps its label inside. */
+/* Panora 10.18 — invoice action matches QR width and always keeps its label inside. */
 @media (min-width:721px){
   #orderRows .order-flow-actions.shipped-actions{
     grid-template-columns:minmax(0,1fr) 52px!important;

@@ -252,10 +252,20 @@ function retailAdminProducts(){
  return list.filter(product=>product&&product.id&&!product.deletedAt);
 }
 function retailProductLabel(product){return String(product?.names?.ru||product?.nameRu||product?.name_ru||product?.name||PRODUCTS[String(product?.id)]?.ru||product?.id||'Хлеб')}
+function decodeRetailSortOrder(value){
+ const raw=Math.max(0,Math.floor(Number(value)||0));
+ if(raw>=10000)return {sortOrder:Math.max(0,Math.floor(raw/10000)-1),retailLimit:Math.max(0,raw%10000),limitConfigured:true};
+ return {sortOrder:raw,retailLimit:0,limitConfigured:false};
+}
+function encodeRetailSortOrder(index,retailLimit){
+ const order=Math.max(0,Math.floor(Number(index)||0)),limit=Math.min(9999,Math.max(0,Math.floor(Number(retailLimit)||0)));
+ return (order+1)*10000+limit;
+}
 function normalizeRetailProductSetting(product,saved={}){
- const basePrice=Number(product?.basePrice??product?.retailPrice??product?.retail_price??product?.price??0);
+ const basePrice=Number(product?.basePrice??product?.retailPrice??product?.retail_price??product?.price??0),decoded=decodeRetailSortOrder(saved.cloudSortOrder??saved.sortOrder);
+ const explicitLimit=saved.retailLimit!==undefined&&saved.retailLimit!==null;
  return {productId:String(product?.id||saved.productId||''),enabled:saved.enabled!==undefined?!!saved.enabled:product?.active!==false,stockSales:saved.stockSales!==false,preorders:saved.preorders!==false,
-  retailPrice:Number.isFinite(Number(saved.retailPrice))?Math.max(0,Number(saved.retailPrice)):Math.max(0,Number.isFinite(basePrice)?basePrice:0),sortOrder:Number.isFinite(Number(saved.sortOrder))?Number(saved.sortOrder):0};
+  retailPrice:Number.isFinite(Number(saved.retailPrice))?Math.max(0,Number(saved.retailPrice)):Math.max(0,Number.isFinite(basePrice)?basePrice:0),sortOrder:Number.isFinite(Number(saved.sortOrder))?Number(saved.sortOrder):decoded.sortOrder,retailLimit:explicitLimit?Math.min(9999,Math.max(0,Math.floor(Number(saved.retailLimit)||0))):decoded.retailLimit,limitConfigured:explicitLimit?true:!!saved.limitConfigured||decoded.limitConfigured};
 }
 function retailProductSetting(product,map=readRetailProductSettings()){return normalizeRetailProductSetting(product,map[String(product?.id)]||{})}
 function retailOrderStatus(order){return String(order?.status||'new')}
@@ -321,10 +331,10 @@ async function saveRetailSettingsCloud(settings){
  catch(error){const rows=await retailAdminApi('retail_settings?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(retailCloudRow(settings,{legacy:true}))});return {row:rows?.[0]||null,extended:false}}
 }
 async function loadRetailProductSettingsCloud(){
- try{const rows=await retailAdminApi('retail_product_settings?select=product_id,enabled,stock_sales,preorders,retail_price,sort_order,updated_at&order=sort_order.asc,product_id.asc');const map={};(Array.isArray(rows)?rows:[]).forEach(row=>{map[String(row.product_id)]={productId:String(row.product_id),enabled:row.enabled!==false,stockSales:row.stock_sales!==false,preorders:row.preorders!==false,retailPrice:Number(row.retail_price||0),sortOrder:Number(row.sort_order||0)}});saveRetailProductSettingsLocal(map);renderRetailCatalogSettings();const status=$('#retailCatalogSaved');if(status)status.textContent='Ассортимент загружен из облака';return true}
+ try{const rows=await retailAdminApi('retail_product_settings?select=product_id,enabled,stock_sales,preorders,retail_price,sort_order,updated_at&order=sort_order.asc,product_id.asc');const map={};(Array.isArray(rows)?rows:[]).forEach(row=>{(()=>{const decoded=decodeRetailSortOrder(row.sort_order);map[String(row.product_id)]={productId:String(row.product_id),enabled:row.enabled!==false,stockSales:row.stock_sales!==false,preorders:row.preorders!==false,retailPrice:Number(row.retail_price||0),sortOrder:decoded.sortOrder,retailLimit:decoded.retailLimit,limitConfigured:decoded.limitConfigured,cloudSortOrder:Number(row.sort_order||0)}})()});saveRetailProductSettingsLocal(map);renderRetailCatalogSettings();renderStock();const status=$('#retailCatalogSaved');if(status)status.textContent='Ассортимент и лимиты Розницы загружены из облака';return true}
  catch(error){const status=$('#retailCatalogSaved');if(status)status.textContent='Локальный ассортимент · выполните SQL 6.28';return false}
 }
-async function saveRetailProductSettingsCloud(map){const products=retailAdminProducts();const rows=products.map((product,index)=>{const item=retailProductSetting(product,map);return {product_id:item.productId,enabled:!!item.enabled,stock_sales:!!item.stockSales,preorders:!!item.preorders,retail_price:Number(item.retailPrice||0),sort_order:index,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}});if(!rows.length)return [];return retailAdminApi('retail_product_settings?on_conflict=product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(rows)})}
+async function saveRetailProductSettingsCloud(map){const products=retailAdminProducts();const rows=products.map((product,index)=>{const item=retailProductSetting(product,map);return {product_id:item.productId,enabled:!!item.enabled,stock_sales:!!item.stockSales,preorders:!!item.preorders,retail_price:Number(item.retailPrice||0),sort_order:encodeRetailSortOrder(index,item.retailLimit),updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}});if(!rows.length)return [];return retailAdminApi('retail_product_settings?on_conflict=product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(rows)})}
 function retailOrderFromCloud(row){return{id:String(row.id||''),number:Number(row.order_number||0),publicToken:String(row.public_token||''),source:String(row.source||'stock'),fulfillment:String(row.fulfillment||'pickup'),bakeDate:row.bake_date||'',pickupDate:row.pickup_date||'',slot:row.pickup_slot||'',customerName:row.customer_name||'',customerPhone:row.customer_phone||'',customerEmail:row.customer_email||'',comment:row.comment||'',deliveryAddress:row.delivery_address||'',deliveryNote:row.delivery_note||'',deliveryFee:Number(row.delivery_fee||0),status:String(row.status||'new'),paymentStatus:String(row.payment_status||'pending'),paymentMethod:String(row.payment_method||'pickup'),paymentProvider:String(row.payment_provider||'none'),total:Number(row.total||0),createdAt:row.created_at||'',updatedAt:row.updated_at||'',completedAt:row.completed_at||'',cancelledAt:row.cancelled_at||'',items:(row.retail_order_items||[]).map(item=>({product:String(item.product_id||''),quantity:Math.max(0,Number(item.quantity||0)),unitPrice:Number(item.unit_price||0)}))}}
 async function loadRetailUnreadMessagesCloud(){try{const rows=await retailAdminApi('retail_order_messages?sender_role=eq.customer&read_by_bakery_at=is.null&select=order_id');const map=new Map();(rows||[]).forEach(row=>{const id=String(row.order_id||'');if(id)map.set(id,(map.get(id)||0)+1)});retailUnreadMessages=map;return true}catch{return false}}
 let retailOrdersCloudHydrated=false,finishedStockCloudHydrated=false;
@@ -346,7 +356,7 @@ async function loadRetailOrdersCloud(){
  }catch(error){if(status)status.textContent='Выполните SQL 6.28';return false}
 }
 async function updateRetailOrderStatusCloud(id,nextStatus){
- const now=new Date().toISOString(),payload={status:nextStatus,updated_at:now};
+ const before=readRetailOrders().find(order=>String(order.id)===String(id)),now=new Date().toISOString(),payload={status:nextStatus,updated_at:now};
  if(nextStatus==='completed')payload.completed_at=now;
  if(nextStatus==='cancelled')payload.cancelled_at=now;
  const rows=await retailAdminApi(`retail_orders?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!Array.isArray(rows)||!rows.length||String(rows[0]?.status||'')!==String(nextStatus))throw new Error('Сервер не подтвердил новый статус заказа');
@@ -355,6 +365,7 @@ async function updateRetailOrderStatusCloud(id,nextStatus){
  await loadRetailOrdersCloud();const current=readRetailOrders().find(order=>String(order.id)===String(id));if(!current||retailOrderStatus(current)!==String(nextStatus))throw new Error('Статус заказа не подтвердился после синхронизации');
  if(nextStatus==='completed'&&!current.completedAt)throw new Error('Время завершения заказа не подтвердилось после синхронизации');
  if(nextStatus==='cancelled'&&!current.cancelledAt)throw new Error('Время отмены заказа не подтвердилось после синхронизации');
+ if(nextStatus==='completed'&&retailOrderStatus(before)!=='completed')await consumeRetailAllocationForOrder(before||current);
  renderPlan();window.panoraRawStock?.render?.();if(typeof renderPurchase==='function')renderPurchase();window.dispatchEvent(new CustomEvent('panora:retail-orders-updated'))
 }
 async function updateRetailPaymentStatusCloud(id,nextStatus){
@@ -418,7 +429,7 @@ function renderRetailCatalogSettings(){
  grid.innerHTML=products.map(product=>{const item=retailProductSetting(product,map),inactive=product.active===false;return `<article class="retail-catalog-card ${inactive?'is-inactive':''}" data-retail-product="${adminEscape(item.productId)}"><img src="${adminEscape(product.image||product.imageUrl||product.image_url||'icon.svg')}" alt="${adminEscape(retailProductLabel(product))}" onerror="this.src='icon.svg'"><div class="retail-catalog-card-body"><div class="retail-catalog-title"><div><strong>${adminEscape(retailProductLabel(product))}</strong><small>${inactive?'Товар выключен в карточках продукции':'Товар активен'}</small></div><label class="retail-switch"><input type="checkbox" data-retail-field="enabled" ${item.enabled&&!inactive?'checked':''} ${inactive?'disabled':''}><span></span><em>${item.enabled&&!inactive?'вкл.':'выкл.'}</em></label></div><div class="retail-catalog-controls"><label><span>Розничная цена, €</span><input type="number" min="0" step="0.01" data-retail-field="retailPrice" value="${Number(item.retailPrice||0).toFixed(2)}" ${inactive?'disabled':''}></label><label class="retail-option compact"><input type="checkbox" data-retail-field="stockSales" ${item.stockSales?'checked':''} ${inactive?'disabled':''}><span><strong>Из наличия</strong><small>Можно купить свободный остаток</small></span></label><label class="retail-option compact"><input type="checkbox" data-retail-field="preorders" ${item.preorders?'checked':''} ${inactive?'disabled':''}><span><strong>К выпечке</strong><small>Можно заказать на будущий день</small></span></label></div></div></article>`}).join('');
  grid.querySelectorAll('[data-retail-field="enabled"]').forEach(input=>input.addEventListener('change',()=>{const em=input.closest('.retail-switch')?.querySelector('em');if(em)em.textContent=input.checked?'вкл.':'выкл.'}));
 }
-function collectRetailCatalogForm(){const current=readRetailProductSettings(),next={...current};$$('#retailCatalogGrid [data-retail-product]').forEach((card,index)=>{const product=retailAdminProducts().find(p=>String(p.id)===String(card.dataset.retailProduct));if(!product)return;const get=name=>card.querySelector(`[data-retail-field="${name}"]`);next[String(product.id)]=normalizeRetailProductSetting(product,{productId:String(product.id),enabled:!!get('enabled')?.checked,stockSales:!!get('stockSales')?.checked,preorders:!!get('preorders')?.checked,retailPrice:Math.max(0,Number(get('retailPrice')?.value||0)),sortOrder:index})});return next}
+function collectRetailCatalogForm(){const current=readRetailProductSettings(),next={...current};$$('#retailCatalogGrid [data-retail-product]').forEach((card,index)=>{const product=retailAdminProducts().find(p=>String(p.id)===String(card.dataset.retailProduct));if(!product)return;const get=name=>card.querySelector(`[data-retail-field="${name}"]`);const previous=retailProductSetting(product,current);next[String(product.id)]=normalizeRetailProductSetting(product,{productId:String(product.id),enabled:!!get('enabled')?.checked,stockSales:!!get('stockSales')?.checked,preorders:!!get('preorders')?.checked,retailPrice:Math.max(0,Number(get('retailPrice')?.value||0)),sortOrder:index,retailLimit:previous.retailLimit,limitConfigured:previous.limitConfigured})});return next}
 function retailTomorrow(){const d=new Date();d.setDate(d.getDate()+1);return iso(d)}
 function retailFilteredOrders(orders){const today=iso(new Date()),tomorrow=retailTomorrow();if(retailOrderFilter==='today')return orders.filter(o=>String(o.pickupDate)===today&&!['completed','cancelled'].includes(retailOrderStatus(o)));if(retailOrderFilter==='tomorrow')return orders.filter(o=>String(o.pickupDate)===tomorrow&&!['completed','cancelled'].includes(retailOrderStatus(o)));if(retailOrderFilter==='future')return orders.filter(o=>String(o.pickupDate)>tomorrow&&!['completed','cancelled'].includes(retailOrderStatus(o)));if(retailOrderFilter==='finished')return orders.filter(o=>['completed','cancelled'].includes(retailOrderStatus(o)));return orders.filter(o=>!['completed','cancelled'].includes(retailOrderStatus(o)))}
 function retailNextAction(order){const status=retailOrderStatus(order),delivery=String(order?.fulfillment||'pickup')==='delivery';if(status==='ready'&&delivery)return{status:'delivering',label:'Передать в доставку'};if(status==='delivering')return{status:'completed',label:'Доставлен'};return({new:{status:'confirmed',label:'Подтвердить'},confirmed:{status:'preparing',label:'Готовить'},preparing:{status:'ready',label:'Готов'},ready:{status:'completed',label:'Выдать'}}[status]||null)}
@@ -820,31 +831,30 @@ function stockEffectiveMovements(){
 function stockRawBalance(product){
  return stockEffectiveMovements().filter(m=>String(m.product)===String(product)).reduce((sum,m)=>sum+signed(m),0);
 }
-function stockReserved(product){
+function stockPartnerReserved(product){
  const today=stockLocalDate(),shippedOrders=new Set(stockCanonicalNotes().map(note=>String(note.orderId||'')).filter(Boolean));
- const partner=stockOrders()
-  .filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&!shippedOrders.has(String(o.id||''))&&String(o.date||'')&&String(o.date)<=today)
-  .flatMap(o=>o.items||[])
-  .filter(item=>String(item.product)===String(product))
-  .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||item.quantityPieces||0)),0);
- // 6.30: keep the admin stock view aligned with panora_retail_stock_snapshot().
- // Stock orders reserve immediately. Bake preorders start reserving finished bread
- // only after a factual bake completion exists for their bake date. Delivery orders
- // remain reserved while they are physically "delivering" and are released only
- // when completed/cancelled.
- const retail=readRetailOrders()
-  .filter(o=>{
-   if(!o||['completed','cancelled'].includes(retailOrderStatus(o)))return false;
-   const source=String(o.source||'stock');
-   if(source==='stock')return true;
-   if(source!=='bake_preorder')return false;
-   const bakeDate=String(o.bakeDate||o.pickupDate||'').slice(0,10);
-   return !!(bakeDate&&bakeCompletionFor(bakeDate));
-  })
-  .flatMap(o=>o.items||[])
-  .filter(item=>String(item.product)===String(product))
-  .reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0)),0);
- return partner+retail;
+ return stockOrders().filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&!shippedOrders.has(String(o.id||''))&&String(o.date||'')&&String(o.date)<=today).flatMap(o=>o.items||[]).filter(item=>String(item.product)===String(product)).reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||item.quantityPieces||0)),0);
+}
+function stockRetailReserved(product){
+ return readRetailOrders().filter(o=>{if(!o||['completed','cancelled'].includes(retailOrderStatus(o)))return false;const source=String(o.source||'stock');if(source==='stock')return true;if(source!=='bake_preorder')return false;const bakeDate=String(o.bakeDate||o.pickupDate||'').slice(0,10);return !!(bakeDate&&bakeCompletionFor(bakeDate))}).flatMap(o=>o.items||[]).filter(item=>String(item.product)===String(product)).reduce((sum,item)=>sum+Math.max(0,Number(item.quantity||0)),0);
+}
+function stockReserved(product){return stockPartnerReserved(product)+stockRetailReserved(product)}
+function stockRetailLimit(product){
+ const target=retailAdminProducts().find(p=>String(p?.id)===String(product))||{id:product};
+ const setting=retailProductSetting(target,readRetailProductSettings());
+ return setting.limitConfigured?Math.max(0,Number(setting.retailLimit||0)):0;
+}
+async function saveStockRetailLimit(product,value){
+ const products=retailAdminProducts(),target=products.find(p=>String(p?.id)===String(product));if(!target)return false;
+ const map=readRetailProductSettings(),current=retailProductSetting(target,map);map[String(product)]={...current,retailLimit:Math.min(9999,Math.max(0,Math.floor(Number(value)||0))),limitConfigured:true};
+ saveRetailProductSettingsLocal(map);renderStock();renderRetailCatalogSettings();
+ try{await saveRetailProductSettingsCloud(map);const status=$('#retailCatalogSaved');if(status)status.textContent='Лимит Розницы сохранён в облаке';return true}catch(error){alert(`Лимит сохранён на этом устройстве, но облако не подтвердило изменение: ${error?.message||error}`);return false}
+}
+async function consumeRetailAllocationForOrder(order){
+ if(!order||String(order.source||'stock')!=='stock')return true;
+ const map=readRetailProductSettings(),products=retailAdminProducts();let changed=false;
+ (order.items||[]).forEach(item=>{const id=String(item?.product||''),qty=Math.max(0,Math.floor(Number(item?.quantity||0))),product=products.find(p=>String(p?.id)===id);if(!product||!qty)return;const current=retailProductSetting(product,map),limit=current.limitConfigured?Math.max(0,Number(current.retailLimit||0)):0;map[id]={...current,retailLimit:Math.max(0,limit-qty),limitConfigured:true};changed=true});
+ if(!changed)return true;saveRetailProductSettingsLocal(map);renderStock();renderRetailCatalogSettings();await saveRetailProductSettingsCloud(map);return true;
 }
 function stockOpenNote(noteId,orderId){
  if(noteId&&typeof window.panoraOpenDeliveryNote==='function'){window.panoraOpenDeliveryNote(noteId);return}
@@ -872,8 +882,8 @@ function renderStock(){
  const ids=stockProductIds(),effective=stockEffectiveMovements(),cutoff=stockCutoffDate(30);
  const cards=ids.map(pid=>{
   const raw=effective.filter(m=>String(m.product)===String(pid)).reduce((sum,m)=>sum+signed(m),0);
-  const inventoryConfirmed=raw>=0,onHand=inventoryConfirmed?raw:0,reserved=stockReserved(pid),coveredReserved=inventoryConfirmed?Math.min(reserved,onHand):0,free=inventoryConfirmed?Math.max(0,onHand-reserved):0,shortage=inventoryConfirmed?Math.max(0,reserved-onHand):reserved;
-  return {pid,raw,inventoryConfirmed,onHand,reserved,coveredReserved,free,shortage};
+  const inventoryConfirmed=raw>=0,onHand=inventoryConfirmed?raw:0,partnerReserved=stockPartnerReserved(pid),retailReserved=stockRetailReserved(pid),reserved=partnerReserved+retailReserved,coveredReserved=inventoryConfirmed?Math.min(reserved,onHand):0,free=inventoryConfirmed?Math.max(0,onHand-reserved):0,shortage=inventoryConfirmed?Math.max(0,reserved-onHand):reserved,retailLimit=stockRetailLimit(pid),retailAvailable=inventoryConfirmed?Math.max(0,Math.min(Math.max(0,retailLimit-retailReserved),free)):0;
+  return {pid,raw,inventoryConfirmed,onHand,partnerReserved,retailReserved,reserved,coveredReserved,free,shortage,retailLimit,retailAvailable};
  }).sort((x,y)=>stockProductName(x.pid).localeCompare(stockProductName(y.pid),'ru'));
  const confirmed=cards.filter(x=>x.inventoryConfirmed),inventoryNeeded=cards.filter(x=>!x.inventoryConfirmed);
  const totalOnHand=confirmed.reduce((s,x)=>s+x.onHand,0),totalReserved=confirmed.reduce((s,x)=>s+x.coveredReserved,0),totalFree=confirmed.reduce((s,x)=>s+x.free,0);
@@ -893,7 +903,8 @@ function renderStock(){
   return `<article class="stock-product-card ${x.shortage?'has-shortage':''}">
    <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Не хватает ${x.shortage} шт.</span>`:''}</div>
    <div class="stock-product-main"><small>Подтверждено на складе</small><b>${x.onHand} ${t('pcs')}</b></div>
-   <dl><div><dt>Зарезервировано</dt><dd>${x.reserved} ${t('pcs')}</dd></div><div><dt>Свободно</dt><dd>${x.free} ${t('pcs')}</dd></div></dl>
+   <dl class="stock-channel-grid"><div><dt>B2B резерв</dt><dd>${x.partnerReserved} ${t('pcs')}</dd></div><div><dt>Розничные заказы</dt><dd>${x.retailReserved} ${t('pcs')}</dd></div><div><dt>Свободно после резервов</dt><dd>${x.free} ${t('pcs')}</dd></div><div class="stock-retail-available"><dt>Доступно Рознице сейчас</dt><dd>${x.retailAvailable} ${t('pcs')}</dd></div></dl>
+   <div class="stock-retail-allocation"><label><span>Выделено в Розницу, шт.</span><input type="number" min="0" max="9999" step="1" inputmode="numeric" value="${x.retailLimit}" data-stock-retail-limit="${adminEscape(x.pid)}"></label><button type="button" class="secondary" data-stock-retail-all="${adminEscape(x.pid)}" data-stock-retail-free="${x.free}">Выделить всё свободное</button><small>Витрина получит не больше этого лимита и никогда не больше фактически свободного остатка.</small></div>
   </article>`;
  }).join('');
  const uncovered=cards.reduce((sum,x)=>sum+x.shortage,0),warningRoot=$('#stockWarnings');
@@ -903,6 +914,8 @@ function renderStock(){
   warningRoot.innerHTML=`<div class="stock-warning-summary"><div><strong>${inventoryNeeded.length?`${stockProductCountLabel(inventoryNeeded.length)} требуют инвентаризации`:'Есть непокрытые резервы'}</strong><span>${inventoryNeeded.length?'Физический остаток этих позиций не считается нулём, пока его не подтвердит инвентаризация.':''}${inventoryNeeded.length&&uncovered?' ':''}${uncovered?`Не покрыто готовым хлебом: ${uncovered} шт.`:''}</span></div>${first?`<button type="button" data-stock-inventory="${adminEscape(first)}">Провести инвентаризацию</button>`:''}</div>`;
  }else{warningRoot.hidden=true;warningRoot.innerHTML=''}
  $$('[data-stock-inventory]').forEach(button=>button.onclick=()=>openStockMovementDialog(button.dataset.stockInventory,'inventory_set'));
+ $$('[data-stock-retail-limit]').forEach(input=>input.onchange=()=>saveStockRetailLimit(input.dataset.stockRetailLimit,input.value));
+ $$('[data-stock-retail-all]').forEach(button=>button.onclick=()=>saveStockRetailLimit(button.dataset.stockRetailAll,button.dataset.stockRetailFree));
  const sorted=effective.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
  const recent=sorted.filter(m=>String(m.date||'')>=cutoff),archive=sorted.filter(m=>String(m.date||'')<cutoff);
  const tabs=$('#stockMovementTabs');
