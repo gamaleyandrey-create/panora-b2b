@@ -380,3 +380,5 @@
  .stock-retail-allocation button{width:100%;}
  .stock-product-card .stock-channel-grid{grid-template-columns:1fr 1fr;}
 }
+
+/* Panora 10.19 — Push quiet-hours defaults: Bakery 07:00–22:00; Partner 08:00–21:00; Retail 09:00–21:00. */
