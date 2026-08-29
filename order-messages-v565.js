@@ -138,10 +138,6 @@
         // initial dialog on “Loading…”: mark what is now visible, then reconcile once.
         await api().markRead(targetOrderId).catch(()=>{});
         if(!dialog||currentOrderId!==targetOrderId)return;
-        const reconciledRows=await api().list(targetOrderId).catch(()=>firstRows);
-        if(!dialog||currentOrderId!==targetOrderId)return;
-        renderMessages(reconciledRows);
-        writeMessageCache(targetOrderId,reconciledRows);
       }else{
         // Background refreshes keep the safe mark-read -> list ordering while the
         // existing conversation stays on screen, so there is no visible loading wait.
@@ -279,8 +275,21 @@
   window.panoraOrderMessages={open,close,refreshUnread,openPushChat};
   const tryInitialPushChat=()=>{if(pushChatTarget(location.href))setTimeout(()=>openPushChat(location.href),250)};
   window.addEventListener("panora:authenticated",()=>setTimeout(()=>{refreshUnread();openPushChat(location.href)},500));
+  const pushLooksLikeMessage=data=>{
+    const signal=`${data?.kind||data?.type||data?.event_type||data?.tag||""} ${data?.title||""} ${data?.body||""}`.toLowerCase();
+    return /(message|chat|сообщ|mensaje)/i.test(signal);
+  };
+  const pushOrderId=data=>{
+    const direct=String(data?.order_id||data?.orderId||data?.order?.id||"");if(direct)return direct;
+    try{const url=new URL(String(data?.url||data?.href||""),location.href);return String(url.searchParams.get("order")||url.searchParams.get("orderId")||"")}catch{return""}
+  };
   navigator.serviceWorker?.addEventListener?.("message",event=>{
     if(event.data?.type==="PANORA_PUSH_OPENED")openPushChat(event.data.url||location.href);
+    if(event.data?.type==="PANORA_PUSH_RECEIVED"&&pushLooksLikeMessage(event.data.payload||{})){
+      const payload=event.data.payload||{},orderId=pushOrderId(payload);
+      refreshUnread().catch(()=>{});
+      if(dialog&&currentOrderId&&(!orderId||String(orderId)===String(currentOrderId)))load({quiet:true});
+    }
   });
   const initialMessagePaint=()=>{scheduleUnreadPaint();tryInitialPushChat()};
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initialMessagePaint,{once:true});else initialMessagePaint();

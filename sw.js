@@ -1,4 +1,4 @@
-const CACHE='panora-v10200';
+const CACHE='panora-v10210';
 const CORE=[
   './partner/index.html',
   './partner/manifest.webmanifest',
@@ -16,11 +16,11 @@ self.addEventListener('fetch',event=>{
 self.addEventListener('message',event=>{if(event.data?.type==='PANORA_SKIP_WAITING')self.skipWaiting()});
 
 
-/* Panora 10.20 — quiet hours by audience for legacy/root Web Push. */
+/* Panora 10.21 — quiet hours by audience for legacy/root Web Push. */
 const PANORA_PUSH_WINDOWS={admin:{start:7,end:22},bakery:{start:7,end:22},partner:{start:8,end:21},retail:{start:9,end:21},customer:{start:9,end:21}};
 const panoraPushAudience=data=>{const raw=String(data?.audience||data?.recipient_role||data?.role||'retail').toLowerCase();return raw.includes('admin')||raw.includes('bakery')?'admin':raw.includes('partner')?'partner':raw.includes('customer')?'customer':'retail'};
 const panoraPushAllowed=data=>{const w=PANORA_PUSH_WINDOWS[panoraPushAudience(data)]||PANORA_PUSH_WINDOWS.retail,h=new Date().getHours();return h>=w.start&&h<w.end};
-const PANORA_PUSH_DB='panora-push-quiet-v10200',PANORA_PUSH_STORE='pending';
+const PANORA_PUSH_DB='panora-push-quiet-v10210',PANORA_PUSH_STORE='pending';
 const panoraPushDb=()=>new Promise((resolve,reject)=>{const r=indexedDB.open(PANORA_PUSH_DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(PANORA_PUSH_STORE))r.result.createObjectStore(PANORA_PUSH_STORE,{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
 async function panoraQueuePush(data){try{const db=await panoraPushDb(),tx=db.transaction(PANORA_PUSH_STORE,'readwrite');tx.objectStore(PANORA_PUSH_STORE).put({id:String(data.notification_id||data.tag||crypto.randomUUID?.()||Date.now()+Math.random()),data,queuedAt:Date.now()});await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});try{await self.registration.sync?.register?.('panora-push-flush')}catch{}}catch{}}
 async function panoraShowPush(data){return self.registration.showNotification(String(data.title||'Panora'),{body:String(data.body||'Новое уведомление'),icon:'icon-192.png',badge:'icon-192.png',tag:String(data.tag||data.notification_id||'panora-retail'),renotify:true,data:{url:panoraPushTarget(data)}})}
@@ -41,9 +41,10 @@ const panoraPushTarget=data=>{
   return url.href;
  }catch{return raw}
 };
+async function panoraNotifyOpenClients(data){try{const list=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const client of list){try{client.postMessage({type:'PANORA_PUSH_RECEIVED',payload:data||{}})}catch{}}}catch{}}
 self.addEventListener('push',event=>{
  let data={};try{data=event.data?event.data.json():{}}catch{try{data={body:event.data?.text?.()||''}}catch{}}
- event.waitUntil(panoraPushAllowed(data)?panoraShowPush(data):panoraQueuePush(data));
+ event.waitUntil(Promise.allSettled([panoraNotifyOpenClients(data),panoraPushAllowed(data)?panoraShowPush(data):panoraQueuePush(data)]));
 });
 self.addEventListener('sync',event=>{if(event.tag==='panora-push-flush')event.waitUntil(panoraFlushPush())});
 self.addEventListener('notificationclick',event=>{
