@@ -1,4 +1,4 @@
-/* Panora 10.20: Web Push quiet hours are enforced by each role service worker. Bakery 07–22, Partner 08–21, Retail 09–21. */
+/* Panora 10.21: Web Push quiet hours are enforced by each role service worker. Bakery 07–22, Partner 08–21, Retail 09–21. */
 /* Panora 2.6 — active notifications, priority timing and persistent new-order alerts */
 (function(){
  const SOUND_KEY='panora-event-sound-v332',SNAP_KEY='panora-event-orders-v332',PENDING_KEY='panora-admin-pending-order-alerts-v25';
@@ -158,6 +158,9 @@
      realtimeChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'order_messages',...(orderFilter?{filter:orderFilter}:{})},payload=>{
        realtimeLastEventAt=Date.now();window.dispatchEvent(new CustomEvent('panora:realtime-message',{detail:payload}));
        window.panoraOrderMessages?.refreshUnread?.();
+     });
+     if(admin)realtimeChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'retail_order_messages'},payload=>{
+       realtimeLastEventAt=Date.now();window.dispatchEvent(new CustomEvent('panora:realtime-retail-message',{detail:payload}));
      });
      realtimeChannel.subscribe(status=>{
        const active=status==='SUBSCRIBED';window.panoraRealtimeActive=active;
