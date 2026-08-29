@@ -1,7 +1,7 @@
 
 /* Panora 7.33 — stable install/update controller */
 (function(){
-  const BUILD='10190';
+  const BUILD='10200';
   const INSTALL_SNOOZE_MS=10*24*60*60*1000;
   let deferredPrompt=null;
 
@@ -103,7 +103,7 @@
   window.panoraPwa={build:BUILD,register};
 })();
 
-/* Panora 10.19 — flush Push payloads queued during quiet hours when the app is next opened. */
+/* Panora 10.20 — flush Push payloads queued during quiet hours when the app is next opened. */
 (()=>{
   if(!('serviceWorker' in navigator))return;
   const flush=()=>navigator.serviceWorker.ready.then(reg=>reg.active?.postMessage?.({type:'PANORA_FLUSH_PUSH'})).catch(()=>{});

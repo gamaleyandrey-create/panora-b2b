@@ -44,7 +44,8 @@
   const writeUnreadCache=map=>{
     try{localStorage.setItem(UNREAD_CACHE_KEY,JSON.stringify(Object.fromEntries([...(map instanceof Map?map:new Map())].filter(([,count])=>Number(count)>0))))}catch{}
   };
-  let dialog=null,currentOrderId="",currentOrderLabel="",poll=0,lastUnreadMap=readUnreadCache(),unreadPaintQueued=false;
+  let dialog=null,currentOrderId="",currentOrderLabel="",lastUnreadMap=readUnreadCache(),unreadPaintQueued=false;
+  let wakeRefreshAt=0,wakeRefreshPromise=null;
   const MESSAGE_CACHE_KEY="panora-order-message-cache-v1";
   const readMessageCache=orderId=>{
     try{
@@ -157,7 +158,6 @@
     }
   };
   const close=()=>{
-    clearInterval(poll);poll=0;
     if(dialog){dialog.close();dialog.remove();dialog=null}
     currentOrderId="";currentOrderLabel="";
   };
@@ -198,7 +198,6 @@
     else dialog.querySelector("[data-order-message-list]").innerHTML=`<p class="order-message-empty">${t("loading")}</p>`;
     syncPushState().catch(()=>{});
     await load({quiet:cachedRows.length>0,fastOpen:true});
-    poll=setInterval(()=>{if(dialog&&!document.hidden&&!window.panoraRealtimeActive)load({quiet:true})},30000);
   };
 
   const applyUnread=(map,{remember=true}={})=>{
@@ -293,7 +292,21 @@
   window.addEventListener("panora:partner-data-updated",()=>setTimeout(()=>refreshUnread(),500));
   window.addEventListener("panora:partner-push-state",()=>{if(dialog)syncPushState().catch(()=>{})});
   window.addEventListener("panora:admin-webpush-state",()=>{if(dialog)syncPushState().catch(()=>{})});
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshUnread()});
-  setInterval(()=>{if(!document.hidden&&navigator.onLine&&!window.panoraRealtimeActive)refreshUnread()},120000);
+  const refreshOnWake=()=>{
+    if(document.hidden||!navigator.onLine)return Promise.resolve(false);
+    if(wakeRefreshPromise)return wakeRefreshPromise;
+    const now=Date.now();
+    if(now-wakeRefreshAt<10000)return Promise.resolve(false);
+    wakeRefreshAt=now;
+    wakeRefreshPromise=(async()=>{
+      await refreshUnread();
+      if(dialog&&currentOrderId)await load({quiet:true});
+      return true;
+    })().finally(()=>{wakeRefreshPromise=null});
+    return wakeRefreshPromise;
+  };
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshOnWake().catch(()=>{})});
+  window.addEventListener("focus",()=>refreshOnWake().catch(()=>{}),true);
+  window.addEventListener("online",()=>refreshOnWake().catch(()=>{}));
   setTimeout(()=>refreshUnread(),1200);
 })();
