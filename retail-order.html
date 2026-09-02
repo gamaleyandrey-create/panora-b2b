@@ -31,7 +31,7 @@
 </style>
 
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="manifest-retail-998.webmanifest?v=10280">
+  <link rel="manifest" href="manifest-retail-998.webmanifest?v=10290">
 
 </head>
 <body>
@@ -57,7 +57,7 @@
  </section>
  <div class="footer">Panora · Bakery · build 7310</div>
 </main>
-<script src="supabase-config.js?v=10280"></script>
+<script src="supabase-config.js?v=10290"></script>
 <script>
 (()=>{
  const $=s=>document.querySelector(s), params=new URLSearchParams(location.search), token=params.get('t')||'';
@@ -165,7 +165,7 @@
  const refreshOnWake=()=>{if(document.hidden||!navigator.onLine||!order)return Promise.resolve(false);if(wakeRefreshPromise)return wakeRefreshPromise;const now=Date.now();if(now-wakeRefreshAt<10000)return Promise.resolve(false);wakeRefreshAt=now;wakeRefreshPromise=(async()=>{await load({silent:true});await syncCustomerPush({repair:true}).catch(()=>{});return true})().finally(()=>{wakeRefreshPromise=null});return wakeRefreshPromise};$('#enablePushButton').addEventListener('click',toggleCustomerPush);$('#langSelect').addEventListener('change',e=>{lang=e.target.value;localStorage.setItem('panora-retail-language',lang);const u=new URL(location.href);u.searchParams.set('lang',lang);history.replaceState(null,'',u);render();if($('#error').classList.contains('hidden')===false)showError()});$('#refreshButton').addEventListener('click',load);render();load();document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshOnWake().catch(()=>{})});window.addEventListener('focus',()=>refreshOnWake().catch(()=>{}),true);window.addEventListener('online',()=>refreshOnWake().catch(()=>{}));const retailPushMatchesOrder=data=>{const signal=`${data?.kind||data?.type||data?.event_type||data?.tag||''} ${data?.title||''} ${data?.body||''}`.toLowerCase();if(!/(message|chat|сообщ|mensaje)/i.test(signal))return false;const directToken=String(data?.public_token||data?.publicToken||'');if(directToken)return directToken===token;const directOrder=String(data?.order_id||data?.orderId||'');if(directOrder&&order?.id)return directOrder===String(order.id);try{const u=new URL(String(data?.url||data?.href||''),location.href),t=u.searchParams.get('t');return !t||t===token}catch{return true}};navigator.serviceWorker?.addEventListener?.('message',event=>{if(event.data?.type==='PANORA_PUSH_RECEIVED'&&retailPushMatchesOrder(event.data.payload||{})){load({silent:true}).catch(()=>{})}});
 })();
 </script>
-<script src="pwa-stable.js?v=10280"></script>
+<script src="pwa-stable.js?v=10290"></script>
 
 
 
