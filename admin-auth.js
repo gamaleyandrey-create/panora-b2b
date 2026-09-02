@@ -12,7 +12,21 @@
   const clearSession=()=>{localStorage.removeItem(sessionKey);try{localStorage.removeItem(legacySessionKey)}catch{}};
   let authUnlocked=false;
   let authGeneration=0;
-  const withTimeout=async(promise,ms=15000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Сервер не ответил. Проверьте интернет и повторите вход.')),ms)})])}finally{clearTimeout(timer)}};
+  const withTimeout=async(promise,ms=15000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>{const e=new Error('Сервер не ответил. Проверьте интернет и повторите вход.');e.code='PANORA_NETWORK_TIMEOUT';reject(e)},ms)})])}finally{clearTimeout(timer)}};
+  const isNetworkFailure=error=>error?.code==='PANORA_NETWORK_TIMEOUT'||/load failed|failed to fetch|networkerror|network request failed|internet connection appears to be offline|the network connection was lost/i.test(String(error?.message||error||''));
+  async function fetchNetworkSafe(url,options={}, {attempts=2,timeout=15000}={}){
+    let lastError=null;
+    for(let attempt=0;attempt<attempts;attempt++){
+      if(typeof navigator!=='undefined'&&navigator.onLine===false){const e=new Error('Нет соединения с интернетом. Подключитесь к сети — Panora продолжит вход.');e.code='PANORA_OFFLINE';throw e}
+      try{return await withTimeout(fetch(url,options),timeout)}
+      catch(error){
+        lastError=error;
+        if(!isNetworkFailure(error)||attempt>=attempts-1)throw error;
+        await new Promise(resolve=>setTimeout(resolve,650*(attempt+1)));
+      }
+    }
+    throw lastError||new Error('Не удалось связаться с сервером.');
+  }
   async function signOut(session=readSession()){
     try{if(session?.access_token)await fetch(`${cfg.url}/auth/v1/logout`,{method:'POST',headers:headers(session.access_token)})}catch{}
     clearSession();location.reload();
@@ -22,7 +36,7 @@
   async function getProfile(token,userId){
     const url=`${cfg.url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,role,display_name`;
     let response;
-    try{response=await withTimeout(fetch(url,{headers:headers(token)}),12000)}
+    try{response=await fetchNetworkSafe(url,{headers:headers(token)},{attempts:2,timeout:12000})}
     catch(cause){const e=new Error('Не удалось связаться с сервером проверки доступа.');e.code='PANORA_PROFILE_NETWORK';e.cause=cause;throw e}
     if(!response.ok){const e=new Error(response.status===401?'Сессия входа требует обновления.':'Не удалось проверить права пользователя.');e.status=response.status;e.code='PANORA_PROFILE_HTTP';throw e}
     const rows=await response.json();
@@ -48,7 +62,7 @@
   }
   async function refresh(session){
     if(!session?.refresh_token)return null;
-    const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}));
+    const response=await fetchNetworkSafe(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})},{attempts:2,timeout:15000});
     if(!response.ok)return null;
     const updated=await response.json();saveSession(updated);return updated;
   }
@@ -115,7 +129,7 @@
     const data=new FormData(form);
     let authenticated=false;
     try{
-      const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})}));
+      const response=await fetchNetworkSafe(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})},{attempts:3,timeout:15000});
       const session=await response.json();
       if(!response.ok)throw new Error(session.error_description||session.msg||'Неверный email или пароль.');
       authenticated=true;saveSession(session);message('Пароль принят. Проверяем доступ…');
@@ -124,6 +138,7 @@
     }catch(err){
       if(err?.code==='PANORA_NOT_ADMIN'){clearSession();message(err.message)}
       else if(authenticated){message('Вход подтверждён, но проверка доступа не завершилась. Проверьте интернет — Panora продолжит автоматически.')}
+      else if(isNetworkFailure(err)||err?.code==='PANORA_OFFLINE')message('Не удалось связаться с сервером входа. Проверьте LTE/Wi‑Fi и повторите — пароль не изменён.');
       else message(err.message||'Не удалось войти. Проверьте соединение.');
     }finally{submit.disabled=false}
   });
