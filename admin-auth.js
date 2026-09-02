@@ -18,13 +18,33 @@
     clearSession();location.reload();
   }
   const message=text=>{error.textContent=text||''};
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   async function getProfile(token,userId){
     const url=`${cfg.url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,role,display_name`;
-    const response=await withTimeout(fetch(url,{headers:headers(token)}));
-    if(!response.ok)throw new Error('Не удалось проверить права пользователя.');
+    let response;
+    try{response=await withTimeout(fetch(url,{headers:headers(token)}),12000)}
+    catch(cause){const e=new Error('Не удалось связаться с сервером проверки доступа.');e.code='PANORA_PROFILE_NETWORK';e.cause=cause;throw e}
+    if(!response.ok){const e=new Error(response.status===401?'Сессия входа требует обновления.':'Не удалось проверить права пользователя.');e.status=response.status;e.code='PANORA_PROFILE_HTTP';throw e}
     const rows=await response.json();
-    if(!rows[0]||rows[0].role!=='admin')throw new Error('У этого пользователя нет прав администратора.');
+    if(!rows[0]||rows[0].role!=='admin'){const e=new Error('У этого пользователя нет прав администратора.');e.code='PANORA_NOT_ADMIN';throw e}
     return rows[0];
+  }
+  async function verifyAdminSession(input,{allowRefresh=true}={}){
+    let active=input;
+    let lastError=null;
+    for(let attempt=0;attempt<2;attempt++){
+      try{return {session:active,profile:await getProfile(active.access_token,active.user.id)}}
+      catch(error){
+        lastError=error;
+        if(error?.code==='PANORA_NOT_ADMIN')throw error;
+        if(error?.status===401&&allowRefresh){
+          const updated=await refresh(active);
+          if(updated){active=updated;allowRefresh=false;continue}
+        }
+        if(attempt===0){await wait(650);continue}
+      }
+    }
+    throw lastError||new Error('Не удалось проверить доступ.');
   }
   async function refresh(session){
     if(!session?.refresh_token)return null;
@@ -45,9 +65,12 @@
   }
   async function validate(session){
     if(!session)return false;
-    try{const profile=await getProfile(session.access_token,session.user.id);unlock(session,profile);return true}catch{
-      const updated=await refresh(session);if(!updated)return false;
-      try{const profile=await getProfile(updated.access_token,updated.user.id);unlock(updated,profile);return true}catch{return false}
+    try{
+      const checked=await verifyAdminSession(session);
+      saveSession(checked.session);unlock(checked.session,checked.profile);return true;
+    }catch(error){
+      if(error?.code==='PANORA_NOT_ADMIN')clearSession();
+      return false;
     }
   }
   async function changePassword(currentPassword,newPassword){
@@ -88,17 +111,36 @@
     });
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();const generation=++authGeneration;message('');clearSession();const submit=form.querySelector('button[type="submit"]')||form.querySelector('button');submit.disabled=true;
+    event.preventDefault();const generation=++authGeneration;message('Входим…');clearSession();const submit=form.querySelector('button[type="submit"]')||form.querySelector('button');submit.disabled=true;
     const data=new FormData(form);
+    let authenticated=false;
     try{
       const response=await withTimeout(fetch(`${cfg.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json'},body:JSON.stringify({email:String(data.get('email')).trim(),password:String(data.get('password'))})}));
       const session=await response.json();
       if(!response.ok)throw new Error(session.error_description||session.msg||'Неверный email или пароль.');
-      const profile=await getProfile(session.access_token,session.user.id);if(generation!==authGeneration)return;saveSession(session);unlock(session,profile);form.reset();
-    }catch(err){message(err.message||'Не удалось войти. Проверьте соединение.')}finally{submit.disabled=false}
+      authenticated=true;saveSession(session);message('Пароль принят. Проверяем доступ…');
+      const checked=await verifyAdminSession(session);if(generation!==authGeneration)return;
+      saveSession(checked.session);unlock(checked.session,checked.profile);form.reset();message('');
+    }catch(err){
+      if(err?.code==='PANORA_NOT_ADMIN'){clearSession();message(err.message)}
+      else if(authenticated){message('Вход подтверждён, но проверка доступа не завершилась. Проверьте интернет — Panora продолжит автоматически.')}
+      else message(err.message||'Не удалось войти. Проверьте соединение.');
+    }finally{submit.disabled=false}
   });
   window.addEventListener('panora:admin-session-expired',()=>{authUnlocked=false;clearSession();document.body.classList.remove('admin-authenticated','auth-pending');layer.hidden=false;message('Сессия завершена. Войдите снова.');});
   window.addEventListener('pageshow',()=>{if(!authUnlocked&&!readSession()){document.body.classList.remove('auth-pending');layer.hidden=false;}});
+
+  let authResumeAt=0,authResumePromise=null;
+  const resumeStoredLogin=()=>{
+    if(authUnlocked||document.hidden||!navigator.onLine)return Promise.resolve(false);
+    const stored=readSession();if(!stored?.access_token||!stored?.user?.id)return Promise.resolve(false);
+    const now=Date.now();if(authResumePromise)return authResumePromise;if(now-authResumeAt<10000)return Promise.resolve(false);
+    authResumeAt=now;message('Проверяем сохранённый вход…');
+    authResumePromise=validate(stored).then(ok=>{if(!ok&&!authUnlocked)message('Не удалось проверить доступ. Проверьте интернет и повторите.');return ok}).finally(()=>{authResumePromise=null});
+    return authResumePromise;
+  };
+  window.addEventListener('online',()=>resumeStoredLogin().catch(()=>{}));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeStoredLogin().catch(()=>{})});
   const initialSession=readSession();
   const restoreGeneration=authGeneration;
   if(!initialSession){
