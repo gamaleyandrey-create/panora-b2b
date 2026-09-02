@@ -145,7 +145,7 @@
 })();
 
 
-/* Panora 10.29 — visible loading reminder refined from real mobile feedback.
+/* Panora 10.30 — visible loading reminder refined from real mobile feedback.
    Presentation only: no network requests. */
 (()=>{
   'use strict';
@@ -202,7 +202,7 @@
     if(!navigator.onLine)return'offline';
     if(t==='error'||/ошиб|error|failed/.test(x))return'error';
     if(t==='local'||/сохран.*устройств|offline|офлайн/.test(x))return'local';
-    // Panora 10.29: success text such as «Синхронизировано» contains the same
+    // Panora 10.30: success text such as «Синхронизировано» contains the same
     // lexical root as «Синхронизация…». Resolve explicit success BEFORE the
     // broad loading regex so the partner reminder cannot spin forever.
     if(t==='ok'||t==='synced'||/^(?:✓\s*)?(?:синхронизировано|актуально|synced|sincronizado|actualizado)$/.test(x.trim()))return'synced';

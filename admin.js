@@ -92,6 +92,7 @@ function isArchivedAdminOrder(row){
  if(['cancelled','canceled','closed','archived'].includes(status))return true;
  if(['delivered'].includes(status))return true;
  if(status!=='shipped')return Boolean(row?.archived||row?.isArchived||row?.archive);
+ if(row?.deliveryConfirmedAt)return true;
  const notes=typeof deliveryNotes!=='undefined'&&Array.isArray(deliveryNotes)?deliveryNotes:[];
  const note=notes.find(item=>String(item?.orderId||'')===String(row?.id||''));
  if(!note)return false;

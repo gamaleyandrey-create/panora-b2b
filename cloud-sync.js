@@ -973,6 +973,7 @@
     const status=String(order?.status||'');
     if(status==='cancelled')return true;
     if(status!=='shipped')return false;
+    if(order?.deliveryConfirmedAt)return true;
     const note=(deliveryNotes||[]).find(item=>String(item?.orderId||'')===String(order?.id||''));
     if(!note)return false;
     return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||adminOrderFollowupForCount(order).manualClosedAt);
@@ -1290,7 +1291,7 @@
   const hasFinalReceiptEvidence=note=>Boolean(note?.customerConfirmedAt||note?.offlineProof?.receivedAt);
   const preserveFinalReceiptEvidence=(remoteNote,knownNote)=>{
     if(!remoteNote||!knownNote||hasFinalReceiptEvidence(remoteNote)||!hasFinalReceiptEvidence(knownNote))return remoteNote;
-    // Panora 10.29: receipt evidence is monotonic during ordinary cloud refreshes.
+    // Panora 10.30: receipt evidence is monotonic during ordinary cloud refreshes.
     // A transient/incomplete server row must never reopen an already received delivery.
     return {...remoteNote,
       customerConfirmedAt:knownNote.customerConfirmedAt||null,
@@ -1311,7 +1312,7 @@
     });
     // Panora 9.89 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
-    // Panora 10.29 preserves only already-final receipt evidence while refreshing.
+    // Panora 10.30 preserves only already-final receipt evidence while refreshing.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
@@ -1332,12 +1333,13 @@
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     cacheDeliveryNotesLocal();status('Облако ✓');
   }
-  const paymentSchemaCacheKey='panora-payment-dispute-schema-v1028';
+  const paymentSchemaCacheKey='panora-payment-read-schema-v1030';
   const paymentSchemaCacheTtl=7*24*60*60*1000;
-  const readPaymentSchemaSupport=()=>{try{const v=JSON.parse(localStorage.getItem(paymentSchemaCacheKey)||'null');if(v?.mode==='legacy'&&Date.now()-Number(v.at||0)<paymentSchemaCacheTtl)return false;if(!v){localStorage.setItem(paymentSchemaCacheKey,JSON.stringify({mode:'legacy',at:Date.now()}));return false}}catch{}return true};
-  let paymentDisputeColumnsSupported=readPaymentSchemaSupport();
-  const paymentDisputeSchemaError=error=>/dispute_status|dispute_reason|disputed_at|dispute_deadline|42703|column .* does not exist/i.test(String(error?.message||error||''));
-  const rememberLegacyPaymentSchema=()=>{try{localStorage.setItem(paymentSchemaCacheKey,JSON.stringify({mode:'legacy',at:Date.now()}))}catch{}};
+  const readPaymentSchemaMode=()=>{try{const v=JSON.parse(localStorage.getItem(paymentSchemaCacheKey)||'null');if(v?.mode&&Date.now()-Number(v.at||0)<paymentSchemaCacheTtl)return String(v.mode)}catch{}return 'minimal'};
+  let paymentReadSchemaMode=readPaymentSchemaMode();
+  let paymentDisputeColumnsSupported=paymentReadSchemaMode==='full';
+  const paymentSchemaError=error=>/42703|column .* does not exist|schema cache|confirmed_by|confirmed_at|updated_at|dispute_status|dispute_reason|disputed_at|dispute_deadline/i.test(String(error?.message||error||''));
+  const rememberPaymentSchemaMode=mode=>{paymentReadSchemaMode=mode;paymentDisputeColumnsSupported=mode==='full';try{localStorage.setItem(paymentSchemaCacheKey,JSON.stringify({mode,at:Date.now()}))}catch{}};
   const paymentReadTimeoutMs=12000;
   const paymentRequest=async path=>{
     const controller=typeof AbortController!=='undefined'?new AbortController():null;
@@ -1348,16 +1350,29 @@
   };
   const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,updatedAt:row.updated_at||null,recordedBy:row.confirmed_by||null});
   async function requestPaymentsCompatible(deltaQuery=''){
-    const common=`id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,updated_at`;
-    if(paymentDisputeColumnsSupported){
-      try{return await paymentRequest(`payments?select=${common},dispute_status,dispute_reason,disputed_at,dispute_deadline${deltaQuery}&order=received_at.asc`)}
+    const minimal=`id,restaurant_id,delivery_note_id,amount,method,note,status,received_at`;
+    const extended=`${minimal},confirmed_at,confirmed_by,updated_at`;
+    const full=`${extended},dispute_status,dispute_reason,disputed_at,dispute_deadline`;
+    // Panora 10.30: the bakery must be able to read payments created by older
+    // database schemas. Start from the remembered safe shape and only use delta
+    // reads when updated_at is known to exist. A missing optional column is not a
+    // finance outage and must never fail the whole application refresh.
+    const attempt=async(mode)=>{
+      const select=mode==='full'?full:mode==='extended'?extended:minimal;
+      const delta=mode==='minimal'?'':deltaQuery;
+      return paymentRequest(`payments?select=${select}${delta}&order=received_at.asc`);
+    };
+    const chain=paymentReadSchemaMode==='full'?['full','extended','minimal']:paymentReadSchemaMode==='extended'?['extended','minimal']:['minimal'];
+    let lastError=null;
+    for(const mode of chain){
+      try{const rows=await attempt(mode);rememberPaymentSchemaMode(mode);return rows}
       catch(error){
-        if(!paymentDisputeSchemaError(error))throw error;
-        paymentDisputeColumnsSupported=false;rememberLegacyPaymentSchema();
-        console.warn('Panora payments: legacy schema without dispute columns; compatibility mode enabled');
+        lastError=error;
+        if(!paymentSchemaError(error))throw error;
+        console.warn(`Panora payments: ${mode} read schema unavailable; falling back`,error?.message||error);
       }
     }
-    return paymentRequest(`payments?select=${common}${deltaQuery}&order=received_at.asc`);
+    throw lastError||new Error('Не удалось загрузить оплаты');
   }
   const paymentFinanciallyConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==='confirmed')&&payment?.disputeStatus!=='open';
   function cachePayment(row){
@@ -1373,7 +1388,7 @@
   async function loadPayments(){
     const firstHydration=!window.panoraAdminPaymentsHydrated;
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
-    const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
+    const watermark=!firstHydration&&paymentReadSchemaMode!=='minimal'?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
     let rows;
@@ -1381,7 +1396,7 @@
     catch(error){
       const slow=/Оплаты: сервер отвечает слишком долго/i.test(String(error?.message||error||''));
       if(!slow)throw error;
-      // Panora 10.29: a slow payments endpoint must not block the whole mobile bakery.
+      // Panora 10.30: a slow payments endpoint must not block the whole mobile bakery.
       // Keep the last confirmed cache and let a later wake/manual refresh retry normally.
       if(Array.isArray(local))payments=local;
       recalculateBalances();

@@ -59,12 +59,12 @@ body:not(.admin-page) #panoraConnectionState{display:none!important}
 }
 
 
-/* Panora 10.29 — loading reminder refined after mobile field test. */
+/* Panora 10.30 — loading reminder refined after mobile field test. */
 .panora-load-reminder{position:sticky;top:0;z-index:1080;margin:0;padding:10px clamp(16px,3vw,34px);border-bottom:1px solid #d6e3da;background:rgba(247,251,247,.98);color:#294d37;box-shadow:0 6px 18px rgba(28,54,38,.08)}
 .panora-load-reminder[hidden]{display:none!important}.panora-load-reminder-main{display:flex;align-items:center;gap:11px;max-width:1180px;margin:auto}.panora-load-reminder-main i{width:14px;height:14px;flex:0 0 14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%}.panora-load-reminder.is-busy .panora-load-reminder-main i{animation:panora-load-spin .8s linear infinite}.panora-load-reminder:not(.is-busy) .panora-load-reminder-main i{border-right-color:currentColor}.panora-load-reminder strong{display:block;font:800 13px/1.25 Manrope,system-ui,sans-serif}.panora-load-reminder small{display:block;margin-top:2px;color:#6c7b71;font:600 10px/1.35 Manrope,system-ui,sans-serif}.panora-load-reminder[data-state="error"]{background:#fff5f2;color:#9b443d;border-color:#efd1cb}.panora-load-reminder[data-state="stale"]{background:#fff9ed;color:#85601e;border-color:#ead9b0}.panora-load-reminder[data-state="offline"],.panora-load-reminder[data-state="local"]{background:#fff9ed;color:#85601e;border-color:#ead9b0}.panora-load-skeleton{display:none;max-width:1180px;margin:8px auto 0;grid-template-columns:1.4fr 1fr .8fr;gap:8px}.panora-load-reminder.is-busy .panora-load-skeleton{display:grid}.panora-load-skeleton span{height:5px;border-radius:999px;background:linear-gradient(90deg,#e2ebe4 25%,#f6faf6 50%,#e2ebe4 75%);background-size:200% 100%;animation:panora-load-shimmer 1.15s linear infinite}@keyframes panora-load-spin{to{transform:rotate(360deg)}}@keyframes panora-load-shimmer{to{background-position:-200% 0}}
 @media(max-width:720px){.panora-load-reminder{position:sticky;top:0;padding:13px 16px 12px}.panora-load-reminder-main{align-items:flex-start}.panora-load-reminder-main i{width:18px;height:18px;flex-basis:18px;margin-top:1px}.panora-load-reminder strong{font-size:14px}.panora-load-reminder small{font-size:11px;line-height:1.4}.panora-load-skeleton{margin-top:10px;grid-template-columns:1fr .72fr .48fr}.panora-load-skeleton span{height:7px}}
 
-/* 10.29: partner success never overlays the workspace title; completed state is one compact line. */
+/* 10.30: partner success never overlays the workspace title; completed state is one compact line. */
 body:not(.admin-page) .panora-load-reminder{position:relative;top:auto;box-shadow:none}
 body:not(.admin-page) .panora-load-reminder.is-done{padding-top:7px;padding-bottom:7px;border-bottom-color:#dce8df;background:#f6faf6}
 body:not(.admin-page) .panora-load-reminder.is-done .panora-load-reminder-main{align-items:center}
