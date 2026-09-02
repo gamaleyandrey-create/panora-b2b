@@ -249,7 +249,7 @@ const orderCountSnapshot=(()=>{
 const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
 const adminOrderCloudLoading=()=>Boolean(navigator.onLine&&!adminOrderArchiveReady());
 const orderCountsForHeader=()=>{
-  // Panora 10.25: shipped orders cannot be classified until delivery notes / receipt
+  // Panora 10.26: shipped orders cannot be classified until delivery notes / receipt
   // confirmations are loaded. Never present stale mobile cache as authoritative.
   if(adminOrderCloudLoading())return{active:'…',archive:'…',loading:true};
   return{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};

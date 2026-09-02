@@ -130,3 +130,64 @@
 
   window.panoraConnectionState={render,refresh:readState,get:()=>({...last})};
 })();
+
+
+/* Panora 10.26 — visible screen loading reminder. Presentation only: no network requests. */
+(()=>{
+  'use strict';
+  let hideTimer=0,lastState='';
+  const isAdmin=()=>document.body?.classList.contains('admin-page');
+  const ensure=()=>{
+    let el=document.querySelector('#panoraLoadReminder');
+    if(el)return el;
+    el=document.createElement('div');
+    el.id='panoraLoadReminder';
+    el.className='panora-load-reminder';
+    el.setAttribute('role','status');el.setAttribute('aria-live','polite');el.hidden=true;
+    el.innerHTML='<div class="panora-load-reminder-main"><i aria-hidden="true"></i><div><strong data-load-title></strong><small data-load-detail></small></div></div><div class="panora-load-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>';
+    const anchor=document.querySelector('.admin-topbar,header,.topbar');
+    if(anchor?.parentNode)anchor.insertAdjacentElement('afterend',el);else document.body.prepend(el);
+    return el;
+  };
+  const show=(state,text)=>{
+    const el=ensure();if(!el)return;
+    clearTimeout(hideTimer);lastState=state;
+    const title=el.querySelector('[data-load-title]'),detail=el.querySelector('[data-load-detail]');
+    el.dataset.state=state;el.hidden=false;
+    const raw=String(text||'').trim();
+    if(state==='loading'||state==='syncing'){
+      title.textContent=raw||'Обновляем данные…';
+      detail.textContent=isAdmin()?'Дождитесь завершения — данные на экране ещё обновляются.':'Показываем актуальные данные после завершения загрузки.';
+      el.classList.add('is-busy');
+    }else if(state==='offline'||state==='local'){
+      title.textContent='Нет сети · показаны сохранённые данные';
+      detail.textContent='После восстановления связи Panora проверит актуальные данные.';
+      el.classList.remove('is-busy');
+    }else if(state==='error'){
+      title.textContent=raw||'Не удалось обновить данные';
+      detail.textContent='Проверьте соединение и нажмите «Обновить».';
+      el.classList.remove('is-busy');
+    }else{
+      title.textContent='✓ Данные актуальны';detail.textContent='Обновление завершено.';el.classList.remove('is-busy');
+      hideTimer=setTimeout(()=>{if(lastState==='synced')el.hidden=true},1800);
+    }
+  };
+  const mapState=(type,text)=>{
+    const t=String(type||'').toLowerCase(),x=String(text||'').toLowerCase();
+    if(!navigator.onLine)return'offline';
+    if(t==='error'||/ошиб|error|failed/.test(x))return'error';
+    if(t==='local'||/сохран.*устройств|offline|офлайн/.test(x))return'local';
+    if(t==='loading'||t==='syncing'||t==='sending'||/загруз|обнов|синхрони|провер|loading|updat|sync/.test(x))return'loading';
+    return'synced';
+  };
+  window.addEventListener('panora:restaurant-sync',e=>{const d=e.detail||{};show(mapState(d.type,d.text),d.text)});
+  window.addEventListener('online',()=>show('loading','Восстанавливаем актуальные данные…'));
+  window.addEventListener('offline',()=>show('offline'));
+  const observeAdmin=()=>{
+    const source=document.querySelector('#saveState');if(!source)return;
+    const read=()=>{const text=source.textContent||'',state=mapState(source.dataset.syncState,text);show(state,text)};
+    new MutationObserver(read).observe(source,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-sync-state']});
+    if(/загруз|синхрони|обнов/i.test(source.textContent||''))read();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeAdmin,{once:true});else observeAdmin();
+})();
