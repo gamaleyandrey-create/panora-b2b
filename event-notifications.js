@@ -1,4 +1,4 @@
-/* Panora 10.21: Web Push quiet hours are enforced by each role service worker. Bakery 07–22, Partner 08–21, Retail 09–21. */
+/* Panora 10.22: Web Push quiet hours are enforced by each role service worker. Bakery 07–22, Partner 08–21, Retail 09–21. */
 /* Panora 2.6 — active notifications, priority timing and persistent new-order alerts */
 (function(){
  const SOUND_KEY='panora-event-sound-v332',SNAP_KEY='panora-event-orders-v332',PENDING_KEY='panora-admin-pending-order-alerts-v25';
