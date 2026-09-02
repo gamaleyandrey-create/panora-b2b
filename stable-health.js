@@ -1,8 +1,8 @@
 /* Panora 9.89 — production runtime health. */
 (function(){
  async function run(){
-   const out={build:'10260',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false};
-   try{const k='panora-health-v10260';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
+   const out={build:'10280',online:navigator.onLine,serviceWorker:'serviceWorker' in navigator,fetch:typeof fetch==='function',storage:false};
+   try{const k='panora-health-v10280';localStorage.setItem(k,'1');out.storage=localStorage.getItem(k)==='1';localStorage.removeItem(k)}catch{}
    window.panoraStableHealth=out;
    window.dispatchEvent(new CustomEvent('panora:stable-health',{detail:out}));
    return out;
