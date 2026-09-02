@@ -1290,7 +1290,7 @@
   const hasFinalReceiptEvidence=note=>Boolean(note?.customerConfirmedAt||note?.offlineProof?.receivedAt);
   const preserveFinalReceiptEvidence=(remoteNote,knownNote)=>{
     if(!remoteNote||!knownNote||hasFinalReceiptEvidence(remoteNote)||!hasFinalReceiptEvidence(knownNote))return remoteNote;
-    // Panora 10.28: receipt evidence is monotonic during ordinary cloud refreshes.
+    // Panora 10.29: receipt evidence is monotonic during ordinary cloud refreshes.
     // A transient/incomplete server row must never reopen an already received delivery.
     return {...remoteNote,
       customerConfirmedAt:knownNote.customerConfirmedAt||null,
@@ -1311,7 +1311,7 @@
     });
     // Panora 9.89 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
-    // Panora 10.28 preserves only already-final receipt evidence while refreshing.
+    // Panora 10.29 preserves only already-final receipt evidence while refreshing.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
@@ -1381,7 +1381,7 @@
     catch(error){
       const slow=/Оплаты: сервер отвечает слишком долго/i.test(String(error?.message||error||''));
       if(!slow)throw error;
-      // Panora 10.28: a slow payments endpoint must not block the whole mobile bakery.
+      // Panora 10.29: a slow payments endpoint must not block the whole mobile bakery.
       // Keep the last confirmed cache and let a later wake/manual refresh retry normally.
       if(Array.isArray(local))payments=local;
       recalculateBalances();
