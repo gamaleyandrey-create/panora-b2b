@@ -2,7 +2,7 @@
   "id": "panora-partner-998",
   "name": "Panora — Партнёр",
   "short_name": "Panora Партнёр",
-  "start_url": "./index.html?app=partner-998&build=10230",
+  "start_url": "./index.html?app=partner-998&build=10240",
   "scope": "./index",
   "display": "standalone",
   "background_color": "#f4f6f2",
