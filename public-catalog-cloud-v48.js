@@ -4,6 +4,7 @@
  'use strict';
  const cfg=window.PANORA_SUPABASE;
  if(!cfg?.url||!cfg?.publishableKey)return;
+ const retailLoadState=(state,text='')=>window.dispatchEvent(new CustomEvent('panora:retail-load-state',{detail:{state,text}}));
  let loading=null,timer=0,lastAutoFetchAt=0;
  const AUTO_FETCH_KEY='panora-public-catalog-auto-fetch-v934';
  const REVISION_KEY='panora-public-catalog-revision-v934';
@@ -25,6 +26,7 @@
  async function fetchCatalog(){
   if(loading)return loading;
   loading=(async()=>{
+   retailLoadState('loading','Обновляем наличие…');
    const response=await fetch(endpoint(),{
     method:'POST',
     headers:{
@@ -86,8 +88,9 @@
       window.dispatchEvent(new CustomEvent('panora:retail-catalog-updated',{detail:{count:next.length,cached}}));
     }
    }
+   retailLoadState('synced','✓ Наличие актуально');
    return next;
-  })().finally(()=>loading=null);
+  })().catch(error=>{retailLoadState(navigator.onLine?'error':'offline',navigator.onLine?'Не удалось обновить наличие':'Нет сети · показаны сохранённые данные');throw error}).finally(()=>loading=null);
   return loading;
  }
  async function refreshCatalogIfChanged(){
@@ -124,4 +127,17 @@
  window.addEventListener('focus',()=>autoFetchCatalog());
  window.addEventListener('online',()=>autoFetchCatalog({force:true}));
  start();
+})();
+
+
+/* Panora 10.26 — retail loading reminder. Presentation only; no network requests. */
+(()=>{
+ let hideTimer=0;
+ const style=document.createElement('style');style.textContent=`
+ .retail-load-reminder{position:sticky;top:0;z-index:1500;padding:12px 16px;border-bottom:1px solid #d7e3d9;background:rgba(247,251,247,.98);color:#29513a;box-shadow:0 6px 18px rgba(28,54,38,.08);font-family:Manrope,Arial,sans-serif}.retail-load-reminder[hidden]{display:none!important}.retail-load-main{display:flex;gap:11px;align-items:flex-start;max-width:900px;margin:auto}.retail-load-main i{width:17px;height:17px;flex:0 0 17px;margin-top:1px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%}.retail-load-reminder[data-state=loading] .retail-load-main i{animation:retail-load-spin .8s linear infinite}.retail-load-reminder strong{display:block;font-size:14px;line-height:1.25}.retail-load-reminder small{display:block;margin-top:3px;color:#6c7b71;font-size:11px;line-height:1.4}.retail-load-skeleton{display:none;max-width:900px;margin:10px auto 0;grid-template-columns:1fr .75fr .5fr;gap:8px}.retail-load-reminder[data-state=loading] .retail-load-skeleton{display:grid}.retail-load-skeleton span{height:7px;border-radius:999px;background:linear-gradient(90deg,#e1eae3 25%,#f8faf7 50%,#e1eae3 75%);background-size:200% 100%;animation:retail-shimmer 1.15s linear infinite}.retail-load-reminder[data-state=error]{background:#fff5f2;color:#9b443d}.retail-load-reminder[data-state=offline]{background:#fff9ed;color:#85601e}@keyframes retail-load-spin{to{transform:rotate(360deg)}}@keyframes retail-shimmer{to{background-position:-200% 0}}@media(min-width:721px){.retail-load-reminder{padding:9px 20px}.retail-load-reminder strong{font-size:12px}.retail-load-reminder small{font-size:10px}.retail-load-skeleton span{height:5px}}
+ `;document.head.append(style);
+ const ensure=()=>{let el=document.querySelector('#retailLoadReminder');if(el)return el;el=document.createElement('div');el.id='retailLoadReminder';el.className='retail-load-reminder';el.hidden=true;el.setAttribute('role','status');el.setAttribute('aria-live','polite');el.innerHTML='<div class="retail-load-main"><i aria-hidden="true"></i><div><strong></strong><small></small></div></div><div class="retail-load-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>';const anchor=document.querySelector('header,.topbar');anchor?.insertAdjacentElement('afterend',el)||document.body.prepend(el);return el};
+ window.addEventListener('panora:retail-load-state',event=>{const d=event.detail||{},el=ensure();clearTimeout(hideTimer);el.hidden=false;el.dataset.state=d.state||'loading';el.querySelector('strong').textContent=d.text||(d.state==='synced'?'✓ Актуально':'Обновляем данные…');el.querySelector('small').textContent=d.state==='loading'?'Проверяем актуальный ассортимент и наличие.':d.state==='offline'?'После восстановления сети Panora проверит актуальные данные.':d.state==='error'?'Проверьте соединение и повторите обновление.':'Обновление завершено.';if(d.state==='synced')hideTimer=setTimeout(()=>el.hidden=true,1800)});
+ window.addEventListener('offline',()=>retailLoadState('offline','Нет сети · показаны сохранённые данные'));
+ window.addEventListener('online',()=>retailLoadState('loading','Восстанавливаем актуальные данные…'));
 })();

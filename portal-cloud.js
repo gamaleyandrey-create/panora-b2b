@@ -548,6 +548,7 @@
     }
     loadPromise=(async()=>{
       const uid=session?.user?.id;if(!uid)return;
+      state('loading',labels('Загружаем кабинет…','Loading your workspace…','Cargando tu área…'));
       const hadAccount=Boolean(account?.id);
       const previousPartnerPlanSnapshot=partnerPlanSignature(read('panora-production-plans',[])||[]);
       const previousAccountSnapshot=account?JSON.stringify({
@@ -561,6 +562,7 @@
       const profiles=await api(`profiles?id=eq.${encodeURIComponent(uid)}&select=restaurant_id,role`),profile=profiles?.[0];
       if(!profile||profile.role!=='restaurant'||!profile.restaurant_id)throw new Error(labels('Email не связан с карточкой партнёра','Email is not linked to a partner profile','El email no está vinculado al perfil del socio'));
       const rid=profile.restaurant_id;
+      state('loading',labels('Загружаем заказы, накладные и оплаты…','Loading orders, delivery notes and payments…','Cargando pedidos, albaranes y pagos…'));
       const [restaurantRows,prices,orderRows,notes,payments,days,products,statusEvents,orderRules]=await Promise.all([
         api(`restaurants?id=eq.${rid}&select=id,name,email,phone,whatsapp,telegram,extra_messengers,address,legal_name,tax_id,billing_address,contact_person,delivery_comment,receiving_hours,receiving_days,notify_order,notify_shipment,notify_invoice,notify_payment,language,partner_type,active`),api(`restaurant_prices?restaurant_id=eq.${rid}&select=product_id,price`),api(`orders?restaurant_id=eq.${rid}&select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)&order=order_number.asc`),fetchPartnerDeliveryNotes(rid),fetchPartnerPayments(rid),api('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,bake_items(product_id,planned_quantity)&order=bake_date.asc'),api('rpc/panora_restaurant_catalog',{method:'POST',body:'{}'}),fetchStatusEvents(),api('rpc/panora_public_order_rules',{method:'POST',body:'{}'}).catch(()=>[])
       ]);
@@ -570,6 +572,7 @@
         try{await logoutAccount()}catch{}
         throw new Error(inactiveMessage);
       }
+      state('loading',labels('Обновляем данные кабинета…','Updating workspace data…','Actualizando los datos…'));
       const rpcPrices=Object.fromEntries((products||[]).map(item=>[item.id,Number(item.price)]));
       const hydratedOrderRows=await hydrateOrderRows(orderRows||[]);
       const own={...mapRestaurant(restaurantRows[0],prices||[]),prices:Object.keys(rpcPrices).length?rpcPrices:mapRestaurant(restaurantRows[0],prices||[]).prices};
