@@ -249,7 +249,7 @@ const orderCountSnapshot=(()=>{
 const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
 const adminOrderCloudLoading=()=>Boolean(navigator.onLine&&!adminOrderArchiveReady());
 const orderCountsForHeader=()=>{
-  // Panora 10.30: shipped orders cannot be classified until delivery notes / receipt
+  // Panora 10.31: shipped orders cannot be classified until delivery notes / receipt
   // confirmations are loaded. Never present stale mobile cache as authoritative.
   if(adminOrderCloudLoading())return{active:'…',archive:'…',loading:true};
   return{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};
@@ -499,7 +499,7 @@ const orderFollowupMeta=o=>{
 };
 const orderReceiptFinalized=o=>{
   if(String(o?.status||'')!=='shipped')return false;
-  // Panora 10.30: use the same durable receipt evidence as the delivery-note archive.
+  // Panora 10.31: use the same durable receipt evidence as the delivery-note archive.
   // The order row may already contain deliveryConfirmedAt even when a compact/partial
   // delivery-note refresh has not hydrated customerConfirmedAt yet. In that case the
   // order must stay archived instead of reappearing as active.

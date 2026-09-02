@@ -382,3 +382,6 @@
 }
 
 /* Panora 10.24 — Push quiet-hours defaults: Bakery 07:00–22:00; Partner 08:00–21:00; Retail 09:00–21:00. */
+
+/* Panora 10.31 · retail preorder online price */
+.retail-preorder-price-card{margin:14px 0;padding:16px;border:1px solid #dce6de;border-radius:16px;background:#f8fbf8;display:grid;gap:12px}.retail-preorder-price-card .retail-setting-row{margin:0}.retail-preorder-price-card>label{max-width:260px}.retail-preorder-price-card .retail-settings-intro{margin:0;color:#6f7b73;font-size:12px;line-height:1.5}@media(max-width:760px){.retail-preorder-price-card{padding:14px}.retail-preorder-price-card>label{max-width:none}}

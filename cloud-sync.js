@@ -1291,7 +1291,7 @@
   const hasFinalReceiptEvidence=note=>Boolean(note?.customerConfirmedAt||note?.offlineProof?.receivedAt);
   const preserveFinalReceiptEvidence=(remoteNote,knownNote)=>{
     if(!remoteNote||!knownNote||hasFinalReceiptEvidence(remoteNote)||!hasFinalReceiptEvidence(knownNote))return remoteNote;
-    // Panora 10.30: receipt evidence is monotonic during ordinary cloud refreshes.
+    // Panora 10.31: receipt evidence is monotonic during ordinary cloud refreshes.
     // A transient/incomplete server row must never reopen an already received delivery.
     return {...remoteNote,
       customerConfirmedAt:knownNote.customerConfirmedAt||null,
@@ -1312,7 +1312,7 @@
     });
     // Panora 9.89 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
-    // Panora 10.30 preserves only already-final receipt evidence while refreshing.
+    // Panora 10.31 preserves only already-final receipt evidence while refreshing.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
@@ -1353,7 +1353,7 @@
     const minimal=`id,restaurant_id,delivery_note_id,amount,method,note,status,received_at`;
     const extended=`${minimal},confirmed_at,confirmed_by,updated_at`;
     const full=`${extended},dispute_status,dispute_reason,disputed_at,dispute_deadline`;
-    // Panora 10.30: the bakery must be able to read payments created by older
+    // Panora 10.31: the bakery must be able to read payments created by older
     // database schemas. Start from the remembered safe shape and only use delta
     // reads when updated_at is known to exist. A missing optional column is not a
     // finance outage and must never fail the whole application refresh.
@@ -1396,7 +1396,7 @@
     catch(error){
       const slow=/Оплаты: сервер отвечает слишком долго/i.test(String(error?.message||error||''));
       if(!slow)throw error;
-      // Panora 10.30: a slow payments endpoint must not block the whole mobile bakery.
+      // Panora 10.31: a slow payments endpoint must not block the whole mobile bakery.
       // Keep the last confirmed cache and let a later wake/manual refresh retry normally.
       if(Array.isArray(local))payments=local;
       recalculateBalances();
