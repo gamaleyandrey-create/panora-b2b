@@ -961,6 +961,30 @@
     })().finally(()=>{adminCommerceRevisionPromise=null});
     return adminCommerceRevisionPromise;
   }
+  const adminOrderFollowupForCount=order=>{
+    try{
+      const note=(deliveryNotes||[]).find(item=>String(item?.orderId||'')===String(order?.id||''));
+      if(!note)return {};
+      const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};
+      return all[String(note.id||note.orderId||'')]||{};
+    }catch{return {}}
+  };
+  const adminOrderArchivedForCount=order=>{
+    const status=String(order?.status||'');
+    if(status==='cancelled')return true;
+    if(status!=='shipped')return false;
+    const note=(deliveryNotes||[]).find(item=>String(item?.orderId||'')===String(order?.id||''));
+    if(!note)return false;
+    return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||adminOrderFollowupForCount(order).manualClosedAt);
+  };
+  const publishAdminOrderArchiveCounts=()=>{
+    if(!window.panoraAdminOrdersHydrated||!window.panoraAdminOrderArchiveHydrated)return;
+    const active=(orders||[]).filter(order=>!adminOrderArchivedForCount(order)).length;
+    const archive=(orders||[]).length-active;
+    safeLocalSet('panora-order-counts-cache',JSON.stringify({active,archive,updatedAt:new Date().toISOString()}),{quotaIsWarning:false});
+    window.dispatchEvent(new CustomEvent('panora:order-counts-updated',{detail:{active,archive,authoritative:true}}));
+  };
+
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
@@ -980,11 +1004,10 @@
         orders=[...merged.values()].sort((a,b)=>Number(a?.number||0)-Number(b?.number||0));
       }else orders=(changedRows||[]).map(rowOrder);
       if(newest)localStorage.setItem(adminOrdersWatermarkKey,newest);
-      const activeOrderCount=orders.filter(order=>!['shipped','cancelled'].includes(String(order?.status||''))).length;
-      const archivedOrderCount=orders.length-activeOrderCount;
-      safeLocalSet('panora-order-counts-cache',JSON.stringify({active:activeOrderCount,archive:archivedOrderCount,updatedAt:new Date().toISOString()}),{quotaIsWarning:false});
       window.panoraAdminOrdersHydrated=true;
-      window.dispatchEvent(new CustomEvent('panora:order-counts-updated',{detail:{active:activeOrderCount,archive:archivedOrderCount,authoritative:true}}));
+      // Archive classification is authoritative only after delivery notes / receipt
+      // confirmations are available. If they were already loaded, publish now.
+      publishAdminOrderArchiveCounts();
       const afterOrders=JSON.stringify(orders);
       const afterSignature=orderUiSignature(orders);
       const changed=beforeSignature!==afterSignature;
@@ -1274,8 +1297,12 @@
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
+    window.panoraAdminOrderArchiveHydrated=true;
+    publishAdminOrderArchiveCounts();
     const changed=beforeSignature!==noteUiSignature(deliveryNotes);
-    if(changed)queueAdminCommerceRender()
+    // First receipt hydration must repaint even when the note signature happened to
+    // match cache, because mobile order archive classification was intentionally held.
+    if(changed||window.panoraAdminOrdersHydrated)queueAdminCommerceRender()
   }
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;

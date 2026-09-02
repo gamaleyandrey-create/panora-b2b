@@ -246,15 +246,13 @@ const orderCountSnapshot=(()=>{
   }catch{}
   return null;
 })();
+const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
+const adminOrderCloudLoading=()=>Boolean(navigator.onLine&&!adminOrderArchiveReady());
 const orderCountsForHeader=()=>{
-  const actual={active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};
-  // Before the first authoritative cloud read, an empty full-order cache must not
-  // masquerade as a real zero. Reuse only last confirmed non-zero counters; a
-  // cached zero is intentionally rendered as an ellipsis until Supabase confirms it.
-  if(!window.panoraAdminOrdersHydrated&&orders.length===0){
-    return orderCountSnapshot?{active:orderCountSnapshot.active>0?orderCountSnapshot.active:'…',archive:orderCountSnapshot.archive>0?orderCountSnapshot.archive:'…',loading:true}:{active:'…',archive:'…',loading:true};
-  }
-  return actual;
+  // Panora 10.25: shipped orders cannot be classified until delivery notes / receipt
+  // confirmations are loaded. Never present stale mobile cache as authoritative.
+  if(adminOrderCloudLoading())return{active:'…',archive:'…',loading:true};
+  return{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};
 };
 const paintAuthoritativeOrderCounts=counts=>{
   const local=window.panoraAdminOrdersHydrated?{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length}:null;
@@ -578,7 +576,7 @@ function renderOrders() {
   if(statusBar){
     const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
     const scopedOrders=orders.filter(orderArchiveMatches);
-    const ordersStillLoading=!window.panoraAdminOrdersHydrated&&orders.length===0;
+    const ordersStillLoading=adminOrderCloudLoading();
     statusBar.classList.toggle('is-loading',ordersStillLoading);
     statusBar.innerHTML=defs.map(([key,label])=>`<button type="button" class="${orderStatusFilter===key?'active':''}" data-order-status="${key}"><span>${label}</span><b>${ordersStillLoading?'…':scopedOrders.filter(statusGroups[key]).length}</b></button>`).join('');
     statusBar.querySelectorAll('[data-order-status]').forEach(button=>button.onclick=()=>{orderStatusFilter=button.dataset.orderStatus;renderOrders()});
@@ -637,7 +635,7 @@ function renderOrders() {
   const reset=document.querySelector('#orderFiltersReset');
   if(reset)reset.onclick=()=>{orderStatusFilter='all';orderPartnerTypeFilter='all';orderPartnerNameFilter='all';orderDateFromFilter='';orderDateToFilter='';orderFilterOpen=false;renderOrders()};
 
-  const visibleOrders=orders.filter(order=>{
+  const visibleOrders=adminOrderCloudLoading()?[]:orders.filter(order=>{
     if(!orderArchiveMatches(order))return false;
     const partner=restaurant(order.restaurantId);
     const typeMatches=orderPartnerTypeFilter==='all'||normalizePartnerType(partner?.partnerType||order.partnerType)===orderPartnerTypeFilter;
@@ -681,7 +679,7 @@ function renderOrders() {
           </tr>`;
         })
         .join("")
-    : `<tr><td class="empty-row" colspan="7">${(!window.panoraAdminOrdersHydrated&&orders.length===0)?'Загружаем заказы из облака…':orders.length?(orderArchiveView==='archive'?'В архиве по выбранным фильтрам заказов нет.':'Активных заказов по выбранным фильтрам нет.'):'Заказов пока нет.'}</td></tr>`;
+    : `<tr><td class="empty-row" colspan="7">${adminOrderCloudLoading()?'Загружаем актуальные заказы и подтверждения получения…':orders.length?(orderArchiveView==='archive'?'В архиве по выбранным фильтрам заказов нет.':'Активных заказов по выбранным фильтрам нет.'):'Заказов пока нет.'}</td></tr>`;
   document
     .querySelectorAll("[data-ship]")
     .forEach((b) => (b.onclick = () => openShipment(b.dataset.ship)));
