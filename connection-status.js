@@ -3,6 +3,16 @@
 (function(){
   let last={state:navigator.onLine?'synced':'offline',text:navigator.onLine?'Синхронизировано':'Нет сети'};
 
+  const hasUsableAdminCache=()=>{
+    if(!document.body?.classList.contains('admin-page'))return false;
+    try{
+      return ['panora-orders','panora-delivery-notes','panora-payments'].some(key=>{
+        const value=JSON.parse(localStorage.getItem(key)||'[]');
+        return Array.isArray(value)&&value.length>0;
+      });
+    }catch{return false}
+  };
+
   const labels={
     synced:'Синхронизировано',
     syncing:'Сохраняем…',
@@ -83,8 +93,11 @@
       const detail=`${String(source.title||'')} ${String(source.textContent||'')}`;
       const cacheQuotaOnly=state==='error'&&/(?:localstorage|setitem[^\n]*storage|storage[^\n]*quota|exceeded the quota|quotaexceedederror)/i.test(detail);
       if(cacheQuotaOnly)state='synced';
+      const staleWithCache=state==='error'&&hasUsableAdminCache();
+      if(staleWithCache)state='local';
       let text=source.textContent?.trim()||labels[state];
       if(cacheQuotaOnly)text=labels.synced;
+      else if(staleWithCache)text='Сохранённые данные';
       else if(state==='error') text=labels.error;
       const pending=Number(window.panoraCloud?.pendingCount||0);
       if(state==='local'&&pending>0)text='Сохранено на устройстве · отправим при подключении';
@@ -132,11 +145,16 @@
 })();
 
 
-/* Panora 10.26 — visible screen loading reminder. Presentation only: no network requests. */
+/* Panora 10.28 — visible loading reminder refined from real mobile feedback.
+   Presentation only: no network requests. */
 (()=>{
   'use strict';
   let hideTimer=0,lastState='';
   const isAdmin=()=>document.body?.classList.contains('admin-page');
+  const hasCachedAdminData=()=>{
+    if(!isAdmin())return false;
+    try{return ['panora-orders','panora-delivery-notes','panora-payments'].some(key=>{const rows=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(rows)&&rows.length>0})}catch{return false}
+  };
   const ensure=()=>{
     let el=document.querySelector('#panoraLoadReminder');
     if(el)return el;
@@ -153,23 +171,30 @@
     const el=ensure();if(!el)return;
     clearTimeout(hideTimer);lastState=state;
     const title=el.querySelector('[data-load-title]'),detail=el.querySelector('[data-load-detail]');
-    el.dataset.state=state;el.hidden=false;
+    const stale=state==='error'&&hasCachedAdminData();
+    const shownState=stale?'stale':state;
+    el.dataset.state=shownState;el.hidden=false;el.classList.remove('is-done');
     const raw=String(text||'').trim();
     if(state==='loading'||state==='syncing'){
       title.textContent=raw||'Обновляем данные…';
-      detail.textContent=isAdmin()?'Дождитесь завершения — данные на экране ещё обновляются.':'Показываем актуальные данные после завершения загрузки.';
+      detail.textContent=isAdmin()?'Дождитесь завершения — данные на экране ещё обновляются.':'Покажем актуальные данные после завершения загрузки.';
       el.classList.add('is-busy');
     }else if(state==='offline'||state==='local'){
       title.textContent='Нет сети · показаны сохранённые данные';
       detail.textContent='После восстановления связи Panora проверит актуальные данные.';
+      el.classList.remove('is-busy');
+    }else if(stale){
+      title.textContent='Не удалось проверить обновления';
+      detail.textContent='Показаны сохранённые данные. Нажмите «Обновить», когда связь станет стабильнее.';
       el.classList.remove('is-busy');
     }else if(state==='error'){
       title.textContent=raw||'Не удалось обновить данные';
       detail.textContent='Проверьте соединение и нажмите «Обновить».';
       el.classList.remove('is-busy');
     }else{
-      title.textContent='✓ Данные актуальны';detail.textContent='Обновление завершено.';el.classList.remove('is-busy');
-      hideTimer=setTimeout(()=>{if(lastState==='synced')el.hidden=true},1800);
+      title.textContent=isAdmin()?'✓ Данные актуальны':'✓ Актуально';detail.textContent='';el.classList.remove('is-busy');el.classList.add('is-done');
+      const delay=isAdmin()?1400:900;
+      hideTimer=setTimeout(()=>{if(lastState==='synced'){el.hidden=true;el.classList.remove('is-done')}},delay);
     }
   };
   const mapState=(type,text)=>{

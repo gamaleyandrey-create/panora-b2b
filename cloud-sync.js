@@ -1287,13 +1287,31 @@
     })().finally(()=>repairingFinance=null);
     return repairingFinance;
   }
+  const hasFinalReceiptEvidence=note=>Boolean(note?.customerConfirmedAt||note?.offlineProof?.receivedAt);
+  const preserveFinalReceiptEvidence=(remoteNote,knownNote)=>{
+    if(!remoteNote||!knownNote||hasFinalReceiptEvidence(remoteNote)||!hasFinalReceiptEvidence(knownNote))return remoteNote;
+    // Panora 10.28: receipt evidence is monotonic during ordinary cloud refreshes.
+    // A transient/incomplete server row must never reopen an already received delivery.
+    return {...remoteNote,
+      customerConfirmedAt:knownNote.customerConfirmedAt||null,
+      customerReceiver:knownNote.customerReceiver||'',
+      offlineProof:knownNote.offlineProof?structuredClone(knownNote.offlineProof):null
+    };
+  };
   async function loadDeliveryNotes(){
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
+    const knownNotes=Array.isArray(deliveryNotes)?deliveryNotes.slice():[];
     const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
-    const remote=(rows||[]).map(rowNote);
+    const remote=(rows||[]).map(row=>{
+      const mapped=rowNote(row);
+      const known=knownNotes.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''))
+        ||local.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''));
+      return preserveFinalReceiptEvidence(mapped,known);
+    });
     // Panora 9.89 CLEAN BASE: an arbitrary old local cache is never treated as
     // an unsent delivery note. Offline confirmations use their dedicated queue.
+    // Panora 10.28 preserves only already-final receipt evidence while refreshing.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
@@ -1314,20 +1332,32 @@
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
     cacheDeliveryNotesLocal();status('Облако ✓');
   }
-  let paymentDisputeColumnsSupported=true;
+  const paymentSchemaCacheKey='panora-payment-dispute-schema-v1028';
+  const paymentSchemaCacheTtl=7*24*60*60*1000;
+  const readPaymentSchemaSupport=()=>{try{const v=JSON.parse(localStorage.getItem(paymentSchemaCacheKey)||'null');if(v?.mode==='legacy'&&Date.now()-Number(v.at||0)<paymentSchemaCacheTtl)return false;if(!v){localStorage.setItem(paymentSchemaCacheKey,JSON.stringify({mode:'legacy',at:Date.now()}));return false}}catch{}return true};
+  let paymentDisputeColumnsSupported=readPaymentSchemaSupport();
   const paymentDisputeSchemaError=error=>/dispute_status|dispute_reason|disputed_at|dispute_deadline|42703|column .* does not exist/i.test(String(error?.message||error||''));
+  const rememberLegacyPaymentSchema=()=>{try{localStorage.setItem(paymentSchemaCacheKey,JSON.stringify({mode:'legacy',at:Date.now()}))}catch{}};
+  const paymentReadTimeoutMs=12000;
+  const paymentRequest=async path=>{
+    const controller=typeof AbortController!=='undefined'?new AbortController():null;
+    const timer=controller?setTimeout(()=>controller.abort(),paymentReadTimeoutMs):0;
+    try{return await request(path,controller?{signal:controller.signal}:{})}
+    catch(error){if(error?.name==='AbortError')throw new Error('Оплаты: сервер отвечает слишком долго. Показаны сохранённые данные.');throw error}
+    finally{if(timer)clearTimeout(timer)}
+  };
   const rowPayment=row=>({id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||null,date:localDate(row.received_at),receivedAt:row.received_at||null,amount:Number(row.amount),method:row.method,note:row.note||'',confirmed:row.status==null?true:row.status==='confirmed',confirmedAt:row.confirmed_at||row.received_at||null,status:row.status,disputeStatus:row.dispute_status||'none',disputeReason:row.dispute_reason||'',disputedAt:row.disputed_at||null,disputeDeadline:row.dispute_deadline||null,updatedAt:row.updated_at||null,recordedBy:row.confirmed_by||null});
   async function requestPaymentsCompatible(deltaQuery=''){
     const common=`id,restaurant_id,delivery_note_id,amount,method,note,status,received_at,confirmed_at,confirmed_by,updated_at`;
     if(paymentDisputeColumnsSupported){
-      try{return await request(`payments?select=${common},dispute_status,dispute_reason,disputed_at,dispute_deadline${deltaQuery}&order=received_at.asc`)}
+      try{return await paymentRequest(`payments?select=${common},dispute_status,dispute_reason,disputed_at,dispute_deadline${deltaQuery}&order=received_at.asc`)}
       catch(error){
         if(!paymentDisputeSchemaError(error))throw error;
-        paymentDisputeColumnsSupported=false;
+        paymentDisputeColumnsSupported=false;rememberLegacyPaymentSchema();
         console.warn('Panora payments: legacy schema without dispute columns; compatibility mode enabled');
       }
     }
-    return request(`payments?select=${common}${deltaQuery}&order=received_at.asc`);
+    return paymentRequest(`payments?select=${common}${deltaQuery}&order=received_at.asc`);
   }
   const paymentFinanciallyConfirmed=payment=>payment?.confirmed!==false&&(!payment?.status||payment.status==='confirmed')&&payment?.disputeStatus!=='open';
   function cachePayment(row){
@@ -1345,8 +1375,22 @@
     const beforeSignature=paymentUiSignature(typeof payments!=='undefined'?payments:[]);
     const watermark=!firstHydration?String(localStorage.getItem(adminPaymentsWatermarkKey)||''):'';
     const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-    const rows=await requestPaymentsCompatible(deltaQuery);
     const local=JSON.parse(localStorage.getItem('panora-payments')||'[]');
+    let rows;
+    try{rows=await requestPaymentsCompatible(deltaQuery);window.panoraAdminPaymentsStale=false}
+    catch(error){
+      const slow=/Оплаты: сервер отвечает слишком долго/i.test(String(error?.message||error||''));
+      if(!slow)throw error;
+      // Panora 10.28: a slow payments endpoint must not block the whole mobile bakery.
+      // Keep the last confirmed cache and let a later wake/manual refresh retry normally.
+      if(Array.isArray(local))payments=local;
+      recalculateBalances();
+      window.panoraAdminPaymentsHydrated=true;
+      window.panoraAdminPaymentsStale=true;
+      console.warn('Panora payments: slow response; using confirmed local cache');
+      window.dispatchEvent(new CustomEvent('panora:payments-cache-used',{detail:{reason:'timeout'}}));
+      return false;
+    }
     if(rows?.length){
       const mapped=rows.map(rowPayment);
       if(watermark){
@@ -1951,9 +1995,15 @@ window.panoraRecalculateBalances=recalculateBalances;
       const index=deliveryNotes.findIndex(note=>String(note?.id)===String(row.id)||String(note?.orderId)===String(row.order_id));
       if(index<0)continue;
       const note=deliveryNotes[index];
-      const nextConfirmed=row.customer_confirmed_at||null;
-      const nextReceiver=row.customer_receiver||'';
-      const nextProof=row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null;
+      const remoteReceipt={
+        customerConfirmedAt:row.customer_confirmed_at||null,
+        customerReceiver:row.customer_receiver||'',
+        offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null
+      };
+      const next=preserveFinalReceiptEvidence({...note,...remoteReceipt},note);
+      const nextConfirmed=next.customerConfirmedAt||null;
+      const nextReceiver=next.customerReceiver||'';
+      const nextProof=next.offlineProof||null;
       const before=JSON.stringify({customerConfirmedAt:note.customerConfirmedAt||null,customerReceiver:note.customerReceiver||'',offlineProof:note.offlineProof||null});
       const after=JSON.stringify({customerConfirmedAt:nextConfirmed,customerReceiver:nextReceiver,offlineProof:nextProof});
       if(before===after)continue;
