@@ -249,7 +249,7 @@ const orderCountSnapshot=(()=>{
 const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
 const adminOrderCloudLoading=()=>Boolean(navigator.onLine&&!adminOrderArchiveReady());
 const orderCountsForHeader=()=>{
-  // Panora 10.31: shipped orders cannot be classified until delivery notes / receipt
+  // Panora 10.32: shipped orders cannot be classified until delivery notes / receipt
   // confirmations are loaded. Never present stale mobile cache as authoritative.
   if(adminOrderCloudLoading())return{active:'…',archive:'…',loading:true};
   return{active:orders.filter(order=>!orderIsArchived(order)).length,archive:orders.filter(order=>orderIsArchived(order)).length};
@@ -443,6 +443,7 @@ async function restoreRestaurant(id) {
   }catch(error){alert(`Не удалось восстановить партнёра: ${error.message||error}`)}
 }
 function orderStatus(o) {
+  if (String(o?.status || "") === "shipped" && orderReceiptFinalized(o)) return "Получен";
   return (
     {
       submitted: "Новый заказ",
@@ -474,6 +475,16 @@ function customerConfirmationHtml(order) {
     : `<br>Лотки: принято ${Number(note.customerTraysReceived)} · возвращено ${Number(note.customerTraysReturned || 0)} · осталось ${Number(note.trayBalanceAfter || 0)}`;
   return `<small class="customer-confirmed">✓ Получено партнёром${receiver ? ` · ${safe(receiver)}` : ""}<br>${safe(date)}${trayInfo}</small>`;
 }
+function bakeryOrderAuditHtml(o) {
+  if (o?.createdByRole === "admin") {
+    return `<small class="bakery-order-audit">Создан пекарней${o.confirmedAt ? ` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }))}` : ""}</small>`;
+  }
+  if (o?.confirmedByRole === "admin") {
+    return `<small class="bakery-order-audit">Получение подтвердил: Пекарня${o.confirmedAt ? ` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }))}` : ""}</small>`;
+  }
+  return "";
+}
+
 function orderActions(o) {
   const step=(n,label,state)=>`<span class="order-flow-step ${state}" aria-label="Этап ${n}: ${label}"><b>${state==='done'?'✓':n}</b><span>${label}</span></span>`;
   const pricing=orderPricingState(o);
@@ -499,7 +510,7 @@ const orderFollowupMeta=o=>{
 };
 const orderReceiptFinalized=o=>{
   if(String(o?.status||'')!=='shipped')return false;
-  // Panora 10.31: use the same durable receipt evidence as the delivery-note archive.
+  // Panora 10.32: use the same durable receipt evidence as the delivery-note archive.
   // The order row may already contain deliveryConfirmedAt even when a compact/partial
   // delivery-note refresh has not hydrated customerConfirmedAt yet. In that case the
   // order must stay archived instead of reappearing as active.
@@ -670,7 +681,7 @@ function renderOrders() {
             ? orderLine(o,i)
             : `<div class="order-item"><strong>${commerceProductLabel(i.product)}</strong><span>${i.quantity} шт.</span></div>`).join("");
           return `<tr data-order-id="${commerceEscape(o.id)}" class="order-row order-row-${o.status}${o.status==='submitted'?' order-row-new':''}">
-            <td class="order-mobile-number" data-label="Заказ"><strong>${commerceOrderNumber(o)}</strong></td>
+            <td class="order-mobile-number" data-label="Заказ"><div class="order-number-stack"><strong>${commerceOrderNumber(o)}</strong><div class="order-mobile-receipt-meta">${bakeryOrderAuditHtml(o)}${customerConfirmationHtml(o)}</div></div></td>
             <td class="order-mobile-dates" data-label="Даты"><div class="order-dates">
               <span class="order-date-line"><em>Выпечка</em><strong class="date-desktop">${orderDateLabel(o.date, true)}</strong><strong class="date-mobile">${orderCompactDate(o.date)}</strong></span>
               <span class="order-date-line"><em>Доставка</em><strong class="date-desktop">${orderDateLabel(o.deliveryDate || o.date)}</strong><strong class="date-mobile">${orderCompactDate(o.deliveryDate || o.date)}</strong></span>
@@ -679,7 +690,7 @@ function renderOrders() {
             <td class="order-mobile-partner" data-label="Партнёр">${orderPartnerHtml(partner||{name:o.partnerName||'—',partnerType:o.partnerType})}</td>
             <td class="order-mobile-items" data-label="Состав"><div class="order-items">${itemHtml}</div></td>
             <td class="order-mobile-total" data-label="Сумма">${orderTotalHtml(o)}</td>
-            <td class="order-mobile-status" data-label="Статус"><span class="tag order-status-${o.status}">${orderStatus(o)}</span>${o.createdByRole==='admin'?`<small class="bakery-order-audit">Создан пекарней${o.confirmedAt?` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}))}`:''}</small>`:''}${o.confirmedByRole==='admin'&&o.createdByRole!=='admin'?`<small class="bakery-order-audit">Получение подтвердил: Пекарня${o.confirmedAt?` · ${commerceEscape(new Date(o.confirmedAt).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}))}`:''}</small>`:''}${customerConfirmationHtml(o)}</td>
+            <td class="order-mobile-status${orderReceiptFinalized(o)?' is-received':''}" data-label="Статус"><span class="tag order-status-${o.status}${orderReceiptFinalized(o)?' order-status-received':''}">${orderStatus(o)}</span><div class="order-desktop-status-meta">${bakeryOrderAuditHtml(o)}${customerConfirmationHtml(o)}</div></td>
             <td class="order-action-cell" data-label="Действие">${orderActions(o)}<button type="button" class="admin-order-message-button" data-order-messages="${commerceEscape(o.id)}" data-order-label="${commerceOrderNumber(o)}">✉ Чат по поставке</button></td>
           </tr>`;
         })

@@ -1,4 +1,4 @@
--- Panora 10.31 · retail pre-order discount for full online prepayment
+-- Panora 10.32 · retail pre-order discount for full online prepayment
 -- Run once in Supabase SQL editor.
 -- Discount is calculated ONCE from the goods total. Item unit prices and delivery fee are not discounted.
 

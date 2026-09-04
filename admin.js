@@ -329,7 +329,7 @@ async function loadRetailSettingsCloud(){
   }
  }
  }
- if(rows?.[0])saveRetailSettingsLocal(retailSettingsFromCloud(rows[0]));renderRetailFoundation();const saved=$('#retailSettingsSaved');if(saved&&rows?.[0])saved.textContent=level==='1031'?'Настройки и цена предзаказа загружены из облака':level==='635'?'Настройки загружены · выполните SQL 10.31 для цены предзаказа':level==='633'?'Настройки загружены · выполните SQL 6.34 для сообщений':level==='628'?'Настройки загружены · выполните SQL 6.33–6.35':'Обновите SQL розницы';return !!rows?.[0];
+ if(rows?.[0])saveRetailSettingsLocal(retailSettingsFromCloud(rows[0]));renderRetailFoundation();const saved=$('#retailSettingsSaved');if(saved&&rows?.[0])saved.textContent=level==='1031'?'Настройки и цена предзаказа загружены из облака':level==='635'?'Настройки загружены · выполните SQL 10.32 для цены предзаказа':level==='633'?'Настройки загружены · выполните SQL 6.34 для сообщений':level==='628'?'Настройки загружены · выполните SQL 6.33–6.35':'Обновите SQL розницы';return !!rows?.[0];
 }
 async function saveRetailSettingsCloud(settings){
  try{const rows=await retailAdminApi('retail_settings?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(retailCloudRow(settings))});return {row:rows?.[0]||null,extended:true}}

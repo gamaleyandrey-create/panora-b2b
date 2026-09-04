@@ -164,3 +164,22 @@
     box-sizing:border-box!important;
   }
 }
+
+/* Panora 10.32 — received archive cards: keep the badge separate from receipt metadata. */
+.order-mobile-receipt-meta{display:none}
+.order-desktop-status-meta{display:block}
+#orderRows .order-status-received{background:#315b42!important;border-color:#315b42!important;color:#fff!important}
+@media(max-width:720px){
+  #view-orders #orderRows .order-mobile-number .order-number-stack{display:grid!important;gap:7px!important;min-width:0!important}
+  #view-orders #orderRows .order-mobile-receipt-meta{display:grid!important;gap:3px!important;grid-column:1 / -1!important;min-width:0!important;margin-top:2px!important;padding-right:0!important}
+  #view-orders #orderRows .order-mobile-receipt-meta .bakery-order-audit,
+  #view-orders #orderRows .order-mobile-receipt-meta .customer-confirmed{
+    display:block!important;position:static!important;width:auto!important;max-width:none!important;margin:0!important;
+    color:#66736b!important;font-size:10px!important;line-height:1.35!important;text-align:left!important;white-space:normal!important
+  }
+  #view-orders #orderRows .order-mobile-receipt-meta .customer-confirmed{color:#315b42!important;font-size:11px!important;font-weight:700!important}
+  #view-orders #orderRows .order-desktop-status-meta{display:none!important}
+  #view-orders #orderRows tr.order-row td:first-child{min-height:74px!important;padding-right:112px!important;align-items:start!important}
+  #view-orders #orderRows tr.order-row td:nth-child(6){top:14px!important;right:14px!important}
+  #view-orders #orderRows tr.order-row td:nth-child(6) .tag.order-status-received{max-width:104px!important}
+}
