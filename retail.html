@@ -12,7 +12,7 @@
   <meta property="og:title" content="Panora — Розница">
   <meta name="twitter:title" content="Panora — Розница">
   <link rel="icon" href="icon.svg">
-  <link rel="stylesheet" href="retail-account.css?v=10310">
+  <link rel="stylesheet" href="retail-account.css?v=10320">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap');
     :root{--green:#315f43;--green-dark:#1d3829;--green-soft:#eaf2ea;--orange:#d97841;--paper:#fbfaf7;--cream:#f3efe6;--white:#fff;--ink:#1f2a23;--muted:#748078;--line:#dce2dc;--danger:#b9483e;--shadow:0 20px 60px rgba(29,56,41,.12)}
@@ -42,7 +42,7 @@
 </style>
   
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="retail/manifest.webmanifest?v=10310">
+  <link rel="manifest" href="retail/manifest.webmanifest?v=10320">
 
 </head>
 <body>
@@ -141,9 +141,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=10310"></script>
-<script src="public-catalog-cloud-v48.js?v=10310"></script>
-<script src="pwa-stable.js?v=10310"></script>
+<script src="supabase-config.js?v=10320"></script>
+<script src="public-catalog-cloud-v48.js?v=10320"></script>
+<script src="pwa-stable.js?v=10320"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -216,7 +216,7 @@
   function updateModeText(){const preorder=state.mode==='preorder';$('#dateSection').hidden=!preorder;$('#catalogTitle').textContent=t(preorder?'catalogPreorder':'catalogStock');$('#catalogText').textContent=t(preorder?'catalogPreorderText':'catalogStockText')}
   function setMode(mode){if(state.reservationToken)return;state.mode=mode;state.cart={};$$('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));updateModeText();renderAll()}
   function setLanguage(lang){if(!TEXT[lang])return;state.lang=lang;try{localStorage.setItem('panora-retail-language',lang)}catch{}applyStaticTranslations();updateModeText();renderAll();if($('#retailCheckoutDialog').open)renderHoldInfo()}
-  function mapError(error){const code=String(error?.message||error||'');if(code.includes('stock_changed'))return t('errStock');if(code.includes('slot_full')||code.includes('invalid_slot'))return t('errSlot');if(code.includes('reservation_expired'))return t('errExpired');if(code.includes('preorder_price_setup'))return state.lang==='ru'?'Цена предзаказа ещё не активирована на сервере. Пекарне нужно применить SQL 10.31.':state.lang==='en'?'The pre-order price is not active on the server yet. The bakery must apply SQL 10.31.':state.lang==='de'?'Der Vorbestellpreis ist auf dem Server noch nicht aktiviert. Die Bäckerei muss SQL 10.31 anwenden.':'El precio de reserva aún no está activo en el servidor. La panadería debe aplicar SQL 10.31.';if(code.includes('invalid_customer')||code.includes('invalid_phone'))return t('errCustomer');if(code.includes('invalid_email'))return t('errEmail');if(code.includes('delivery_minimum'))return t('errDeliveryMin');if(code.includes('invalid_delivery_address'))return t('errDeliveryAddress');if(code.includes('retail_closed'))return t('errClosed');if(code.includes('bake_day_closed')||code.includes('invalid_bake_date'))return t('errBake');return t('errGeneric')}
+  function mapError(error){const code=String(error?.message||error||'');if(code.includes('stock_changed'))return t('errStock');if(code.includes('slot_full')||code.includes('invalid_slot'))return t('errSlot');if(code.includes('reservation_expired'))return t('errExpired');if(code.includes('preorder_price_setup'))return state.lang==='ru'?'Цена предзаказа ещё не активирована на сервере. Пекарне нужно применить SQL 10.32.':state.lang==='en'?'The pre-order price is not active on the server yet. The bakery must apply SQL 10.32.':state.lang==='de'?'Der Vorbestellpreis ist auf dem Server noch nicht aktiviert. Die Bäckerei muss SQL 10.32 anwenden.':'El precio de reserva aún no está activo en el servidor. La panadería debe aplicar SQL 10.32.';if(code.includes('invalid_customer')||code.includes('invalid_phone'))return t('errCustomer');if(code.includes('invalid_email'))return t('errEmail');if(code.includes('delivery_minimum'))return t('errDeliveryMin');if(code.includes('invalid_delivery_address'))return t('errDeliveryAddress');if(code.includes('retail_closed'))return t('errClosed');if(code.includes('bake_day_closed')||code.includes('invalid_bake_date'))return t('errBake');return t('errGeneric')}
   async function rpc(name,body){return publicFetch(`rpc/${name}`,{method:'POST',body})}
   function holdPayload(){return{p_source:state.mode==='preorder'?'bake_preorder':'stock',p_bake_date:state.mode==='preorder'?state.date:null,p_pickup_date:state.mode==='preorder'?state.date:today(),p_pickup_slot:state.slot,p_fulfillment:state.fulfillment,p_items:cartData().map(x=>({product_id:x.p.id,quantity:x.quantity}))}}
   function renderHoldInfo(){const root=$('#retailHoldInfo');if(!state.reservationToken){root.textContent='';return}const left=Math.max(0,state.reservationExpires-Date.now()),seconds=Math.ceil(left/1000),mm=String(Math.floor(seconds/60)).padStart(2,'0'),ss=String(seconds%60).padStart(2,'0');root.innerHTML=`<strong>${esc(t('hold',retailSettings().reservationMinutes))}</strong><br>${esc(t('holdLeft',`${mm}:${ss}`))}`;if(left<=0){clearInterval(state.reservationTimer);state.reservationTimer=0;$('#retailConfirmOrder').disabled=true;$('#retailCheckoutError').textContent=t('errExpired')}}
@@ -254,7 +254,7 @@
 </script>
 
 
-<script src="retail-account.js?v=10310"></script>
+<script src="retail-account.js?v=10320"></script>
 
 </body>
 </html>

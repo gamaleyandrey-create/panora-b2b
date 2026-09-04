@@ -130,7 +130,7 @@
 })();
 
 
-/* Panora 10.31 — retail loading reminder refined after mobile field test. Presentation only; no network requests. */
+/* Panora 10.32 — retail loading reminder refined after mobile field test. Presentation only; no network requests. */
 (()=>{
  let hideTimer=0;
  const style=document.createElement('style');style.textContent=`
