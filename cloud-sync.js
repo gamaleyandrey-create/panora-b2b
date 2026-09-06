@@ -5,9 +5,19 @@
   const restaurantBaselineKey='panora-cloud-restaurants-baseline-v415';
   const adminRestaurantPricesKey='panora-admin-restaurant-prices-v420';
   const ingredientCostsKey='panora-ingredient-costs';
+  const recipePendingSignatureKey='panora-recipe-pending-signature-v1034';
   let ingredientCostTimer=0,ingredientCostsSaving=null;
   const readPending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey)||'{}')||{}}catch{return{}}};
   const readObject=(key)=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{return{}}};
+  const recipeSignature=value=>{
+    const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+    const normalized={};
+    Object.keys(source).sort().forEach(productId=>{normalized[productId]=(Array.isArray(source[productId])?source[productId]:[]).map(item=>({
+      name:String(item?.name||''),qty:Number(item?.qty||0),unit:String(item?.unit||'g'),stock:Number(item?.stock||0),margin:Number(item?.margin||0),
+      sourceIngredientName:String(item?.sourceIngredientName||''),sourceUnit:String(item?.sourceUnit||'g'),sourceYieldPct:Number(item?.sourceYieldPct||0)
+    }))});
+    return JSON.stringify(normalized);
+  };
   let pending=readPending();
   let revisions=readObject(revisionKey),conflicts=readObject(conflictKey),accepted=readObject(acceptedKey),baselines=readObject(baselineKey);
   const sectionKeys={products:'panora-products',recipes:'panora-recipes',restaurants:'panora-restaurants',plans:'panora-production-plans'};
@@ -141,7 +151,7 @@
   const forceSections=new Set();
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;safeLocalSet(pendingKey,JSON.stringify(pending));showPending()};
-  const clearPending=section=>{delete pending[section];if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
+  const clearPending=section=>{delete pending[section];if(section==='recipes')localStorage.removeItem(recipePendingSignatureKey);if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
   let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,receiptPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminLeaderHeartbeat=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
@@ -708,15 +718,38 @@
   async function loadRecipes(){
     const rows=await request('recipe_items?select=product_id,position,ingredient_name,quantity,unit,stock,margin,source_ingredient_name,source_unit,source_yield_pct,updated_at&order=product_id.asc,position.asc');
     const local=JSON.parse(localStorage.getItem('panora-recipes')||'{}');
-    if(recipeDirty||savingRecipes){await flushRecipes();return}
+    if(savingRecipes){await savingRecipes}
     rememberRevision('recipes',rows);
     if(rows?.length){
-      await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       const remote={};
-      rows.forEach(row=>{const pos=Number(row.position||0),localItem=local?.[row.product_id]?.[pos]||{};(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0),sourceIngredientName:row.source_ingredient_name??localItem.sourceIngredientName??'',sourceUnit:row.source_unit??localItem.sourceUnit??'g',sourceYieldPct:Number(row.source_yield_pct??localItem.sourceYieldPct??0)})});
+      // Cloud values are canonical on every device. Never fill nullable cloud
+      // fields from this browser's local cache: that was the source of mobile /
+      // desktop recipe differences when one device had older semi-finished data.
+      rows.forEach(row=>{(remote[row.product_id]??=[]).push({name:row.ingredient_name,qty:Number(row.quantity),unit:row.unit,stock:Number(row.stock||0),margin:Number(row.margin||0),sourceIngredientName:row.source_ingredient_name??'',sourceUnit:row.source_unit??'g',sourceYieldPct:Number(row.source_yield_pct??0)})});
+      const localSig=recipeSignature(local),remoteSig=recipeSignature(remote),queuedSig=String(localStorage.getItem(recipePendingSignatureKey)||'');
+      if(recipeDirty){
+        if(queuedSig&&queuedSig===localSig){
+          // This is a real edit queued by 10.34 (including an offline edit from
+          // a previous session). Preserve it and use the normal conflict guard.
+          await flushRecipes();return;
+        }
+        // Legacy boolean pending flags do not prove a user edit. They could
+        // survive an already completed sync and silently overwrite the common
+        // cloud recipe on the next device. Keep a reserve, then take cloud as
+        // the shared source of truth.
+        if(localSig!==remoteSig)saveBackup(['recipes'],'sync');
+        recipeDirty=false;clearPending('recipes');delete conflicts.recipes;saveConflicts();
+      }
+      await window.panoraFormDrafts?.acceptCommittedWithin?.('#recipeList');
       recipes=remote;if(typeof syncAdminProductRegistry==='function')syncAdminProductRegistry();safeLocalSet('panora-recipes',JSON.stringify(recipes),{quotaIsWarning:false});safeLocalSet('panora-recipes-version','cloud-2',{quotaIsWarning:false});window.dispatchEvent(new CustomEvent('panora:recipes-changed'));
       if(typeof renderAll==='function')renderAll();
-    }else if(Object.keys(local).length){recipes=local;ready=true;recipeDirty=true;recipeRevision++;await flushRecipes()}
+    }else if(Object.keys(local).length){
+      const queuedSig=String(localStorage.getItem(recipePendingSignatureKey)||'');
+      // Only a positively identified user edit may populate an empty cloud.
+      // Old device defaults must never become authoritative merely by opening.
+      if(recipeDirty&&queuedSig&&queuedSig===recipeSignature(local)){recipes=local;ready=true;await flushRecipes()}
+      else{recipeDirty=false;clearPending('recipes')}
+    }
   }
   async function saveRecipesNow(){
     if(!ready||typeof recipes==='undefined')return false;
@@ -1910,7 +1943,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);if(error?.panoraConflict){showConflicts();return}audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){if(applyingCloud)return;const current=typeof plans!=='undefined'?plans:JSON.parse(localStorage.getItem('panora-production-plans')||'[]');const signature=planSignature(current);if(signature===String(baselines.plans||'')){clearPending('plans');delete conflicts.plans;saveConflicts();return}markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{showPending();fail('план',error)}),350)}
   function queueProducts(){if(applyingCloud)return;const signature=productSignature(localProducts());if(signature===String(baselines.products||'')){productDirty=false;clearPending('products');return}productDirty=true;markPending('products');clearTimeout(productTimer);productTimer=setTimeout(()=>flushProducts().catch(error=>fail('товары',error)),350)}
-  function queueRecipes(){recipeDirty=true;recipeRevision++;markPending('recipes');clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
+  function queueRecipes(){recipeDirty=true;recipeRevision++;try{localStorage.setItem(recipePendingSignatureKey,recipeSignature(typeof recipes!=='undefined'?recipes:JSON.parse(localStorage.getItem('panora-recipes')||'{}')))}catch{}markPending('recipes');clearTimeout(recipeTimer);recipeTimer=setTimeout(()=>flushRecipes().catch(error=>fail('рецептуры',error)),400)}
   function queueRestaurants(){
     markPending('restaurants');
     clearTimeout(restaurantTimer);
@@ -2221,7 +2254,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     retrying=(async()=>{status(pendingCount()?'Отправляем изменения…':'Проверяем синхронизацию…');
     try{
       if(pending.products)await flushProducts();
-      if(pending.recipes)await flushRecipes();
+      if(pending.recipes)await loadRecipes();
       if(pending.ingredientCosts)await flushIngredientCosts();
       if(pending.restaurants)await saveRestaurantsNow();
       if(pending.plans)await savePlansNow();
@@ -2375,6 +2408,10 @@ window.panoraRecalculateBalances=recalculateBalances;
         const tasks=[];if(rawChanged)tasks.push(syncRawStockNow({quiet:true,delta:true}));if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
         if(tasks.length)await Promise.allSettled(tasks);
       }else if(['recipes','purchase'].includes(view)){
+        if(view==='recipes'&&!window.panoraRecipeEditing&&!document.activeElement?.closest?.('#recipeList')){
+          const recipesChanged=await adminReferenceComponentChanged('recipes');
+          if(recipesChanged)await loadRecipes();
+        }
         await loadIngredientCosts();
       }else if(view==='restaurants'){
         await refreshRestaurantPricesDirect();
@@ -2389,6 +2426,17 @@ window.panoraRecalculateBalances=recalculateBalances;
     clearTimeout(adminWakeRefreshTimer);
     adminWakeRefreshTimer=setTimeout(()=>refreshAdminCommerceOnWake(reason).catch(error=>console.warn('Panora commerce wake refresh',reason,error)),delay);
   };
+  document.addEventListener('click',event=>{
+    const recipeViewButton=event.target?.closest?.('.admin-nav [data-view="recipes"]');
+    if(!recipeViewButton||!ready||!navigator.onLine)return;
+    setTimeout(async()=>{
+      if(window.panoraRecipeEditing||document.activeElement?.closest?.('#recipeList'))return;
+      try{
+        const changed=await adminReferenceComponentChanged('recipes');
+        if(changed)await loadRecipes();
+      }catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora recipe open refresh',error)}
+    },80);
+  });
   window.addEventListener('online',()=>{pending=readPending();if(ready){retrySync();scheduleAdminCommerceWakeRefresh('online',100)}});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
   const startPendingWatchdog=()=>{
