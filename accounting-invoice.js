@@ -230,6 +230,7 @@
         Number(note.prices?.[item.product] || 0).toFixed(2),
         (Number(item.quantity) * Number(note.prices?.[item.product] || 0)).toFixed(2),
       ]),
+      ...(Number(note.deliveryCharge||0)>0?[[(documentLanguage === "ru" ? "Доставка" : documentLanguage === "es" ? "Entrega" : "Delivery"),1,Number(note.deliveryCharge||0).toFixed(2),Number(note.deliveryCharge||0).toFixed(2)]]:[]),
       [],
       [text("total"), Number(note.total || 0).toFixed(2)],
       [text("paid"), paidAmount(note).toFixed(2)],
@@ -365,7 +366,7 @@ ${lines}
       <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(text("product"))}</span><span>${esc(text("quantity"))}</span><span>${esc(text("price"))}</span><span>${esc(text("amount"))}</span></div>${note.items.map((item) => {
         const issued=(meta.lines||[]).find(x=>x.product_id===item.product),price=Number(issued?.unit_price_net ?? note.prices?.[item.product] ?? 0),amount=Number(issued?.tax_base ?? (Number(item.quantity)*price));
         return `<div class="accounting-line"><strong>${esc(issued?.name||productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(amount))}</strong></div>`;
-      }).join("")}</div>
+      }).join("")}${Number(note.deliveryCharge||0)>0?`<div class="accounting-line"><strong>${esc(documentLanguage === "ru" ? "Доставка" : documentLanguage === "es" ? "Entrega" : "Delivery")}</strong><span>1</span><span>${esc(money(note.deliveryCharge))}</span><strong>${esc(money(note.deliveryCharge))}</strong></div>`:""}</div>
       ${meta.aeatType?`<section class="accounting-tax-meta"><p><span>Tipo AEAT</span><strong>${esc(meta.aeatType)}</strong></p>${meta.rectifiesNumber?`<p><span>Rectifica</span><strong>${esc(meta.rectifiesNumber)}</strong></p>`:''}${meta.rectificationMode?`<p><span>Modalidad</span><strong>${esc(meta.rectificationMode)}</strong></p>`:''}</section>`:''}<section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
       <footer><span>${esc(text("bakerySignature"))} __________________</span><span>${esc(text("restaurantSignature"))} __________________</span></footer>
     </article>

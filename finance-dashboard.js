@@ -243,18 +243,18 @@
     const retailAllocatedUnitCost=(order,product)=>{const row=retailSaleCost.get(`${String(order?.id||'')}\u0000${String(product||'')}`);return row&&Number(row.qty)>0?Number(row.cost||0)/Number(row.qty):retailUnitRawCost(order,product)};
     const notes=allNotes.filter(note=>inPeriod(note.date));
     const productMap=new Map(),partnerMap=new Map();
-    let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0,b2bReturnsGross=0,b2bReturnedPieces=0;
+    let b2bGrossRevenue=0,b2bRevenueNet=0,b2bSalesVat=0,b2bCogs=0,b2bPieces=0,b2bReturnsGross=0,b2bReturnedPieces=0,b2bLogisticsCost=0,b2bDeliveryRevenue=0;
 
     notes.forEach(note=>{
-      const noteGross=Number(note.total||0),noteNet=Number(note.subtotal??(noteGross-Number(note.tax||0))),noteVat=Number(note.tax??Math.max(0,noteGross-noteNet));
-      b2bGrossRevenue+=noteGross;b2bRevenueNet+=noteNet;b2bSalesVat+=noteVat;
+      const noteGross=Number(note.total||0),deliveryCharge=Math.max(0,Number(note.deliveryCharge||0)),transportCost=Math.max(0,Number(note.transportCost||0)),goodsGross=Math.max(0,Number(note.goodsTotal??Math.max(0,noteGross-deliveryCharge))),goodsNet=Number(note.subtotal??(goodsGross-Number(note.tax||0))),noteNet=goodsNet+deliveryCharge,noteVat=Number(note.tax??Math.max(0,goodsGross-goodsNet));
+      b2bGrossRevenue+=noteGross;b2bRevenueNet+=noteNet;b2bSalesVat+=noteVat;b2bLogisticsCost+=transportCost;b2bDeliveryRevenue+=deliveryCharge;
       const items=Array.isArray(note.items)?note.items:[],pricesSnapshot=note.prices||{};
       const itemNetTotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(pricesSnapshot[item.product]||0),0)||noteNet||1;
       items.forEach(item=>{
         const qty=Math.max(0,Number(item.quantity||0));if(!qty)return;
         const unitCogs=b2bAllocatedUnitCost(note,item.product),itemCogs=unitCogs*qty;
         const sourceGross=qty*Number(pricesSnapshot[item.product]||0);
-        const itemNet=itemNetTotal>0?noteNet*(sourceGross/itemNetTotal):0;
+        const itemNet=itemNetTotal>0?goodsNet*(sourceGross/itemNetTotal):0;
         b2bCogs+=itemCogs;b2bPieces+=qty;
         const p=productMap.get(item.product)||{product:item.product,pieces:0,revenue:0,cogs:0,b2bPieces:0,retailPieces:0,b2bRevenue:0,retailRevenue:0};
         p.pieces+=qty;p.b2bPieces+=qty;p.revenue+=itemNet;p.b2bRevenue+=itemNet;p.cogs+=itemCogs;productMap.set(item.product,p);
@@ -262,6 +262,7 @@
         const partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};
         partner.pieces+=qty;partner.revenue+=itemNet;partner.cogs+=itemCogs;partnerMap.set(k,partner);
       });
+      const k=String(note.restaurantId||''),partner=partnerMap.get(k)||{id:k,pieces:0,revenue:0,cogs:0};partner.revenue+=deliveryCharge;partner.cogs+=transportCost;partner.logisticsCost=(partner.logisticsCost||0)+transportCost;partner.deliveryRevenue=(partner.deliveryRevenue||0)+deliveryCharge;partnerMap.set(k,partner);
     });
 
     // Panora 6.87 B2B: a return linked to a delivery note is a separate credit event.
@@ -386,11 +387,11 @@
     });
     const stockLossesNet=lossRows.reduce((sum,row)=>sum+Math.max(0,Number(row.grossAmount||0)),0);
     const operatingCostsNet=expensesNet+stockLossesNet;
-    const grossRevenue=b2bGrossRevenue+retailGrossRevenue,revenueNet=b2bRevenueNet+retailRevenueNet,salesVat=b2bSalesVat+retailSalesVat,cogs=b2bCogs+retailCogs,pieces=b2bPieces+retailPieces;
+    const grossRevenue=b2bGrossRevenue+retailGrossRevenue,revenueNet=b2bRevenueNet+retailRevenueNet,salesVat=b2bSalesVat+retailSalesVat,cogs=b2bCogs+retailCogs+b2bLogisticsCost,pieces=b2bPieces+retailPieces;
     const grossProfit=revenueNet-cogs,operatingProfit=grossProfit-operatingCostsNet;
     return {grossRevenue,revenueNet,salesVat,cogs,pieces,expensesNet,stockLossesNet,operatingCostsNet,inputVat,rawPurchasesNet,rawPurchasesGross,rawPurchasesVat,grossProfit,operatingProfit,
       vatPayable:Math.max(0,salesVat-inputVat),products:[...productMap.values()],partners:[...partnerMap.values()],periodExpenses:[...manualExpenses,...lossRows],lossRows,
-      b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,returnsGross:b2bReturnsGross,returnedPieces:b2bReturnedPieces,grossProfit:b2bRevenueNet-b2bCogs},
+      b2b:{grossRevenue:b2bGrossRevenue,revenueNet:b2bRevenueNet,salesVat:b2bSalesVat,cogs:b2bCogs,pieces:b2bPieces,returnsGross:b2bReturnsGross,returnedPieces:b2bReturnedPieces,logisticsCost:b2bLogisticsCost,deliveryRevenue:b2bDeliveryRevenue,grossProfit:b2bRevenueNet-b2bCogs-b2bLogisticsCost},
       retail:{grossRevenue:retailGrossRevenue,revenueNet:retailRevenueNet,salesVat:retailSalesVat,cogs:retailCogs,pieces:retailPieces,grossProfit:retailRevenueNet-retailCogs,deliveryGross:retailDeliveryGross,deliveryNet:retailDeliveryNet,breadGross:retailBreadGross,breadNet:retailBreadNet,refundsGross:retailRefundsGross,completed:retailCompleted.length,refunded:retailRefunded.length,vatRate:retailVatRate}};
   }
 
@@ -410,7 +411,7 @@
     document.querySelector('#financeRevenueGross').textContent=`С НДС: ${money(x.grossRevenue)}`;
     document.querySelector('#financeCogs').textContent='−'+money(Math.abs(x.cogs));
     const setText=(id,value)=>{const el=document.querySelector(id);if(el)el.textContent=value};
-    setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bReturns',money(x.b2b.returnsGross));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
+    setText('#financeB2bRevenue',money(x.b2b.revenueNet));setText('#financeB2bReturns',money(x.b2b.returnsGross));setText('#financeB2bCogs',money(x.b2b.cogs));setText('#financeB2bLogisticsCost',money(x.b2b.logisticsCost));setText('#financeB2bDeliveryRevenue',money(x.b2b.deliveryRevenue));setText('#financeB2bGrossProfit',money(x.b2b.grossProfit));setText('#financeB2bPieces',`${x.b2b.pieces} шт.`);
     setText('#financeRetailRevenue',money(x.retail.revenueNet));setText('#financeRetailRevenueGross',`С НДС: ${money(x.retail.grossRevenue)}`);setText('#financeRetailBreadRevenue',money(x.retail.breadNet));setText('#financeRetailDeliveryRevenue',money(x.retail.deliveryNet));setText('#financeRetailRefunds',money(x.retail.refundsGross));setText('#financeRetailCogs',money(x.retail.cogs));setText('#financeRetailGrossProfit',money(x.retail.grossProfit));setText('#financeRetailPieces',`${x.retail.pieces} шт.`);setText('#financeRetailOrders',`${x.retail.completed} завершённых продаж · ${x.retail.refunded} возвратов`);
     setSignedState(document.querySelector('#financeRetailGrossProfit'),x.retail.grossProfit);
 

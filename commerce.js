@@ -154,10 +154,13 @@ const orderTotalHtml = (o) => {
   if (pricing.reason === "empty") return `<strong class="order-total-error">Нет позиций</strong><small class="order-total-error-hint">Отгрузка заблокирована</small>`;
   return `<strong class="order-total-error">Цена не рассчитана</strong><small class="order-total-error-hint">Проверьте состав и цены</small>`;
 };
+const b2bInvoiceTotal = (note) => typeof window.panoraB2BEffectiveNoteTotal === "function"
+  ? Math.max(0, Number(window.panoraB2BEffectiveNoteTotal(note) || 0))
+  : Math.max(0, Number(note?.total || 0));
 const shippedFor = (id) =>
   deliveryNotes
     .filter((n) => n.restaurantId === id)
-    .reduce((s, n) => s + n.total, 0);
+    .reduce((s, n) => s + b2bInvoiceTotal(n), 0);
 const paymentConfirmed = (payment) => payment?.confirmed !== false && (!payment?.status || payment.status === "confirmed") && payment?.disputeStatus !== "open";
 const paymentIsReturnCredit = payment => /\[panora:b2b-return-credit:[^\]]+\]/.test(String(payment?.note||""));
 const paidFor = (id) =>
@@ -1558,6 +1561,13 @@ function openShipment(id) {
     previousTrays = traysAtRestaurant(r.id);
   form.orderId.value = id;
   form.paymentDueDate.value = "";
+  form.deliveryMethod.value = "bakery_vehicle";
+  form.deliveryKm.value = "0";
+  form.deliveryRate.value = "0";
+  form.deliveryExtraCost.value = "0";
+  form.deliveryCharge.value = "0";
+  const logisticsReady=window.panoraB2BLogisticsReady===true,logisticsBox=form.querySelector('.shipment-logistics');
+  if(logisticsBox){logisticsBox.classList.toggle('is-disabled',!logisticsReady);logisticsBox.querySelectorAll('input,select').forEach(el=>el.disabled=!logisticsReady);let warning=logisticsBox.querySelector('.shipment-logistics-setup');if(!logisticsReady&&!warning){warning=document.createElement('small');warning.className='shipment-logistics-setup';warning.textContent='Учёт логистики пока выключен. Примените SQL Panora 10.36 и обновите приложение.';logisticsBox.appendChild(warning)}else if(logisticsReady&&warning)warning.remove()}
   form.traysDelivered.value = "";
   form.traysReturned.value = "";
   summary.innerHTML = `<strong>${commerceOrderNumber(o)} · ${commerceEscape(r.name)}</strong><p class="shipment-help">При необходимости уменьшите фактическое количество. Увеличить выше заказа нельзя.</p><div class="shipment-items">${o.items.map((i) => `<label class="shipment-item"><span><strong>${commerceProductLabel(i.product)}</strong><small>Заказано: ${i.quantity} шт. · ${euro(prices[i.product])}/шт.</small></span><input data-shipment-quantity data-product="${i.product}" data-max="${i.quantity}" type="number" inputmode="numeric" min="0" max="${i.quantity}" step="1" value="${i.quantity}"></label>`).join("")}</div><div class="shipment-total"><span>Фактическая сумма</span><strong id="shipmentActualTotal"></strong></div><div class="shipment-debt-preview"><span>Задолженность после поставки</span><strong id="shipmentDebtAfter"></strong></div>`;
@@ -1570,8 +1580,15 @@ function openShipment(id) {
       );
       subtotal += qty * Number(prices[input.dataset.product] || 0);
     });
-    const total =
+    const goodsTotal =
         subtotal * (1 + Number(o.taxRate ?? bakerySettings.taxRate) / 100),
+      deliveryMethod = String(form.deliveryMethod?.value || "bakery_vehicle"),
+      deliveryKm = Math.max(0, Number(form.deliveryKm?.value) || 0),
+      deliveryRate = Math.max(0, Number(form.deliveryRate?.value) || 0),
+      deliveryExtraCost = Math.max(0, Number(form.deliveryExtraCost?.value) || 0),
+      deliveryCharge = Math.max(0, Number(form.deliveryCharge?.value) || 0),
+      transportCost = deliveryMethod === "partner_pickup" ? 0 : deliveryKm * deliveryRate + deliveryExtraCost,
+      total = goodsTotal + deliveryCharge,
       paid = Math.min(total, Math.max(0, Number(form.paid.value) || 0)),
       traysDelivered = Math.max(
         0,
@@ -1582,6 +1599,7 @@ function openShipment(id) {
         Math.trunc(Number(form.traysReturned.value) || 0),
       );
     document.querySelector("#shipmentActualTotal").textContent = euro(total);
+    const transportEl=document.querySelector("#shipmentTransportCost");if(transportEl)transportEl.textContent=euro(transportCost);
     document.querySelector("#shipmentDebtAfter").textContent = euro(
       Math.max(0, financeNetFor(r.id) + total - paid),
     );
@@ -1593,6 +1611,7 @@ function openShipment(id) {
     .forEach((input) => input.addEventListener("input", update));
   form.paid.value = "";
   form.paid.oninput = update;
+  [form.deliveryMethod,form.deliveryKm,form.deliveryRate,form.deliveryExtraCost,form.deliveryCharge].forEach(el=>{if(el)el.oninput=update;if(el&&el.tagName==='SELECT')el.onchange=update});
   form.traysDelivered.oninput = update;
   form.traysReturned.oninput = update;
   update();
@@ -1668,7 +1687,14 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     ),
     taxRate = Number(o.taxRate ?? bakerySettings.taxRate),
     tax = (subtotal * taxRate) / 100,
-    total = subtotal + tax,
+    goodsTotal = subtotal + tax,
+    deliveryMethod = String(f.get("deliveryMethod") || "bakery_vehicle"),
+    deliveryKm = Math.max(0, Number(f.get("deliveryKm")) || 0),
+    deliveryRate = Math.max(0, Number(f.get("deliveryRate")) || 0),
+    deliveryExtraCost = Math.max(0, Number(f.get("deliveryExtraCost")) || 0),
+    transportCost = deliveryMethod === "partner_pickup" ? 0 : deliveryKm * deliveryRate + deliveryExtraCost,
+    deliveryCharge = Math.max(0, Number(f.get("deliveryCharge")) || 0),
+    total = goodsTotal + deliveryCharge,
     paid = Math.min(total, Math.max(0, Number(f.get("paid")))),
     traysDelivered = Math.max(
       0,
@@ -1710,6 +1736,7 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
         paymentAmount: paid,
         paymentMethod: f.get("method") || "Наличные",
         paymentDueDate: f.get("paymentDueDate") || null,
+        goodsTotal, invoiceTotal:total, deliveryMethod, deliveryKm, deliveryRate, deliveryExtraCost, transportCost, deliveryCharge,
         traysDelivered,
         traysReturned,
         trayBalanceAfter,
@@ -1732,7 +1759,9 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
         subtotal,
         taxRate,
         tax,
+        goodsTotal,
         total,
+        deliveryMethod,deliveryKm,deliveryRate,deliveryExtraCost,transportCost,deliveryCharge,
         paid,
         traysDelivered,
         traysReturned,

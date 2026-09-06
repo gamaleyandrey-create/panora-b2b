@@ -729,7 +729,7 @@
       const localSig=recipeSignature(local),remoteSig=recipeSignature(remote),queuedSig=String(localStorage.getItem(recipePendingSignatureKey)||'');
       if(recipeDirty){
         if(queuedSig&&queuedSig===localSig){
-          // This is a real edit queued by 10.35 (including an offline edit from
+          // This is a real edit queued by 10.36 (including an offline edit from
           // a previous session). Preserve it and use the normal conflict guard.
           await flushRecipes();return;
         }
@@ -1094,13 +1094,14 @@
     window.panoraRefreshNewOrderBadge?.();
     return saved;
   }
-  async function shipOrderAtomic({orderId,items,paymentAmount=0,paymentMethod='Наличные',paymentDueDate=null,traysDelivered=0,traysReturned=0,trayBalanceAfter=0}){
+  async function shipOrderAtomic({orderId,items,paymentAmount=0,paymentMethod='Наличные',paymentDueDate=null,goodsTotal=0,invoiceTotal=0,deliveryMethod='bakery_vehicle',deliveryKm=0,deliveryRate=0,deliveryExtraCost=0,transportCost=0,deliveryCharge=0,traysDelivered=0,traysReturned=0,trayBalanceAfter=0}){
     if(!ready)throw new Error('Нет соединения с облаком');
     if(shippingLocks.has(orderId)){audit('shipment.duplicate_prevented',`Заказ ${orderId}: повторное нажатие заблокировано`,'warning');throw new Error('Отгрузка уже выполняется')}
     const localNote=deliveryNotes.find(entry=>entry.orderId===orderId);
     if(localNote){audit('shipment.duplicate_prevented',`Заказ ${orderId}: накладная уже существует`,'warning');return localNote}
     shippingLocks.add(orderId);
     try{
+      if((Number(deliveryKm||0)>0||Number(deliveryRate||0)>0||Number(deliveryExtraCost||0)>0||Number(deliveryCharge||0)>0||String(deliveryMethod||'bakery_vehicle')!=='bakery_vehicle')&&!deliveryLogisticsColumnsSupported)throw new Error('Для учёта доставки примените SQL Panora 10.36. Отгрузка не проведена, данные не потеряны.');
       if(loadingOrders)await loadingOrders;
       clearTimeout(orderTimer);orderTimer=0;
       const existing=await request(`delivery_notes?order_id=eq.${encodeURIComponent(orderId)}&select=id,note_number&limit=1`);
@@ -1127,7 +1128,8 @@
       body:JSON.stringify({
         trays_delivered:Number(traysDelivered||0),
         trays_returned:Number(traysReturned||0),
-        tray_balance_after:Number(trayBalanceAfter||0)
+        tray_balance_after:Number(trayBalanceAfter||0),
+        ...(deliveryLogisticsColumnsSupported?{goods_total:Math.max(0,Number(goodsTotal||0)),total:Math.max(0,Number(invoiceTotal||goodsTotal||0)),delivery_method:deliveryMethod||'bakery_vehicle',delivery_distance_km:Math.max(0,Number(deliveryKm||0)),delivery_rate_per_km:Math.max(0,Number(deliveryRate||0)),delivery_extra_cost:Math.max(0,Number(deliveryExtraCost||0)),transport_cost:Math.max(0,Number(transportCost||0)),delivery_charge:Math.max(0,Number(deliveryCharge||0))}:{})
       })
     });
     await loadOrders();await loadPayments();await loadDeliveryNotes();
@@ -1272,7 +1274,7 @@
     offlineReceivedAt:String(note?.offlineProof?.receivedAt||''),offlineReceiver:String(note?.offlineProof?.receiver||''),
     offlineSignaturePresent:Boolean(note?.offlineProof?.signature),offlinePending:Boolean(note?.offlineProof?.pending),
     traysDelivered:Number(note?.traysDelivered||0),traysReturned:Number(note?.traysReturned||0),
-    trayBalanceAfter:Number(note?.trayBalanceAfter||0)
+    trayBalanceAfter:Number(note?.trayBalanceAfter||0),goodsTotal:Number((note?.goodsTotal ?? note?.total) || 0),deliveryMethod:String(note?.deliveryMethod||''),deliveryKm:Number(note?.deliveryKm||0),deliveryRate:Number(note?.deliveryRate||0),deliveryExtraCost:Number(note?.deliveryExtraCost||0),transportCost:Number(note?.transportCost||0),deliveryCharge:Number(note?.deliveryCharge||0)
   })).sort((a,b)=>a.id.localeCompare(b.id)));
   const paymentUiSignature=list=>stableJson((list||[]).map(payment=>({
     id:String(payment?.id||''),restaurantId:String(payment?.restaurantId||''),deliveryNoteId:String(payment?.deliveryNoteId||''),
@@ -1294,16 +1296,32 @@
     const subtotal=taxRate>0?gross/(1+taxRate/100):gross;
     return{gross,subtotal,taxRate,tax:Math.max(0,gross-subtotal)};
   }
+
+  const deliveryLogisticsSchemaKey='panora-delivery-logistics-schema-v1036';
+  let deliveryLogisticsColumnsSupported=(()=>{try{return localStorage.getItem(deliveryLogisticsSchemaKey)==='1'}catch{return false}})(),deliveryLogisticsProbeDone=false;
+  const deliveryLogisticsSchemaError=error=>/42703|column .* does not exist|goods_total|delivery_method|delivery_distance_km|delivery_rate_per_km|delivery_extra_cost|transport_cost|delivery_charge/i.test(String(error?.message||error||''));
+  const rememberDeliveryLogisticsSupport=value=>{deliveryLogisticsColumnsSupported=!!value;try{localStorage.setItem(deliveryLogisticsSchemaKey,value?'1':'0')}catch{};window.panoraB2BLogisticsReady=deliveryLogisticsColumnsSupported};
+  window.panoraB2BLogisticsReady=deliveryLogisticsColumnsSupported;
+  const deliveryNoteSelectBase='id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature';
+  const deliveryNoteSelectLogistics=deliveryNoteSelectBase+',goods_total,delivery_method,delivery_distance_km,delivery_rate_per_km,delivery_extra_cost,transport_cost,delivery_charge';
+  async function requestDeliveryNotes(pathSuffix=''){
+    const suffix=String(pathSuffix||'');
+    if(deliveryLogisticsColumnsSupported||!deliveryLogisticsProbeDone){
+      deliveryLogisticsProbeDone=true;
+      try{const rows=await request(`delivery_notes?select=${deliveryNoteSelectLogistics}${suffix}`);rememberDeliveryLogisticsSupport(true);return rows}catch(error){if(!deliveryLogisticsSchemaError(error))throw error;rememberDeliveryLogisticsSupport(false)}
+    }
+    return request(`delivery_notes?select=${deliveryNoteSelectBase}${suffix}`);
+  }
   const rowNote=row=>{
-    const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&paymentFinanciallyConfirmed(p)).reduce((sum,p)=>sum+Number(p.amount||0),0),parts=noteTaxPartsFromGross(row.total,order?.taxRate);
-    return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:parts.subtotal,taxRate:parts.taxRate,tax:parts.tax,total:parts.gross,paid,balanceAfter:0,traysDelivered:Number(row.trays_delivered||0),traysReturned:Number(row.trays_returned||0),trayBalanceAfter:Number(row.tray_balance_after||0),customerTraysReceived:row.customer_trays_received==null?null:Number(row.customer_trays_received),customerTraysReturned:row.customer_trays_returned==null?null:Number(row.customer_trays_returned),qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null};
+    const order=orders.find(item=>item.id===row.order_id),paid=payments.filter(p=>p.deliveryNoteId===row.id&&paymentFinanciallyConfirmed(p)).reduce((sum,p)=>sum+Number(p.amount||0),0),parts=noteTaxPartsFromGross(row.goods_total??row.total,order?.taxRate);
+    return{id:row.id,number:Number(row.note_number),orderId:row.order_id,restaurantId:row.restaurant_id,date:localDate(row.delivered_at),paymentDueDate:row.payment_due_date||'',items:structuredClone(order?.items||[]),prices:structuredClone(order?.prices||{}),bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal:parts.subtotal,taxRate:parts.taxRate,tax:parts.tax,goodsTotal:Math.max(0,Number((row.goods_total ?? row.total) || 0)),total:Math.max(0,Number(row.total??parts.gross)),deliveryMethod:row.delivery_method||'bakery_vehicle',deliveryKm:Math.max(0,Number(row.delivery_distance_km||0)),deliveryRate:Math.max(0,Number(row.delivery_rate_per_km||0)),deliveryExtraCost:Math.max(0,Number(row.delivery_extra_cost||0)),transportCost:Math.max(0,Number(row.transport_cost||0)),deliveryCharge:Math.max(0,Number(row.delivery_charge||0)),paid,balanceAfter:0,traysDelivered:Number(row.trays_delivered||0),traysReturned:Number(row.trays_returned||0),trayBalanceAfter:Number(row.tray_balance_after||0),customerTraysReceived:row.customer_trays_received==null?null:Number(row.customer_trays_received),customerTraysReturned:row.customer_trays_returned==null?null:Number(row.customer_trays_returned),qrToken:row.qr_token,customerConfirmedAt:row.customer_confirmed_at||null,customerReceiver:row.customer_receiver||'',offlineProof:row.offline_received_at?{receivedAt:row.offline_received_at,receiver:row.offline_receiver||'',signature:row.offline_signature||'',pending:false}:null};
   };
-  const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,total:subtotal+tax,paid:0,balanceAfter:0,recovered:true}};
-  const deliveryNoteRow=(note,{includeId=true}={})=>{note.qrToken ||= crypto.randomUUID();const row={order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),trays_delivered:Number(note.traysDelivered||0),trays_returned:Number(note.traysReturned||0),tray_balance_after:Number(note.trayBalanceAfter||0),customer_trays_received:note.customerTraysReceived==null?null:Number(note.customerTraysReceived),customer_trays_returned:note.customerTraysReturned==null?null:Number(note.customerTraysReturned),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null};if(includeId&&note.id)row.id=note.id;if(Number(note.number)>0)row.note_number=Number(note.number);return row};
+  const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,goodsTotal:subtotal+tax,total:subtotal+tax,deliveryMethod:'bakery_vehicle',deliveryKm:0,deliveryRate:0,deliveryExtraCost:0,transportCost:0,deliveryCharge:0,paid:0,balanceAfter:0,recovered:true}};
+  const deliveryNoteRow=(note,{includeId=true}={})=>{note.qrToken ||= crypto.randomUUID();const row={order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),trays_delivered:Number(note.traysDelivered||0),trays_returned:Number(note.traysReturned||0),tray_balance_after:Number(note.trayBalanceAfter||0),customer_trays_received:note.customerTraysReceived==null?null:Number(note.customerTraysReceived),customer_trays_returned:note.customerTraysReturned==null?null:Number(note.customerTraysReturned),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null,...(deliveryLogisticsColumnsSupported?{goods_total:Number(note.goodsTotal ?? Math.max(0,Number(note.total||0)-Number(note.deliveryCharge||0))),delivery_method:note.deliveryMethod||'bakery_vehicle',delivery_distance_km:Math.max(0,Number(note.deliveryKm||0)),delivery_rate_per_km:Math.max(0,Number(note.deliveryRate||0)),delivery_extra_cost:Math.max(0,Number(note.deliveryExtraCost||0)),transport_cost:Math.max(0,Number(note.transportCost||0)),delivery_charge:Math.max(0,Number(note.deliveryCharge||0))}:{})};if(includeId&&note.id)row.id=note.id;if(Number(note.number)>0)row.note_number=Number(note.number);return row};
   async function repairMissingDeliveryNotes(){
     if(repairingFinance)return repairingFinance;
     repairingFinance=(async()=>{
-      const remoteRows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature');
+      const remoteRows=await requestDeliveryNotes('');
       const remoteOrders=new Set((remoteRows||[]).map(row=>row.order_id));
       const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!remoteOrders.has(order.id));
       for(const order of missing){
@@ -1335,7 +1353,7 @@
   async function loadDeliveryNotes(){
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
     const knownNotes=Array.isArray(deliveryNotes)?deliveryNotes.slice():[];
-    const rows=await request('delivery_notes?select=id,note_number,order_id,restaurant_id,delivered_at,payment_due_date,total,trays_delivered,trays_returned,tray_balance_after,customer_trays_received,customer_trays_returned,qr_token,customer_confirmed_at,customer_receiver,offline_received_at,offline_receiver,offline_signature&order=note_number.asc');
+    const rows=await requestDeliveryNotes('&order=note_number.asc');
     const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
     const remote=(rows||[]).map(row=>{
       const mapped=rowNote(row);
@@ -1584,7 +1602,7 @@ function b2bReturnCreditForNote(note,sourceMovements=localFinishedStockMovements
   const items=Array.isArray(note.items)?note.items:[],prices=note.prices||{},remaining=new Map();
   items.forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty)remaining.set(product,(remaining.get(product)||0)+qty)});
   const subtotalBasis=Math.max(0,Number(note.subtotal||0))||items.reduce((sum,item)=>sum+Math.max(0,Number(item?.quantity||0))*Math.max(0,Number(prices[item?.product]||0)),0);
-  const grossBasis=Math.max(0,Number(note.total||0)),taxRate=Math.max(0,Number(note.taxRate||0));
+  const grossBasis=Math.max(0,Number(note.goodsTotal ?? Math.max(0,Number(note.total||0)-Number(note.deliveryCharge||0)))),taxRate=Math.max(0,Number(note.taxRate||0));
   let gross=0,net=0,tax=0;const rows=[];
   (Array.isArray(sourceMovements)?sourceMovements:[]).filter(m=>String(m?.type||'')==='returned'&&b2bReturnNoteIdFromMovement(m)===String(note.id)&&(!returnCutoff||localDate(m?.date||m?.createdAt)<=returnCutoff)).slice().sort((a,b)=>String(a?.date||'').localeCompare(String(b?.date||''))||String(a?.createdAt||'').localeCompare(String(b?.createdAt||''))||String(a?.id||'').localeCompare(String(b?.id||''))).forEach(movement=>{
     const product=String(movement?.product||''),left=Math.max(0,Number(remaining.get(product)||0)),requested=Math.max(0,Math.abs(Number(movement?.quantity||0))),qty=Math.min(left,requested);if(!product||qty<=0)return;

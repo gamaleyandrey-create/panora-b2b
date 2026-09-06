@@ -774,3 +774,8 @@ body.admin-page #saveState{
 }
 
 .bakery-order-audit{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:#6c756f;font-weight:600}
+
+/* Panora 10.36 · B2B delivery logistics */
+.shipment-logistics{border:1px solid var(--line);border-radius:12px;padding:14px;margin:14px 0;display:grid;gap:11px}.shipment-logistics legend{font-weight:800;padding:0 7px}.shipment-logistics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.shipment-logistics label{display:grid;gap:5px}.shipment-logistics input,.shipment-logistics select{width:100%;box-sizing:border-box}.shipment-logistics-total{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px}.shipment-logistics-hint{color:var(--muted);line-height:1.35}@media(max-width:720px){.shipment-logistics-grid{grid-template-columns:1fr}.shipment-logistics{padding:12px}}
+
+.shipment-logistics.is-disabled{opacity:.72}.shipment-logistics-setup{display:block;color:#8a5a22;font-weight:700}.shipment-logistics.is-disabled input,.shipment-logistics.is-disabled select{background:#f4f4f1}
