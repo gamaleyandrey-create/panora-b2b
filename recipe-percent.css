@@ -278,7 +278,7 @@
 .recipe-archive-list{display:grid;gap:10px;padding:0 14px 14px}.recipe-archive-card{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8f9f6}.recipe-archive-card>div{flex:1;min-width:0}.recipe-archive-card h3{margin:4px 0 2px;font-size:18px}.recipe-archive-card p{margin:0;color:var(--muted);font-size:13px}.recipe-archive-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.recipe-archive-empty{margin:0;padding:12px;color:var(--muted);text-align:center}.recipe-archive-button{border-color:#d6c7bd!important;color:#7c4b38!important}
 @media(max-width:700px){.recipe-archive-card{align-items:stretch;flex-direction:column}.recipe-archive-card button{width:100%;min-height:48px}.recipe-archive>summary{min-height:56px}}
 
-/* Panora 10.33: compact mobile recipe finder. Desktop recipe editor stays expanded. */
+/* Panora 10.34: compact mobile recipe finder. Desktop recipe editor stays expanded. */
 .recipe-mobile-finder,.recipe-mobile-toggle{display:none}
 @media(max-width:700px){
   #view-recipes .page-head{margin-bottom:12px}
