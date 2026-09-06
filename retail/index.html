@@ -11,8 +11,8 @@
   <meta name="title" content="Panora — Розница">
   <meta property="og:title" content="Panora — Розница">
   <meta name="twitter:title" content="Panora — Розница">
-  <link rel="icon" href="retail/icon.svg?v=10340">
-  <link rel="stylesheet" href="retail-account.css?v=10340">
+  <link rel="icon" href="retail/icon.svg?v=10350">
+  <link rel="stylesheet" href="retail-account.css?v=10350">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap');
     :root{--green:#315f43;--green-dark:#1d3829;--green-soft:#eaf2ea;--orange:#d97841;--paper:#fbfaf7;--cream:#f3efe6;--white:#fff;--ink:#1f2a23;--muted:#748078;--line:#dce2dc;--danger:#b9483e;--shadow:0 20px 60px rgba(29,56,41,.12)}
@@ -42,7 +42,7 @@
 </style>
   
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="retail/manifest.webmanifest?v=10340">
+  <link rel="manifest" href="retail/manifest.webmanifest?v=10350">
 
 </head>
 <body>
@@ -103,7 +103,7 @@
       <div class="cart-items" id="cartItems"></div>
       <div class="cart-summary">
         <div class="summary-row"><span data-i18n="goods">Productos</span><strong id="goodsTotal">0,00 €</strong></div>
-        <div class="summary-row" id="preorderDiscountRow" hidden><span>Предоплата</span><strong id="preorderDiscountValue">0,00 €</strong></div>
+        <div class="summary-row" id="preorderDiscountRow" hidden><span data-i18n="prepayment">Предоплата</span><strong id="preorderDiscountValue">0,00 €</strong></div>
         <div class="summary-row"><span id="fulfillmentSummaryLabel" data-i18n="pickup">Recogida</span><strong id="fulfillmentFee">Gratis</strong></div>
         <div class="summary-row total"><span data-i18n="total">Total</span><strong id="grandTotal">0,00 €</strong></div>
         <button class="checkout" id="retailCheckout" type="button" disabled></button>
@@ -141,9 +141,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=10340"></script>
-<script src="public-catalog-cloud-v48.js?v=10340"></script>
-<script src="pwa-stable.js?v=10340"></script>
+<script src="supabase-config.js?v=10350"></script>
+<script src="public-catalog-cloud-v48.js?v=10350"></script>
+<script src="pwa-stable.js?v=10350"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -170,6 +170,7 @@
   const browserLanguage=()=>{const raw=String(navigator.language||'').toLowerCase();return ['es','en','de','ru'].find(x=>raw.startsWith(x))||'es'};
   const savedLanguage=()=>{try{const x=localStorage.getItem('panora-retail-language');return ['es','en','de','ru'].includes(x)?x:null}catch{return null}};
   const state={mode:'stock',date:'',slot:'',fulfillment:'pickup',cart:{},lang:savedLanguage()||browserLanguage(),settings:null,productSettings:{},stockSnapshot:null,cloudBakeDates:null,apiReady:{stock:false,bakes:false},reservationToken:null,reservationExpires:0,reservationTimer:0,lastOrder:null};
+  TEXT.es.prepayment='Prepago';TEXT.en.prepayment='Prepayment';TEXT.de.prepayment='Vorauszahlung';TEXT.ru.prepayment='Предоплата';
   const t=(key,...args)=>{const v=TEXT[state.lang]?.[key]??TEXT.es[key]??key;return typeof v==='function'?v(...args):v};
   const money=v=>Number.isFinite(Number(v))?Number(v).toLocaleString(LOCALES[state.lang]||'es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €':'—';
   function normalizeRetailSettings(value={}){return {enabled:value.enabled!==false,stockSales:value.stockSales!==false,preorders:value.preorders!==false,pickup:value.pickup!==false,delivery:!!value.delivery,onlinePayment:value.onlinePayment!==false,payOnPickup:value.payOnPickup!==false,preorderOnlineDiscountEnabled:!!value.preorderOnlineDiscountEnabled,preorderOnlineDiscountPercent:Math.min(30,Math.max(0,Number(value.preorderOnlineDiscountPercent??5))),preorderOnlineDiscountMinDays:Math.min(14,Math.max(1,Number(value.preorderOnlineDiscountMinDays??2))),reservationMinutes:Number(value.reservationMinutes||15),preorderCutoffHours:Number(value.preorderCutoffHours||24),preorderHorizonDays:Math.min(30,Math.max(1,Number(value.preorderHorizonDays||7))),pickupLeadMinutes:Math.min(1440,Math.max(0,Number(value.pickupLeadMinutes??60))),maxOrdersPerSlot:Math.min(100,Math.max(1,Number(value.maxOrdersPerSlot||12))),pickupSlots:Array.isArray(value.pickupSlots)&&value.pickupSlots.length?value.pickupSlots:DEFAULT_SLOTS,deliveryMinTotal:Math.max(0,Number(value.deliveryMinTotal??20)),deliveryFee:Math.max(0,Number(value.deliveryFee??5)),deliveryFreeFrom:Math.max(0,Number(value.deliveryFreeFrom??50)),maxDeliveriesPerSlot:Math.min(100,Math.max(1,Number(value.maxDeliveriesPerSlot||8))),deliverySlots:Array.isArray(value.deliverySlots)&&value.deliverySlots.length?value.deliverySlots:['11:00–13:00','13:00–15:00','15:00–17:00'],contactPhone:String(value.contactPhone||''),contactEmail:String(value.contactEmail||''),pickupNote:String(value.pickupNote||''),paymentProvider:String(value.paymentProvider||'none')}}
@@ -215,7 +216,7 @@
 
   function updateModeText(){const preorder=state.mode==='preorder';$('#dateSection').hidden=!preorder;$('#catalogTitle').textContent=t(preorder?'catalogPreorder':'catalogStock');$('#catalogText').textContent=t(preorder?'catalogPreorderText':'catalogStockText')}
   function setMode(mode){if(state.reservationToken)return;state.mode=mode;state.cart={};$$('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));updateModeText();renderAll()}
-  function setLanguage(lang){if(!TEXT[lang])return;state.lang=lang;try{localStorage.setItem('panora-retail-language',lang)}catch{}applyStaticTranslations();updateModeText();renderAll();if($('#retailCheckoutDialog').open)renderHoldInfo()}
+  function setLanguage(lang){if(!TEXT[lang])return;state.lang=lang;try{localStorage.setItem('panora-retail-language',lang)}catch{}applyStaticTranslations();updateModeText();renderAll();if($('#retailCheckoutDialog').open)renderHoldInfo();window.dispatchEvent(new CustomEvent('panora:retail-language-changed',{detail:{language:lang}}))}
   function mapError(error){const code=String(error?.message||error||'');if(code.includes('stock_changed'))return t('errStock');if(code.includes('slot_full')||code.includes('invalid_slot'))return t('errSlot');if(code.includes('reservation_expired'))return t('errExpired');if(code.includes('preorder_price_setup'))return state.lang==='ru'?'Цена предзаказа ещё не активирована на сервере. Пекарне нужно применить SQL 10.32.':state.lang==='en'?'The pre-order price is not active on the server yet. The bakery must apply SQL 10.32.':state.lang==='de'?'Der Vorbestellpreis ist auf dem Server noch nicht aktiviert. Die Bäckerei muss SQL 10.32 anwenden.':'El precio de reserva aún no está activo en el servidor. La panadería debe aplicar SQL 10.32.';if(code.includes('invalid_customer')||code.includes('invalid_phone'))return t('errCustomer');if(code.includes('invalid_email'))return t('errEmail');if(code.includes('delivery_minimum'))return t('errDeliveryMin');if(code.includes('invalid_delivery_address'))return t('errDeliveryAddress');if(code.includes('retail_closed'))return t('errClosed');if(code.includes('bake_day_closed')||code.includes('invalid_bake_date'))return t('errBake');return t('errGeneric')}
   async function rpc(name,body){return publicFetch(`rpc/${name}`,{method:'POST',body})}
   function holdPayload(){return{p_source:state.mode==='preorder'?'bake_preorder':'stock',p_bake_date:state.mode==='preorder'?state.date:null,p_pickup_date:state.mode==='preorder'?state.date:today(),p_pickup_slot:state.slot,p_fulfillment:state.fulfillment,p_items:cartData().map(x=>({product_id:x.p.id,quantity:x.quantity}))}}
@@ -254,7 +255,7 @@
 </script>
 
 
-<script src="retail-account.js?v=10340"></script>
+<script src="retail-account.js?v=10350"></script>
 
 </body>
 </html>
