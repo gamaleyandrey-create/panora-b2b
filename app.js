@@ -12,6 +12,14 @@ I18N.en.catalog.privateNote='Personal prices are available after signing in.';
 I18N.en.catalog.retailPrice='Retail price';
 I18N.en.catalog.wholesalePrice='Your wholesale price';
 I18N.es.catalog.privateNote='Los precios personalizados están disponibles después de iniciar sesión.';
+I18N.ru.catalog.orderDeadline='Заказы принимаются не позднее чем за 48 часов до выпечки.';
+I18N.en.catalog.orderDeadline='Orders are accepted no later than 48 hours before baking.';
+I18N.es.catalog.orderDeadline='Los pedidos se aceptan como máximo hasta 48 horas antes del horneado.';
+I18N.ru.catalog.signInRegister='Войти / зарегистрироваться';
+I18N.en.catalog.signInRegister='Sign in / register';
+I18N.es.catalog.signInRegister='Entrar / registrarse';
+I18N.ru.nav.account='Кабинет';I18N.en.nav.account='Account';I18N.es.nav.account='Cuenta';
+
 I18N.ru.cart.deliveryDate='День выпечки';
 I18N.en.cart.deliveryDate='Bake day';
 I18N.es.cart.deliveryDate='Día de horneado';

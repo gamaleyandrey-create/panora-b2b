@@ -729,7 +729,7 @@
       const localSig=recipeSignature(local),remoteSig=recipeSignature(remote),queuedSig=String(localStorage.getItem(recipePendingSignatureKey)||'');
       if(recipeDirty){
         if(queuedSig&&queuedSig===localSig){
-          // This is a real edit queued by 10.34 (including an offline edit from
+          // This is a real edit queued by 10.35 (including an offline edit from
           // a previous session). Preserve it and use the normal conflict guard.
           await flushRecipes();return;
         }

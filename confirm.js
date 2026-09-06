@@ -3,251 +3,38 @@
   const cfg = window.PANORA_SUPABASE || {};
   const sessionKey = 'panora-restaurant-cloud-session';
   const queueKey = 'panora-delivery-confirmation-queue';
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[char]));
-  const token = new URLSearchParams(location.search).get('t') || '';
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const params = new URLSearchParams(location.search);
+  const token = params.get('t') || '';
+  const normalizeLang=value=>['ru','en','es'].includes(String(value||'').slice(0,2).toLowerCase())?String(value).slice(0,2).toLowerCase():'';
+  const language = normalizeLang(params.get('lang')) || normalizeLang(localStorage.getItem('panora-lang')) || normalizeLang(navigator.language) || 'ru';
+  const locale = language==='es'?'es-ES':language==='en'?'en-GB':'ru-RU';
+  const L={
+    ru:{title:'Panora — Подтверждение поставки',back:'← Назад',heading:'Подтвердите поставку',intro:'Проверьте хлеб и возвратные лотки.',confirmed:'Поставка подтверждена',delivery:'Поставка',order:'Заказ',deliveryDate:'Дата поставки',trays:'Возвратные лотки',bakeryGives:'Пекарня выдаёт',expectedReturn:'Ожидается возврат пустых',partnerAccepted:'Партнёр принял',partnerReturned:'Партнёр вернул',partnerKeeps:'Осталось у партнёра',product:'Товар',quantity:'Количество',receiver:'Имя получателя',traysReceived:'Принято лотков, шт.',traysReturned:'Возвращено пустых, шт.',beforeDelivery:'До поставки у партнёра: {n} шт. После подтверждения остаток будет пересчитан.',accepted:'Количество хлеба и лотков проверено. Подтверждаю получение.',confirm:'Подтвердить получение',checkTrays:'Проверьте количество лотков',checkTraysText:'Принятых лотков не может быть больше, чем выдаёт пекарня, а возвращённых — больше доступного количества.',pending:'Ожидает отправки',pendingText:'Подтверждение сохранено и будет проверено после появления интернета.',noServer:'Нет связи с сервером',retryText:'Проверьте интернет и нажмите «Повторить».',retry:'Повторить',confirmFailed:'Не удалось подтвердить',invalidCode:'Код недействителен, истёк или принадлежит другому партнёру.',invalidLink:'Ссылка недействительна',newQr:'Попросите пекарню показать новый QR-код.',appOld:'Приложение не обновлено',reopen:'Закройте страницу, откройте её снова и повторно отсканируйте QR-код.',loginNeeded:'Нужно войти в кабинет партнёра',loginAgainScan:'После входа снова отсканируйте QR-код.',login:'Войти',offline:'Нет подключения к интернету',offlineFirst:'Для первого открытия QR-кода нужна безопасная проверка. Повторите после появления сети.',checking:'Проверяем защищённый код…',unavailable:'Поставка недоступна',wrongPartner:'QR-код относится к другому партнёру, недействителен или истёк.',loginAgain:'Нужно снова войти',sessionExpired:'Срок безопасного входа истёк. Войдите в кабинет и повторно отсканируйте QR-код.',setup:'QR-подтверждение ещё не настроено',setupText:'Обновите функцию подтверждения в Supabase и повторите.',verifyFailed:'Не удалось проверить поставку',serverError:'Сервер вернул ошибку {n}. Нажмите «Повторить».',pcs:'шт.'},
+    en:{title:'Panora — Delivery confirmation',back:'← Back',heading:'Confirm delivery',intro:'Check the bread and returnable trays.',confirmed:'Delivery confirmed',delivery:'Delivery',order:'Order',deliveryDate:'Delivery date',trays:'Returnable trays',bakeryGives:'Bakery hands over',expectedReturn:'Empty trays expected back',partnerAccepted:'Partner accepted',partnerReturned:'Partner returned',partnerKeeps:'Remaining with partner',product:'Product',quantity:'Quantity',receiver:'Recipient name',traysReceived:'Trays received, pcs',traysReturned:'Empty trays returned, pcs',beforeDelivery:'Before delivery the partner had: {n} pcs. The balance will be recalculated after confirmation.',accepted:'Bread and tray quantities have been checked. I confirm receipt.',confirm:'Confirm receipt',checkTrays:'Check tray quantities',checkTraysText:'Received trays cannot exceed the bakery handover, and returned trays cannot exceed the available quantity.',pending:'Waiting to send',pendingText:'The confirmation is saved and will be verified when internet access returns.',noServer:'No server connection',retryText:'Check your internet connection and tap “Retry”.',retry:'Retry',confirmFailed:'Could not confirm',invalidCode:'The code is invalid, expired, or belongs to another partner.',invalidLink:'Invalid link',newQr:'Ask the bakery to show a new QR code.',appOld:'App is not up to date',reopen:'Close the page, open it again and scan the QR code once more.',loginNeeded:'Sign in to the partner account',loginAgainScan:'After signing in, scan the QR code again.',login:'Sign in',offline:'No internet connection',offlineFirst:'The first QR-code opening requires a secure check. Retry when the connection is restored.',checking:'Checking secure code…',unavailable:'Delivery unavailable',wrongPartner:'The QR code belongs to another partner, is invalid, or has expired.',loginAgain:'Sign in again',sessionExpired:'Your secure session has expired. Sign in and scan the QR code again.',setup:'QR confirmation is not configured yet',setupText:'Update the confirmation function in Supabase and retry.',verifyFailed:'Could not verify delivery',serverError:'The server returned error {n}. Tap “Retry”.',pcs:'pcs'},
+    es:{title:'Panora — Confirmación de entrega',back:'← Atrás',heading:'Confirmar entrega',intro:'Comprueba el pan y las bandejas retornables.',confirmed:'Entrega confirmada',delivery:'Entrega',order:'Pedido',deliveryDate:'Fecha de entrega',trays:'Bandejas retornables',bakeryGives:'La panadería entrega',expectedReturn:'Se espera devolver vacías',partnerAccepted:'El socio recibió',partnerReturned:'El socio devolvió',partnerKeeps:'Quedan con el socio',product:'Producto',quantity:'Cantidad',receiver:'Nombre del receptor',traysReceived:'Bandejas recibidas, uds.',traysReturned:'Bandejas vacías devueltas, uds.',beforeDelivery:'Antes de la entrega el socio tenía: {n} uds. El saldo se recalculará después de confirmar.',accepted:'He comprobado las cantidades de pan y bandejas. Confirmo la recepción.',confirm:'Confirmar recepción',checkTrays:'Comprueba las bandejas',checkTraysText:'Las bandejas recibidas no pueden superar las entregadas por la panadería y las devueltas no pueden superar la cantidad disponible.',pending:'Pendiente de envío',pendingText:'La confirmación se ha guardado y se verificará cuando vuelva la conexión a internet.',noServer:'Sin conexión con el servidor',retryText:'Comprueba internet y pulsa «Reintentar».',retry:'Reintentar',confirmFailed:'No se pudo confirmar',invalidCode:'El código no es válido, ha caducado o pertenece a otro socio.',invalidLink:'Enlace no válido',newQr:'Pide a la panadería que muestre un nuevo código QR.',appOld:'La aplicación no está actualizada',reopen:'Cierra la página, ábrela de nuevo y vuelve a escanear el código QR.',loginNeeded:'Debes entrar en la cuenta del socio',loginAgainScan:'Después de entrar, vuelve a escanear el código QR.',login:'Entrar',offline:'Sin conexión a internet',offlineFirst:'La primera apertura del código QR requiere una comprobación segura. Reintenta cuando vuelva la conexión.',checking:'Comprobando código seguro…',unavailable:'Entrega no disponible',wrongPartner:'El código QR pertenece a otro socio, no es válido o ha caducado.',loginAgain:'Vuelve a iniciar sesión',sessionExpired:'La sesión segura ha caducado. Entra en la cuenta y vuelve a escanear el código QR.',setup:'La confirmación QR aún no está configurada',setupText:'Actualiza la función de confirmación en Supabase y vuelve a intentarlo.',verifyFailed:'No se pudo verificar la entrega',serverError:'El servidor devolvió el error {n}. Pulsa «Reintentar».',pcs:'uds.'}
+  };
+  const t=(key,data={})=>String((L[language]||L.ru)[key]||key).replace(/\{(\w+)\}/g,(_,k)=>data[k]??'');
+  document.documentElement.lang=language;document.title=t('title');
+  const back=document.querySelector('#confirmBack'),heading=document.querySelector('#confirmHeading'),intro=document.querySelector('#confirmIntro');
+  if(back)back.textContent=t('back');if(heading)heading.textContent=t('heading');if(intro)intro.textContent=t('intro');
   const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
-
-  function readJson(key, fallback) {
-    try {
-      const value = JSON.parse(localStorage.getItem(key) || 'null');
-      return value ?? fallback;
-    } catch {
-      return fallback;
-    }
+  function readJson(key,fallback){try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}}
+  let session=readJson(sessionKey,null);
+  function show(title,text,action=''){root.innerHTML=`<div class="error"><strong>${esc(title)}</strong><br>${esc(text)}</div>${action}`}
+  function serverError(message,status,payload){const error=new Error(message);error.status=status;error.payload=payload;return error}
+  async function refresh(){if(!session?.refresh_token)return false;let response;try{response=await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',cache:'no-store',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json','Cache-Control':'no-cache'},body:JSON.stringify({refresh_token:session.refresh_token})})}catch{throw serverError('NETWORK_ERROR',0)}if(!response.ok)return false;session=await response.json();localStorage.setItem(sessionKey,JSON.stringify(session));return true}
+  async function rpc(name,body,retry=true){let response;try{response=await fetch(`${cfg.url}/rest/v1/rpc/${name}`,{method:'POST',cache:'no-store',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${session?.access_token||''}`,'Content-Type':'application/json','Cache-Control':'no-cache'},body:JSON.stringify(body)})}catch{throw serverError('NETWORK_ERROR',0)}if(response.status===401&&retry&&await refresh())return rpc(name,body,false);const text=await response.text();let payload=null;try{payload=text?JSON.parse(text):null}catch{payload=text}if(!response.ok)throw serverError(payload?.message||`HTTP_${response.status}`,response.status,payload);return payload}
+  function queued(){const value=readJson(queueKey,[]);return Array.isArray(value)?value:[]}
+  function savePending(receiver,traysReceived,traysReturned){const queue=queued().filter(item=>item.token!==token);queue.push({token,receiver,traysReceived,traysReturned,createdAt:new Date().toISOString()});localStorage.setItem(queueKey,JSON.stringify(queue))}
+  async function flush(){if(!navigator.onLine||!session?.access_token)return;const left=[];for(const item of queued()){try{const rows=await rpc('panora_confirm_delivery',{p_token:item.token,p_receiver:item.receiver,p_trays_received:Number(item.traysReceived||0),p_trays_returned:Number(item.traysReturned||0)});if(!rows?.length)throw new Error('NOT_CONFIRMED')}catch{left.push(item)}}localStorage.setItem(queueKey,JSON.stringify(left))}
+  function render(delivery){
+    const formatDate=value=>{if(!value)return'—';const raw=String(value).slice(0,10),date=new Date(`${raw}T12:00:00`);return Number.isNaN(date.getTime())?raw:date.toLocaleDateString(locale,{day:'numeric',month:'long',year:'numeric'})};
+    const items=Array.isArray(delivery.items)?delivery.items:[],traysDelivered=Math.max(0,Number(delivery.trays_delivered||0)),traysReturnedPlanned=Math.max(0,Number(delivery.trays_returned||0)),balanceAfter=Math.max(0,Number(delivery.tray_balance_after||0)),previousBalance=Math.max(0,balanceAfter-traysDelivered+traysReturnedPlanned),actualReceived=delivery.customer_trays_received==null?null:Math.max(0,Number(delivery.customer_trays_received)),actualReturned=delivery.customer_trays_returned==null?null:Math.max(0,Number(delivery.customer_trays_returned));
+    const itemName=item=>item?.[`name_${language}`]||item?.name||item?.name_ru||item?.product_id;
+    root.innerHTML=`${delivery.customer_confirmed_at?`<div class="success"><strong>${t('confirmed')}</strong><br>${new Date(delivery.customer_confirmed_at).toLocaleString(locale)}</div>`:''}<h2>${t('delivery')} DN-${String(delivery.note_number).padStart(4,'0')}</h2><div class="meta"><div><small>${t('order')}</small><strong>PN-${String(delivery.order_number).padStart(4,'0')}</strong></div><div><small>${t('deliveryDate')}</small><strong>${esc(formatDate(delivery.delivery_date||delivery.delivered_at))}</strong></div></div><section class="tray-card"><h3>${t('trays')}</h3><div><span>${t('bakeryGives')}</span><strong>${traysDelivered} ${t('pcs')}</strong></div><div><span>${t('expectedReturn')}</span><strong>${traysReturnedPlanned} ${t('pcs')}</strong></div>${delivery.customer_confirmed_at?`<div><span>${t('partnerAccepted')}</span><strong>${actualReceived??traysDelivered} ${t('pcs')}</strong></div><div><span>${t('partnerReturned')}</span><strong>${actualReturned??traysReturnedPlanned} ${t('pcs')}</strong></div><div class="tray-balance"><span>${t('partnerKeeps')}</span><strong>${balanceAfter} ${t('pcs')}</strong></div>`:''}</section><table class="items"><thead><tr><th>${t('product')}</th><th>${t('quantity')}</th></tr></thead><tbody>${items.map(item=>`<tr><td>${esc(itemName(item))}</td><td>${item.quantity} ${t('pcs')}</td></tr>`).join('')}</tbody></table>${delivery.customer_confirmed_at?'':`<form id="confirmForm" class="confirm-form"><label><span>${t('receiver')}</span><input name="receiver" minlength="2" maxlength="120" autocomplete="name" required></label><div class="tray-inputs"><label><span>${t('traysReceived')}</span><input name="traysReceived" type="number" inputmode="numeric" min="0" max="${traysDelivered}" step="1" value="${traysDelivered}" required></label><label><span>${t('traysReturned')}</span><input name="traysReturned" type="number" inputmode="numeric" min="0" max="${previousBalance+traysDelivered}" step="1" value="${Math.min(traysReturnedPlanned,previousBalance+traysDelivered)}" required></label></div><p class="tray-help">${t('beforeDelivery',{n:previousBalance})}</p><label class="check"><input name="accepted" type="checkbox" required><span>${t('accepted')}</span></label><button>${t('confirm')}</button></form>`}`;
+    document.querySelector('#confirmForm')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,data=new FormData(form),receiver=String(data.get('receiver')).trim(),traysReceived=Number(data.get('traysReceived')),traysReturned=Number(data.get('traysReturned'));if(!Number.isInteger(traysReceived)||traysReceived<0||traysReceived>traysDelivered||!Number.isInteger(traysReturned)||traysReturned<0||traysReturned>previousBalance+traysReceived){show(t('checkTrays'),t('checkTraysText'));return}const button=form.querySelector('button');button.disabled=true;try{if(!navigator.onLine){savePending(receiver,traysReceived,traysReturned);root.insertAdjacentHTML('afterbegin',`<div class="pending"><strong>${t('pending')}</strong><br>${t('pendingText')}</div>`);form.remove();return}const rows=await rpc('panora_confirm_delivery',{p_token:token,p_receiver:receiver,p_trays_received:traysReceived,p_trays_returned:traysReturned});if(!rows?.length)throw serverError('NOT_CONFIRMED',403);await load()}catch(error){if(error.status===0)show(t('noServer'),t('retryText'),`<button class="button retry" type="button">${t('retry')}</button>`);else show(t('confirmFailed'),t('invalidCode'))}finally{button.disabled=false}})
   }
-
-  let session = readJson(sessionKey, null);
-
-  function show(title, text, action = '') {
-    root.innerHTML = `<div class="error"><strong>${esc(title)}</strong><br>${esc(text)}</div>${action}`;
-  }
-
-  function serverError(message, status, payload) {
-    const error = new Error(message);
-    error.status = status;
-    error.payload = payload;
-    return error;
-  }
-
-  async function refresh() {
-    if (!session?.refresh_token) return false;
-    let response;
-    try {
-      response = await fetch(`${cfg.url}/auth/v1/token?grant_type=refresh_token`, {
-        method: 'POST',
-        cache: 'no-store',
-        headers: {
-          apikey: cfg.publishableKey,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
-      });
-    } catch {
-      throw serverError('NETWORK_ERROR', 0);
-    }
-    if (!response.ok) return false;
-    session = await response.json();
-    localStorage.setItem(sessionKey, JSON.stringify(session));
-    return true;
-  }
-
-  async function rpc(name, body, retry = true) {
-    let response;
-    try {
-      response = await fetch(`${cfg.url}/rest/v1/rpc/${name}`, {
-        method: 'POST',
-        cache: 'no-store',
-        headers: {
-          apikey: cfg.publishableKey,
-          Authorization: `Bearer ${session?.access_token || ''}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        body: JSON.stringify(body)
-      });
-    } catch {
-      throw serverError('NETWORK_ERROR', 0);
-    }
-
-    if (response.status === 401 && retry && await refresh()) {
-      return rpc(name, body, false);
-    }
-
-    const text = await response.text();
-    let payload = null;
-    try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
-    if (!response.ok) {
-      throw serverError(payload?.message || `HTTP_${response.status}`, response.status, payload);
-    }
-    return payload;
-  }
-
-  function queued() {
-    const value = readJson(queueKey, []);
-    return Array.isArray(value) ? value : [];
-  }
-
-  function savePending(receiver, traysReceived, traysReturned) {
-    const queue = queued().filter(item => item.token !== token);
-    queue.push({ token, receiver, traysReceived, traysReturned, createdAt: new Date().toISOString() });
-    localStorage.setItem(queueKey, JSON.stringify(queue));
-  }
-
-  async function flush() {
-    if (!navigator.onLine || !session?.access_token) return;
-    const left = [];
-    for (const item of queued()) {
-      try {
-        const rows = await rpc('panora_confirm_delivery', {
-          p_token: item.token,
-          p_receiver: item.receiver,
-          p_trays_received: Number(item.traysReceived || 0),
-          p_trays_returned: Number(item.traysReturned || 0)
-        });
-        if (!rows?.length) throw new Error('NOT_CONFIRMED');
-      } catch {
-        left.push(item);
-      }
-    }
-    localStorage.setItem(queueKey, JSON.stringify(left));
-  }
-
-  function render(delivery) {
-    const formatDate = value => {
-      if (!value) return '—';
-      const raw = String(value).slice(0, 10);
-      const date = new Date(`${raw}T12:00:00`);
-      return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-    };
-    const items = Array.isArray(delivery.items) ? delivery.items : [];
-    const traysDelivered = Math.max(0, Number(delivery.trays_delivered || 0));
-    const traysReturnedPlanned = Math.max(0, Number(delivery.trays_returned || 0));
-    const balanceAfter = Math.max(0, Number(delivery.tray_balance_after || 0));
-    const previousBalance = Math.max(0, balanceAfter - traysDelivered + traysReturnedPlanned);
-    const actualReceived = delivery.customer_trays_received == null ? null : Math.max(0, Number(delivery.customer_trays_received));
-    const actualReturned = delivery.customer_trays_returned == null ? null : Math.max(0, Number(delivery.customer_trays_returned));
-    root.innerHTML = `${delivery.customer_confirmed_at
-      ? `<div class="success"><strong>Поставка подтверждена</strong><br>${new Date(delivery.customer_confirmed_at).toLocaleString('ru-RU')}</div>`
-      : ''}
-      <h2>Поставка DN-${String(delivery.note_number).padStart(4, '0')}</h2>
-      <div class="meta">
-        <div><small>Заказ</small><strong>PN-${String(delivery.order_number).padStart(4, '0')}</strong></div>
-        <div><small>Дата поставки</small><strong>${esc(formatDate(delivery.delivery_date || delivery.delivered_at))}</strong></div>
-      </div>
-      <section class="tray-card">
-        <h3>Возвратные лотки</h3>
-        <div><span>Пекарня выдаёт</span><strong>${traysDelivered} шт.</strong></div>
-        <div><span>Ожидается возврат пустых</span><strong>${traysReturnedPlanned} шт.</strong></div>
-        ${delivery.customer_confirmed_at ? `
-          <div><span>Партнёр принял</span><strong>${actualReceived ?? traysDelivered} шт.</strong></div>
-          <div><span>Партнёр вернул</span><strong>${actualReturned ?? traysReturnedPlanned} шт.</strong></div>
-          <div class="tray-balance"><span>Осталось у партнёра</span><strong>${balanceAfter} шт.</strong></div>` : ''}
-      </section>
-      <table class="items">
-        <thead><tr><th>Товар</th><th>Количество</th></tr></thead>
-        <tbody>${items.map(item => `<tr><td>${esc(item.name_ru || item.product_id)}</td><td>${item.quantity} шт.</td></tr>`).join('')}</tbody>
-      </table>
-      ${delivery.customer_confirmed_at ? '' : `
-        <form id="confirmForm" class="confirm-form">
-          <label><span>Имя получателя</span><input name="receiver" minlength="2" maxlength="120" autocomplete="name" required></label>
-          <div class="tray-inputs">
-            <label><span>Принято лотков, шт.</span><input name="traysReceived" type="number" inputmode="numeric" min="0" max="${traysDelivered}" step="1" value="${traysDelivered}" required></label>
-            <label><span>Возвращено пустых, шт.</span><input name="traysReturned" type="number" inputmode="numeric" min="0" max="${previousBalance + traysDelivered}" step="1" value="${Math.min(traysReturnedPlanned, previousBalance + traysDelivered)}" required></label>
-          </div>
-          <p class="tray-help">До поставки у партнёра: ${previousBalance} шт. После подтверждения остаток будет пересчитан.</p>
-          <label class="check"><input name="accepted" type="checkbox" required><span>Количество хлеба и лотков проверено. Подтверждаю получение.</span></label>
-          <button>Подтвердить получение</button>
-        </form>`}`;
-
-    document.querySelector('#confirmForm')?.addEventListener('submit', async event => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const data = new FormData(form);
-      const receiver = String(data.get('receiver')).trim();
-      const traysReceived = Number(data.get('traysReceived'));
-      const traysReturned = Number(data.get('traysReturned'));
-      if (!Number.isInteger(traysReceived) || traysReceived < 0 || traysReceived > traysDelivered ||
-          !Number.isInteger(traysReturned) || traysReturned < 0 || traysReturned > previousBalance + traysReceived) {
-        show('Проверьте количество лотков', 'Принятых лотков не может быть больше, чем выдаёт пекарня, а возвращённых — больше доступного количества.');
-        return;
-      }
-      const button = form.querySelector('button');
-      button.disabled = true;
-      try {
-        if (!navigator.onLine) {
-          savePending(receiver, traysReceived, traysReturned);
-          root.insertAdjacentHTML('afterbegin', '<div class="pending"><strong>Ожидает отправки</strong><br>Подтверждение сохранено и будет проверено после появления интернета.</div>');
-          form.remove();
-          return;
-        }
-        const rows = await rpc('panora_confirm_delivery', {
-          p_token: token,
-          p_receiver: receiver,
-          p_trays_received: traysReceived,
-          p_trays_returned: traysReturned
-        });
-        if (!rows?.length) throw serverError('NOT_CONFIRMED', 403);
-        await load();
-      } catch (error) {
-        if (error.status === 0) {
-          show('Нет связи с сервером', 'Проверьте интернет и нажмите «Повторить».', '<button class="button retry" type="button">Повторить</button>');
-        } else {
-          show('Не удалось подтвердить', 'Код недействителен, истёк или принадлежит другому партнёру.');
-        }
-      } finally {
-        button.disabled = false;
-      }
-    });
-  }
-
-  async function load() {
-    if (!valid) {
-      show('Ссылка недействительна', 'Попросите пекарню показать новый QR-код.');
-      return;
-    }
-    if (!cfg.url || !cfg.publishableKey) {
-      show('Приложение не обновлено', 'Закройте страницу, откройте её снова и повторно отсканируйте QR-код.');
-      return;
-    }
-    if (!session?.access_token) {
-      show('Нужно войти в кабинет партнёра', 'После входа снова отсканируйте QR-код.', '<a class="button login" href="index.html">Войти</a>');
-      return;
-    }
-    if (!navigator.onLine) {
-      show('Нет подключения к интернету', 'Для первого открытия QR-кода нужна безопасная проверка. Повторите после появления сети.', '<button class="button retry" type="button">Повторить</button>');
-      return;
-    }
-
-    root.innerHTML = '<p class="loading">Проверяем защищённый код…</p>';
-    flush().catch(() => {});
-    try {
-      const rows = await rpc('panora_delivery_confirmation', { p_token: token });
-      if (!rows?.length) {
-        show('Поставка недоступна', 'QR-код относится к другому партнёру, недействителен или истёк.');
-        return;
-      }
-      render(rows[0]);
-    } catch (error) {
-      if (error.status === 401 || error.status === 403) {
-        localStorage.removeItem(sessionKey);
-        session = null;
-        show('Нужно снова войти', 'Срок безопасного входа истёк. Войдите в кабинет и повторно отсканируйте QR-код.', '<a class="button login" href="index.html">Войти</a>');
-      } else if (error.status === 404 || error.payload?.code === 'PGRST202') {
-        show('QR-подтверждение ещё не настроено', 'Обновите функцию подтверждения в Supabase и повторите.', '<button class="button retry" type="button">Повторить</button>');
-      } else if (error.status === 0) {
-        show('Нет связи с сервером', 'Проверьте интернет и нажмите «Повторить».', '<button class="button retry" type="button">Повторить</button>');
-      } else {
-        show('Не удалось проверить поставку', `Сервер вернул ошибку ${error.status || ''}. Нажмите «Повторить».`, '<button class="button retry" type="button">Повторить</button>');
-      }
-    }
-  }
-
-  root.addEventListener('click', event => {
-    if (event.target.closest('.retry')) load();
-  });
-  addEventListener('online', load);
-  load();
+  async function load(){if(!valid){show(t('invalidLink'),t('newQr'));return}if(!cfg.url||!cfg.publishableKey){show(t('appOld'),t('reopen'));return}if(!session?.access_token){show(t('loginNeeded'),t('loginAgainScan'),`<a class="button login" href="index.html?lang=${encodeURIComponent(language)}">${t('login')}</a>`);return}if(!navigator.onLine){show(t('offline'),t('offlineFirst'),`<button class="button retry" type="button">${t('retry')}</button>`);return}root.innerHTML=`<p class="loading">${t('checking')}</p>`;flush().catch(()=>{});try{const rows=await rpc('panora_delivery_confirmation',{p_token:token});if(!rows?.length){show(t('unavailable'),t('wrongPartner'));return}render(rows[0])}catch(error){if(error.status===401||error.status===403){localStorage.removeItem(sessionKey);session=null;show(t('loginAgain'),t('sessionExpired'),`<a class="button login" href="index.html?lang=${encodeURIComponent(language)}">${t('login')}</a>`)}else if(error.status===404||error.payload?.code==='PGRST202')show(t('setup'),t('setupText'),`<button class="button retry" type="button">${t('retry')}</button>`);else if(error.status===0)show(t('noServer'),t('retryText'),`<button class="button retry" type="button">${t('retry')}</button>`);else show(t('verifyFailed'),t('serverError',{n:error.status||''}),`<button class="button retry" type="button">${t('retry')}</button>`)}}
+  root.addEventListener('click',event=>{if(event.target.closest('.retry'))load()});addEventListener('online',load);load();
 })();
