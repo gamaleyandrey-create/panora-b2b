@@ -23,6 +23,28 @@
   const ingredientPrice=(prices,name,unit)=>Number(prices[costKey(name,unit)] ?? prices[`${name}|${unit}`] ?? 0);
   const priceUnitLabel=unit=>unit==='g'?'€/кг':unit==='ml'?'€/л':'€/шт.';
   const TECH_CARD_DISCLOSURE_KEY='panora-tech-card-disclosure-v1';
+  const MOBILE_RECIPE_OPEN_KEY='panora-mobile-recipe-open-v1';
+  const mobileRecipeMode=()=>window.matchMedia?.('(max-width:700px)')?.matches===true;
+  const mobileOpenRecipe=()=>{try{return String(localStorage.getItem(MOBILE_RECIPE_OPEN_KEY)||'')}catch{return ''}};
+  const setMobileOpenRecipe=id=>{try{if(id)localStorage.setItem(MOBILE_RECIPE_OPEN_KEY,String(id));else localStorage.removeItem(MOBILE_RECIPE_OPEN_KEY)}catch{}};
+  function ensureMobileRecipeFinder(root){
+    const view=root.closest('#view-recipes')||root.parentElement;if(!view)return null;
+    let finder=view.querySelector('.recipe-mobile-finder');
+    if(!finder){
+      finder=document.createElement('div');finder.className='recipe-mobile-finder';
+      finder.innerHTML=`<label><span>${lang==='ru'?'Найти хлеб':lang==='es'?'Buscar pan':'Find bread'}</span><input type="search" inputmode="search" autocomplete="off" placeholder="${lang==='ru'?'Начните вводить название…':lang==='es'?'Escriba el nombre…':'Type a bread name…'}" aria-label="${lang==='ru'?'Поиск хлеба':lang==='es'?'Buscar pan':'Search bread'}"></label><button type="button" class="recipe-mobile-search-clear" aria-label="${lang==='ru'?'Очистить поиск':lang==='es'?'Borrar búsqueda':'Clear search'}">×</button>`;
+      view.insertBefore(finder,root);
+    }
+    return finder;
+  }
+  function bindMobileRecipeFinder(root){
+    const finder=ensureMobileRecipeFinder(root);if(!finder)return;
+    const input=finder.querySelector('input'),clear=finder.querySelector('.recipe-mobile-search-clear');
+    const apply=()=>{const q=normalizeText(input?.value||'');let visible=0,last=null;root.querySelectorAll('.recipe-card').forEach(card=>{const match=!q||normalizeText(card.dataset.recipeSearch||'').includes(q);card.hidden=!match;if(match){visible++;last=card}});finder.classList.toggle('has-query',Boolean(q));finder.dataset.matches=String(visible)};
+    if(input&&!input.dataset.bound){input.dataset.bound='true';input.addEventListener('input',apply);input.addEventListener('keydown',event=>{if(event.key==='Escape'){input.value='';apply();input.blur()}if(event.key==='Enter'){event.preventDefault();const first=root.querySelector('.recipe-card:not([hidden])');first?.querySelector('.recipe-mobile-toggle')?.click()}})}
+    if(clear&&!clear.dataset.bound){clear.dataset.bound='true';clear.addEventListener('click',()=>{if(input){input.value='';apply();input.focus()}})}
+    apply();
+  }
   const readTechCardDisclosure=()=>{try{const value=JSON.parse(localStorage.getItem(TECH_CARD_DISCLOSURE_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}};
   const techCardOpen=productId=>readTechCardDisclosure()[String(productId)]!==false;
   const setTechCardOpen=(productId,open)=>{
@@ -295,8 +317,9 @@
     // inputs while the mobile keyboard is open: doing so removes the focused
     // element and makes the user appear to be "thrown out" of gram editing.
     if(!force&&(window.panoraRecipeEditing||root.dataset.recipeEditing==='true'||document.activeElement?.closest?.('#recipeList'))&&root.children.length)return;
-    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),tech=product?.techCard||{},items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional" data-recipe-card="${pid}">
-      <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span></div>
+    root.innerHTML=Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),tech=product?.techCard||{},items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional ${mobileRecipeMode()&&mobileOpenRecipe()===String(pid)?'is-mobile-open':''}" data-recipe-card="${pid}" data-recipe-search="${esc(productName(pid))}">
+      <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span><button class="recipe-mobile-toggle" type="button" aria-expanded="${mobileRecipeMode()&&mobileOpenRecipe()===String(pid)?'true':'false'}" aria-label="${lang==='ru'?'Открыть рецепт':lang==='es'?'Abrir receta':'Open recipe'}"><span aria-hidden="true">⌄</span></button></div>
+      <div class="recipe-card-body">
       <label class="recipe-product-weight"><span>${L().weight}</span><span><input data-recipe-weight="${pid}" type="number" min="1" step="1" value="${Number(product?.weight||750)}"> g</span></label>
       <p class="recipe-help"><strong>${L().percent}.</strong> ${L().help} ${L().stock}</p>
       <div class="recipe-tech-summary" aria-label="${L().formula}">
@@ -321,6 +344,7 @@
       <details class="recipe-tech-card" ${techCardOpen(pid)?'open':''}><summary>${L().tech}</summary><div class="recipe-tech-fields"><label class="wide"><span>${L().mix}</span><textarea data-tech="mix" data-draft-key="tech:mix" rows="3">${esc(tech.mix||'')}</textarea></label><label><span>${L().fermentation}</span><input data-tech="fermentation" data-draft-key="tech:fermentation" type="number" min="0" inputmode="numeric" value="${numeric(tech.fermentation)||''}"></label><label><span>${L().proof}</span><input data-tech="proof" data-draft-key="tech:proof" type="number" min="0" inputmode="numeric" value="${numeric(tech.proof)||''}"></label><label><span>${L().bakeTemp}</span><input data-tech="bakeTemp" data-draft-key="tech:bakeTemp" type="number" min="0" inputmode="numeric" value="${numeric(tech.bakeTemp)||''}"></label><label><span>${L().bakeTime}</span><input data-tech="bakeTime" data-draft-key="tech:bakeTime" type="number" min="0" inputmode="numeric" value="${numeric(tech.bakeTime)||''}"></label><label class="wide"><span>${L().steps}</span><textarea data-tech="steps" data-draft-key="tech:steps" rows="5" placeholder="1. …&#10;2. …">${esc(tech.steps||'')}</textarea></label><label class="wide"><span>${L().notes}</span><textarea data-tech="notes" data-draft-key="tech:notes" rows="3">${esc(tech.notes||'')}</textarea></label></div><button class="secondary recipe-print" type="button">${L().print}</button></details>
       <div class="recipe-lock-bar"><span data-tech-lock-state></span><button class="secondary" data-tech-edit type="button">${L().edit}</button><button class="secondary" data-tech-cancel type="button" hidden>${L().cancelEdit}</button></div><div class="recipe-actions"><button class="secondary" data-add-ingredient="${pid}" type="button">${L().add}</button><button class="secondary recipe-archive-button" data-archive-recipe="${pid}" type="button">${L().archiveRecipe}</button><span class="recipe-save-status" aria-live="polite"></span><button class="primary recipe-save" type="button">${L().save}</button></div>
       <div class="product-manage"><label><input type="checkbox" data-product-active="${pid}" ${productRegistry.find(p=>p.id===pid)?.active!==false?'checked':''}> В каталоге</label><button type="button" class="product-delete-button" data-delete-product="${pid}">Удалить товар</button></div>
+      </div>
     </article>`}).join('');
     const archiveDetails=document.querySelector('#recipeArchive'),archiveRoot=document.querySelector('#recipeArchiveList'),archiveCount=document.querySelector('#recipeArchiveCount');
     const archived=[];
@@ -334,6 +358,14 @@
     if(archiveRoot)archiveRoot.innerHTML=archived.length?archived.map(pid=>{const product=recipeProduct(pid),items=recipes[pid]||[];return `<article class="recipe-archive-card"><div><span class="recipe-archive-badge">${esc(L().archiveTitle)}</span><h3>${esc(productName(pid))}</h3><p>${items.length} ${lang==='ru'?'ингредиентов':lang==='es'?'ingredientes':'ingredients'} · ${L().tech}</p></div><button type="button" class="secondary" data-restore-recipe="${esc(pid)}">${L().restoreRecipe}</button></article>`}).join(''):`<p class="recipe-archive-empty">${L().archiveEmpty}</p>`;
     if(archiveDetails)archiveDetails.dataset.empty=archived.length?'false':'true';
     root.querySelectorAll('.recipe-card').forEach(card=>{
+      const toggle=card.querySelector('.recipe-mobile-toggle');
+      const setOpen=open=>{
+        if(!mobileRecipeMode())return;
+        root.querySelectorAll('.recipe-card.is-mobile-open').forEach(other=>{if(other!==card){other.classList.remove('is-mobile-open');other.querySelector('.recipe-mobile-toggle')?.setAttribute('aria-expanded','false')}});
+        card.classList.toggle('is-mobile-open',Boolean(open));toggle?.setAttribute('aria-expanded',open?'true':'false');setMobileOpenRecipe(open?card.dataset.recipeCard:'');
+      };
+      toggle?.addEventListener('click',event=>{event.stopPropagation();const open=!card.classList.contains('is-mobile-open');setOpen(open);if(open)setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60)});
+      card.querySelector('.recipe-card-head')?.addEventListener('click',event=>{if(!mobileRecipeMode()||event.target.closest('button,input,select,textarea,a'))return;setOpen(!card.classList.contains('is-mobile-open'))});
       updateCard(card);
       setCardEditMode(card,Boolean(window.panoraCloud?.hasTechCardLock?.(card.dataset.recipeCard)));
       const techDetails=card.querySelector('.recipe-tech-card');
@@ -382,6 +414,7 @@
     document.querySelectorAll('#recipeArchiveList [data-restore-recipe]').forEach(button=>button.onclick=async()=>{const pid=button.dataset.restoreRecipe;if(!confirm(L().restoreConfirm))return;try{await setRecipeArchivedConfirmed(pid,false,button)}catch(error){alert(`${L().archiveFailed}: ${error?.message||error}`)}});
     root.querySelectorAll('[data-product-active]').forEach(input=>input.onchange=()=>{const product=productRegistry.find(p=>p.id===input.dataset.productActive);if(!product)return;product.active=input.checked;saveProducts()});
     bindProductDeleteButtons(root);
+    bindMobileRecipeFinder(root);
   }
   window.panoraBakersPercent={flourName,gramUnit,round,techCardOpen,setTechCardOpen,recipeArchived,setRecipeArchivedConfirmed};
   renderRecipes=professionalRender;
