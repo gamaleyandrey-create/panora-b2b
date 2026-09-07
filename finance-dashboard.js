@@ -560,7 +560,7 @@
   };
   window.dispatchEvent(new CustomEvent('panora:partner-analytics-ready'));
 
-  // Panora 10.39 — raw-material purchase entry from Raw Materials stock.
+  // Panora 10.40 — raw-material purchase entry from Raw Materials stock.
   // It uses the same Finance persistence path as manual expenses, so cloud/local
   // accounting cannot diverge between the stock screen and Finance.
   window.panoraFinanceAddRawPurchase=async data=>{
