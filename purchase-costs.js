@@ -178,7 +178,7 @@
  const RAW_STOCK_KEY='panora-raw-stock-movements';
  const RAW_STOCK_MIGRATION='panora-raw-stock-migration-v606';
  const RAW_STOCK_DEVICE_KEY='panora-raw-stock-device-v607';
- let rawHistoryView='active',rawStockView='active',rawStockOpenKey='';
+ let rawHistoryView='active',rawHistoryFilter='all',rawHistorySearch='',rawHistoryOpenId='',rawStockView='active',rawStockOpenKey='';
  const rawStockDeviceId=(()=>{let id=localStorage.getItem(RAW_STOCK_DEVICE_KEY);if(id)return id;id=crypto.randomUUID();localStorage.setItem(RAW_STOCK_DEVICE_KEY,id);return id})();
 
  const readRawMovements=()=>{
@@ -286,7 +286,7 @@
  function rawAutoConsumptionFor(completion,balance,catalog){
   const date=String(completion?.date||''),latest=currentRecipes(),events=[],productDemand=new Map();
   (completion?.items||[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.rawQuantity ?? item?.produced ?? 0));if(product&&qty)productDemand.set(product,(productDemand.get(product)||0)+qty)});
-  const push=(row,type,quantity,note,product='')=>{const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;const before=Number(balance.get(row.key)||0),delta=-qty;balance.set(row.key,before+delta);events.push({id:`auto:${completion?.id||date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,type,quantity:qty,delta,note,product,virtual:true,system:true,bakeCompletionId:completion?.id||''})};
+  const push=(row,type,quantity,note,product='')=>{const qty=Math.max(0,Number(quantity||0));if(!row||qty<=0.0005)return;const before=Number(balance.get(row.key)||0),delta=-qty;balance.set(row.key,before+delta);events.push({id:`auto:${completion?.id||date}:${type}:${row.key}:${product}:${events.length}`,date,key:row.key,name:row.name,unit:row.unit,type,quantity:qty,delta,note,product,virtual:true,system:true,bakeCompletionId:completion?.id||'',balanceAfter:Number(balance.get(row.key)||0)})};
   [...productDemand.entries()].forEach(([product,pieces])=>{const completionItem=(completion?.items||[]).find(item=>String(item?.product||'')===String(product)),recipe=Array.isArray(completionItem?.recipeSnapshot)&&completionItem.recipeSnapshot.length?completionItem.recipeSnapshot:(Array.isArray(latest?.[product])?latest[product]:[]);recipe.forEach(item=>{const perBread=Math.max(0,Number(item?.qty||0));if(!perBread)return;const row=catalog.get(ingredientKey(item));if(!row)return;const required=perBread*pieces;if(item?.sourceIngredientName&&Number(item?.sourceYieldPct)>0){const available=Math.max(0,Number(balance.get(row.key)||0)),fromStock=Math.min(required,available);if(fromStock>0)push(row,'bake_out_auto',fromStock,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product);const short=Math.max(0,required-fromStock);if(short>0){const sourceKey=`${normalizeName(item.sourceIngredientName)}|${normalizeUnit(item.sourceUnit||item.unit||'g')}`,source=catalog.get(sourceKey),sourceQty=short/(Number(item.sourceYieldPct)/100);push(source,'semi_source_auto',sourceQty,`Для «${row.name}» · выход ${Number(item.sourceYieldPct)}% · факт ${productName(product)} ${pieces} шт.`,product)}}else push(row,'bake_out_auto',required,`Факт выпечки · ${productName(product)} · ${pieces} шт.`,product)})});
   return events;
  }
@@ -307,7 +307,7 @@
   timeline.forEach(entry=>{
    if(entry.kind==='manual'){
     const movement=entry.value,delta=rawManualApply(balances,movement);
-    events.push({...movement,delta,virtual:false});
+    events.push({...movement,delta,virtual:false,balanceAfter:Number(balances.get(String(movement?.key||''))||0)});
    }else events.push(...rawAutoConsumptionFor(entry.value,balances,catalog));
   });
   manual.filter(m=>String(m?.date||'')>today).forEach(m=>events.push({...m,delta:0,virtual:false,future:true}));
@@ -377,11 +377,15 @@
   return {needs,semiNeeds,details,days};
  }
  const rawMovementLabel=type=>({
-  opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
+  opening:'Начальный остаток',purchase_in:'Закупка',inventory_set:'Корректировка остатка',
   correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
-  bake_out_auto:'Фактическая выпечка',semi_source_auto:'Приготовление полуфабриката',
-  catalog_add:'Добавлено сырьё',exclude_item:'Исключено из списка',restore_item:'Возвращено в список'
+  bake_out_auto:'Списание на выпечку',semi_source_auto:'Приготовление полуфабриката',
+  catalog_add:'Создание сырья',exclude_item:'Исключение',restore_item:'Возврат в список',reversal:'Отмена движения'
  })[type]||type;
+ const rawHistoryGroup=event=>{const type=String(event?.type||'');if(type==='purchase_in')return 'purchase';if(['inventory_set','correction_plus','correction_minus','written_off','reversal'].includes(type))return 'adjustment';if(['bake_out_auto','semi_source_auto'].includes(type))return 'consumption';return 'service'};
+ const rawHistoryService=event=>rawHistoryGroup(event)==='service';
+ const rawHistoryReversible=event=>!event?.virtual&&!event?.system&&!event?.reversedAt&&!event?.reversalOf&&['inventory_set','correction_plus','correction_minus','written_off'].includes(String(event?.type||''));
+ const rawHistoryQuantity=event=>{const delta=Number(event?.delta??(event?.type==='inventory_set'?0:rawSignedType(event?.type)*Number(event?.quantity||0)));if(rawHistoryService(event))return '—';if(event?.type==='inventory_set')return `Установлен остаток: ${niceQty(event.quantity,event.unit)}`;return `${delta>0?'+':''}${niceQty(delta,event.unit)}`};
 
  function renderRawStock(){
   const root=document.querySelector('#view-rawstock');if(!root)return;
@@ -450,15 +454,25 @@
   const tabs=document.querySelector('#rawStockHistoryTabs');
   tabs.innerHTML=`<button type="button" class="${rawHistoryView==='active'?'active':''}" data-raw-history="active"><span>Последние 30 дней</span><b>${activeEvents.length}</b></button><button type="button" class="${rawHistoryView==='archive'?'active':''}" data-raw-history="archive"><span>Архив</span><b>${archiveEvents.length}</b></button>`;
   tabs.querySelectorAll('[data-raw-history]').forEach(button=>button.onclick=()=>{rawHistoryView=button.dataset.rawHistory;renderRawStock()});
-
-  const shown=(rawHistoryView==='active'?activeEvents:archiveEvents).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const filters=document.querySelector('#rawStockHistoryFilters');
+  if(filters){const defs=[['all','Все'],['purchase','Закупки'],['adjustment','Корректировки'],['consumption','Списания'],['service','Служебные']];filters.innerHTML=defs.map(([key,label])=>`<button type="button" class="${rawHistoryFilter===key?'active':''}" data-raw-history-filter="${key}">${label}</button>`).join('');filters.querySelectorAll('[data-raw-history-filter]').forEach(button=>button.onclick=()=>{rawHistoryFilter=button.dataset.rawHistoryFilter;renderRawStock()})}
+  const historySearch=document.querySelector('#rawStockHistorySearch');
+  if(historySearch){historySearch.value=rawHistorySearch;historySearch.oninput=()=>{rawHistorySearch=historySearch.value;renderRawStock();requestAnimationFrame(()=>{const field=document.querySelector('#rawStockHistorySearch');field?.focus();try{field?.setSelectionRange(rawHistorySearch.length,rawHistorySearch.length)}catch{}})}}
+  const baseShown=(rawHistoryView==='active'?activeEvents:archiveEvents).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const searchNeedle=normalizeName(rawHistorySearch),shown=baseShown.filter(event=>(rawHistoryFilter==='all'||rawHistoryGroup(event)===rawHistoryFilter)&&(!searchNeedle||normalizeName(event?.name||'').includes(searchNeedle)));
   document.querySelector('#rawStockMovementRows').innerHTML=shown.length?shown.map(event=>{
-   const delta=Number(event.delta??(event.type==='inventory_set'?0:rawSignedType(event.type)*Number(event.quantity||0)));
-   const quantity=event.type==='inventory_set'?`= ${niceQty(event.quantity,event.unit)}`:`${delta>0?'+':''}${niceQty(delta,event.unit)}`;
-   const action=event.virtual||event.system?'':`<button type="button" class="finance-row-action danger" data-raw-delete="${event.id}">Удалить</button>`;
-   return `<tr class="${event.virtual?'raw-stock-auto-row':''}"><td>${fmt(event.date,{day:'numeric',month:'short',year:'numeric'})}${event.future?' <small>будущее</small>':''}</td><td><strong>${event.name}</strong></td><td><span class="raw-stock-operation ${event.virtual?'auto':''}">${rawMovementLabel(event.type)}</span></td><td class="${delta<0?'raw-stock-negative':'raw-stock-positive'}"><strong>${quantity}</strong></td><td>${event.note||'—'}</td><td>${action}</td></tr>`;
-  }).join(''):'<tr><td colspan="6">Движений в этом разделе пока нет.</td></tr>';
+   const delta=Number(event.delta??(event.type==='inventory_set'?0:rawSignedType(event.type)*Number(event.quantity||0))),service=rawHistoryService(event);
+   const balanceAfter=Number.isFinite(Number(event.balanceAfter))?niceQty(Number(event.balanceAfter),event.unit):'—';
+   const purchaseMeta=event.type==='purchase_in'&&event.note?String(event.note):'';
+   const note=service?(event.note||rawMovementLabel(event.type)):(event.note||'—');
+   const action=event.reversedAt?'<small class="raw-history-action-hint">отменено</small>':rawHistoryReversible(event)?`<button type="button" class="finance-row-action" data-raw-reverse="${event.id}">Отменить</button>`:event.type==='purchase_in'?'<small class="raw-history-action-hint">через Финансы</small>':'';
+   return `<tr class="${event.virtual?'raw-stock-auto-row':''} ${service?'raw-history-service-row':''} ${rawHistoryOpenId===String(event.id)?'is-history-open':''}" data-raw-history-id="${event.id}"><td>${fmt(event.date,{day:'numeric',month:'short',year:'numeric'})}${event.future?' <small>будущее</small>':''}</td><td><button type="button" class="raw-history-mobile-toggle" data-raw-history-toggle="${event.id}"><strong>${event.name}</strong><i aria-hidden="true">⌄</i></button></td><td><span class="raw-stock-operation ${event.virtual?'auto':''}">${event.reversalOf?'Отмена движения':rawMovementLabel(event.type)}</span></td><td class="${delta<0?'raw-stock-negative':'raw-stock-positive'}"><strong>${rawHistoryQuantity(event)}</strong></td><td><strong>${service?'—':balanceAfter}</strong></td><td>${note}</td><td>${action}</td></tr>`;
+  }).join(''):'<tr><td colspan="7">По выбранным условиям событий нет.</td></tr>';
 
+  root.querySelectorAll('[data-raw-history-toggle]').forEach(button=>button.onclick=()=>{
+   if(!window.matchMedia?.('(max-width: 760px)').matches)return;
+   const id=String(button.dataset.rawHistoryToggle||'');rawHistoryOpenId=rawHistoryOpenId===id?'':id;renderRawStock();
+  });
   root.querySelectorAll('[data-raw-ingredient-price]').forEach(input=>{
    const commit=()=>{
     const map=costs(),value=window.panoraParseDecimal?.(input.value);
@@ -486,12 +500,15 @@
    try{rawSetExcluded(row,true);rawStockFeedback(`«${row.name}» исключено из обычного списка.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}
   });
   root.querySelectorAll('[data-raw-restore]').forEach(button=>button.onclick=()=>{const row=ledger.catalog.get(button.dataset.rawRestore);if(!row)return;try{rawSetExcluded(row,false);rawStockFeedback(`«${row.name}» возвращено в список.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}});
-  root.querySelectorAll('[data-raw-delete]').forEach(button=>button.onclick=()=>{
-   if(!confirm('Удалить это движение сырья?'))return;
-   const now=new Date().toISOString(),id=String(button.dataset.rawDelete);
-   const next=readRawMovements().map(item=>String(item.id)===id?{...item,deletedAt:now,updatedAt:now,deviceId:item.deviceId||rawStockDeviceId}:item);
-   try{saveRawMovements(next);rawStockFeedback('Движение удалено на устройстве.')}
-   catch(error){rawStockFeedback(error.message||String(error),'error')}
+  root.querySelectorAll('[data-raw-reverse]').forEach(button=>button.onclick=()=>{
+   const id=String(button.dataset.rawReverse||''),ledgerNow=rawLedger(),event=ledgerNow.events.find(item=>String(item.id)===id);
+   if(!event||!rawHistoryReversible(event))return;
+   const delta=Number(event.delta||0);if(Math.abs(delta)<=0.0000001){rawStockFeedback('Для этого движения нет количественного изменения.','error');return}
+   if(!confirm(`Отменить движение «${rawMovementLabel(event.type)}» по «${event.name}»?\n\nPanora не удалит историю, а создаст обратную проводку ${niceQty(Math.abs(delta),event.unit)}.`))return;
+   const movements=readRawMovements(),now=new Date().toISOString(),reverseType=delta>0?'correction_minus':'correction_plus';
+   movements.push({id:crypto.randomUUID(),date:localToday(),key:event.key,name:event.name,unit:event.unit,type:reverseType,quantity:Math.abs(delta),note:`Отмена движения от ${event.date} · ${rawMovementLabel(event.type)}`,reversalOf:event.id,createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+   const next=movements.map(item=>String(item.id)===id?{...item,reversedAt:now,updatedAt:now}:item);
+   try{saveRawMovements(next);rawStockFeedback('Создана обратная проводка. Исходное движение сохранено в истории.')}catch(error){rawStockFeedback(error.message||String(error),'error')}
    renderRawStock();renderPurchase();
   });
   root.querySelectorAll('[data-raw-fix]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawFix,type:'inventory_set',reason:'negative'}));
