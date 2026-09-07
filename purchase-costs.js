@@ -178,7 +178,7 @@
  const RAW_STOCK_KEY='panora-raw-stock-movements';
  const RAW_STOCK_MIGRATION='panora-raw-stock-migration-v606';
  const RAW_STOCK_DEVICE_KEY='panora-raw-stock-device-v607';
- let rawHistoryView='active',rawStockView='active';
+ let rawHistoryView='active',rawStockView='active',rawStockOpenKey='';
  const rawStockDeviceId=(()=>{let id=localStorage.getItem(RAW_STOCK_DEVICE_KEY);if(id)return id;id=crypto.randomUUID();localStorage.setItem(RAW_STOCK_DEVICE_KEY,id);return id})();
 
  const readRawMovements=()=>{
@@ -238,6 +238,9 @@
     ensure(source,row.sourceUnit,{margin:item?.margin??5,stock:0});
    }
   });
+  // Catalog-only raw materials are persisted as ordinary synced stock movements.
+  // This lets an ingredient exist before it is used by any recipe.
+  readRawMovements().filter(item=>!item?.deletedAt).forEach(item=>ensure(item?.name,item?.unit,{stock:0,margin:5}));
   return map;
  }
 
@@ -377,7 +380,7 @@
   opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
   correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
   bake_out_auto:'Фактическая выпечка',semi_source_auto:'Приготовление полуфабриката',
-  exclude_item:'Исключено из списка',restore_item:'Возвращено в список'
+  catalog_add:'Добавлено сырьё',exclude_item:'Исключено из списка',restore_item:'Возвращено в список'
  })[type]||type;
 
  function renderRawStock(){
@@ -419,8 +422,8 @@
     ?`<button type="button" class="raw-stock-row-action restore" data-raw-restore="${row.key}">Вернуть</button>`
     :`<button type="button" class="raw-stock-row-action" data-raw-purchase="${row.key}">Закупка</button><button type="button" class="raw-stock-row-action" data-raw-adjust="${row.key}">Корректировка</button><button type="button" class="raw-stock-row-action danger" data-raw-exclude="${row.key}">Исключить</button>`;
    const actions=`<div class="raw-stock-actions-desktop">${actionButtons}</div><details class="raw-stock-actions-mobile"><summary aria-label="Действия">⋯</summary><div>${actionButtons}</div></details>`;
-   return `<tr class="${needsInventory?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''} ${excluded?'raw-stock-excluded-row':''}">
-    <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}${blocked?' · исключена, но пока используется/есть остаток':''}</small></td>
+   return `<tr data-raw-stock-key="${row.key}" class="raw-stock-mobile-card ${rawStockOpenKey===row.key?'is-mobile-open':''} ${needsInventory?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''} ${excluded?'raw-stock-excluded-row':''}">
+    <td class="raw-stock-mobile-head"><button type="button" class="raw-stock-mobile-toggle" data-raw-toggle="${row.key}" aria-expanded="${rawStockOpenKey===row.key?'true':'false'}"><span><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}${blocked?' · исключена, но пока используется/есть остаток':''}</small></span><span class="raw-stock-mobile-quick"><b>${niceQty(stock,row.unit)}</b><i aria-hidden="true">⌄</i></span></button></td>
     <td><strong>${niceQty(stock,row.unit)}</strong></td><td>${needText}</td>
     <td class="${after!==null&&after<0&&!row.semi?'raw-stock-negative':''}">${afterText}</td><td>${priceText}</td>
     <td>${euroCost(value)}</td><td>${status}</td><td>${actions}</td></tr>`;
@@ -469,12 +472,16 @@
    input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();input.blur()}};
    input.onfocus=()=>requestAnimationFrame(()=>input.select());
   });
+  root.querySelectorAll('[data-raw-toggle]').forEach(button=>button.onclick=()=>{
+   const key=String(button.dataset.rawToggle||'');rawStockOpenKey=rawStockOpenKey===key?'':key;renderRawStock();
+  });
   root.querySelectorAll('[data-raw-purchase]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawPurchase,type:'purchase_in',mode:'purchase'}));
   root.querySelectorAll('[data-raw-adjust]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawAdjust,type:'inventory_set',mode:'adjust'}));
   root.querySelectorAll('[data-raw-exclude]').forEach(button=>button.onclick=()=>{
    const row=ledger.catalog.get(button.dataset.rawExclude);if(!row)return;
    const stock=Math.abs(Number(ledger.balances.get(row.key)||0)),required=Math.max(0,Number(needs.get(row.key)||0));
-   if((stock>0.0005||required>0.0005)&&!confirm(`У «${row.name}» есть ${stock>0.0005?'остаток':''}${stock>0.0005&&required>0.0005?' и ':''}${required>0.0005?'текущая потребность по рецептурам':''}. Исключить позицию? Пока остаток или потребность не станут нулевыми, Panora всё равно будет показывать её в активном списке для безопасности.`))return;
+   const details=[`Текущий остаток: ${niceQty(stock,row.unit)}`,required>0.0005?`Потребность по выбранным рецептурам: ${niceQty(required,row.unit)}`:'Текущей потребности нет','История движений и рецептур сохранится.'].join('\n');
+   if(!confirm(`Исключить «${row.name}» из обычного списка склада сырья?\n\n${details}\n\nПозицию можно будет вернуть из вкладки «Исключённые».`))return;
    try{rawSetExcluded(row,true);rawStockFeedback(`«${row.name}» исключено из обычного списка.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}
   });
   root.querySelectorAll('[data-raw-restore]').forEach(button=>button.onclick=()=>{const row=ledger.catalog.get(button.dataset.rawRestore);if(!row)return;try{rawSetExcluded(row,false);rawStockFeedback(`«${row.name}» возвращено в список.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}});
@@ -610,6 +617,23 @@
    :'';
   preview.innerHTML=row?`<div class="raw-stock-preview-grid"><span>Сейчас<strong>${niceQty(current,row.unit)}</strong></span><span>Нужно по выборке<strong>${niceQty(required,row.unit)}</strong></span>${hasQuantity?`<span>После операции<strong>${niceQty(after,row.unit)}</strong></span>`:''}</div>${result}${conversion}${guidance}`:'Ингредиент не найден.';
  }
+ function openNewRawMaterial(options={}){
+  const dialog=document.querySelector('#rawStockNewDialog'),form=document.querySelector('#rawStockNewForm');if(!dialog||!form){rawStockFeedback('Форма нового сырья не загрузилась. Обновите Panora.','error');return}
+  form.reset();form.unit.value=normalizeUnit(options.unit)||'g';form.name.value=String(options.name||'').trim();dialog.showModal();setTimeout(()=>form.name?.focus(),30);
+ }
+ function saveNewRawMaterial(form){
+  const data=Object.fromEntries(new FormData(form)),name=String(data.name||'').trim(),unit=normalizeUnit(data.unit)||'g';
+  if(!name){rawStockFeedback('Укажите название сырья.','error');return false}
+  const normalized=normalizeName(name),ledger=rawLedger(),sameName=[...ledger.catalog.values()].filter(row=>normalizeName(row.name)===normalized);
+  if(sameName.length){const row=sameName[0];rawStockFeedback(`«${row.name}» уже есть в каталоге (${rawEntryUnitLabel(row.unit)}). Используйте закупку или корректировку.`,'error');return false}
+  const key=`${normalized}|${unit}`,movements=readRawMovements(),now=new Date().toISOString(),initial=Math.max(0,Number(String(data.initial||0).replace(',','.'))||0),price=Math.max(0,Number(String(data.price||0).replace(',','.'))||0);
+  movements.push({id:crypto.randomUUID(),date:localToday(),key,name,unit,type:'catalog_add',quantity:0,note:'Добавлено новое сырьё',createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+  if(initial>0)movements.push({id:crypto.randomUUID(),date:localToday(),key,name,unit,type:'inventory_set',quantity:rawEntryToBase(initial,unit),note:'Начальный фактический остаток при создании сырья',createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+  try{saveRawMovements(movements)}catch(error){rawStockFeedback(error.message||String(error),'error');return false}
+  if(price>0)window.panoraIngredientCosts?.set?.(name,unit,price);
+  rawStockOpenKey=key;form.closest('dialog')?.close();renderRawStock();if(typeof renderPurchase==='function')renderPurchase();
+  window.dispatchEvent(new CustomEvent('panora:raw-catalog-changed',{detail:{key,name,unit}}));rawStockFeedback(`«${name}» добавлено в каталог сырья.`);return true;
+ }
  function bindRawStock(){
   const add=document.querySelector('#rawStockAddMovement'),dialog=document.querySelector('#rawStockMovementDialog'),form=document.querySelector('#rawStockMovementForm');
   if(!add||!dialog||!form)return false;
@@ -617,6 +641,12 @@
   form.dataset.rawStockBound='1';
 
   add.addEventListener('click',event=>{event.preventDefault();openRawStockMovement({type:'purchase_in'})});
+  document.querySelector('#rawStockAddNew')?.addEventListener('click',event=>{event.preventDefault();openNewRawMaterial()});
+  const newDialog=document.querySelector('#rawStockNewDialog'),newForm=document.querySelector('#rawStockNewForm');
+  document.querySelector('#rawStockNewClose')?.addEventListener('click',()=>newDialog?.close());
+  document.querySelector('#rawStockNewCancel')?.addEventListener('click',()=>newDialog?.close());
+  newDialog?.addEventListener('click',event=>{if(event.target===newDialog)newDialog.close()});
+  newForm?.addEventListener('submit',event=>{event.preventDefault();if(newForm.reportValidity())saveNewRawMaterial(newForm)});
   document.querySelector('#rawStockOpenPurchase')?.addEventListener('click',()=>document.querySelector('.admin-nav button[data-view="purchase"]')?.click());
   document.querySelector('#rawStockMovementClose')?.addEventListener('click',()=>dialog.close());
   document.querySelector('#rawStockMovementCancel')?.addEventListener('click',()=>dialog.close());
@@ -676,7 +706,7 @@
   });
   return true;
  }
- window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,setExcluded:rawSetExcluded,excluded:rawExclusionState,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
+ window.panoraRawStock={ledger:rawLedger,catalog:()=>[...rawLedger().catalog.values()].map(row=>({...row})),balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNew:openNewRawMaterial,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,setExcluded:rawSetExcluded,excluded:rawExclusionState,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
  function periodDemandForDates(dates){
   const demand=new Map(),days=rawDemandByDate(dates);
