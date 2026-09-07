@@ -2308,7 +2308,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
     startAdminLeaderHeartbeat();
-    // Panora 10.43: cloud data is event/on-demand driven.
+    // Panora 10.44: cloud data is event/on-demand driven.
     // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
@@ -2355,7 +2355,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const now=Date.now();
     if(adminWakeRefreshPromise)return adminWakeRefreshPromise;
     // focus + visibilitychange + pageshow commonly fire together on mobile.
-    // One wake refresh per 15 seconds is enough; periodic timers cover the rest.
+    // One wake refresh per 15 seconds is enough; identical wake events are deduplicated.
     if(now-adminWakeRefreshAt<15000)return Promise.resolve(false);
     adminWakeRefreshAt=now;
     adminWakeRefreshPromise=(async()=>{
