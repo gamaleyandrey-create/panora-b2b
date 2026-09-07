@@ -119,8 +119,8 @@
  function start(){
   clearInterval(timer);
   autoFetchCatalog({force:true});
-  // Public catalogue changes rarely. User actions elsewhere still dispatch direct refresh events.
-  timer=setInterval(()=>autoFetchCatalog(),1800000);
+  // Panora 10.42: no periodic catalogue polling; wake/focus/online and direct events refresh it.
+  timer=0;
  }
  window.panoraPublicCatalog={refresh:fetchCatalog,start};
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoFetchCatalog()});

@@ -855,7 +855,7 @@
       }
     };
     tick();
-    partnerOrderPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine&&isPartnerBackgroundLeader())tick()},1800000);
+    partnerOrderPoll=0;
   }
   function stopPartnerOrderPolling(){clearInterval(partnerOrderPoll);clearInterval(partnerLeaderHeartbeat);partnerOrderPoll=0;partnerLeaderHeartbeat=0;partnerCancelabilitySignature='';partnerOrdersHydrated=false;partnerFinanceHydrated=false;partnerCommerceRevision='';partnerCommerceParts={orders:'',payments:'',notes:''};partnerCommerceRevisionUnavailable=false}
   let partnerPricingPoll=0,partnerPricingLoading=null;
@@ -910,7 +910,7 @@
       console.warn('Panora partner pricing refresh',error);
     });
     tick();
-    partnerPricingPoll=setInterval(()=>{if(!document.hidden&&navigator.onLine)tick()},1800000);
+    partnerPricingPoll=0;
   }
   function stopPartnerPricingPolling(){clearInterval(partnerPricingPoll);partnerPricingPoll=0}
 
@@ -1525,7 +1525,6 @@
     if(error?.code==='PANORA_SESSION_EXPIRED'||isInvalidRefreshToken(error))clearBrokenSession(error);
     else{document.documentElement.classList.remove('panora-partner-boot');document.documentElement.classList.add('panora-mobile-route-ready');state('error',error.message);renderAccountModal()}
   }})();
-  setInterval(async()=>{if(!session?.user||loadPromise||document.hidden||!navigator.onLine||!isPartnerBackgroundLeader())return;try{const changed=await partnerCommerceRevisionChanged();if(changed?.changed){if(changed.orders)await refreshPartnerOrders();if(changed.payments||changed.notes)await refreshPartnerFinance({notes:changed.notes,payments:changed.payments})}}catch(error){if(error?.code!=='PANORA_SESSION_EXPIRED')console.warn('Panora partner safety refresh',error)}},1800000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)claimPartnerLeader(true)});
   window.addEventListener('focus',()=>claimPartnerLeader(true),true);
   window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
