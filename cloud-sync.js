@@ -2308,7 +2308,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
     startAdminLeaderHeartbeat();
-    // Panora 10.42: cloud data is event/on-demand driven.
+    // Panora 10.43: cloud data is event/on-demand driven.
     // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
