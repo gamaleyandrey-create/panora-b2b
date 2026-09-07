@@ -167,10 +167,25 @@
       const prices=Object.fromEntries((r.restaurant_prices||[]).map(x=>[String(x.product_id),Number(x.price)]));
       const productList=products();
       const restaurantId=String(r.id);
+      const analytics=typeof window.panoraPartnerMonthAnalytics==='function'?window.panoraPartnerMonthAnalytics(restaurantId):null;
+      const money=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' €';
+      const pct=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:1}).format(Number(value)||0)+'%';
+      const analyticsHtml=analytics?`<section class="partner-logistics-analytics" aria-label="Логистика за текущий месяц">
+        <div class="partner-logistics-analytics-head"><div><strong>Логистика за текущий месяц</strong><small>${esc(analytics.from)} — ${esc(analytics.to)}</small></div><span class="partner-logistics-profit ${Number(analytics.profit)<0?'is-negative':'is-positive'}">${money(analytics.profit)}</span></div>
+        <div class="partner-logistics-kpis">
+          <span><small>Доставок</small><strong>${Number(analytics.deliveries||0)}</strong></span>
+          <span><small>Выручка</small><strong>${money(analytics.revenue)}</strong></span>
+          <span><small>Плата за доставку</small><strong>${money(analytics.deliveryRevenue)}</strong></span>
+          <span><small>Транспорт</small><strong>${money(analytics.logisticsCost)}</strong></span>
+          <span><small>Себестоимость + транспорт</small><strong>${money(analytics.cogs)}</strong></span>
+          <span><small>Маржа после логистики</small><strong>${pct(analytics.margin)}</strong></span>
+        </div>
+      </section>`:'';
       return `<article class="restaurant-card" data-direct-restaurant="${esc(r.id)}">
         <div class="restaurant-card-head"><span class="tag">${esc(partnerTypeLabel(r.partner_type))}</span><button type="button" class="restaurant-delete" data-direct-archive-partner="${esc(restaurantId)}">Архивировать</button></div>
         <h3>${esc(r.name)}</h3>
         <p>${esc(r.email||'')}<br>${esc(r.address||'')}</p>
+        ${analyticsHtml}
         ${r.email?`<div class="partner-access-actions"><button type="button" class="secondary" data-partner-invite="${esc(restaurantId)}">Пригласить в Panora</button><span data-partner-invite-status="${esc(restaurantId)}"></span></div>`:''}
         <details class="partner-contact-settings partner-profile-settings">
           <summary>Данные партнёра</summary>
@@ -612,6 +627,10 @@
 
   document.addEventListener('visibilitychange',()=>{if(active&&!document.hidden)refresh()});
   window.addEventListener('focus',()=>{if(active)refresh()});
+  window.addEventListener('panora:partner-analytics-ready',()=>{if(active&&lastRows.length)render(lastRows)});
+  window.addEventListener('panora:delivery-notes-updated',()=>{if(active&&lastRows.length)render(lastRows)});
+  window.addEventListener('panora:ingredient-costs-changed',()=>{if(active&&lastRows.length)render(lastRows)});
+  window.addEventListener('panora:bake-completions-changed',()=>{if(active&&lastRows.length)render(lastRows)});
 
   setTimeout(()=>{
     const view=screen();

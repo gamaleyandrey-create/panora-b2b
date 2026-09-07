@@ -543,5 +543,22 @@
   window.addEventListener('panora:bake-completions-changed',render);
   window.addEventListener('panora:bake-completions-cloud-updated',render);
   window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
+
+  // Panora 10.37: expose the same finance engine to Partner cards for a current-month
+  // logistics snapshot. We temporarily scope the existing synchronous calculation to
+  // the month and immediately restore the Finance filters, so there is only one P&L
+  // formula in the application.
+  window.panoraPartnerMonthAnalytics=restaurantId=>{
+    const oldFrom=from.value,oldTo=to.value,d=new Date(),start=iso(new Date(d.getFullYear(),d.getMonth(),1)),end=iso(d);
+    try{
+      from.value=start;to.value=end;
+      const x=calculate(),id=String(restaurantId||''),row=(x.partners||[]).find(item=>String(item.id||'')===id)||{id,pieces:0,revenue:0,cogs:0,logisticsCost:0,deliveryRevenue:0};
+      const notes=(Array.isArray(read('panora-delivery-notes',[]))?read('panora-delivery-notes',[]):[]).filter(note=>String(note?.restaurantId||'')===id&&inPeriod(note?.date));
+      const revenue=Number(row.revenue||0),cogs=Number(row.cogs||0),logisticsCost=Math.max(0,Number(row.logisticsCost||0)),deliveryRevenue=Math.max(0,Number(row.deliveryRevenue||0)),profit=revenue-cogs,margin=revenue?profit/revenue*100:0;
+      return {restaurantId:id,from:start,to:end,deliveries:notes.length,pieces:Number(row.pieces||0),revenue,cogs,logisticsCost,deliveryRevenue,profit,margin};
+    }finally{from.value=oldFrom;to.value=oldTo}
+  };
+  window.dispatchEvent(new CustomEvent('panora:partner-analytics-ready'));
+
   render();setTimeout(()=>{if(document.querySelector('#view-finance')?.classList.contains('active'))loadCloud()},700);
 })();
