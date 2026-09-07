@@ -544,7 +544,7 @@
   window.addEventListener('panora:bake-completions-cloud-updated',render);
   window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
 
-  // Panora 10.37: expose the same finance engine to Partner cards for a current-month
+  // Panora 10.38: expose the same finance engine to Partner cards for a current-month
   // logistics snapshot. We temporarily scope the existing synchronous calculation to
   // the month and immediately restore the Finance filters, so there is only one P&L
   // formula in the application.
