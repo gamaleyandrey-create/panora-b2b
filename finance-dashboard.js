@@ -560,5 +560,18 @@
   };
   window.dispatchEvent(new CustomEvent('panora:partner-analytics-ready'));
 
+  // Panora 10.39 — raw-material purchase entry from Raw Materials stock.
+  // It uses the same Finance persistence path as manual expenses, so cloud/local
+  // accounting cannot diverge between the stock screen and Finance.
+  window.panoraFinanceAddRawPurchase=async data=>{
+    const gross=Math.max(0,Number(data?.grossAmount||0));
+    if(gross<=0)throw new Error('Сумма закупки должна быть больше нуля.');
+    const ingredient=String(data?.ingredient||'').trim(),supplier=String(data?.supplier||'').trim(),documentRef=String(data?.documentRef||'').trim();
+    const description=[ingredient&&`Закупка сырья · ${ingredient}`,supplier&&`Поставщик: ${supplier}`,documentRef&&`Документ: ${documentRef}`].filter(Boolean).join(' · ');
+    const row={id:crypto.randomUUID(),date:String(data?.date||iso(new Date())).slice(0,10),category:'Сырьё',description,expenseType:'variable',grossAmount:gross,vatRate:Math.max(0,Number(data?.vatRate||0)),vatDeductible:data?.vatDeductible!==false};
+    await persist(row);
+    return row;
+  };
+
   render();setTimeout(()=>{if(document.querySelector('#view-finance')?.classList.contains('active'))loadCloud()},700);
 })();
