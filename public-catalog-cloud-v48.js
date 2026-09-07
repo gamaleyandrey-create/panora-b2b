@@ -122,11 +122,16 @@
   // Panora 10.44: no periodic catalogue polling; wake/focus/online and direct events refresh it.
   timer=0;
  }
- window.panoraPublicCatalog={refresh:fetchCatalog,start};
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoFetchCatalog()});
- window.addEventListener('focus',()=>autoFetchCatalog());
- window.addEventListener('online',()=>autoFetchCatalog({force:true}));
- start();
+ const isRetailPage=()=>/\/retail(?:\/|\.html|$)/.test(location.pathname);
+ window.panoraPublicCatalog={refresh:fetchCatalog,refreshIfChanged:refreshCatalogIfChanged,start};
+ // Panora 10.45: the retail storefront owns its wake refresh. Avoid a second
+ // catalogue wake listener in this helper. Other pages keep the shared cache refresh.
+ if(!isRetailPage()){
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoFetchCatalog()});
+  window.addEventListener('focus',()=>autoFetchCatalog());
+  window.addEventListener('online',()=>autoFetchCatalog({force:true}));
+  start();
+ }
 })();
 
 

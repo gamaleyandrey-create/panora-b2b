@@ -638,3 +638,24 @@
 
 .raw-history-mobile-toggle{border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit;text-align:left}.raw-history-mobile-toggle i{display:none;font-style:normal}
 @media(max-width:760px){.raw-history-mobile-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px}.raw-history-mobile-toggle i{display:inline-block;transition:transform .18s ease}.raw-stock-movement-table tr.is-history-open .raw-history-mobile-toggle i{transform:rotate(180deg)}.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(5),.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(6),.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(7){display:none!important}.raw-stock-movement-table tr:not(.is-history-open){cursor:pointer}}
+
+
+/* Panora 10.45 — raw material history filters are always visible on desktop. */
+@media(min-width:761px){
+  .raw-stock-history-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:end!important;column-gap:18px;row-gap:12px}
+  .raw-stock-history-head>div:first-child{grid-column:1;min-width:0}
+  .raw-stock-history-tools{grid-column:1/-1;width:100%;display:grid!important;grid-template-columns:minmax(210px,.72fr) minmax(430px,1.55fr) auto;align-items:end;gap:10px;padding-top:11px;border-top:1px solid #edf0eb}
+  .raw-stock-history-search{min-width:0!important;width:100%}
+  .raw-stock-history-filters{display:flex!important;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+  .raw-stock-history-filters button{min-height:40px;padding:8px 13px}
+  .raw-stock-history-tools .stock-movement-tabs{justify-self:end;white-space:nowrap}
+}
+@media(max-width:1180px) and (min-width:761px){
+  .raw-stock-history-tools{grid-template-columns:minmax(190px,.65fr) minmax(0,1.35fr)}
+  .raw-stock-history-tools .stock-movement-tabs{grid-column:1/-1;justify-self:end}
+}
+@media(max-width:760px){
+  .raw-stock-history-filters{display:flex!important;overflow-x:auto;flex-wrap:nowrap!important;gap:7px;padding:1px 0 4px;scrollbar-width:none}
+  .raw-stock-history-filters::-webkit-scrollbar{display:none}
+  .raw-stock-history-filters button{flex:0 0 auto;min-height:40px;padding:8px 12px!important;font-size:12px}
+}
