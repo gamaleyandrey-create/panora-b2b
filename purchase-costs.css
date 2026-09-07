@@ -567,3 +567,38 @@
   body.admin-page .purchase-date-options{scroll-snap-type:x proximity!important;overscroll-behavior-x:contain!important}
   body.admin-page .purchase-date-option{scroll-snap-align:start!important}
 }
+
+/* Panora 10.39 — raw-material row actions, purchases, corrections and exclusions */
+.raw-stock-item-tabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.raw-stock-item-tabs button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 11px;border:1px solid #d7e0d7;border-radius:999px;background:#fff;color:#647169;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.raw-stock-item-tabs button.active{background:#eaf2e9;color:#315d42;border-color:#c8d8ca;box-shadow:inset 0 -2px 0 #39704f}
+.raw-stock-item-tabs b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#f0f3ef;color:#54635a;font-size:10px}
+.raw-stock-item-tabs button.active b{background:#fff;color:#315d42}
+.raw-stock-actions-desktop{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.raw-stock-row-action{min-height:32px;padding:0 9px;border:1px solid #d5ddd5;border-radius:9px;background:#fff;color:#385746;font:inherit;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap}
+.raw-stock-row-action:hover{background:#f0f5ef}
+.raw-stock-row-action.danger{border-color:#ecd3cf;color:#9a4942;background:#fff9f8}
+.raw-stock-row-action.restore{border-color:#c8dccd;background:#eef6ef;color:#315f43}
+.raw-stock-actions-mobile{display:none}
+.raw-stock-excluded-row{opacity:.78}
+.raw-stock-purchase-fields{display:grid;gap:10px;margin:0;padding:12px;border:1px solid #dde5dc;border-radius:12px;background:#f8faf7}
+.raw-stock-purchase-fields[hidden]{display:none!important}
+.raw-stock-purchase-fields legend{padding:0 5px;color:#385847;font-size:11px;font-weight:800}
+.raw-stock-purchase-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.raw-stock-purchase-fields>small{color:#6f7b72;font-size:9.5px;line-height:1.45}
+.raw-stock-vat-check{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center!important;gap:8px!important}
+.raw-stock-vat-check input{width:auto!important;margin:0!important}
+
+@media(max-width:720px){
+  .raw-stock-panel-head{align-items:flex-start!important;gap:10px!important}
+  .raw-stock-item-tabs{width:100%}
+  .raw-stock-item-tabs button{flex:1;justify-content:center;min-height:42px}
+  body.admin-page .raw-stock-balance-table td:nth-child(8)::before{content:"Действия"}
+  .raw-stock-actions-desktop{display:none!important}
+  .raw-stock-actions-mobile{display:block;position:relative;width:100%}
+  .raw-stock-actions-mobile summary{display:grid;place-items:center;width:48px;min-height:42px;border:1px solid #d8e0d8;border-radius:10px;background:#fff;color:#375744;font-size:22px;line-height:1;cursor:pointer;list-style:none}
+  .raw-stock-actions-mobile summary::-webkit-details-marker{display:none}
+  .raw-stock-actions-mobile[open]>div{display:grid;gap:7px;margin-top:7px}
+  .raw-stock-actions-mobile .raw-stock-row-action{width:100%;min-height:44px;text-align:left;padding:0 12px}
+  .raw-stock-purchase-grid{grid-template-columns:1fr}
+}

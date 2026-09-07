@@ -178,7 +178,7 @@
  const RAW_STOCK_KEY='panora-raw-stock-movements';
  const RAW_STOCK_MIGRATION='panora-raw-stock-migration-v606';
  const RAW_STOCK_DEVICE_KEY='panora-raw-stock-device-v607';
- let rawHistoryView='active';
+ let rawHistoryView='active',rawStockView='active';
  const rawStockDeviceId=(()=>{let id=localStorage.getItem(RAW_STOCK_DEVICE_KEY);if(id)return id;id=crypto.randomUUID();localStorage.setItem(RAW_STOCK_DEVICE_KEY,id);return id})();
 
  const readRawMovements=()=>{
@@ -201,6 +201,19 @@
  const rawEntryToBase=(value,unit)=>Math.max(0,Number(value||0))*rawEntryScale(unit);
  const rawBaseToEntry=(value,unit)=>Number(value||0)/rawEntryScale(unit);
  const rawSignedType=type=>['correction_minus','written_off','bake_out_auto','semi_source_auto'].includes(type)?-1:1;
+ const rawExclusionState=()=>{
+  const state=new Map();
+  readRawMovements().filter(item=>!item?.deletedAt&&['exclude_item','restore_item'].includes(String(item?.type||'')))
+   .slice().sort((a,b)=>String(a?.updatedAt||a?.createdAt||'').localeCompare(String(b?.updatedAt||b?.createdAt||'')))
+   .forEach(item=>state.set(String(item.key||''),item.type==='exclude_item'));
+  return state;
+ };
+ const rawSetExcluded=(row,excluded)=>{
+  if(!row)return false;
+  const movements=readRawMovements(),now=new Date().toISOString();
+  movements.push({id:crypto.randomUUID(),date:localToday(),key:row.key,name:row.name,unit:row.unit,type:excluded?'exclude_item':'restore_item',quantity:0,note:excluded?'Исключено из обычного списка склада сырья':'Возвращено в обычный список склада сырья',createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+  saveRawMovements(movements);return true;
+ };
 
  function rawIngredientCatalog(){
   const map=new Map(),latest=currentRecipes();
@@ -363,14 +376,19 @@
  const rawMovementLabel=type=>({
   opening:'Начальный остаток',purchase_in:'Приход закупки',inventory_set:'Инвентаризация',
   correction_plus:'Корректировка +',correction_minus:'Корректировка −',written_off:'Списание / брак',
-  bake_out_auto:'Фактическая выпечка',semi_source_auto:'Приготовление полуфабриката'
+  bake_out_auto:'Фактическая выпечка',semi_source_auto:'Приготовление полуфабриката',
+  exclude_item:'Исключено из списка',restore_item:'Возвращено в список'
  })[type]||type;
 
  function renderRawStock(){
   const root=document.querySelector('#view-rawstock');if(!root)return;
   const ledger=rawLedger(),forward=rawForwardNeeds(ledger),{needs}=forward,priceMap=costs();
   let stockValue=0,shortages=0,inventoryIssues=0;
-  const rows=[...ledger.catalog.values()].sort((a,b)=>a.semi!==b.semi?(a.semi?1:-1):a.name.localeCompare(b.name,'ru'));
+  const excludedState=rawExclusionState(),allRows=[...ledger.catalog.values()].sort((a,b)=>a.semi!==b.semi?(a.semi?1:-1):a.name.localeCompare(b.name,'ru'));
+  const safetyVisible=row=>Math.abs(Number(ledger.balances.get(row.key)||0))>0.0005||Math.max(0,Number(needs.get(row.key)||0))>0.0005;
+  const rows=allRows.filter(row=>rawStockView==='excluded'?excludedState.get(row.key)===true:(excludedState.get(row.key)!==true||safetyVisible(row)));
+  const itemTabs=document.querySelector('#rawStockItemTabs');
+  if(itemTabs){const excludedCount=allRows.filter(row=>excludedState.get(row.key)===true).length;itemTabs.innerHTML=`<button type="button" class="${rawStockView==='active'?'active':''}" data-raw-stock-view="active"><span>Активные</span><b>${allRows.length-excludedCount}</b></button><button type="button" class="${rawStockView==='excluded'?'active':''}" data-raw-stock-view="excluded"><span>Исключённые</span><b>${excludedCount}</b></button>`;itemTabs.querySelectorAll('[data-raw-stock-view]').forEach(button=>button.onclick=()=>{rawStockView=button.dataset.rawStockView;renderRawStock()});}
   document.querySelector('#rawStockRows').innerHTML=rows.length?rows.map(row=>{
    const stock=Number(ledger.balances.get(row.key)||0),required=Math.max(0,Number(needs.get(row.key)||0)),needsInventory=stock<0;
    const price=ingredientPrice(priceMap,row.name,row.unit);
@@ -396,14 +414,19 @@
    const afterText=needsInventory
     ?'<span class="raw-stock-pending">После инвентаризации</span>'
     :row.semi?(shortage>0.0005?`приготовить ${niceQty(shortage,row.unit)}`:niceQty(Math.max(0,after),row.unit)):niceQty(after,row.unit);
-   return `<tr class="${needsInventory?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''}">
-    <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}</small></td>
+   const excluded=excludedState.get(row.key)===true,blocked=excluded&&safetyVisible(row);
+   const actionButtons=excluded
+    ?`<button type="button" class="raw-stock-row-action restore" data-raw-restore="${row.key}">Вернуть</button>`
+    :`<button type="button" class="raw-stock-row-action" data-raw-purchase="${row.key}">Закупка</button><button type="button" class="raw-stock-row-action" data-raw-adjust="${row.key}">Корректировка</button><button type="button" class="raw-stock-row-action danger" data-raw-exclude="${row.key}">Исключить</button>`;
+   const actions=`<div class="raw-stock-actions-desktop">${actionButtons}</div><details class="raw-stock-actions-mobile"><summary aria-label="Действия">⋯</summary><div>${actionButtons}</div></details>`;
+   return `<tr class="${needsInventory?'raw-stock-negative-row':''} ${row.semi?'raw-stock-semi-row':''} ${excluded?'raw-stock-excluded-row':''}">
+    <td><strong>${row.name}</strong><small>${row.semi?`Полуфабрикат из «${row.sourceName}» · выход ${row.yieldPct}%`:rawUnitLabel(row.unit)}${blocked?' · исключена, но пока используется/есть остаток':''}</small></td>
     <td><strong>${niceQty(stock,row.unit)}</strong></td><td>${needText}</td>
     <td class="${after!==null&&after<0&&!row.semi?'raw-stock-negative':''}">${afterText}</td><td>${priceText}</td>
-    <td>${euroCost(value)}</td><td>${status}</td></tr>`;
-  }).join(''):'<tr><td colspan="7">В рецептурах пока нет ингредиентов.</td></tr>';
+    <td>${euroCost(value)}</td><td>${status}</td><td>${actions}</td></tr>`;
+  }).join(''):`<tr><td colspan="8">${rawStockView==='excluded'?'Исключённых позиций нет.':'В рецептурах пока нет ингредиентов.'}</td></tr>`;
 
-  document.querySelector('#rawStockIngredientCount').textContent=String(rows.length);
+  document.querySelector('#rawStockIngredientCount').textContent=String(allRows.filter(row=>excludedState.get(row.key)!==true||safetyVisible(row)).length);
   document.querySelector('#rawStockValue').textContent=euroCost(stockValue);
   document.querySelector('#rawStockShortages').textContent=String(shortages);
   const shortageHint=document.querySelector('#rawStockShortageHint');
@@ -446,6 +469,15 @@
    input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();input.blur()}};
    input.onfocus=()=>requestAnimationFrame(()=>input.select());
   });
+  root.querySelectorAll('[data-raw-purchase]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawPurchase,type:'purchase_in',mode:'purchase'}));
+  root.querySelectorAll('[data-raw-adjust]').forEach(button=>button.onclick=()=>openRawStockMovement({key:button.dataset.rawAdjust,type:'inventory_set',mode:'adjust'}));
+  root.querySelectorAll('[data-raw-exclude]').forEach(button=>button.onclick=()=>{
+   const row=ledger.catalog.get(button.dataset.rawExclude);if(!row)return;
+   const stock=Math.abs(Number(ledger.balances.get(row.key)||0)),required=Math.max(0,Number(needs.get(row.key)||0));
+   if((stock>0.0005||required>0.0005)&&!confirm(`У «${row.name}» есть ${stock>0.0005?'остаток':''}${stock>0.0005&&required>0.0005?' и ':''}${required>0.0005?'текущая потребность по рецептурам':''}. Исключить позицию? Пока остаток или потребность не станут нулевыми, Panora всё равно будет показывать её в активном списке для безопасности.`))return;
+   try{rawSetExcluded(row,true);rawStockFeedback(`«${row.name}» исключено из обычного списка.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}
+  });
+  root.querySelectorAll('[data-raw-restore]').forEach(button=>button.onclick=()=>{const row=ledger.catalog.get(button.dataset.rawRestore);if(!row)return;try{rawSetExcluded(row,false);rawStockFeedback(`«${row.name}» возвращено в список.`);renderRawStock()}catch(error){rawStockFeedback(error.message||String(error),'error')}});
   root.querySelectorAll('[data-raw-delete]').forEach(button=>button.onclick=()=>{
    if(!confirm('Удалить это движение сырья?'))return;
    const now=new Date().toISOString(),id=String(button.dataset.rawDelete);
@@ -512,7 +544,7 @@
   }).join(''):'<div class="raw-stock-need-empty">Для активных дат потребность по этому ингредиенту не найдена.</div>';
 
   const receipt=document.querySelector('#rawStockNeedAddReceipt');
-  receipt.onclick=()=>{dialog.close();openRawStockMovement({key:row.key,type:'purchase_in',reason:'shortage'})};
+  receipt.onclick=()=>{dialog.close();openRawStockMovement({key:row.key,type:'purchase_in',reason:'shortage',mode:'purchase'})};
   document.querySelector('#rawStockNeedOpenPurchase').onclick=()=>{dialog.close();document.querySelector('.admin-nav button[data-view="purchase"]')?.click()};
   dialog.showModal();
  }
@@ -531,6 +563,8 @@
   if(!dialog||!form){rawStockFeedback('Форма движения склада не загрузилась. Обновите Panora.','error');return false}
   const ledger=rawLedger(),rows=[...ledger.catalog.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   form.reset();form.date.value=localToday();form.date.max=localToday();
+  const title=form.querySelector('h3');if(title)title.textContent=options.mode==='purchase'?'Закупка сырья':options.mode==='adjust'?'Корректировка остатка':'Движение сырья';
+  form.dataset.mode=options.mode||'';
   form.ingredient.innerHTML=rows.map(row=>`<option value="${row.key}">${row.name} · склад в ${rawEntryUnitLabel(row.unit)}</option>`).join('');
   if(options.key&&rows.some(row=>row.key===options.key))form.ingredient.value=options.key;
   form.type.value=options.type||'purchase_in';
@@ -544,6 +578,7 @@
   const form=document.querySelector('#rawStockMovementForm'),preview=document.querySelector('#rawStockMovementPreview'),label=document.querySelector('#rawStockQuantityLabel'),hint=document.querySelector('#rawStockEntryUnitHint');
   if(!form||!preview)return;
   const ledger=rawLedger(),forward=rawForwardNeeds(ledger),row=ledger.catalog.get(form.ingredient.value),current=row?Number(ledger.balances.get(row.key)||0):0,type=form.type.value;
+  const purchaseFields=document.querySelector('#rawStockPurchaseFields');if(purchaseFields)purchaseFields.hidden=type!=='purchase_in';
   const required=row?Math.max(0,Number(forward.needs.get(row.key)||0)):0;
   const entryUnit=row?rawEntryUnitLabel(row.unit):'',entryValue=Math.max(0,Number(form.quantity.value||0)),qty=row?rawEntryToBase(entryValue,row.unit):0;
   if(label)label.textContent=`${type==='inventory_set'?'Фактический остаток':'Количество'}, ${entryUnit}`;
@@ -593,12 +628,30 @@
   form.type.addEventListener('change',updateRawMovementPreview);
   form.quantity.addEventListener('input',updateRawMovementPreview);
 
-  form.addEventListener('submit',event=>{
+  form.addEventListener('submit',async event=>{
    event.preventDefault();if(!form.reportValidity())return;
    const data=Object.fromEntries(new FormData(form)),ledger=rawLedger(),row=ledger.catalog.get(data.ingredient);
    if(!row){rawStockFeedback('Ингредиент не найден в рецептурах.','error');return}
-   const movements=readRawMovements(),now=new Date().toISOString(),quantity=rawEntryToBase(data.quantity,row.unit);
-   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity,note:String(data.note||'').trim(),createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
+   const movements=readRawMovements(),now=new Date().toISOString(),quantity=rawEntryToBase(data.quantity,row.unit),parseMoney=value=>{const n=Number(String(value??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?Math.max(0,n):0};
+   let purchaseNote='';
+   if(data.type==='purchase_in'){
+    const gross=parseMoney(data.purchaseGross),vat=Math.max(0,parseMoney(data.purchaseVat)),vatDeductible=form.vatDeductible?.checked!==false,supplier=String(data.supplier||'').trim(),documentRef=String(data.documentRef||'').trim();
+    if(gross>0&&quantity<=0){rawStockFeedback('Для закупки с суммой укажите количество больше нуля.','error');return}
+    if(gross>0){
+     const net=vatDeductible&&vat>0?gross/(1+vat/100):gross,unitPrice=net/(quantity/factor(row.unit));
+     if(!Number.isFinite(unitPrice)||unitPrice<=0){rawStockFeedback('Не удалось рассчитать цену закупки. Проверьте количество и сумму.','error');return}
+     if(window.panoraFinanceAddRawPurchase){
+      const submit=form.querySelector('[type="submit"]');if(submit)submit.disabled=true;
+      try{await window.panoraFinanceAddRawPurchase({date:data.date||localToday(),ingredient:row.name,grossAmount:gross,vatRate:vat,vatDeductible,supplier,documentRef});}
+      catch(error){if(submit)submit.disabled=false;rawStockFeedback(`Закупка не сохранена в Финансах: ${error?.message||error}`,'error');return}
+      if(submit)submit.disabled=false;
+     }
+     window.panoraIngredientCosts?.set?.(row.name,row.unit,unitPrice);
+     purchaseNote=[`Закупка ${gross.toFixed(2)} €`,supplier&&`поставщик: ${supplier}`,documentRef&&`документ: ${documentRef}`,`цена ${unitPrice.toFixed(2)} ${row.unit==='g'?'€/кг':row.unit==='ml'?'€/л':'€/шт.'}`].filter(Boolean).join(' · ');
+    }
+   }
+   const userNote=String(data.note||'').trim(),note=[purchaseNote,userNote].filter(Boolean).join(' · ');
+   movements.push({id:crypto.randomUUID(),date:data.date||localToday(),key:row.key,name:row.name,unit:row.unit,type:data.type,quantity,note,createdAt:now,updatedAt:now,deviceId:rawStockDeviceId,deletedAt:''});
    try{saveRawMovements(movements)}
    catch(error){rawStockFeedback(error.message||String(error),'error');return}
    dialog.close();renderRawStock();renderPurchase();
@@ -623,7 +676,7 @@
   });
   return true;
  }
- window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
+ window.panoraRawStock={ledger:rawLedger,balance:rawBalance,render:renderRawStock,openMovement:openRawStockMovement,openNeed:openRawNeedBreakdown,forwardNeeds:rawForwardNeeds,readMovements:readRawMovements,setExcluded:rawSetExcluded,excluded:rawExclusionState,deviceId:rawStockDeviceId,storageKey:RAW_STOCK_KEY};
 
  function periodDemandForDates(dates){
   const demand=new Map(),days=rawDemandByDate(dates);
