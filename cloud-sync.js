@@ -2308,58 +2308,10 @@ window.panoraRecalculateBalances=recalculateBalances;
     const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
     const viewIs=(...names)=>names.includes(activeAdminView());
     startAdminLeaderHeartbeat();
-    // Panora 9.37: periodic cloud reads are scoped to the screen that can actually use them,
-    // and only one visible tab owns background polling.
-    // User actions still save/refresh immediately; this only removes background table downloads.
-    clearInterval(orderPoll);orderPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('orders','accounting','finance','reminders'))return;try{
-      // Panora 9.37: one tiny revision RPC replaces three table downloads while commerce data is unchanged.
-      const changed=await adminCommerceRevisionChanged();if(!changed?.changed)return;
-      if(changed.orders)await loadOrders();
-      if(changed.payments)await loadPayments();
-      if(changed.notes)await loadDeliveryNotes();
-    }catch(error){
-    if(window.panoraHandleSessionError?.(error)) return;
-    fail('заказы, оплаты и накладные',error)}},1800000);
-    // Panora 10.14: receipt updates are event/on-demand driven.
-    // No 15-second polling: refresh on Orders open, app wake/focus and manual Refresh.
-    clearInterval(receiptPoll);receiptPoll=0;
-    clearInterval(productPoll);productPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('products','recipes'))return;try{
-      const productsChanged=await adminReferenceComponentChanged('products');
-      const recipesChanged=await adminReferenceComponentChanged('recipes');
-      const ingredientCostsChanged=await adminReferenceComponentChanged('ingredientCosts');
-      if(productsChanged)await refreshProductsIfChanged();
-      if(recipesChanged)await loadRecipes();
-      if(ingredientCostsChanged)await loadIngredientCosts();
-    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora reference refresh',error)}},1800000);
-    clearInterval(planPoll);planPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','orders'))return;try{
-      if(!await adminOperationalComponentChanged('plans'))return;
-      await refreshPlansIfChanged();
-    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora plan refresh',error)}},300000);
-    clearInterval(rawStockPoll);rawStockPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('rawstock','purchase','recipes'))return;try{
-      if(!await adminOperationalComponentChanged('rawStock'))return;
-      await syncRawStockNow({quiet:true,delta:true});
-    }catch(error){
-      if(window.panoraHandleSessionError?.(error))return;
-      rawStockState('Ошибка облака','error',error?.message||String(error));
-      console.warn('Panora raw stock refresh',error);
-    }},900000);
-    clearInterval(bakeCompletionPoll);bakeCompletionPoll=setInterval(async()=>{if(document.hidden||!navigator.onLine||!isAdminBackgroundLeader()||!viewIs('plan','rawstock','finance'))return;try{
-      if(!await adminOperationalComponentChanged('bakeCompletions'))return;
-      await syncBakeCompletionsNow({quiet:true,delta:true});
-    }catch(error){if(window.panoraHandleSessionError?.(error))return;console.warn('Panora bake completion refresh',error)}},900000);
-    clearInterval(restaurantPoll);restaurantPoll=setInterval(async()=>{
-      if(!isAdminBackgroundLeader())return;
-      const view=document.querySelector('#view-restaurants');
-      if(!view||view.hidden||!view.classList.contains('active'))return;
-      try{
-        if(!await adminReferenceComponentChanged('restaurants'))return;
-        await refreshRestaurantsIfChanged();
-        await refreshRestaurantPricesDirect();
-      }catch(error){
-        if(window.panoraHandleSessionError?.(error))return;
-        console.warn('Panora restaurant refresh',error);
-      }
-    },600000);
+    // Panora 10.42: cloud data is event/on-demand driven.
+    // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
+    [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
+    orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
   }
   async function refreshAdminOrdersOnDemand(reason='manual'){
@@ -2457,23 +2409,20 @@ window.panoraRecalculateBalances=recalculateBalances;
   });
   window.addEventListener('online',()=>{pending=readPending();if(ready){retrySync();scheduleAdminCommerceWakeRefresh('online',100)}});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
-  const startPendingWatchdog=()=>{
-    clearInterval(pendingRetryTimer);
-    pendingRetryTimer=setInterval(()=>{
-      pending=readPending();
-      if(!ready||retrying||!pendingCount())return;
-      retrySync().catch(error=>console.warn('Panora pending retry',error));
-    },30000);
+  const retryPendingOnWake=()=>{
+    pending=readPending();
+    if(!ready||retrying||!pendingCount()||!navigator.onLine)return;
+    retrySync().catch(error=>console.warn('Panora pending retry',error));
   };
-  startPendingWatchdog();
+  clearInterval(pendingRetryTimer);pendingRetryTimer=0;
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&ready)scheduleAdminCommerceWakeRefresh('visibility');
+    if(!document.hidden&&ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('visibility')};
   });
   window.addEventListener('focus',()=>{
-    if(ready)scheduleAdminCommerceWakeRefresh('focus');
+    if(ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('focus')};
   });
-  window.addEventListener('pageshow',()=>{if(ready)scheduleAdminCommerceWakeRefresh('pageshow',30)});
+  window.addEventListener('pageshow',()=>{if(ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('pageshow',30)}});
   document.addEventListener('click',event=>{
     const refresh=event.target.closest?.('#refreshOrdersCloud');
     if(refresh){event.preventDefault();refreshAdminOrdersOnDemand('manual').catch(error=>{console.warn('Panora manual orders refresh',error);status('Ошибка обновления')});return}
