@@ -624,7 +624,7 @@
   tr.is-mobile-open .raw-stock-mobile-quick i{transform:rotate(180deg)}
 }
 
-/* Panora 10.42 — raw-stock actions compact and visible */
+/* Panora 10.43 — raw-stock actions compact and visible */
 .raw-stock-head-actions{align-items:center}
 .raw-stock-head-actions .raw-stock-add-new{order:-2}
 .raw-stock-head-actions #rawStockCloudState{order:4}

@@ -305,3 +305,35 @@
 /* Panora 10.41 — raw-material catalog picker */
 .recipe-catalog-state{display:block;margin-top:5px;color:#8b5b35;font-size:10px;font-weight:700;line-height:1.35}
 .recipe-catalog-state button{border:0;background:transparent;padding:0;color:#315f43;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}
+
+/* Panora 10.43 — desktop recipe rows stay inside the card with long raw-material names */
+@media(min-width:701px){
+  body.admin-page #view-recipes .recipe-card,
+  body.admin-page #view-recipes .recipe-card-body,
+  body.admin-page #view-recipes .recipe-percent-row{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  body.admin-page #view-recipes .recipe-percent-row{
+    grid-template-columns:minmax(0,1fr) 96px 92px 72px 48px!important;
+    overflow:hidden!important;
+  }
+  body.admin-page #view-recipes .recipe-column-heads{
+    grid-template-columns:minmax(0,1fr) 96px 92px 72px 48px!important;
+  }
+  body.admin-page #view-recipes .recipe-field,
+  body.admin-page #view-recipes .recipe-field-name,
+  body.admin-page #view-recipes .recipe-field input,
+  body.admin-page #view-recipes .recipe-field select{
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+  body.admin-page #view-recipes .recipe-field-name input{
+    text-overflow:ellipsis;
+  }
+  body.admin-page #view-recipes .recipe-delete{
+    min-width:48px!important;
+    width:48px!important;
+  }
+}

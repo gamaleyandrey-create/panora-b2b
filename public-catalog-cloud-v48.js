@@ -119,7 +119,7 @@
  function start(){
   clearInterval(timer);
   autoFetchCatalog({force:true});
-  // Panora 10.42: no periodic catalogue polling; wake/focus/online and direct events refresh it.
+  // Panora 10.43: no periodic catalogue polling; wake/focus/online and direct events refresh it.
   timer=0;
  }
  window.panoraPublicCatalog={refresh:fetchCatalog,start};
