@@ -1,0 +1,922 @@
+/* Panora 10.53 — bakery order layout styles. Consolidated in the exact previous cascade order. */
+
+/* ===== migrated from desktop-orders-v22.css ===== */
+/* Panora 2.2 — desktop admin orders visual repair only.
+   No mobile or functional changes. */
+@media (min-width:721px){
+  /* Status filters: restore spacing, pill geometry and count badges. */
+  #view-orders .order-status-bar{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px!important;
+    margin:0 0 14px!important;
+  }
+  #view-orders .order-status-bar button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0 12px!important;
+    border:1px solid #d5ddd6!important;
+    border-radius:10px!important;
+    background:#fff!important;
+    color:#425047!important;
+    box-shadow:none!important;
+    font-size:12.5px!important;
+    font-weight:650!important;
+    line-height:1!important;
+    cursor:pointer!important;
+    white-space:nowrap!important;
+  }
+  #view-orders .order-status-bar button b{
+    display:inline-grid!important;
+    place-items:center!important;
+    min-width:22px!important;
+    height:22px!important;
+    padding:0 6px!important;
+    border-radius:999px!important;
+    background:#edf2ed!important;
+    color:#5f6b63!important;
+    font-size:11px!important;
+    font-weight:750!important;
+  }
+  #view-orders .order-status-bar button.active{
+    border-color:#315b42!important;
+    background:#315b42!important;
+    color:#fff!important;
+  }
+  #view-orders .order-status-bar button.active b{
+    background:rgba(255,255,255,.16)!important;
+    color:#fff!important;
+  }
+
+  /* The workflow text is decorative and duplicated the real actions.
+     Hide it on desktop so the action column contains only usable controls. */
+  #orderRows .order-flow{
+    display:none!important;
+  }
+
+  /* Keep all real row actions as a clean vertical stack. */
+  #orderRows td.order-action-cell{
+    min-width:0!important;
+    padding-top:12px!important;
+    padding-bottom:12px!important;
+  }
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:8px!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  #orderRows .order-flow-actions>button,
+  #orderRows .order-contact-button{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    margin:0!important;
+    padding:0 12px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:10px!important;
+    font-size:13px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+  }
+
+  /* More breathing room in the dense desktop table without changing columns/data. */
+  #view-orders tbody td{
+    line-height:1.38!important;
+  }
+  #orderRows .order-dates{
+    gap:7px!important;
+  }
+  #orderRows .order-items{
+    gap:8px!important;
+  }
+  #orderRows .order-item{
+    padding-bottom:7px!important;
+    border-bottom:1px solid #edf0ec!important;
+  }
+  #orderRows .order-item:last-child{
+    padding-bottom:0!important;
+    border-bottom:0!important;
+  }
+}
+
+
+/* Panora 2.2 — desktop order table visual refinement only. */
+@media (min-width:721px){
+  /* Status choices now live inside the main Filter panel. Keep the old quick bar
+     available for the untouched mobile layout, but remove it from desktop. */
+  #view-orders .order-status-bar{display:none!important}
+  #view-orders .order-filter-card .order-partner-filter{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px!important;align-items:end!important}
+  #view-orders .order-filter-card .order-partner-filter label{min-width:0!important}
+  #view-orders .order-filter-card .order-partner-filter select,
+  #view-orders .order-filter-card .order-partner-filter input{width:100%!important;min-width:0!important}
+  #view-orders .order-date-range{display:contents!important}
+
+  /* Dates: label and value must never visually merge. */
+  #orderRows .order-date-line{display:grid!important;gap:2px!important}
+  #orderRows .order-date-line em{display:block!important;margin:0!important;color:#6e7871!important;font-size:11px!important;font-style:italic!important;font-weight:650!important;line-height:1.15!important}
+  #orderRows .order-date-line strong{display:block!important;margin:0!important;line-height:1.3!important}
+
+  /* Partner type is metadata, not an order status. */
+  #orderRows .partner-type{min-height:22px!important;padding:3px 8px!important;border:1px solid #dfe4df!important;background:#f5f7f4!important;color:#68736b!important;font-size:10px!important;font-weight:700!important;letter-spacing:.01em!important}
+
+  /* Calm, consistent order-status badges. */
+  #orderRows .tag[class*="order-status-"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:27px!important;padding:5px 10px!important;border:1px solid transparent!important;border-radius:999px!important;font-size:11px!important;font-weight:750!important;line-height:1!important;white-space:nowrap!important;box-shadow:none!important}
+  #orderRows .order-status-submitted{background:#fff4e8!important;border-color:#eed9c0!important;color:#8a5a2b!important}
+  #orderRows .order-status-confirmed{background:#edf4ee!important;border-color:#d5e4d7!important;color:#315b42!important}
+  #orderRows .order-status-shipped{background:#eef3ed!important;border-color:#dce5da!important;color:#425c48!important}
+  #orderRows .order-status-cancelled{background:#f6f1ef!important;border-color:#e8deda!important;color:#786762!important}
+
+  /* Message action: text-only, no black speech-bubble mark. */
+  #orderRows .order-contact-icon{display:none!important}
+  #orderRows .order-contact-button{gap:0!important;border-color:#8aaa94!important;background:#fff!important;color:#2f6845!important}
+}
+
+
+/* Panora 5.80 — Active / Archive for bakery orders */
+.order-archive-tabs{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 14px;
+}
+.order-archive-tabs button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-height:44px;
+  padding:0 18px;
+  border:1px solid #d4ddd5;
+  border-radius:999px;
+  background:#fff;
+  color:#465249;
+  font:700 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  cursor:pointer;
+}
+.order-archive-tabs button b{
+  display:inline-grid;
+  place-items:center;
+  min-width:25px;
+  height:25px;
+  padding:0 7px;
+  border-radius:999px;
+  background:#eaf0ea;
+  color:#68736b;
+  font-size:12px;
+}
+.order-archive-tabs button.active{
+  border-color:#315b42;
+  background:#315b42;
+  color:#fff;
+}
+.order-archive-tabs button.active b{
+  background:rgba(255,255,255,.18);
+  color:#fff;
+}
+.order-archive-tabs button:hover:not(.active){background:#f4f7f3}
+
+
+/* Panora 5.81 — never disguise missing order data as €0.00 */
+#orderRows .order-total-error{
+  display:block;
+  color:#a8463e!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+#orderRows .order-total-error-hint{
+  display:block;
+  margin-top:4px;
+  color:#7d5b57;
+  font-size:11px;
+  line-height:1.25;
+}
+#orderRows .order-ship-disabled,
+#orderRows .order-ship-disabled:hover{
+  border-color:#cfd7d0!important;
+  background:#e7ece8!important;
+  color:#78827b!important;
+  cursor:not-allowed!important;
+  opacity:1!important;
+}
+
+/* ===== migrated from desktop-orders-v23.css ===== */
+/* Panora 2.3 — desktop orders: clearer operational status, quieter partner metadata. */
+@media (min-width:721px){
+  /* Partner type is supporting information, not a badge. */
+  #orderRows .partner-type{
+    display:block!important;min-height:0!important;padding:0!important;margin-top:4px!important;
+    border:0!important;border-radius:0!important;background:transparent!important;
+    color:#758078!important;font-size:11px!important;font-weight:600!important;line-height:1.2!important;
+  }
+
+  /* Status remains a primary working signal: compact rectangular labels. */
+  #orderRows .tag[class*="order-status-"]{
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    min-width:112px!important;min-height:30px!important;padding:6px 10px!important;
+    border:1px solid transparent!important;border-radius:7px!important;
+    font-size:11px!important;font-weight:800!important;line-height:1!important;
+    letter-spacing:.025em!important;text-transform:uppercase!important;white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  #orderRows .order-status-submitted{background:#fff1df!important;border-color:#e8c99f!important;color:#87511f!important}
+  #orderRows .order-status-confirmed{background:#e7f0e9!important;border-color:#bdd1c1!important;color:#28563a!important}
+  #orderRows .order-status-shipped{background:#315b42!important;border-color:#315b42!important;color:#fff!important}
+  #orderRows .order-status-completed{background:#eef1ee!important;border-color:#d6ddd7!important;color:#536158!important}
+  #orderRows .order-status-cancelled{background:#f3e9e7!important;border-color:#d9b9b3!important;color:#874e47!important}
+
+  /* Cancelled rows stay identifiable without dominating the working list. */
+  #view-orders tr.order-row-cancelled{background:#fbf8f7!important;color:#6f6967!important}
+  #view-orders tr.order-row-cancelled>td:first-child{box-shadow:inset 3px 0 0 #c69a93!important}
+}
+
+/* ===== migrated from desktop-orders-v24.css ===== */
+/* Panora 2.4 — desktop order actions + notification sound control. */
+@media (min-width:721px){
+  /* Operational actions stay clearly separated from the status column. */
+  #view-orders table th:nth-child(6),
+  #view-orders table td:nth-child(6){padding-right:22px!important}
+  #view-orders table th:nth-child(7),
+  #view-orders table td:nth-child(7){padding-left:22px!important}
+
+  /* Invoice is primary; QR is secondary and always directly below it. */
+  #orderRows .order-flow-actions{display:flex!important;flex-direction:column!important;gap:9px!important}
+  #orderRows .order-flow-actions [data-note]{order:1!important}
+  #orderRows .order-flow-actions [data-delivery-qr]{order:2!important}
+  #orderRows .order-flow-actions [data-delivery-qr]{
+    background:#fff!important;color:#557061!important;border:1px solid #b7c5ba!important;
+    box-shadow:none!important;font-weight:650!important
+  }
+
+  /* Notification and sound controls form one compact working group. */
+  #view-orders .notification-control-group{
+    display:inline-flex!important;align-items:center!important;gap:4px!important;
+    padding:3px!important;border:1px solid #d7ded8!important;border-radius:11px!important;
+    background:#fff!important;box-shadow:0 1px 2px rgba(34,55,41,.04)!important
+  }
+  #view-orders .notification-control-group #enableAdminNotifications{
+    margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
+    min-height:34px!important;padding:0 10px!important;border-radius:8px!important
+  }
+  #view-orders .notification-sound-toggle{
+    display:inline-grid!important;place-items:center!important;width:36px!important;height:34px!important;
+    min-width:36px!important;min-height:34px!important;margin:0!important;padding:0!important;
+    border:0!important;border-left:1px solid #e4e9e4!important;border-radius:0 8px 8px 0!important;
+    background:transparent!important;color:#315b42!important;box-shadow:none!important;cursor:pointer!important
+  }
+  #view-orders .notification-sound-toggle:hover{background:#f2f6f2!important}
+  #view-orders .notification-sound-toggle.sound-off{color:#8a928c!important}
+  #view-orders .notification-sound-toggle svg{width:19px;height:19px;display:block}
+}
+
+/* ===== migrated from desktop-orders-v25.css ===== */
+/* Panora 2.5 — focused order cancellation label + mobile notification bell ergonomics. */
+@media (min-width:721px){
+  /* Desktop shows one cancellation label only. */
+  #orderRows .cancel-label-desktop{display:none!important}
+  #orderRows .cancel-label-mobile{display:inline!important}
+}
+
+@media (max-width:720px){
+  /* Keep the notification state and sound bell together without crowding the primary action. */
+  #view-orders .notification-control-group{
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:4px!important;
+    max-width:100%!important;
+  }
+  #view-orders .notification-control-group #enableAdminNotifications{
+    min-width:0!important;
+  }
+  #view-orders .notification-sound-toggle{
+    display:inline-grid!important;
+    place-items:center!important;
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    flex:0 0 44px!important;
+    margin:0!important;
+    padding:0!important;
+    border:1px solid #d7ded8!important;
+    border-radius:11px!important;
+    background:#fff!important;
+    color:#315b42!important;
+    box-shadow:none!important;
+  }
+  #view-orders .notification-sound-toggle.sound-off{color:#8a928c!important}
+  #view-orders .notification-sound-toggle svg{width:20px!important;height:20px!important;display:block!important}
+}
+
+/* ===== migrated from desktop-orders-v27.css ===== */
+/* Panora 2.7 — desktop filter header spacing only. */
+@media (min-width:721px){
+  #view-orders .order-filter-head-actions{
+    display:flex!important;
+    align-items:center!important;
+    gap:16px!important;
+  }
+  #view-orders .order-filter-head-actions .order-filter-reset{
+    padding:6px 4px!important;
+    margin:0!important;
+    white-space:nowrap!important;
+  }
+  #view-orders .order-filter-head-actions .order-filter-close{
+    flex:0 0 36px!important;
+    width:36px!important;
+    height:36px!important;
+    margin:0!important;
+  }
+}
+
+/* ===== migrated from desktop-orders-v28.css ===== */
+/* Panora 2.8 — desktop date filter picker only. Mobile is intentionally untouched. */
+@media (min-width:721px){
+  #view-orders>.order-filter-card .order-partner-filter{
+    grid-template-columns:minmax(170px,1.05fr) minmax(180px,1.1fr) minmax(190px,1.15fr) minmax(150px,.9fr) minmax(150px,.9fr)!important;
+  }
+  #view-orders>.order-filter-card input[type="date"]{
+    cursor:pointer!important;
+    min-width:150px!important;
+    padding:0 12px!important;
+    color-scheme:light;
+  }
+  #view-orders>.order-filter-card input[type="date"]::-webkit-calendar-picker-indicator{
+    opacity:1!important;
+    cursor:pointer!important;
+    width:20px!important;
+    height:20px!important;
+    margin-left:6px!important;
+  }
+}
+
+/* ===== migrated from desktop-orders-v29-final.css ===== */
+/* Panora 2.9 — FINAL desktop version: Orders.
+   Fixes desktop date fields staying inside the filter panel.
+   Mobile is intentionally untouched. */
+@media (min-width:721px){
+  #view-orders>.order-filter-card .order-partner-filter{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:12px!important;
+    align-items:end!important;
+  }
+
+  #view-orders>.order-filter-card .order-partner-filter label,
+  #view-orders>.order-filter-card .order-date-range label{
+    min-width:0!important;
+    width:100%!important;
+  }
+
+  #view-orders>.order-filter-card .order-date-range{
+    display:contents!important;
+  }
+
+  #view-orders>.order-filter-card select,
+  #view-orders>.order-filter-card input[type="date"]{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  #view-orders>.order-filter-card input[type="date"]{
+    cursor:pointer!important;
+    padding:0 10px!important;
+    color-scheme:light;
+  }
+
+  #view-orders>.order-filter-card input[type="date"]::-webkit-calendar-picker-indicator{
+    opacity:1!important;
+    cursor:pointer!important;
+    width:18px!important;
+    height:18px!important;
+    margin-left:4px!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-v30.css ===== */
+/* Panora 3.0 — mobile Bakery Orders aligned to FINAL desktop Orders.
+   Desktop (>=721px) is intentionally untouched. */
+@media (max-width:720px){
+  #view-orders{
+    --p3-border:#dfe6df;
+    --p3-green:#2f6f49;
+    --p3-muted:#68766d;
+    --p3-new-bg:#fff7ec;
+    --p3-cancel-bg:#fbf5f3;
+  }
+
+  #view-orders .view-header h1{font-size:34px!important;line-height:1.02!important;letter-spacing:-.02em!important;}
+  #view-orders .view-subtitle{font-size:14px!important;line-height:1.4!important;color:var(--p3-muted)!important;}
+
+  #view-orders .orders-toolbar{
+    gap:10px!important;
+    align-items:stretch!important;
+  }
+  #view-orders .orders-toolbar .btn,
+  #view-orders .orders-toolbar button{
+    min-height:46px!important;
+    border-radius:12px!important;
+  }
+
+  #view-orders .orders-table tbody tr{
+    border:1px solid var(--p3-border)!important;
+    border-radius:14px!important;
+    margin:0 0 12px!important;
+    padding:14px!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+    background:#fff!important;
+  }
+
+  #view-orders .orders-table tbody tr.is-new,
+  #view-orders .orders-table tbody tr[data-status="new"]{
+    background:var(--p3-new-bg)!important;
+    border-left:4px solid #ef7d3c!important;
+  }
+
+  #view-orders .orders-table tbody tr.is-cancelled,
+  #view-orders .orders-table tbody tr[data-status="cancelled"]{
+    background:var(--p3-cancel-bg)!important;
+  }
+
+  #view-orders .orders-table td{
+    padding:5px 0!important;
+    border:0!important;
+  }
+
+  #view-orders .orders-table td[data-label="№"],
+  #view-orders .orders-table .order-number{
+    font-size:18px!important;
+    font-weight:800!important;
+  }
+
+  #view-orders .orders-table td[data-label="Партнёр"],
+  #view-orders .orders-table .partner-name{
+    font-weight:750!important;
+  }
+
+  #view-orders .orders-table .partner-type,
+  #view-orders .orders-table .order-partner-type{
+    background:none!important;
+    border:0!important;
+    border-radius:0!important;
+    padding:0!important;
+    color:var(--p3-muted)!important;
+    font-size:13px!important;
+    font-weight:600!important;
+  }
+
+  #view-orders .order-status,
+  #view-orders .status-badge{
+    border-radius:8px!important;
+    min-height:34px!important;
+    padding:7px 12px!important;
+    font-size:12px!important;
+    font-weight:800!important;
+    letter-spacing:.035em!important;
+    text-transform:uppercase!important;
+  }
+
+  #view-orders .order-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:9px!important;
+    margin-top:8px!important;
+  }
+
+  #view-orders .order-actions .btn,
+  #view-orders .order-actions button{
+    width:100%!important;
+    min-height:46px!important;
+    border-radius:11px!important;
+    margin:0!important;
+    font-weight:700!important;
+  }
+
+  /* Primary document action first; QR stays secondary underneath, as on desktop final. */
+  #view-orders .order-actions .invoice-btn,
+  #view-orders .order-actions [data-action="invoice"]{order:10!important;}
+  #view-orders .order-actions .qr-btn,
+  #view-orders .order-actions [data-action="qr"]{order:20!important;background:#fff!important;}
+
+  #view-orders>.order-filter-card{
+    border-radius:16px!important;
+  }
+  #view-orders>.order-filter-card .filter-head{
+    gap:18px!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-toolbar-v34-hotfix.css ===== */
+/* Panora 3.4 HOTFIX — mobile Orders toolbar.
+   CSS only. No MutationObserver/DOM rewriting.
+   Desktop Orders and statuses are untouched. */
+@media (max-width:720px){
+  #view-orders .head-actions{
+    display:grid!important;
+    grid-template-columns:minmax(0,.95fr) minmax(0,1.55fr)!important;
+    gap:10px!important;
+    width:100%!important;
+    align-items:stretch!important;
+  }
+
+  #view-orders #orderFilterToggle{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    padding:0 14px!important;
+    margin:0!important;
+    border:1px solid #d9e0da!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    color:#203027!important;
+    box-shadow:none!important;
+    font-size:14px!important;
+    font-weight:700!important;
+  }
+
+  #view-orders .notification-control-group{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 48px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    border:1px solid #d9e0da!important;
+    border-radius:12px!important;
+    background:#fff!important;
+    overflow:hidden!important;
+    box-shadow:none!important;
+  }
+
+  #view-orders #enableAdminNotifications{
+    min-width:0!important;
+    width:100%!important;
+    min-height:46px!important;
+    padding:0 10px 0 14px!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#111!important;
+    box-shadow:none!important;
+    white-space:normal!important;
+    line-height:1.15!important;
+    font-size:13px!important;
+    font-weight:700!important;
+    text-align:left!important;
+  }
+
+  #view-orders #adminNotificationSound.notification-sound-toggle{
+    width:48px!important;
+    min-width:48px!important;
+    height:46px!important;
+    min-height:46px!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    border-left:1px solid #e1e6e2!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#2f6f49!important;
+    box-shadow:none!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+
+  #view-orders #adminNotificationSound svg{
+    width:22px!important;
+    height:22px!important;
+  }
+
+  #view-orders #addOrder{
+    grid-column:1/-1!important;
+    width:100%!important;
+    min-height:50px!important;
+    margin:0!important;
+    border-radius:11px!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-v35.css ===== */
+/* Panora 3.5 — mobile-only polish.
+   Notification dot stays before text. Filter reset/close are larger and separated.
+   Desktop Orders and statuses are untouched. */
+@media (max-width:720px){
+  /* Notification state dot BEFORE the label, same row. */
+  #view-orders #enableAdminNotifications{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:8px!important;
+  }
+  #view-orders #enableAdminNotifications::before{
+    content:""!important;
+    display:block!important;
+    position:static!important;
+    width:9px!important;
+    height:9px!important;
+    min-width:9px!important;
+    border-radius:50%!important;
+    background:#111!important;
+    margin:0!important;
+    flex:0 0 9px!important;
+  }
+
+  /* Mobile filter header: clearly separate Reset and Close actions. */
+  #view-orders>.order-filter-card .filter-head,
+  #view-orders .order-filter-card .filter-head{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:20px!important;
+    min-height:54px!important;
+  }
+
+  #view-orders>.order-filter-card .filter-head .filter-actions,
+  #view-orders .order-filter-card .filter-head .filter-actions{
+    display:flex!important;
+    align-items:center!important;
+    gap:18px!important;
+    margin-left:auto!important;
+  }
+
+  #view-orders>.order-filter-card .filter-reset,
+  #view-orders .order-filter-card [data-action="reset-filter"],
+  #view-orders .order-filter-card button[id*="Reset"],
+  #view-orders .order-filter-card button[id*="reset"]{
+    min-height:44px!important;
+    padding:0 12px!important;
+    font-size:15px!important;
+    font-weight:750!important;
+    line-height:1!important;
+  }
+
+  #view-orders>.order-filter-card .filter-close,
+  #view-orders .order-filter-card [data-action="close-filter"],
+  #view-orders .order-filter-card button[aria-label*="Закры"],
+  #view-orders .order-filter-card button[aria-label*="закры"]{
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    padding:0!important;
+    margin-left:8px!important;
+    font-size:28px!important;
+    line-height:1!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-v36.css ===== */
+/* Panora 3.6 — mobile Bakery Orders aligned with FINAL desktop Orders.
+   Mobile only. Desktop FINAL Orders remains untouched. */
+@media (max-width:720px){
+  /* Remove the extra decorative dot added in 3.5.
+     The application's native notification state indicator remains authoritative. */
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* Partner type: desktop-like secondary text, not a heavy badge. */
+  #view-orders .partner-type,
+  #view-orders .order-partner-type,
+  #view-orders [data-partner-type]{
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+    border-radius:0!important;
+    color:#68766d!important;
+    font-size:13px!important;
+    font-weight:600!important;
+  }
+
+  /* Desktop-like status treatment/colors. */
+  #view-orders .status-badge,
+  #view-orders .order-status{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:auto!important;
+    min-height:32px!important;
+    padding:6px 10px!important;
+    border-radius:8px!important;
+    font-size:12px!important;
+    line-height:1!important;
+    font-weight:800!important;
+    letter-spacing:.025em!important;
+    box-shadow:none!important;
+  }
+
+  #view-orders .status-badge.status-confirmed,
+  #view-orders .order-status.status-confirmed,
+  #view-orders [data-status="confirmed"] .status-badge,
+  #view-orders [data-status="confirmed"] .order-status{
+    background:#eaf5ed!important;
+    border:1px solid #a9cdb2!important;
+    color:#2f6f49!important;
+  }
+
+  #view-orders .status-badge.status-shipped,
+  #view-orders .order-status.status-shipped,
+  #view-orders [data-status="shipped"] .status-badge,
+  #view-orders [data-status="shipped"] .order-status{
+    background:#edf3f8!important;
+    border:1px solid #b8c9d8!important;
+    color:#365d78!important;
+  }
+
+  /* Actions follow the FINAL desktop hierarchy on mobile:
+     invoice first, QR immediately after it. */
+  #view-orders .order-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:9px!important;
+  }
+  #view-orders .order-actions .invoice-btn,
+  #view-orders .order-actions [data-action="invoice"],
+  #view-orders .order-actions button[data-order-action="invoice"]{
+    order:30!important;
+    width:100%!important;
+  }
+  #view-orders .order-actions .qr-btn,
+  #view-orders .order-actions [data-action="qr"],
+  #view-orders .order-actions button[data-order-action="qr"]{
+    order:31!important;
+    width:100%!important;
+    background:#fff!important;
+    border:1px solid #cfd8d1!important;
+    color:#2f6f49!important;
+    box-shadow:none!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-v37.css ===== */
+/* Panora 3.7 — mobile Bakery Orders matched to FINAL desktop Orders.
+   Uses real production selectors from commerce.js.
+   Desktop Orders are untouched. */
+@media (max-width:720px){
+  /* Notification dot: do NOT draw our own permanent dot.
+     Leave the native application indicator only. */
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* Partner type — exactly the desktop-final secondary text treatment. */
+  #orderRows .partner-type{
+    display:block!important;
+    min-height:0!important;
+    padding:0!important;
+    margin-top:4px!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#758078!important;
+    font-size:11px!important;
+    font-weight:600!important;
+    line-height:1.2!important;
+  }
+
+  /* Statuses — same geometry and colors as desktop Panora 2.3 FINAL lineage. */
+  #orderRows .tag[class*="order-status-"]{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:112px!important;
+    min-height:30px!important;
+    padding:6px 10px!important;
+    border:1px solid transparent!important;
+    border-radius:7px!important;
+    font-size:11px!important;
+    font-weight:800!important;
+    line-height:1!important;
+    letter-spacing:.025em!important;
+    text-transform:uppercase!important;
+    white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  #orderRows .order-status-submitted{
+    background:#fff1df!important;
+    border-color:#e8c99f!important;
+    color:#87511f!important;
+  }
+  #orderRows .order-status-confirmed{
+    background:#e7f0e9!important;
+    border-color:#bdd1c1!important;
+    color:#28563a!important;
+  }
+  #orderRows .order-status-shipped{
+    background:#315b42!important;
+    border-color:#315b42!important;
+    color:#fff!important;
+  }
+  #orderRows .order-status-completed{
+    background:#eef1ee!important;
+    border-color:#d6ddd7!important;
+    color:#536158!important;
+  }
+  #orderRows .order-status-cancelled{
+    background:#f3e9e7!important;
+    border-color:#d9b9b3!important;
+    color:#874e47!important;
+  }
+
+  /* Shipped order actions: invoice first, QR immediately below, then anything else. */
+  #orderRows .order-flow-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:8px!important;
+    width:100%!important;
+  }
+  #orderRows .order-flow-actions [data-note]{
+    order:1!important;
+    width:100%!important;
+    min-width:100%!important;
+    max-width:100%!important;
+    border:1px solid #2f6845!important;
+    background:#2f6845!important;
+    color:#fff!important;
+  }
+  #orderRows .order-flow-actions [data-delivery-qr]{
+    order:2!important;
+    width:100%!important;
+    min-width:100%!important;
+    max-width:100%!important;
+    border:1px solid #6f927c!important;
+    background:#fff!important;
+    color:#2f6845!important;
+    box-shadow:none!important;
+  }
+  #orderRows .order-flow-actions .order-contact-button{
+    order:3!important;
+  }
+  #orderRows .order-flow-actions .danger-quiet{
+    order:4!important;
+  }
+
+  /* Keep cancelled row treatment visually aligned with desktop, but mobile-only. */
+  #view-orders tr.order-row-cancelled{
+    background:#fbf8f7!important;
+    color:#6f6967!important;
+  }
+}
+
+/* ===== migrated from mobile-orders-v38.css ===== */
+/* Panora 3.8 — mobile notification native indicator positioning only.
+   No new dot is created. Desktop Orders are untouched. */
+@media (max-width:720px){
+  /* Undo the older experimental pseudo-dot completely. */
+  #view-orders #enableAdminNotifications::before{
+    content:none!important;
+    display:none!important;
+  }
+
+  /* The real application indicator is kept in normal flow BEFORE the text. */
+  #view-orders #enableAdminNotifications .notification-status-dot,
+  #view-orders #enableAdminNotifications .notification-dot,
+  #view-orders #enableAdminNotifications .notify-dot,
+  #view-orders #enableAdminNotifications .status-dot,
+  #view-orders #enableAdminNotifications [class*="notification"][class*="dot"]{
+    position:static!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    transform:none!important;
+    display:inline-block!important;
+    width:8px!important;
+    height:8px!important;
+    min-width:8px!important;
+    margin:0 8px 0 0!important;
+    vertical-align:middle!important;
+    flex:0 0 8px!important;
+  }
+
+  #view-orders #enableAdminNotifications{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    flex-direction:row!important;
+  }
+}
