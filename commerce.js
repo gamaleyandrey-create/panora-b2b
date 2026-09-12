@@ -1065,34 +1065,53 @@ const showReminderConfirm=(card,key,channel)=>{
   }
 };
 const reminderCopy = {
-  ru: (r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${reminderPrettyDate(p.bakeDate,'ru',false)} можно оформить до ${reminderPrettyCutoff(p.cutoff,'ru')}. Для каждой позиции количество ниже оптового порога идёт по розничной цене, от порога — по цене партнёра.`,
-  en: (r,p)=>`Hello, ${r.name}! A reminder that your Panora order for the ${reminderPrettyDate(p.bakeDate,'en',false)} bake must be placed by ${reminderPrettyCutoff(p.cutoff,'en')}. Each product below its wholesale threshold uses retail price; from the threshold the partner price applies.`,
-  es: (r,p)=>`¡Hola, ${r.name}! Te recordamos que el pedido Panora para el horneado del ${reminderPrettyDate(p.bakeDate,'es',false)} debe realizarse antes del ${reminderPrettyCutoff(p.cutoff,'es')}. Cada producto por debajo de su umbral mayorista usa el precio minorista; desde el umbral se aplica el precio de socio.`,
+  ru: (r,p)=>`Здравствуйте, ${r.name}! Напоминаем: заказ Panora на выпечку ${reminderPrettyDate(p.bakeDate,'ru',false)} можно оформить до ${reminderPrettyCutoff(p.cutoff,'ru')}.`,
+  en: (r,p)=>`Hello, ${r.name}! Your Panora order for the ${reminderPrettyDate(p.bakeDate,'en',false)} bake can be placed until ${reminderPrettyCutoff(p.cutoff,'en')}.`,
+  es: (r,p)=>`¡Hola, ${r.name}! El pedido Panora para el horneado del ${reminderPrettyDate(p.bakeDate,'es',false)} puede realizarse hasta ${reminderPrettyCutoff(p.cutoff,'es')}.`,
 };
+const REMINDER_SETTINGS_KEY='panora-reminder-settings-v1047';
+const reminderSettings=()=>{
+  const raw=cRead(REMINDER_SETTINGS_KEY,{}),num=(v,fallback,min,max)=>{const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback};
+  return {
+    firstHours:num(raw.firstHours,72,24,168),
+    repeatHours:num(raw.repeatHours,24,1,72),
+    paymentDays:num(raw.paymentDays,2,0,14),
+    windowStart:/^\d{2}:\d{2}$/.test(raw.windowStart||'')?raw.windowStart:'08:00',
+    windowEnd:/^\d{2}:\d{2}$/.test(raw.windowEnd||'')?raw.windowEnd:'21:00'
+  };
+};
+let reminderViewFilter='all',reminderSearchValue='';
+const reminderPartnerFlag=(r,name,defaultValue=true)=>{
+  const row=(Array.isArray(r?.extraMessengers)?r.extraMessengers:r?.extra_messengers)||[];
+  const found=row.find(x=>String(x?.name||'').toLowerCase()===`__reminder_${name}__`);
+  if(!found)return defaultValue;
+  return !['0','false','off','no'].includes(String(found.contact||'').toLowerCase());
+};
+const reminderUi=text=>window.panoraAdminTranslateText?.(text)||text;
 const cleanPhone = (value) => String(value || "").replace(/\D/g, "");
+const reminderMadridMinutes=()=>{
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+  const h=Number(parts.find(p=>p.type==='hour')?.value||0),m=Number(parts.find(p=>p.type==='minute')?.value||0);return h*60+m;
+};
+const reminderTimeMinutes=value=>{const [h,m]=String(value||'').split(':').map(Number);return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:0};
 const reminderSendWindow = () => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Madrid",
-      hour: "2-digit",
-      hour12: false,
-    }).formatToParts(new Date()),
-    hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
-  return { allowed: hour >= 12 && hour < 20, hour };
+  const settings=reminderSettings(),minute=reminderMadridMinutes(),start=reminderTimeMinutes(settings.windowStart),end=reminderTimeMinutes(settings.windowEnd);
+  return { allowed: minute >= start && minute < end, minute, start, end, settings };
 };
 function reminderRows() {
-  const now = new Date(),
+  const settings=reminderSettings(),now = new Date(),
     upcoming = cRead("panora-production-plans", [])
       .filter((p) => {
         const hours = (new Date(p.cutoff) - now) / 3600000;
-        return p.open && hours > 0 && hours <= 72;
+        return p.open && hours > 0 && hours <= settings.firstHours;
       })
       .sort((a, b) => new Date(a.cutoff) - new Date(b.cutoff));
   const dates = [...new Set(upcoming.map((p) => p.bakeDate))];
   return dates.flatMap((date) => {
     const plan = upcoming.find((p) => p.bakeDate === date),
       hours = Math.round((new Date(plan.cutoff) - now) / 3600000),
-      stage = hours <= 54 ? "repeat" : "first";
-    return activeRestaurants().map((r) => {
+      stage = hours <= settings.repeatHours ? "repeat" : "first";
+    return activeRestaurants().filter(r=>!reminderPartnerFlag(r,'paused',false)&&reminderPartnerFlag(r,'orders',true)).map((r) => {
       const ordered = orders.some(
           (o) =>
             o.restaurantId === r.id &&
@@ -1216,7 +1235,7 @@ function paymentReminderRows() {
     .filter((note) => note.paymentDueDate)
     .map((note) => {
       const r = restaurant(note.restaurantId);
-      if (!r) return null;
+      if (!r || reminderPartnerFlag(r,'paused',false) || !reminderPartnerFlag(r,'payments',true)) return null;
       if(!allocationByRestaurant.has(r.id)){
         // Panora 6.95: reminders must be correct even before cloud-sync.js exposes
         // panoraFinanceAllocation. The local allocator already understands linked
@@ -1233,10 +1252,12 @@ function paymentReminderRows() {
           new Date(`${today}T12:00:00`)) /
           86400000,
       );
-      const key = `payment-${note.id}-${note.paymentDueDate}`;
-      const reminderState=stateByRestaurant.get(r.id)?.get(String(note.id))||{version:0,reopenVersion:0},stored=reminderLog[key];
+      const paymentStage=days>0?'before':days===0?'due':'overdue';
+      const key = `payment-${note.id}-${note.paymentDueDate}-${paymentStage}`;
+      const legacyKey=`payment-${note.id}-${note.paymentDueDate}`;
+      const reminderState=stateByRestaurant.get(r.id)?.get(String(note.id))||{version:0,reopenVersion:0},stored=reminderLog[key]||(paymentStage==='before'?reminderLog[legacyKey]:null);
       const sent=paymentReminderSentIsCurrent(stored,balance,reminderState)?stored:null;
-      return { note, r, balance, days, key, sent, reminderState };
+      return { note, r, balance, days, key, sent, reminderState, paymentStage };
     })
     .filter(Boolean)
     .sort((a, b) =>
@@ -1259,7 +1280,7 @@ function markReminder(key, channel, row=null) {
 }
 function reminderOverdue(row){
   if(row.ordered||row.sent)return false;
-  const trigger=row.stage==='repeat'?54:72;
+  const settings=reminderSettings(),trigger=row.stage==='repeat'?settings.repeatHours:settings.firstHours;
   return Number(row.hours)<trigger-1;
 }
 function reminderCardActions(row,message,subject,waiting){
@@ -1278,26 +1299,28 @@ function reminderOrderCard(x,windowState){
   const language=x.r.language||'ru',message=reminderCopy[language](x.r,x.plan),
     waiting=!windowState.allowed&&!x.ordered&&!x.sent,
     overdue=reminderOverdue(x),
-    stageLabel=x.stage==='repeat'?'Повторное напоминание':'Первое напоминание',
-    status=x.ordered?'Заказ получен':x.sent?`Отправлено ${new Date(x.sent.sentAt).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
-      waiting?(windowState.hour<12?'Доступно после 12:00':'Отложено до завтра, 12:00'):
-      overdue?`Просрочено · до закрытия ${x.hours} ч.`:`До закрытия ${x.hours} ч.`,
-    subject=`Panora · выпечка ${reminderPrettyDate(x.plan.bakeDate,language,false)}`;
-  return `<article class="reminder-card ${x.ordered?'complete ':''}${x.sent?'sent ':''}${overdue?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}">
-    <div class="reminder-card-top"><div><span class="tag">${stageLabel} · ${status}</span><h3>${commerceEscape(x.r.name)}</h3><p>Выпечка: <strong>${reminderPrettyDate(x.plan.bakeDate,'ru')}</strong> · заказ до <strong>${reminderPrettyCutoff(x.plan.cutoff,'ru')}</strong></p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
-    <p class="reminder-message">${commerceEscape(message)}</p>
+    stageLabel=reminderUi(x.stage==='repeat'?'Повторное напоминание':'Первое напоминание'),
+    status=x.ordered?reminderUi('Заказ получен'):x.sent?`${reminderUi('Отправлено')} ${new Date(x.sent.sentAt).toLocaleString(reminderLocale(language),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
+      waiting?`${reminderUi('Доступно в окно отправки')} ${windowState.settings.windowStart}–${windowState.settings.windowEnd}`:
+      overdue?`${reminderUi('Просрочено')} · ${x.hours} ${reminderUi('ч. до закрытия')}`:`${x.hours} ${reminderUi('ч. до закрытия')}`,
+    subject=`Panora · ${reminderUi('выпечка')} ${reminderPrettyDate(x.plan.bakeDate,language,false)}`;
+  return `<article class="reminder-card reminder-kind-order ${x.ordered?'complete ':''}${x.sent?'sent ':''}${overdue?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}" data-reminder-kind="orders" data-reminder-overdue="${overdue?'1':'0'}">
+    <div class="reminder-card-top"><div><span class="tag">${stageLabel} · ${status}</span><h3 data-panora-user-content>${commerceEscape(x.r.name)}</h3><p>${reminderUi('Выпечка')}: <strong>${reminderPrettyDate(x.plan.bakeDate,language)}</strong> · ${reminderUi('заказ до')} <strong>${reminderPrettyCutoff(x.plan.cutoff,language)}</strong></p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
+    <p class="reminder-message" data-panora-user-content>${commerceEscape(message)}</p>
+    <div class="reminder-context-actions"><button type="button" class="secondary" data-reminder-open-order="${commerceEscape(x.plan.bakeDate)}">${reminderUi('Открыть заказ')}</button></div>
     ${reminderCardActions(x,message,subject,waiting)}
   </article>`;
 }
 function paymentReminderCard(x,windowState){
   const language=x.r.language||'ru',message=paymentReminderCopy[language](x),
     waiting=!windowState.allowed&&!x.sent,
-    status=x.sent?`Отправлено ${new Date(x.sent.sentAt).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
-      x.days<0?`Просрочено на ${Math.abs(x.days)} дн.`:x.days===0?'Оплата сегодня':`До оплаты ${x.days} дн.`,
-    subject=`Panora · оплата DN-${String(x.note.number).padStart(4,'0')}`;
-  return `<article class="reminder-card payment-reminder ${x.sent?'sent ':''}${x.days<0?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}">
-    <div class="reminder-card-top"><div><span class="tag">Оплата · ${status}</span><h3>${commerceEscape(x.r.name)}</h3><p>Накладная <strong>DN-${String(x.note.number).padStart(4,'0')}</strong> · оплатить до <strong>${reminderPrettyDate(x.note.paymentDueDate,'ru')}</strong> · ${euro(x.balance)}</p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
-    <p class="reminder-message">${commerceEscape(message)}</p>
+    status=x.sent?`${reminderUi('Отправлено')} ${new Date(x.sent.sentAt).toLocaleString(reminderLocale(language),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
+      x.days<0?`${reminderUi('Просрочено на')} ${Math.abs(x.days)} ${reminderUi('дн.')}`:x.days===0?reminderUi('Оплата сегодня'):`${reminderUi('До оплаты')} ${x.days} ${reminderUi('дн.')}`,
+    subject=`Panora · ${reminderUi('оплата')} DN-${String(x.note.number).padStart(4,'0')}`;
+  return `<article class="reminder-card payment-reminder reminder-kind-payment ${x.sent?'sent ':''}${x.days<0?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}" data-reminder-kind="payments" data-reminder-overdue="${x.days<0?'1':'0'}">
+    <div class="reminder-card-top"><div><span class="tag">${reminderUi('Оплата')} · ${status}</span><h3 data-panora-user-content>${commerceEscape(x.r.name)}</h3><p>${reminderUi('Накладная')} <strong>DN-${String(x.note.number).padStart(4,'0')}</strong> · ${reminderUi('оплатить до')} <strong>${reminderPrettyDate(x.note.paymentDueDate,language)}</strong> · ${euro(x.balance)}</p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
+    <p class="reminder-message" data-panora-user-content>${commerceEscape(message)}</p>
+    <div class="reminder-context-actions"><button type="button" class="secondary" data-reminder-open-note="${commerceEscape(x.note.id||'')}">${reminderUi('Открыть накладную')}</button></div>
     ${reminderCardActions(x,message,subject,waiting)}
   </article>`;
 }
@@ -1307,7 +1330,7 @@ function bindReminderCards(rows,paymentRows){
     const key=card.dataset.reminderCard,row=all.find(item=>item.key===key);if(!row)return;
     const isPayment=Boolean(row.note),language=row.r.language||'ru',
       message=isPayment?paymentReminderCopy[language](row):reminderCopy[language](row.r,row.plan),
-      subject=isPayment?`Panora · оплата DN-${String(row.note.number).padStart(4,'0')}`:`Panora · выпечка ${reminderPrettyDate(row.plan.bakeDate,language,false)}`;
+      subject=isPayment?`Panora · ${reminderUi('оплата')} DN-${String(row.note.number).padStart(4,'0')}`:`Panora · ${reminderUi('выпечка')} ${reminderPrettyDate(row.plan.bakeDate,language,false)}`;
     card.querySelectorAll('[data-open-reminder-channel]').forEach(button=>button.onclick=()=>{
       if(button.disabled)return;
       reminderOpenChannel(row,button.dataset.openReminderChannel,message,subject,card);
@@ -1317,14 +1340,29 @@ function bindReminderCards(rows,paymentRows){
     const key=button.dataset.confirmReminderSent,channel=button.dataset.channel;
     if(!key||!channel)return;
     const row=all.find(item=>item.key===key)||null;
-    if(confirm(`Отметить сообщение как отправленное через ${reminderChannelLabel(channel)}?`))markReminder(key,channel,row);
+    if(confirm(`${reminderUi('Отметить сообщение как отправленное через')} ${reminderChannelLabel(channel)}?`))markReminder(key,channel,row);
   });
+  document.querySelectorAll('[data-reminder-open-order]').forEach(button=>button.onclick=()=>{
+    document.querySelector('.admin-nav button[data-view="orders"]')?.click();
+    setTimeout(()=>{const row=[...document.querySelectorAll('[data-order-id]')].find(el=>{const order=orders.find(o=>String(o.id)===String(el.dataset.orderId));return order&&String(order.date||order.deliveryDate||'')===String(button.dataset.reminderOpenOrder||'')});row?.scrollIntoView({behavior:'smooth',block:'center'})},80);
+  });
+  document.querySelectorAll('[data-reminder-open-note]').forEach(button=>button.onclick=()=>{
+    document.querySelector('.admin-nav button[data-view="delivery-notes"]')?.click();
+    setTimeout(()=>document.querySelector(`[data-admin-note-library="${CSS.escape(String(button.dataset.reminderOpenNote||''))}"]`)?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+  });
+}
+function bindReminderControls(){
+  const settings=reminderSettings(),map={reminderFirstHours:'firstHours',reminderRepeatHours:'repeatHours',reminderPaymentDays:'paymentDays',reminderWindowStart:'windowStart',reminderWindowEnd:'windowEnd'};
+  Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(!el)return;el.value=settings[key];el.onchange=()=>{const next={...reminderSettings(),[key]:el.type==='number'?Number(el.value):el.value};if(key==='repeatHours'&&Number(next.repeatHours)>=Number(next.firstHours))next.repeatHours=Math.max(1,Number(next.firstHours)-1);cSave(REMINDER_SETTINGS_KEY,next);renderReminders()}});
+  const search=document.getElementById('reminderSearch');if(search){search.value=reminderSearchValue;search.oninput=()=>{reminderSearchValue=search.value.trim().toLowerCase();renderReminders()}}
+  document.querySelectorAll('[data-reminder-filter]').forEach(button=>{button.classList.toggle('active',button.dataset.reminderFilter===reminderViewFilter);button.onclick=()=>{reminderViewFilter=button.dataset.reminderFilter||'all';renderReminders()}});
+  const info=document.getElementById('reminderInfoLine');if(info){const s=reminderSettings();info.innerHTML=`<strong>${reminderUi('Первое напоминание')} ${s.firstHours} ${reminderUi('ч. до закрытия')}</strong><span>·</span><strong>${reminderUi('Повторное напоминание')} ${s.repeatHours} ${reminderUi('ч. до закрытия')}</strong><span>·</span><span>${reminderUi('отправка')} ${s.windowStart}–${s.windowEnd} ${reminderUi('по Мадриду')}</span>`}
 }
 function renderReminders() {
   const root=document.querySelector('#reminderList');if(!root)return;
-  reloadRestaurantsFromStorage();
-  const rows=reminderRows(),paymentRows=paymentReminderRows(),windowState=reminderSendWindow();
-  const orderDue=rows.filter(x=>!x.ordered&&!x.sent),paymentDue=paymentRows.filter(x=>!x.sent);
+  reloadRestaurantsFromStorage();bindReminderControls();
+  const settings=reminderSettings(),rows=reminderRows(),paymentRows=paymentReminderRows(),windowState=reminderSendWindow();
+  const orderDue=rows.filter(x=>!x.ordered&&!x.sent),paymentDue=paymentRows.filter(x=>!x.sent&&Number(x.days)<=settings.paymentDays);
   const overdue=orderDue.filter(reminderOverdue).length+paymentDue.filter(x=>x.days<0).length;
   const sent=rows.filter(x=>x.sent),paymentSent=paymentRows.filter(x=>x.sent),ordered=rows.filter(x=>x.ordered);
 
@@ -1333,25 +1371,24 @@ function renderReminders() {
   document.querySelector('#reminderSent').textContent=sent.length+paymentSent.length;
   document.querySelector('#reminderOrdered').textContent=ordered.length;
 
-  const activeOrderRows=orderDue.slice().sort((a,b)=>Number(a.hours)-Number(b.hours));
-  const activePaymentRows=paymentDue.slice().sort((a,b)=>Number(a.days)-Number(b.days));
-  const sentRows=[...sent,...paymentSent].sort((a,b)=>String(b.sent?.sentAt||'').localeCompare(String(a.sent?.sentAt||'')));
-  const orderedUnique=[...new Map(ordered.map(x=>[`${x.r.id}:${x.plan.bakeDate}`,x])).values()];
+  let activeOrderRows=orderDue.slice().sort((a,b)=>Number(a.hours)-Number(b.hours));
+  let activePaymentRows=paymentDue.slice().sort((a,b)=>Number(a.days)-Number(b.days));
+  let sentRows=[...sent,...paymentSent].sort((a,b)=>String(b.sent?.sentAt||'').localeCompare(String(a.sent?.sentAt||'')));
+  let orderedUnique=[...new Map(ordered.map(x=>[`${x.r.id}:${x.plan.bakeDate}`,x])).values()];
+  const matches=x=>{if(!reminderSearchValue)return true;const hay=`${x.r?.name||''} ${x.note?.number||''} ${x.plan?.bakeDate||''}`.toLowerCase();return hay.includes(reminderSearchValue)};
+  activeOrderRows=activeOrderRows.filter(matches);activePaymentRows=activePaymentRows.filter(matches);sentRows=sentRows.filter(matches);orderedUnique=orderedUnique.filter(matches);
+  if(reminderViewFilter==='orders'){activePaymentRows=[];sentRows=sentRows.filter(x=>!x.note)}
+  if(reminderViewFilter==='payments'){activeOrderRows=[];orderedUnique=[];sentRows=sentRows.filter(x=>x.note)}
+  if(reminderViewFilter==='overdue'){activeOrderRows=activeOrderRows.filter(reminderOverdue);activePaymentRows=activePaymentRows.filter(x=>x.days<0);sentRows=[];orderedUnique=[]}
+  if(reminderViewFilter==='sent'){activeOrderRows=[];activePaymentRows=[];orderedUnique=[]}
+  if(reminderViewFilter==='overdue')sentRows=[];
 
-  const section=(title,count,content,className='')=>content?`<section class="reminder-work-section ${className}"><div class="reminder-section-head"><h3>${title}</h3><span>${count}</span></div>${content}</section>`:'';
-  const activeHtml=[
-    ...activeOrderRows.map(x=>reminderOrderCard(x,windowState)),
-    ...activePaymentRows.map(x=>paymentReminderCard(x,windowState))
-  ].join('');
+  const section=(title,count,content,className='')=>content?`<section class="reminder-work-section ${className}"><div class="reminder-section-head"><h3>${reminderUi(title)}</h3><span>${count}</span></div>${content}</section>`:'';
+  const activeHtml=[...activeOrderRows.map(x=>reminderOrderCard(x,windowState)),...activePaymentRows.map(x=>paymentReminderCard(x,windowState))].join('');
   const sentHtml=sentRows.slice(0,20).map(x=>x.note?paymentReminderCard(x,windowState):reminderOrderCard(x,windowState)).join('');
-  const orderedHtml=orderedUnique.map(x=>`<article class="reminder-ordered-compact"><div><strong>${commerceEscape(x.r.name)}</strong><span>Выпечка ${reminderPrettyDate(x.plan.bakeDate,'ru',false)}</span></div><b>Заказ получен ✓</b></article>`).join('');
+  const orderedHtml=orderedUnique.map(x=>`<article class="reminder-ordered-compact"><div><strong data-panora-user-content>${commerceEscape(x.r.name)}</strong><span>${reminderUi('Выпечка')} ${reminderPrettyDate(x.plan.bakeDate,x.r.language||'ru',false)}</span></div><b>${reminderUi('Заказ получен')} ✓</b></article>`).join('');
 
-  root.innerHTML=
-    section('Нужно отправить',activeOrderRows.length+activePaymentRows.length,activeHtml,'reminder-working')+
-    section('Отправлено',sentRows.length,sentHtml,'reminder-sent-section')+
-    section('Уже заказали',orderedUnique.length,orderedHtml,'reminder-ordered-section')+
-    (!activeHtml&&!sentHtml&&!orderedHtml?'<div class="empty-row">Сейчас напоминаний нет.</div>':'');
-
+  root.innerHTML=section('Нужно отправить',activeOrderRows.length+activePaymentRows.length,activeHtml,'reminder-working')+section('Отправлено',sentRows.length,sentHtml,'reminder-sent-section')+section('Уже заказали',orderedUnique.length,orderedHtml,'reminder-ordered-section')+(!activeHtml&&!sentHtml&&!orderedHtml?`<div class="empty-row">${reminderUi('Сейчас напоминаний нет.')}</div>`:'');
   bindReminderCards(rows,paymentRows);
 }
 
@@ -1458,8 +1495,11 @@ document.querySelector("#saveRestaurant").onclick = (e) => {
       ["Signal",String(f.get("signal")||"").trim()],
       ["Viber",String(f.get("viber")||"").trim()],
       ["Messenger",String(f.get("messenger")||"").trim()],
-      ["__preferred__",String(f.get("preferredChannel")||"whatsapp").trim()]
-    ].filter(([,contact])=>contact).map(([name,contact])=>({name,contact})),
+      ["__preferred__",String(f.get("preferredChannel")||"whatsapp").trim()],
+      ["__reminder_orders__",f.get("reminderOrders")?"1":"0"],
+      ["__reminder_payments__",f.get("reminderPayments")?"1":"0"],
+      ["__reminder_paused__",f.get("reminderPaused")?"1":"0"]
+    ].filter(([,contact])=>contact!=="").map(([name,contact])=>({name,contact})),
     partnerType: f.get("partnerType") || "other",
     language: f.get("language") || "ru",
     address: f.get("address"),

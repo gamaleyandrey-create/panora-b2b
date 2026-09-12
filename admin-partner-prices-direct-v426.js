@@ -57,6 +57,11 @@
     const value=messengerValue(r,'__preferred__').toLowerCase();
     return ['whatsapp','email','telegram','signal','viber','messenger','copy'].includes(value)?value:'whatsapp';
   };
+  const reminderFlag=(r,name,defaultValue=true)=>{
+    const value=messengerValue(r,`__reminder_${name}__`).toLowerCase();
+    if(!value)return defaultValue;
+    return !['0','false','off','no'].includes(value);
+  };
   const contactPayload=card=>{
     const get=name=>String(card.querySelector(`[data-partner-contact="${name}"]`)?.value||'').trim();
     const preferred=get('preferred')||'whatsapp';
@@ -64,8 +69,11 @@
       whatsapp:get('whatsapp')||null,
       telegram:get('telegram')||null,
       extra_messengers:[
-        ['Signal',get('signal')],['Viber',get('viber')],['Messenger',get('messenger')],['__preferred__',preferred]
-      ].filter(([,contact])=>contact).map(([name,contact])=>({name,contact}))
+        ['Signal',get('signal')],['Viber',get('viber')],['Messenger',get('messenger')],['__preferred__',preferred],
+        ['__reminder_orders__',card.querySelector('[data-partner-reminder="orders"]')?.checked?'1':'0'],
+        ['__reminder_payments__',card.querySelector('[data-partner-reminder="payments"]')?.checked?'1':'0'],
+        ['__reminder_paused__',card.querySelector('[data-partner-reminder="paused"]')?.checked?'1':'0']
+      ].filter(([,contact])=>contact!==''&&contact!==null&&contact!==undefined).map(([name,contact])=>({name,contact}))
     };
   };
 
@@ -217,6 +225,12 @@
             <label><span>Главный способ</span><select data-partner-contact="preferred">
               ${[['whatsapp','WhatsApp'],['email','Email'],['telegram','Telegram'],['signal','Signal'],['viber','Viber'],['messenger','Messenger'],['copy','Копировать']].map(([value,label])=>`<option value="${value}"${preferredChannel(r)===value?' selected':''}>${label}</option>`).join('')}
             </select></label>
+          </div>
+          <div class="partner-reminder-preferences">
+            <strong>Напоминания</strong>
+            <label><input type="checkbox" data-partner-reminder="orders"${reminderFlag(r,'orders',true)?' checked':''}> <span>О заказе</span></label>
+            <label><input type="checkbox" data-partner-reminder="payments"${reminderFlag(r,'payments',true)?' checked':''}> <span>Об оплате</span></label>
+            <label><input type="checkbox" data-partner-reminder="paused"${reminderFlag(r,'paused',false)?' checked':''}> <span>Не беспокоить</span></label>
           </div>
           <div class="partner-contact-save-row"><span data-partner-contact-status></span><button type="button" class="secondary" data-save-partner-contacts="${esc(restaurantId)}">Сохранить контакты</button></div>
         </details>
