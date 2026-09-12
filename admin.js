@@ -1144,6 +1144,7 @@ async function retailEnsureAdminPush({prompt=false}={}){
   if(!sub){if(!prompt){retailRenderAdminPushState({active:false,reason:'no_subscription'});return false}sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:retailPushB64ToBytes(settings.pushVapidPublicKey)})}
   const json=sub.toJSON();
   await retailAdminApi('retail_push_subscriptions?on_conflict=audience,endpoint',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({audience:'admin',endpoint:json.endpoint,p256dh:json.keys?.p256dh||'',auth_key:json.keys?.auth||'',user_agent:navigator.userAgent,active:true,updated_at:new Date().toISOString()})});
+  await retailAdminApi(`retail_push_subscriptions?audience=eq.admin&endpoint=eq.${encodeURIComponent(json.endpoint)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({language:(document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'ru')})}).catch(()=>{});
   const verified=await retailAdminPushStatus();
   retailRenderAdminPushState(verified);
   if(!verified.active)throw new Error(verified.error||verified.reason||'server_registration_failed');

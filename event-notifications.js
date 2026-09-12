@@ -3,6 +3,19 @@
 (function(){
  const SOUND_KEY='panora-event-sound-v332',SNAP_KEY='panora-event-orders-v332',PENDING_KEY='panora-admin-pending-order-alerts-v25';
  let sound=localStorage.getItem(SOUND_KEY)==='1',audioCtx=null,initialized=false,lastPlanNoticeAt=0,lastPlanNoticeSig='';
+ const EVENT_COPY={
+  ru:{open:'Открыть →',close:'Закрыть',newOrderTitle:'Новый заказ поступил в пекарню',newOrderBody:'Откройте заказ и проверьте позиции.',partner:'Партнёр',statusTitleAdmin:'Статус заказа обновлён',statusTitlePartner:'Есть новости по вашему заказу',statusPrefix:'статус',planUpdated:'План обновлён',saved:'Сохранено',syncError:'Ошибка синхронизации',syncFailed:'Не удалось синхронизировать данные.',statuses:{submitted:'отправлен в пекарню',confirmed:'подтверждён',processing:'в работе',shipped:'отгружен',completed:'выполнен',cancelled:'отменён'}},
+  en:{open:'Open →',close:'Close',newOrderTitle:'New order received by the bakery',newOrderBody:'Open the order and check the items.',partner:'Partner',statusTitleAdmin:'Order status updated',statusTitlePartner:'There is an update to your order',statusPrefix:'status',planUpdated:'Plan updated',saved:'Saved',syncError:'Sync error',syncFailed:'Could not sync data.',statuses:{submitted:'sent to the bakery',confirmed:'confirmed',processing:'in progress',shipped:'shipped',completed:'completed',cancelled:'cancelled'}},
+  es:{open:'Abrir →',close:'Cerrar',newOrderTitle:'Nuevo pedido recibido en la panadería',newOrderBody:'Abre el pedido y revisa los productos.',partner:'Socio',statusTitleAdmin:'Estado del pedido actualizado',statusTitlePartner:'Hay novedades sobre tu pedido',statusPrefix:'estado',planUpdated:'Plan actualizado',saved:'Guardado',syncError:'Error de sincronización',syncFailed:'No se pudieron sincronizar los datos.',statuses:{submitted:'enviado a la panadería',confirmed:'confirmado',processing:'en preparación',shipped:'enviado',completed:'completado',cancelled:'cancelado'}}
+ };
+ const supportedEventLanguage=value=>['ru','en','es'].includes(String(value||'').toLowerCase())?String(value).toLowerCase():'ru';
+ function adminEventLanguage(){return supportedEventLanguage(document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'ru')}
+ function partnerEventLanguage(){
+  if(typeof account!=='undefined'&&account?.language)return supportedEventLanguage(account.language);
+  try{const id=localStorage.getItem('panora-account-id'),rows=JSON.parse(localStorage.getItem('panora-restaurants')||'[]'),row=rows.find(x=>String(x?.id||'')===String(id||''));return supportedEventLanguage(row?.language||'ru')}catch{return'ru'}
+ }
+ function viewerEventLanguage(){return document.body.classList.contains('admin-page')?adminEventLanguage():partnerEventLanguage()}
+ const eventCopy=(language=viewerEventLanguage())=>EVENT_COPY[supportedEventLanguage(language)]||EVENT_COPY.ru;
 
  function readOrders(){try{return JSON.parse(localStorage.getItem('panora-orders')||'[]')||[]}catch{return[]}}
  function readSnap(){try{return JSON.parse(sessionStorage.getItem(SNAP_KEY)||'{}')||{}}catch{return{}}}
@@ -59,7 +72,7 @@
    if(options.persistent||options.priority==='critical')el.dataset.persistent='true';
    const actionable=Boolean(options.orderId||options.view||options.partnerCabinet||options.selector||options.onActivate);
    if(actionable){el.classList.add('panora-event-actionable');el.setAttribute('role','button');el.tabIndex=0}
-   el.innerHTML=`<div class="panora-event-icon">${icon}</div><div><p class="panora-event-title"></p><p class="panora-event-text"></p>${actionable?'<span class="panora-event-hint">Открыть →</span>':''}</div><button type="button" class="panora-event-close" aria-label="Закрыть">×</button>`;
+   const ui=eventCopy();el.innerHTML=`<div class="panora-event-icon">${icon}</div><div><p class="panora-event-title"></p><p class="panora-event-text"></p>${actionable?`<span class="panora-event-hint">${ui.open}</span>`:''}</div><button type="button" class="panora-event-close" aria-label="${ui.close}">×</button>`;
    el.querySelector('.panora-event-title').textContent=title;el.querySelector('.panora-event-text').textContent=text;
    el.querySelector('.panora-event-close').onclick=e=>{e.stopPropagation();if(options.orderId&&options.persistent)clearPending(options.orderId);else el.remove()};
    const activate=e=>{
@@ -75,7 +88,7 @@
  function persistentOrderToast(order,playSound=false){
    const selector=`.panora-event-toast[data-order-id="${CSS.escape(String(order.id))}"]`;
    if(document.querySelector(selector))return;
-   const el=toast('Новый заказ поступил в пекарню',`${partnerName(order.restaurantId)} · ${orderNo(order)}. Откройте заказ и проверьте позиции.`,'order','🧾',{persistent:true,priority:'critical',orderId:order.id,view:'orders',silent:!playSound});
+   const language=adminEventLanguage(),ui=eventCopy(language),el=toast(ui.newOrderTitle,`${partnerName(order.restaurantId,language)} · ${orderNo(order)}. ${ui.newOrderBody}`,'order','🧾',{persistent:true,priority:'critical',orderId:order.id,view:'orders',silent:!playSound});
    return el;
  }
  function restorePending(orders){
@@ -92,8 +105,8 @@
    const el=toast(title,text,type,icon,options);if(el)el.dataset.key=key;return el;
  }
  function orderNo(o){return Number(o?.number)>0?`PN-${String(Number(o.number)).padStart(4,'0')}`:'PN-…'}
- function partnerName(id){try{const rows=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');return rows.find(x=>x.id===id)?.name||'Партнёр'}catch{return'Партнёр'}}
- function statusText(status){return({submitted:'отправлен в пекарню',confirmed:'подтверждён',processing:'в работе',shipped:'отгружен',completed:'выполнен',cancelled:'отменён'})[status]||`статус: ${status}`}
+ function partnerName(id,language=viewerEventLanguage()){const fallback=eventCopy(language).partner;try{const rows=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');return rows.find(x=>x.id===id)?.name||fallback}catch{return fallback}}
+ function statusText(status,language=viewerEventLanguage()){const ui=eventCopy(language);return ui.statuses[status]||`${ui.statusPrefix}: ${status}`}
  function typeFor(status){return status==='cancelled'?'error':(['confirmed','shipped','completed'].includes(status)?'success':'order')}
 
  function compare(){
@@ -107,8 +120,8 @@
        persistentOrderToast(o,true);
      } else if(old&&old.status!==o.status){
        if(old.status==='submitted'&&o.status!=='submitted')clearPending(o.id);
-       if(admin)toastOnce(`order-status:${o.id}:${o.status}`,'Статус заказа обновлён',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000,{priority:o.status==='cancelled'?'critical':'normal',orderId:o.id,view:'orders'});
-       else toastOnce(`order-status:${o.id}:${o.status}`,'Есть новости по вашему заказу',`${orderNo(o)} — ${statusText(o.status)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000,{priority:o.status==='cancelled'?'critical':'normal',orderId:o.id,partnerCabinet:true});
+       if(admin){const language=adminEventLanguage(),ui=eventCopy(language);toastOnce(`order-status:${o.id}:${o.status}`,ui.statusTitleAdmin,`${orderNo(o)} — ${statusText(o.status,language)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000,{priority:o.status==='cancelled'?'critical':'normal',orderId:o.id,view:'orders'})}
+       else{const language=partnerEventLanguage(),ui=eventCopy(language);toastOnce(`order-status:${o.id}:${o.status}`,ui.statusTitlePartner,`${orderNo(o)} — ${statusText(o.status,language)}.`,typeFor(o.status),o.status==='cancelled'?'⚠️':'✓',30000,{priority:o.status==='cancelled'?'critical':'normal',orderId:o.id,partnerCabinet:true})}
      }
    });
    prunePending(orders);saveSnap(orders);
@@ -187,14 +200,14 @@
  window.addEventListener('panora:plans-updated',event=>{
    if(event.detail?.source!=='cloud-remote')return;const calendarVisible=document.querySelector('#view-plan')?.classList.contains('active');if(!calendarVisible)return;
    const state=document.querySelector('#saveState');if(state&&state.dataset.syncState!=='syncing'&&state.dataset.syncState!=='local'&&state.dataset.syncState!=='error'){
-     state.textContent='План обновлён';state.dataset.syncState='synced';setTimeout(()=>{if(state.textContent==='План обновлён')state.textContent='Сохранено'},1400);
+     const ui=eventCopy(adminEventLanguage());state.textContent='План обновлён';state.textContent=ui.planUpdated;state.dataset.syncState='synced';setTimeout(()=>{if(state.textContent===ui.planUpdated)state.textContent=ui.saved},1400);
    }
  });
  window.addEventListener('panora:restaurant-sync',e=>{
    if(e.detail?.type!=='error')return;
-   const text=e.detail.text||'Не удалось синхронизировать данные.';
+   const ui=eventCopy(),text=e.detail.text||ui.syncFailed;
    const key='sync-error:'+String(text).toLowerCase().replace(/[^a-z0-9а-яё_-]+/gi,'_').slice(0,72);
-   toastOnce(key,'Ошибка синхронизации',text,'error','!',30000,{priority:'critical',view:document.body.classList.contains('admin-page')?'settings':null,partnerCabinet:!document.body.classList.contains('admin-page')});
+   toastOnce(key,ui.syncError,text,'error','!',30000,{priority:'critical',view:document.body.classList.contains('admin-page')?'settings':null,partnerCabinet:!document.body.classList.contains('admin-page')});
  });
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(compare,100)});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{settings();compare()},{once:true});else{settings();compare()}

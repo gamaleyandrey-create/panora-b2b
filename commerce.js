@@ -1088,6 +1088,11 @@ const reminderPartnerFlag=(r,name,defaultValue=true)=>{
   return !['0','false','off','no'].includes(String(found.contact||'').toLowerCase());
 };
 const reminderUi=text=>window.panoraAdminTranslateText?.(text)||text;
+const reminderSubjectWord=(language,key)=>({
+  ru:{bake:'выпечка',payment:'оплата'},
+  en:{bake:'bake',payment:'payment'},
+  es:{bake:'horneado',payment:'pago'}
+}[['ru','en','es'].includes(language)?language:'ru']||{})[key]||key;
 const cleanPhone = (value) => String(value || "").replace(/\D/g, "");
 const reminderMadridMinutes=()=>{
   const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
@@ -1296,14 +1301,14 @@ function reminderCardActions(row,message,subject,waiting){
   </div>`;
 }
 function reminderOrderCard(x,windowState){
-  const language=x.r.language||'ru',message=reminderCopy[language](x.r,x.plan),
+  const language=['ru','en','es'].includes(x.r.language)?x.r.language:'ru',message=(reminderCopy[language]||reminderCopy.ru)(x.r,x.plan),
     waiting=!windowState.allowed&&!x.ordered&&!x.sent,
     overdue=reminderOverdue(x),
     stageLabel=reminderUi(x.stage==='repeat'?'Повторное напоминание':'Первое напоминание'),
     status=x.ordered?reminderUi('Заказ получен'):x.sent?`${reminderUi('Отправлено')} ${new Date(x.sent.sentAt).toLocaleString(reminderLocale(language),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
       waiting?`${reminderUi('Доступно в окно отправки')} ${windowState.settings.windowStart}–${windowState.settings.windowEnd}`:
       overdue?`${reminderUi('Просрочено')} · ${x.hours} ${reminderUi('ч. до закрытия')}`:`${x.hours} ${reminderUi('ч. до закрытия')}`,
-    subject=`Panora · ${reminderUi('выпечка')} ${reminderPrettyDate(x.plan.bakeDate,language,false)}`;
+    subject=`Panora · ${reminderSubjectWord(language,'bake')} ${reminderPrettyDate(x.plan.bakeDate,language,false)}`;
   return `<article class="reminder-card reminder-kind-order ${x.ordered?'complete ':''}${x.sent?'sent ':''}${overdue?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}" data-reminder-kind="orders" data-reminder-overdue="${overdue?'1':'0'}">
     <div class="reminder-card-top"><div><span class="tag">${stageLabel} · ${status}</span><h3 data-panora-user-content>${commerceEscape(x.r.name)}</h3><p>${reminderUi('Выпечка')}: <strong>${reminderPrettyDate(x.plan.bakeDate,language)}</strong> · ${reminderUi('заказ до')} <strong>${reminderPrettyCutoff(x.plan.cutoff,language)}</strong></p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
     <p class="reminder-message" data-panora-user-content>${commerceEscape(message)}</p>
@@ -1312,11 +1317,11 @@ function reminderOrderCard(x,windowState){
   </article>`;
 }
 function paymentReminderCard(x,windowState){
-  const language=x.r.language||'ru',message=paymentReminderCopy[language](x),
+  const language=['ru','en','es'].includes(x.r.language)?x.r.language:'ru',message=(paymentReminderCopy[language]||paymentReminderCopy.ru)(x),
     waiting=!windowState.allowed&&!x.sent,
     status=x.sent?`${reminderUi('Отправлено')} ${new Date(x.sent.sentAt).toLocaleString(reminderLocale(language),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:
       x.days<0?`${reminderUi('Просрочено на')} ${Math.abs(x.days)} ${reminderUi('дн.')}`:x.days===0?reminderUi('Оплата сегодня'):`${reminderUi('До оплаты')} ${x.days} ${reminderUi('дн.')}`,
-    subject=`Panora · ${reminderUi('оплата')} DN-${String(x.note.number).padStart(4,'0')}`;
+    subject=`Panora · ${reminderSubjectWord(language,'payment')} DN-${String(x.note.number).padStart(4,'0')}`;
   return `<article class="reminder-card payment-reminder reminder-kind-payment ${x.sent?'sent ':''}${x.days<0?'overdue ':''}${waiting?'waiting':''}" data-reminder-card="${commerceEscape(x.key)}" data-reminder-kind="payments" data-reminder-overdue="${x.days<0?'1':'0'}">
     <div class="reminder-card-top"><div><span class="tag">${reminderUi('Оплата')} · ${status}</span><h3 data-panora-user-content>${commerceEscape(x.r.name)}</h3><p>${reminderUi('Накладная')} <strong>DN-${String(x.note.number).padStart(4,'0')}</strong> · ${reminderUi('оплатить до')} <strong>${reminderPrettyDate(x.note.paymentDueDate,language)}</strong> · ${euro(x.balance)}</p></div>${x.sent?`<span class="reminder-sent-channel">${reminderChannelLabel(x.sent.channel)}</span>`:''}</div>
     <p class="reminder-message" data-panora-user-content>${commerceEscape(message)}</p>
@@ -1328,9 +1333,9 @@ function bindReminderCards(rows,paymentRows){
   const all=[...rows,...paymentRows];
   document.querySelectorAll('[data-reminder-card]').forEach(card=>{
     const key=card.dataset.reminderCard,row=all.find(item=>item.key===key);if(!row)return;
-    const isPayment=Boolean(row.note),language=row.r.language||'ru',
-      message=isPayment?paymentReminderCopy[language](row):reminderCopy[language](row.r,row.plan),
-      subject=isPayment?`Panora · ${reminderUi('оплата')} DN-${String(row.note.number).padStart(4,'0')}`:`Panora · ${reminderUi('выпечка')} ${reminderPrettyDate(row.plan.bakeDate,language,false)}`;
+    const isPayment=Boolean(row.note),language=['ru','en','es'].includes(row.r.language)?row.r.language:'ru',
+      message=isPayment?(paymentReminderCopy[language]||paymentReminderCopy.ru)(row):(reminderCopy[language]||reminderCopy.ru)(row.r,row.plan),
+      subject=isPayment?`Panora · ${reminderSubjectWord(language,'payment')} DN-${String(row.note.number).padStart(4,'0')}`:`Panora · ${reminderSubjectWord(language,'bake')} ${reminderPrettyDate(row.plan.bakeDate,language,false)}`;
     card.querySelectorAll('[data-open-reminder-channel]').forEach(button=>button.onclick=()=>{
       if(button.disabled)return;
       reminderOpenChannel(row,button.dataset.openReminderChannel,message,subject,card);

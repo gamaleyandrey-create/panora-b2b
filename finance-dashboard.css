@@ -97,6 +97,6 @@
   .finance-secondary-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
-/* Panora 10.47 — Finance hydration status */
+/* Panora 10.48 — Finance hydration status */
 .finance-load-state{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #d8e2d8;border-radius:12px;background:#f7faf6;color:#315b42;font-size:12px}
 .finance-load-state[hidden]{display:none!important}.finance-load-state strong{font-size:13px}.finance-load-state span{color:#6e7a71}.finance-load-state[data-state="warning"]{border-color:#ead7a5;background:#fffaf0;color:#8a681e}.finance-load-state[data-state="loading"]::before{content:"";width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:financeSpin .8s linear infinite}@keyframes financeSpin{to{transform:rotate(360deg)}}

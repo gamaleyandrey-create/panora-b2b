@@ -11,17 +11,15 @@
       "'": "&#39;",
     })[char]);
   const money = (value) =>
-    new Intl.NumberFormat("ru-RU", {
+    new Intl.NumberFormat("es-ES", {
       style: "currency",
       currency: "EUR",
     }).format(Number(value || 0));
-  let documentLanguage = "";
-  const currentLanguage = () =>
-    documentLanguage ||
-    document.querySelector("#adminLanguage")?.value ||
-    (typeof lang !== "undefined" ? lang : "") ||
-    localStorage.getItem("panora-lang") ||
-    "ru";
+  // Panora 10.48: Spanish accounting documents are a bakery accounting artifact.
+  // They stay in Spanish for every partner legal form (company / sole proprietor)
+  // and never inherit the partner or bakery UI language.
+  let documentLanguage = "es";
+  const currentLanguage = () => "es";
   const words = {
     ru: {
       title: "Счёт-фактура",
@@ -129,7 +127,7 @@
       vat: "IVA",
     },
   };
-  const text = (key) => (words[currentLanguage()] || words.ru)[key];
+  const text = (key) => (words[currentLanguage()] || words.es)[key];
   const list = (name, fallback) =>
     typeof window[name] === "function"
       ? window[name]()
@@ -160,23 +158,20 @@
     return rows.find((item) => item.id === id) || {};
   };
   const productName = (id) => {
-    if (typeof portalProduct === "function") return portalProduct(id);
-    const registry =
-      (typeof productRegistry !== "undefined" && productRegistry) ||
-      (typeof PRODUCTS !== "undefined" && PRODUCTS) ||
-      [];
-    const product = registry.find((item) => item.id === id);
-    const language = currentLanguage();
+    const registries = [
+      typeof productRegistry !== "undefined" ? productRegistry : [],
+      typeof PRODUCTS !== "undefined" ? PRODUCTS : [],
+    ];
+    const product = registries.flat().find((item) => item?.id === id) || {};
     return (
-      product?.names?.[language] ||
-      product?.names?.ru ||
-      product?.text?.[language]?.[0] ||
-      product?.text?.ru?.[0] ||
+      product?.names?.es ||
+      product?.name_es ||
+      product?.text?.es?.[0] ||
       (id === "plain"
-        ? "Льняной бездрожжевой хлеб с семенами"
+        ? "Pan de lino sin levadura con semillas"
         : id === "pumpkin"
-          ? "Тыквенный бездрожжевой хлеб с семенами"
-          : id)
+          ? "Pan de calabaza"
+          : `Producto ${id || ""}`.trim())
     );
   };
   const bakeryData = (note) => ({
@@ -331,11 +326,12 @@ ${lines}
     const order = findOrder(note.orderId);
     const meta = options.documentData || {};
     const variant = options.variant === "albaran" ? "albaran" : "factura";
-    const displayTitle = meta.displayTitle || text(variant);
+    const spanishDocumentTitles={albaran:"Albarán",factura:"Factura",simplificada:"Factura simplificada",rectificativa:"Factura rectificativa",devolucion:"Devolución",abono:"Abono"};
+    const displayTitle = spanishDocumentTitles[meta.variant] || text(variant);
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
     const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
-    documentLanguage = ["ru","en","es"].includes(client.language) ? client.language : (["ru","en","es"].includes(baseClient.language) ? baseClient.language : currentLanguage());
+    documentLanguage = "es";
     const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
     const prefix = variant === "albaran" ? "ALB-" : "F-";
     const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
@@ -358,7 +354,7 @@ ${lines}
       <button type="button" class="accounting-x" aria-label="${esc(text("close"))}">×</button>
     </div>
     <article class="accounting-sheet">
-      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(displayTitle)}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Дата операции</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
+      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(displayTitle)}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Fecha de operación</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
       <section class="accounting-parties">
         <div><h2>${esc(text("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(text("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(text("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(text("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
         <div><h2>${esc(text("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(text("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(text("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(text("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
@@ -390,7 +386,7 @@ ${lines}
     dialog.onclick = (event) => {
       if (event.target === dialog) close();
     };
-    dialog.addEventListener("close", () => { documentLanguage=""; dialog.remove(); }, { once: true });
+    dialog.addEventListener("close", () => { documentLanguage="es"; dialog.remove(); }, { once: true });
     dialog.showModal();
   };
 })();
