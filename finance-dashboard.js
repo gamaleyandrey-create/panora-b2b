@@ -16,13 +16,15 @@
     return product?.names?.ru||product?.name||(typeof productName==='function'?productName(id):String(id));
   };
   const partnerLabel=id=>{
-    const list=read('panora-restaurants',[]);
-    return (Array.isArray(list)?list:[]).find(item=>String(item.id)===String(id))?.name||'—';
+    const list=financeArray('restaurants','panora-restaurants');
+    return list.find(item=>String(item.id)===String(id))?.name||'—';
   };
   const recipes=()=>read('panora-recipes',{});
   const prices=()=>read('panora-ingredient-costs',{});
   const ingredientPrice=(map,name,unit)=>Number(map[`${normalize(name)}|${String(unit||'').toLowerCase()}`]??map[`${name}|${unit}`]??0);
   const canonicalRetailOrders=list=>{const map=new Map();(Array.isArray(list)?list:[]).filter(Boolean).forEach(order=>{const key=String(order.id||order.number||'').trim();if(!key)return;const prev=map.get(key),stamp=o=>String(o?.updatedAt||o?.completedAt||o?.createdAt||'');if(!prev||stamp(order)>=stamp(prev))map.set(key,order)});return [...map.values()]};
+  const financeSnapshot=()=>{try{return window.panoraFinanceSnapshot?.()||null}catch{return null}};
+  const financeArray=(snapshotKey,storageKey)=>{const snap=financeSnapshot(),value=snap?.[snapshotKey];return Array.isArray(value)?value:(Array.isArray(read(storageKey,[]))?read(storageKey,[]):[])};
 
   const recipeUnitRawCost=(recipe,product)=>{
     const source=Array.isArray(recipe)&&recipe.length?recipe:(recipes()?.[product]||[]),priceMap=prices();
@@ -41,6 +43,10 @@
 
   let expenses=read(KEY,[]);
   let retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]));
+  let financeHydrationPromise=null,financeHydratedAt=0;
+  const financeState=()=>document.querySelector('#financeLoadState');
+  const setFinanceState=(kind,title,detail='')=>{const el=financeState();if(!el)return;el.hidden=false;el.dataset.state=kind;el.innerHTML=`<strong>${esc(title)}</strong>${detail?`<span>${esc(detail)}</span>`:''}`};
+  const hideFinanceState=()=>{const el=financeState();if(el)el.hidden=true};
   const session=()=>window.panoraSupabaseSession||null;
   const request=async(path,options={})=>{
     const s=session();
@@ -80,7 +86,10 @@
         }
         const rows=await request('finance_expenses?select=id,expense_date,category,description,expense_type,gross_amount,vat_rate,vat_deductible&order=expense_date.desc,created_at.desc');
         if(Array.isArray(rows)){expenses=rows.map(rowFromCloud);save(KEY,expenses);render()}
-      }catch{}
+      }catch(error){
+        console.warn('Panora finance expenses load',error);
+        throw error;
+      }
     })().finally(()=>{financeExpenseLoad=null});
     return financeExpenseLoad;
   };
@@ -94,7 +103,7 @@
     try{
       const rows=await request('retail_orders?select=id,order_number,source,fulfillment,bake_date,pickup_date,delivery_fee,status,payment_status,payment_method,total,created_at,updated_at,completed_at,cancelled_at,retail_order_items(product_id,quantity,unit_price)&order=created_at.desc');
       if(Array.isArray(rows)){retailOrders=canonicalRetailOrders(rows.map(retailOrderFromCloud));save('panora-retail-orders',retailOrders);render()}
-    }catch{retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]))}
+    }catch(error){retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]));throw error}
   };
   const cloudConfigured=()=>Boolean(cfg.url&&cfg.publishableKey);
   const persist=async row=>{
@@ -161,7 +170,7 @@
     // physical return reverse exactly the COGS that belonged to the original bake.
     const costBakeCompletions=(Array.isArray(read('panora-bake-completions',[]))?read('panora-bake-completions',[]):[])
       .filter(row=>row&&!row.deletedAt).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
-    const b2bOrders=Array.isArray(read('panora-orders',[]))?read('panora-orders',[]):[],b2bOrderById=new Map(b2bOrders.filter(Boolean).map(order=>[String(order.id||''),order]));
+    const b2bOrders=financeArray('orders','panora-orders'),b2bOrderById=new Map(b2bOrders.filter(Boolean).map(order=>[String(order.id||''),order]));
     const historicalUnitRawCost=(product,date)=>{
       const day=String(date||'').slice(0,10);let fallbackRecipe=null;
       for(let i=costBakeCompletions.length-1;i>=0;i--){
@@ -177,7 +186,7 @@
     const noteUnitRawCost=(note,product)=>historicalUnitRawCost(product,noteCostDate(note));
     const retailUnitRawCost=(order,product)=>historicalUnitRawCost(product,localEventDay(order?.bakeDate||order?.pickupDate||order?.completedAt||order?.createdAt||''));
     const seenNotes=new Set();
-    const allNotes=read('panora-delivery-notes',[])
+    const allNotes=financeArray('deliveryNotes','panora-delivery-notes')
       .slice()
       .sort((a,b)=>String(a.createdAt||a.date||'').localeCompare(String(b.createdAt||b.date||'')))
       .filter(note=>{
@@ -401,6 +410,33 @@
     element.classList.add(value>0.005?'is-positive':value<-0.005?'is-negative':'is-zero');
   }
 
+  async function hydrateFinance({force=false}={}){
+    if(financeHydrationPromise)return financeHydrationPromise;
+    const now=Date.now();
+    if(!force&&now-financeHydratedAt<15000){render();return true}
+    financeHydrationPromise=(async()=>{
+      setFinanceState('loading','Обновляем финансы…','Заказы, накладные, себестоимость, расходы и розница');
+      const tasks=[];
+      if(window.panoraCloud?.refreshFinanceDashboard)tasks.push(window.panoraCloud.refreshFinanceDashboard({force}));
+      tasks.push(loadCloud());
+      tasks.push(loadRetailCloud());
+      const results=await Promise.allSettled(tasks);
+      retailOrders=canonicalRetailOrders(read('panora-retail-orders',[]));
+      render();
+      const failed=results.filter(row=>row.status==='rejected');
+      if(failed.length){
+        const detail=failed.map(row=>row.reason?.message||String(row.reason||'')).filter(Boolean).join(' · ');
+        setFinanceState('warning','Часть финансовых данных не обновилась',detail||'Показаны последние сохранённые данные.');
+        return false;
+      }
+      financeHydratedAt=Date.now();
+      setFinanceState('ok','✓ Финансовые данные актуальны');
+      setTimeout(()=>{if(financeState()?.dataset.state==='ok')hideFinanceState()},1200);
+      return true;
+    })().finally(()=>{financeHydrationPromise=null});
+    return financeHydrationPromise;
+  }
+
   function render(){
     const x=calculate();
     const operatingMargin=x.revenueNet?x.operatingProfit/x.revenueNet*100:0;
@@ -533,7 +569,7 @@
   from.onchange=to.onchange=render;
   document.querySelector('#financeThisMonth').onclick=()=>{const d=new Date();from.value=iso(new Date(d.getFullYear(),d.getMonth(),1));to.value=iso(d);render()};
   document.querySelector('#financeThisYear').onclick=()=>{const d=new Date();from.value=`${d.getFullYear()}-01-01`;to.value=iso(d);render()};
-  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>{retailOrders=read('panora-retail-orders',[]);render();loadCloud()},20)},true);
+  document.addEventListener('click',event=>{if(event.target.closest('.admin-nav [data-view="finance"]'))setTimeout(()=>hydrateFinance({force:false}),20)},true);
   window.addEventListener('panora:ingredient-costs-changed',render);
   window.addEventListener('panora:recipes-changed',render);
   window.addEventListener('panora:retail-orders-updated',()=>{retailOrders=read('panora-retail-orders',[]);render()});
@@ -542,6 +578,7 @@
   window.addEventListener('panora:finished-stock-cloud-updated',render);
   window.addEventListener('panora:bake-completions-changed',render);
   window.addEventListener('panora:bake-completions-cloud-updated',render);
+  window.addEventListener('panora:finance-data-updated',render);
   window.addEventListener('storage',event=>{if(['panora-retail-orders','panora-stock-movements','panora-bake-completions'].includes(event.key)){retailOrders=read('panora-retail-orders',[]);render()}});
 
   // Panora 10.38: expose the same finance engine to Partner cards for a current-month
@@ -573,5 +610,5 @@
     return row;
   };
 
-  render();setTimeout(()=>{if(document.querySelector('#view-finance')?.classList.contains('active'))loadCloud()},700);
+  render();setTimeout(()=>{if(document.querySelector('#view-finance')?.classList.contains('active'))hydrateFinance({force:false})},700);
 })();

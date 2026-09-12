@@ -2337,7 +2337,49 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(button){button.disabled=false;delete button.dataset.loading;button.textContent='Обновить'}
     }
   }
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  
+  let financeDashboardRefreshPromise=null,financeDashboardRefreshAt=0;
+  async function refreshFinanceDashboardData({force=false}={}){
+    if(financeDashboardRefreshPromise)return financeDashboardRefreshPromise;
+    if(!ready||!session?.access_token)throw new Error('Облако ещё загружается');
+    const now=Date.now();
+    if(!force&&now-financeDashboardRefreshAt<15000)return {cached:true};
+    financeDashboardRefreshAt=now;
+    financeDashboardRefreshPromise=(async()=>{
+      // Finance needs a coherent snapshot, but opening the screen must stay cheap.
+      // Use tiny revision RPCs first and download only components that changed.
+      const referenceChecks=await Promise.allSettled([
+        adminReferenceComponentChanged('products'),adminReferenceComponentChanged('restaurants'),
+        adminReferenceComponentChanged('recipes'),adminReferenceComponentChanged('ingredientCosts')
+      ]);
+      const referenceTasks=[];
+      const referenceLoaders=[loadProducts,loadRestaurants,loadRecipes,loadIngredientCosts];
+      referenceChecks.forEach((row,index)=>{if(row.status==='rejected')referenceTasks.push(Promise.reject(row.reason));else if(row.value)referenceTasks.push(referenceLoaders[index]())});
+      const commerceChanged=await adminCommerceRevisionChanged();
+      if(commerceChanged?.orders)await loadOrders();
+      const commerceTasks=[];
+      if(commerceChanged?.payments)commerceTasks.push(loadPayments());
+      if(commerceChanged?.notes)commerceTasks.push(loadDeliveryNotes());
+      const results=await Promise.allSettled([...referenceTasks,...commerceTasks]);
+      const failed=results.filter(row=>row.status==='rejected');
+      if(failed.length){
+        const error=new Error(failed.map(row=>row.reason?.message||String(row.reason||'')).filter(Boolean).join(' · ')||'Не удалось загрузить часть финансовых данных');
+        error.panoraPartial=true;
+        throw error;
+      }
+      window.dispatchEvent(new CustomEvent('panora:finance-data-updated',{detail:{source:'cloud',at:new Date().toISOString()}}));
+      return {cached:false};
+    })().finally(()=>{financeDashboardRefreshPromise=null});
+    return financeDashboardRefreshPromise;
+  }
+
+  window.panoraFinanceSnapshot=()=>({
+    orders:structuredClone(Array.isArray(orders)?orders:[]),
+    deliveryNotes:structuredClone(Array.isArray(deliveryNotes)?deliveryNotes:[]),
+    payments:structuredClone(Array.isArray(payments)?payments:[]),
+    restaurants:structuredClone(Array.isArray(restaurants)?restaurants:[])
+  });
+  window.panoraCloud={start,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
