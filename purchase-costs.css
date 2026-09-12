@@ -640,7 +640,7 @@
 @media(max-width:760px){.raw-history-mobile-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px}.raw-history-mobile-toggle i{display:inline-block;transition:transform .18s ease}.raw-stock-movement-table tr.is-history-open .raw-history-mobile-toggle i{transform:rotate(180deg)}.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(5),.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(6),.raw-stock-movement-table tr:not(.is-history-open) td:nth-child(7){display:none!important}.raw-stock-movement-table tr:not(.is-history-open){cursor:pointer}}
 
 
-/* Panora 10.46 — raw material history filters are always visible on desktop. */
+/* Panora 10.47 — raw material history filters are always visible on desktop. */
 @media(min-width:761px){
   .raw-stock-history-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:end!important;column-gap:18px;row-gap:12px}
   .raw-stock-history-head>div:first-child{grid-column:1;min-width:0}

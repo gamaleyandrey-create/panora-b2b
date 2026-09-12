@@ -124,7 +124,7 @@
  }
  const isRetailPage=()=>/\/retail(?:\/|\.html|$)/.test(location.pathname);
  window.panoraPublicCatalog={refresh:fetchCatalog,refreshIfChanged:refreshCatalogIfChanged,start};
- // Panora 10.46: the retail storefront owns its wake refresh. Avoid a second
+ // Panora 10.47: the retail storefront owns its wake refresh. Avoid a second
  // catalogue wake listener in this helper. Other pages keep the shared cache refresh.
  if(!isRetailPage()){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoFetchCatalog()});
