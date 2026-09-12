@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const cfg=window.PANORA_SUPABASE,round=v=>Math.round((Number(v)+Number.EPSILON)*100)/100;
-  const productLabel=id=>{const p=(window.productRegistry||[]).find(x=>x.id===id),language=document.querySelector('#adminLanguage')?.value||'es';return p?.names?.[language]||p?.names?.es||p?.names?.ru||String(id||'')};
+  const productLabel=id=>{const p=(window.productRegistry||window.PRODUCTS||[]).find(x=>x.id===id)||{};return p?.names?.es||p?.name_es||p?.text?.es?.[0]||(id==='plain'?'Pan de lino sin levadura con semillas':id==='pumpkin'?'Pan de calabaza':`Producto ${String(id||'')}`.trim())};
   const nifOk=v=>/^[A-Z0-9][A-Z0-9 -]{6,13}$/i.test(String(v||'').trim());
   async function rpc(name,body){const auth=window.panoraSupabaseSession;if(!cfg||!auth?.access_token)throw new Error('Для выпуска документа войдите в кабинет пекарни и подключитесь к интернету.');const res=await fetch(`${cfg.url}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:`Bearer ${auth.access_token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});const text=await res.text();if(!res.ok){let message=text;try{const j=JSON.parse(text);message=j.message||j.hint||text}catch{}const err=new Error(message||'Не удалось выпустить документ.');err.status=res.status;throw err}return text?JSON.parse(text):null}
   window.panoraIssueSpanishDocument=async(note,variant,data)=>{

@@ -12,7 +12,7 @@
   <meta property="og:title" content="Panora — Розница">
   <meta name="twitter:title" content="Panora — Розница">
   <link rel="icon" href="icon.svg">
-  <link rel="stylesheet" href="retail-account.css?v=10470">
+  <link rel="stylesheet" href="retail-account.css?v=10480">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap');
     :root{--green:#315f43;--green-dark:#1d3829;--green-soft:#eaf2ea;--orange:#d97841;--paper:#fbfaf7;--cream:#f3efe6;--white:#fff;--ink:#1f2a23;--muted:#748078;--line:#dce2dc;--danger:#b9483e;--shadow:0 20px 60px rgba(29,56,41,.12)}
@@ -42,7 +42,7 @@
 </style>
   
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="retail/manifest.webmanifest?v=10470">
+  <link rel="manifest" href="retail/manifest.webmanifest?v=10480">
 
 </head>
 <body>
@@ -113,7 +113,7 @@
     </aside>
   </main>
 
-  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10470</span></footer>
+  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10480</span></footer>
 </div>
 
 <dialog class="checkout-dialog" id="retailCheckoutDialog">
@@ -141,9 +141,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=10470"></script>
-<script src="public-catalog-cloud-v48.js?v=10470"></script>
-<script src="pwa-stable.js?v=10470"></script>
+<script src="supabase-config.js?v=10480"></script>
+<script src="public-catalog-cloud-v48.js?v=10480"></script>
+<script src="pwa-stable.js?v=10480"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -224,7 +224,7 @@
   function startHoldTimer(){clearInterval(state.reservationTimer);renderHoldInfo();state.reservationTimer=setInterval(renderHoldInfo,1000)}
   async function releaseHold(){const token=state.reservationToken;state.reservationToken=null;state.reservationExpires=0;clearInterval(state.reservationTimer);state.reservationTimer=0;if(token){try{await rpc('panora_retail_release_hold',{p_reservation_token:token})}catch{}}}
   async function openCheckout(){if(!checkoutReady(cartData()))return;const button=$('#retailCheckout');button.disabled=true;button.textContent='…';$('#retailCheckoutError').textContent='';try{const rows=await rpc('panora_retail_hold',holdPayload()),hold=Array.isArray(rows)?rows[0]:rows;if(!hold?.reservation_token)throw new Error('hold_failed');state.reservationToken=hold.reservation_token;state.reservationExpires=new Date(hold.expires_at).getTime();$('#retailCheckoutFormView').hidden=false;$('#retailSuccessView').hidden=true;$('#retailCustomerForm').reset();const delivery=state.fulfillment==='delivery',deliveryFields=$('#retailDeliveryFields'),address=$('#retailCustomerForm').elements.deliveryAddress;deliveryFields.hidden=!delivery;if(address)address.required=delivery;const title=document.querySelector('#retailCheckoutFormView .dialog-head h2');if(title)title.textContent=t(delivery?'checkoutTitleDelivery':'checkoutTitle');syncPaymentChoices();$('#retailConfirmOrder').disabled=false;startHoldTimer();$('#retailCheckoutDialog').showModal();await loadCloudStock();renderProducts();renderCart()}catch(error){$('#retailCheckoutNote').textContent=mapError(error);await refreshCloud();renderAll()}finally{button.textContent=t('checkout');renderCart()}}
-  async function confirmOrder(event){event.preventDefault();if(!state.reservationToken||Date.now()>=state.reservationExpires){$('#retailCheckoutError').textContent=t('errExpired');return}const form=$('#retailCustomerForm');if(!form.reportValidity())return;const button=$('#retailConfirmOrder');button.disabled=true;$('#retailCheckoutError').textContent='';try{const payload={p_reservation_token:state.reservationToken,p_customer_name:form.customerName.value,p_customer_phone:form.customerPhone.value,p_customer_email:form.customerEmail.value||null,p_comment:form.comment.value||null,p_delivery_address:form.deliveryAddress?.value||null,p_delivery_note:form.deliveryNote?.value||null,p_payment_method:form.paymentMethod?.value||'pickup'};let rows;try{rows=await rpc('panora_retail_confirm_order_v1031',payload)}catch(error){const wantsSpecial=payload.p_payment_method==='online'&&preorderDiscountEligible();if(wantsSpecial)throw new Error('preorder_price_setup');rows=await rpc('panora_retail_confirm_order',payload)}const order=Array.isArray(rows)?rows[0]:rows;if(!order?.order_number)throw new Error('order_failed');state.lastOrder=order;state.reservationToken=null;state.reservationExpires=0;clearInterval(state.reservationTimer);state.reservationTimer=0;state.cart={};$('#retailCheckoutFormView').hidden=true;$('#retailSuccessView').hidden=false;$('#retailSuccessNumber').textContent=`R-${String(order.order_number).padStart(4,'0')}`;const date=fmtDate(order.pickup_date),meta=t('orderMeta',date,order.pickup_slot,money(order.total));$('#retailSuccessMeta').textContent=meta;const orderLink=$('#retailSuccessOrderLink');if(orderLink&&order.public_token)orderLink.href=`retail-order.html?t=${encodeURIComponent(order.public_token)}&lang=${encodeURIComponent(state.lang)}`;await loadCloudStock();renderAll()}catch(error){$('#retailCheckoutError').textContent=mapError(error);if(String(error?.message||'').includes('reservation_expired')){state.reservationToken=null;state.reservationExpires=0}await loadCloudStock();renderProducts();renderCart()}finally{button.disabled=false}}
+  async function confirmOrder(event){event.preventDefault();if(!state.reservationToken||Date.now()>=state.reservationExpires){$('#retailCheckoutError').textContent=t('errExpired');return}const form=$('#retailCustomerForm');if(!form.reportValidity())return;const button=$('#retailConfirmOrder');button.disabled=true;$('#retailCheckoutError').textContent='';try{const payload={p_reservation_token:state.reservationToken,p_customer_name:form.customerName.value,p_customer_phone:form.customerPhone.value,p_customer_email:form.customerEmail.value||null,p_comment:form.comment.value||null,p_delivery_address:form.deliveryAddress?.value||null,p_delivery_note:form.deliveryNote?.value||null,p_payment_method:form.paymentMethod?.value||'pickup'};let rows;try{rows=await rpc('panora_retail_confirm_order_v1031',payload)}catch(error){const wantsSpecial=payload.p_payment_method==='online'&&preorderDiscountEligible();if(wantsSpecial)throw new Error('preorder_price_setup');rows=await rpc('panora_retail_confirm_order',payload)}const order=Array.isArray(rows)?rows[0]:rows;if(!order?.order_number)throw new Error('order_failed');state.lastOrder=order;if(order.public_token)rpc('panora_retail_set_language',{p_public_token:order.public_token,p_language:state.lang}).catch(()=>{});state.reservationToken=null;state.reservationExpires=0;clearInterval(state.reservationTimer);state.reservationTimer=0;state.cart={};$('#retailCheckoutFormView').hidden=true;$('#retailSuccessView').hidden=false;$('#retailSuccessNumber').textContent=`R-${String(order.order_number).padStart(4,'0')}`;const date=fmtDate(order.pickup_date),meta=t('orderMeta',date,order.pickup_slot,money(order.total));$('#retailSuccessMeta').textContent=meta;const orderLink=$('#retailSuccessOrderLink');if(orderLink&&order.public_token)orderLink.href=`retail-order.html?t=${encodeURIComponent(order.public_token)}&lang=${encodeURIComponent(state.lang)}`;await loadCloudStock();renderAll()}catch(error){$('#retailCheckoutError').textContent=mapError(error);if(String(error?.message||'').includes('reservation_expired')){state.reservationToken=null;state.reservationExpires=0}await loadCloudStock();renderProducts();renderCart()}finally{button.disabled=false}}
   async function closeCheckout({release=true}={}){if(release&&state.reservationToken)await releaseHold();if($('#retailCheckoutDialog').open)$('#retailCheckoutDialog').close();$('#retailCheckoutFormView').hidden=false;$('#retailSuccessView').hidden=true;renderAll()}
   let cloudRefreshInFlight=null,cloudRefreshAt=0;
   async function refreshCloud({force=false}={}){
@@ -261,7 +261,7 @@
 </script>
 
 
-<script src="retail-account.js?v=10470"></script>
+<script src="retail-account.js?v=10480"></script>
 
 </body>
 </html>
