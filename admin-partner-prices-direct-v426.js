@@ -203,6 +203,7 @@
             <label><span>Телефон</span><input data-partner-profile="phone" type="tel" value="${esc(r.phone||'')}" placeholder="+34 600 000 000"></label>
             <label><span>Контактное лицо</span><input data-partner-profile="contact_person" value="${esc(r.contact_person||'')}"></label>
             <label class="partner-profile-wide"><span>Адрес</span><input data-partner-profile="address" value="${esc(r.address||'')}"></label>
+            <div class="partner-profile-wide partner-legal-details-note"><strong>Юридические реквизиты для Factura / Albarán</strong><small>Эти данные автоматически подставляются в новые испанские бухгалтерские документы.</small></div>
             <label><span>Юридическое название</span><input data-partner-profile="legal_name" value="${esc(r.legal_name||'')}"></label>
             <label><span>NIF / CIF</span><input data-partner-profile="tax_id" value="${esc(r.tax_id||'')}"></label>
             <label class="partner-profile-wide"><span>Адрес для документов</span><input data-partner-profile="billing_address" value="${esc(r.billing_address||'')}"></label>
@@ -343,13 +344,15 @@
           Object.assign(partner,payload,saved||{});
           try{
             const local=JSON.parse(localStorage.getItem('panora-restaurants')||'[]');
-            const next=(Array.isArray(local)?local:[]).map(r=>String(r.id)===restaurantId?{...r,...payload}:r);
+            const localProfile={name:payload.name,email:payload.email||'',phone:payload.phone||'',address:payload.address||'',legalName:payload.legal_name||'',taxId:payload.tax_id||'',billingAddress:payload.billing_address||'',contactPerson:payload.contact_person||'',deliveryComment:payload.delivery_comment||'',receivingHours:payload.receiving_hours||'',receivingDays:payload.receiving_days||'',partnerType:payload.partner_type||'restaurant'};
+            const next=(Array.isArray(local)?local:[]).map(r=>String(r.id)===restaurantId?{...r,...localProfile}:r);
             localStorage.setItem('panora-restaurants',JSON.stringify(next));
           }catch{}
           const title=card.querySelector('h3'),summary=card.querySelector(':scope > p');
           if(title)title.textContent=partner.name||payload.name;
           if(summary)summary.innerHTML=`${esc(partner.email||'')}<br>${esc(partner.address||'')}`;
           if(status){status.textContent='Сохранено ✓';setTimeout(()=>{if(status)status.textContent=''},1400)}
+          window.panoraRefreshAdmin?.();
           window.dispatchEvent(new CustomEvent('panora:partner-profile-changed',{detail:{restaurantId}}));
         }catch(error){
           if(status)status.textContent='Ошибка сохранения';

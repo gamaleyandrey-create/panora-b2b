@@ -12,6 +12,7 @@ let restaurants = cRead("panora-restaurants", []),
 let bakerySettings = cRead("panora-bakery-settings", {
   legalName: "Panora",
   taxId: "",
+  billingAddress: "",
   address: "",
   email: "gamaley1@gmail.com",
   phone: "+34611187640",
@@ -1981,10 +1982,11 @@ settingsForm.onsubmit = (e) => {
     useTax = f.get("useTax") === "on";
   bakerySettings = {
     ...bakerySettings,
-    legalName: f.get("legalName") || "Panora",
-    taxId: f.get("taxId"),
-    address: f.get("address"),
-    email: f.get("email"),
+    legalName: String(f.get("legalName") || "Panora").trim(),
+    taxId: String(f.get("taxId") || "").trim().toUpperCase(),
+    billingAddress: String(f.get("billingAddress") || "").trim(),
+    address: String(f.get("address") || "").trim(),
+    email: String(f.get("email") || "").trim(),
     phone: f.get("phone"),
     useTax,
     taxRate: useTax ? Number(f.get("taxRate") || 0) : 0,

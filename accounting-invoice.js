@@ -242,13 +242,29 @@
   const safeCell = (value) =>
     `"${String(value ?? "").replaceAll('"', '""').replace(/[\r\n]+/g, " ")}"`;
 
-  function downloadCsv(note, order, client, bakery, number) {
+  const accountingLines = (note, meta = {}) => {
+    if (Array.isArray(meta.lines) && meta.lines.length) return meta.lines.map((line) => ({
+      product_id: line.product_id || "", name: line.name || productName(line.product_id), quantity: Number(line.quantity || 0),
+      unit_price_net: Number(line.unit_price_net || 0), tax_rate: Number(line.tax_rate || 0), tax_base: Number(line.tax_base ?? Number(line.quantity || 0) * Number(line.unit_price_net || 0)), tax_amount: Number(line.tax_amount || 0), line_total: Number(line.line_total ?? line.tax_base ?? 0)
+    }));
+    const rate=Number(meta.ivaRate||0),includeTax=meta.pricesIncludeTax!==false,variant=meta.variant||"factura";
+    const round=v=>Math.round((Number(v)+Number.EPSILON)*100)/100;
+    const rows=(note.items||[]).map(item=>{const source=Number(note.prices?.[item.product]||0),net=variant!=="albaran"&&includeTax?round(source/(1+rate/100)):round(source),base=round(Number(item.quantity||0)*net),tax=variant==="albaran"?0:round(base*rate/100);return{product_id:item.product,name:productName(item.product),quantity:Number(item.quantity||0),unit_price_net:net,tax_rate:variant==="albaran"?0:rate,tax_base:base,tax_amount:tax,line_total:round(base+tax)}});
+    const delivery=Number(note.deliveryCharge||0);if(delivery>0){const net=variant!=="albaran"&&includeTax?round(delivery/(1+rate/100)):round(delivery),base=net,tax=variant==="albaran"?0:round(base*rate/100);rows.push({product_id:"__delivery__",name:"Entrega",quantity:1,unit_price_net:net,tax_rate:variant==="albaran"?0:rate,tax_base:base,tax_amount:tax,line_total:round(base+tax)})}return rows;
+  };
+
+  function downloadCsv(note, order, client, bakery, number, meta = {}) {
+    const lines=accountingLines(note,meta);
+    const taxableBase=Number(meta.taxableBase ?? lines.reduce((s,x)=>s+Number(x.tax_base||0),0));
+    const taxTotal=Number(meta.taxTotal ?? lines.reduce((s,x)=>s+Number(x.tax_amount||0),0));
+    const total=Number(meta.documentTotal ?? lines.reduce((s,x)=>s+Number(x.line_total ?? x.tax_base ?? 0),0));
+    const paid=paidAmount(note),due=Math.max(0,total-paid);
     const rows = [
-      [docText("title"), number],
-      [docText("issueDate"), note.date || ""],
-      [docText("deliveryDate"), order.deliveryDate || order.date || note.date || ""],
+      [meta.variant === "albaran" ? docText("albaran") : docText("factura"), number],
+      [docText("issueDate"), meta.issueDate || note.date || ""],
+      ["Fecha de operación", meta.operationDate || order.deliveryDate || order.date || note.date || ""],
       [],
-      [docText("seller"), bakery.legalName || "Panora"],
+      [docText("seller"), bakery.legalName || bakery.name || "Panora"],
       [docText("taxId"), bakery.taxId || ""],
       [docText("address"), bakery.billingAddress || bakery.address || ""],
       [docText("contacts"), [bakery.email, bakery.phone].filter(Boolean).join(" ")],
@@ -259,26 +275,19 @@
       [docText("contacts"), [client.email, client.phone].filter(Boolean).join(" ")],
       [],
       [docText("product"), docText("quantity"), docText("price"), docText("amount")],
-      ...note.items.map((item) => [
-        productName(item.product),
-        item.quantity,
-        Number(note.prices?.[item.product] || 0).toFixed(2),
-        (Number(item.quantity) * Number(note.prices?.[item.product] || 0)).toFixed(2),
-      ]),
-      ...(Number(note.deliveryCharge||0)>0?[["Entrega",1,Number(note.deliveryCharge||0).toFixed(2),Number(note.deliveryCharge||0).toFixed(2)]]:[]),
+      ...lines.map(line=>[line.name||productName(line.product_id),Number(line.quantity||0),Number(line.unit_price_net||0).toFixed(2),Number(line.tax_base||0).toFixed(2)]),
       [],
-      [docText("total"), Number(note.total || 0).toFixed(2)],
-      [docText("paid"), paidAmount(note).toFixed(2)],
-      [docText("due"), Math.max(0, Number(note.total || 0) - paidAmount(note)).toFixed(2)],
-      [docText("dueDate"), note.paymentDueDate || ""],
-      [docText("method"), documentPaymentMethod(note.paymentMethod)],
+      [docText("taxableBase"), taxableBase.toFixed(2)],
+      [docText("vat"), taxTotal.toFixed(2)],
+      [docText("total"), total.toFixed(2)],
+      [docText("paid"), paid.toFixed(2)],
+      [docText("due"), due.toFixed(2)],
+      [docText("dueDate"), meta.dueDate || note.paymentDueDate || ""],
+      [docText("method"), documentPaymentMethod(meta.paymentMethod || note.paymentMethod)],
     ];
     const csv = "\uFEFF" + rows.map((row) => row.map(safeCell).join(";")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${number}-accounting.csv`;
-    link.click();
+    const link = document.createElement("a"); link.href = url; link.download = `${number}-accounting.csv`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
@@ -298,8 +307,8 @@
   const isoDate = (value) => String(value || "").slice(0, 10);
 
   function downloadUbl(note, order, client, bakery, number, meta = {}) {
-    const items = Array.isArray(meta.lines) ? meta.lines : [];
-    const taxableBase = Number(meta.taxableBase || 0), taxTotal = Number(meta.taxTotal || 0), total = Number(meta.documentTotal || 0);
+    const items = accountingLines(note, meta);
+    const taxableBase = Number(meta.taxableBase ?? items.reduce((s,x)=>s+Number(x.tax_base||0),0)), taxTotal = Number(meta.taxTotal ?? items.reduce((s,x)=>s+Number(x.tax_amount||0),0)), total = Number(meta.documentTotal ?? items.reduce((s,x)=>s+Number(x.line_total ?? x.tax_base ?? 0),0));
     const lines = items
       .map((item, index) => {
         const quantity = Number(item.quantity || 0);
@@ -314,12 +323,13 @@
 </cac:InvoiceLine>`;
       })
       .join("\n");
-    const party = (data) => `<cac:Party>
-  <cac:PartyName><cbc:Name>${xml(data?.name || "")}</cbc:Name></cac:PartyName>
-  ${data?.taxId ? `<cac:PartyTaxScheme><cbc:CompanyID>${xml(data.taxId)}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
-  ${data?.address ? `<cac:PostalAddress><cbc:StreetName>${xml(data.address)}</cbc:StreetName><cbc:CountrySubentity>${xml(data.city || "")}</cbc:CountrySubentity><cac:Country><cbc:IdentificationCode>${xml(data.countryCode || "ES")}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>` : ""}
-</cac:Party>`;
-    const document = `<?xml version="1.0" encoding="UTF-8"?>
+    const party = (data) => {const name=data?.legalName||data?.name||"",address=data?.billingAddress||data?.address||"",taxId=data?.taxId||data?.vatId||"",countryCode=data?.countryCode||data?.country_code||"ES";return `<cac:Party>
+  <cac:PartyName><cbc:Name>${xml(name)}</cbc:Name></cac:PartyName>
+  ${taxId ? `<cac:PartyTaxScheme><cbc:CompanyID>${xml(taxId)}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
+  ${address ? `<cac:PostalAddress><cbc:StreetName>${xml(address)}</cbc:StreetName><cac:Country><cbc:IdentificationCode>${xml(countryCode)}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>` : ""}
+  ${(data?.email||data?.phone)?`<cac:Contact>${data?.phone?`<cbc:Telephone>${xml(data.phone)}</cbc:Telephone>`:""}${data?.email?`<cbc:ElectronicMail>${xml(data.email)}</cbc:ElectronicMail>`:""}</cac:Contact>`:""}
+</cac:Party>`};
+    const xmlDocument = `<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
  xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
@@ -341,7 +351,7 @@ ${meta.dueDate ? `<cbc:DueDate>${xml(isoDate(meta.dueDate))}</cbc:DueDate>` : ""
 </cac:LegalMonetaryTotal>
 ${lines}
 </Invoice>`;
-    const blob = new Blob([document], { type: "application/xml;charset=utf-8" });
+    const blob = new Blob([xmlDocument], { type: "application/xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -371,8 +381,8 @@ ${lines}
     const displayTitle = spanishDocumentTitles[meta.variant] || docText(variant);
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
-    const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
-    const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
+    const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address, email: meta.buyerSnapshot?.email ?? meta.buyerEmail ?? baseClient.email, phone: meta.buyerSnapshot?.phone ?? meta.buyerPhone ?? baseClient.phone, countryCode: meta.buyerSnapshot?.country_code || 'ES'};
+    const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address, email: meta.sellerSnapshot?.email ?? meta.sellerEmail ?? baseBakery.email, phone: meta.sellerSnapshot?.phone ?? meta.sellerPhone ?? baseBakery.phone, countryCode: meta.sellerSnapshot?.country_code || 'ES'};
     const prefix = variant === "albaran" ? "ALB-" : "F-";
     const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
     const rate = variant === "factura" ? Number(meta.ivaRate || 0) : 0;
@@ -399,21 +409,18 @@ ${lines}
         <div><h2>${esc(docText("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(docText("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(docText("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(docText("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
         <div><h2>${esc(docText("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(docText("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(docText("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(docText("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
       </section>
-      <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(docText("product"))}</span><span>${esc(docText("quantity"))}</span><span>${esc(docText("price"))}</span><span>${esc(docText("amount"))}</span></div>${note.items.map((item) => {
-        const issued=(meta.lines||[]).find(x=>x.product_id===item.product),price=Number(issued?.unit_price_net ?? note.prices?.[item.product] ?? 0),amount=Number(issued?.tax_base ?? (Number(item.quantity)*price));
-        return `<div class="accounting-line"><strong>${esc(issued?.name||productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(amount))}</strong></div>`;
-      }).join("")}${Number(note.deliveryCharge||0)>0?`<div class="accounting-line"><strong>${esc("Entrega")}</strong><span>1</span><span>${esc(money(note.deliveryCharge))}</span><strong>${esc(money(note.deliveryCharge))}</strong></div>`:""}</div>
+      <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(docText("product"))}</span><span>${esc(docText("quantity"))}</span><span>${esc(docText("price"))}</span><span>${esc(docText("amount"))}</span></div>${accountingLines(note,meta).map((line) => `<div class="accounting-line"><strong>${esc(line.name||productName(line.product_id))}</strong><span>${esc(line.quantity)}</span><span>${esc(money(line.unit_price_net))}</span><strong>${esc(money(line.tax_base))}</strong></div>`).join("")}</div>
       ${meta.aeatType?`<section class="accounting-tax-meta"><p><span>Tipo AEAT</span><strong>${esc(meta.aeatType)}</strong></p>${meta.rectifiesNumber?`<p><span>Rectifica</span><strong>${esc(meta.rectifiesNumber)}</strong></p>`:''}${meta.rectificationMode?`<p><span>Modalidad</span><strong>${esc(meta.rectificationMode)}</strong></p>`:''}</section>`:''}<section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(docText("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(docText("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(docText("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(docText("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(docText("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(docText("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(docText("method"))}</dt><dd>${esc(documentPaymentMethod(note.paymentMethod))}</dd></div>` : ""}</dl></section>
       <footer><span>${esc(docText("bakerySignature"))} __________________</span><span>${esc(docText("restaurantSignature"))} __________________</span></footer>
     </article>
-<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(uiText("close"))}</button><button type="button" class="secondary accounting-csv">${esc(uiText("csv"))}</button>${variant === "factura" ? `<button type="button" class="secondary accounting-edi">${esc(uiText("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(uiText("print"))}</button></div>`;
+<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(uiText("close"))}</button><button type="button" class="secondary accounting-csv">${esc(uiText("csv"))}</button>${variant === "factura" && (!meta.variant || meta.variant === "factura") ? `<button type="button" class="secondary accounting-edi">${esc(uiText("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(uiText("print"))}</button></div>`;
     document.body.appendChild(dialog);
     const close = () => dialog.close();
     dialog.querySelector(".accounting-x").onclick = close;
     dialog.querySelector(".accounting-close").onclick = close;
     dialog.querySelector(".accounting-print").onclick = () => window.print();
     dialog.querySelector(".accounting-csv").onclick = () =>
-      downloadCsv(note, order, client, bakery, number);
+      downloadCsv(note, order, client, bakery, number, meta);
     dialog.querySelector(".accounting-edi")?.addEventListener("click", () =>
       downloadUbl(note, order, client, bakery, number, meta));
     dialog.querySelector(".accounting-side")?.addEventListener("change", (event) => {
