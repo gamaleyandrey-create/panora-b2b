@@ -3,6 +3,8 @@
  const PREF_KEY='panora-admin-notifications-enabled',SOUND_KEY='panora-event-sound-v332';
  const pref=()=>localStorage.getItem(PREF_KEY)!=='0';
  const soundPref=()=>localStorage.getItem(SOUND_KEY)==='1';
+ const adminLang=()=>{const value=document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'en';return ['ru','en','es'].includes(value)?value:'en'};
+ const copy=()=>({ru:{newOrder:'Новый заказ',partner:'Партнёр',pushOn:'Push подключён',pushEnable:'Включить Push',pushDisableTitle:'Отключить Push на этом устройстве',pushEnableTitle:'Включить Push на этом устройстве',soundOff:'Выключить звук уведомлений',soundOn:'Включить звук уведомлений',soundOnTitle:'Звук уведомлений включён',soundOffTitle:'Звук уведомлений выключен'},en:{newOrder:'New order',partner:'Partner',pushOn:'Push connected',pushEnable:'Enable Push',pushDisableTitle:'Disable Push on this device',pushEnableTitle:'Enable Push on this device',soundOff:'Turn notification sound off',soundOn:'Turn notification sound on',soundOnTitle:'Notification sound is on',soundOffTitle:'Notification sound is off'},es:{newOrder:'Nuevo pedido',partner:'Socio',pushOn:'Push conectado',pushEnable:'Activar Push',pushDisableTitle:'Desactivar Push en este dispositivo',pushEnableTitle:'Activar Push en este dispositivo',soundOff:'Desactivar sonido de notificaciones',soundOn:'Activar sonido de notificaciones',soundOnTitle:'Sonido de notificaciones activado',soundOffTitle:'Sonido de notificaciones desactivado'}}[adminLang()]);
  const liveOrders=()=>{
    try{
      if(typeof orders!=='undefined'&&Array.isArray(orders))return orders;
@@ -17,7 +19,7 @@
  }
  window.panoraRefreshNewOrderBadge=update;
  const orderNumberLabel=order=>Number(order?.number)>0?`PN-${String(Number(order.number)).padStart(4,'0')}`:'PN-…';
- function announce(){const current=update(),fresh=current.filter(order=>order.status==='submitted'&&!known.has(order.id));fresh.forEach(order=>{known.add(order.id);if(pref()&&'Notification'in window&&Notification.permission==='granted'){const client=restaurant(order.restaurantId);new Notification('Panora · Новый заказ',{body:`${client?.name||'Партнёр'} · ${orderNumberLabel(order)}`,icon:'icon.svg',tag:`panora-order-${order.id}`})}});current.forEach(order=>known.add(order.id))}
+ function announce(){const current=update(),fresh=current.filter(order=>order.status==='submitted'&&!known.has(order.id));fresh.forEach(order=>{known.add(order.id);if(pref()&&'Notification'in window&&Notification.permission==='granted'){const client=restaurant(order.restaurantId);new Notification(`Panora · ${copy().newOrder}`,{body:`${client?.name||copy().partner} · ${orderNumberLabel(order)}`,icon:'icon.svg',tag:`panora-order-${order.id}`})}});current.forEach(order=>known.add(order.id))}
  function dispatchSound(enabled){
    localStorage.setItem(SOUND_KEY,enabled?'1':'0');
    window.dispatchEvent(new CustomEvent('panora:notification-preference',{detail:{enabled}}));
@@ -45,8 +47,8 @@
      soundButton.innerHTML=bellSvg(enabled);
      soundButton.classList.toggle('sound-off',!enabled);
      soundButton.setAttribute('aria-pressed',enabled?'true':'false');
-     soundButton.setAttribute('aria-label',enabled?'Выключить звук уведомлений':'Включить звук уведомлений');
-     soundButton.title=enabled?'Звук уведомлений включён':'Звук уведомлений выключен';
+     soundButton.setAttribute('aria-label',enabled?copy().soundOff:copy().soundOn);
+     soundButton.title=enabled?copy().soundOnTitle:copy().soundOffTitle;
    };
    soundButton.onclick=()=>{dispatchSound(!soundPref());render()};
    render();return soundButton;
@@ -58,11 +60,11 @@
    let info={active:false,reason:Notification.permission};
    try{info=await window.panoraAdminWebPush?.status?.()||info}catch{}
    const active=Boolean(info.active);
-   button.innerHTML=active?'<span class="native-notification-dot" aria-hidden="true"></span><span>Push подключён</span>':'<span>Включить Push</span>';
+   button.innerHTML=active?`<span class="native-notification-dot" aria-hidden="true"></span><span>${copy().pushOn}</span>`:`<span>${copy().pushEnable}</span>`;
    button.classList.toggle('notifications-active',active);
    button.classList.toggle('notifications-off',!active);
    button.setAttribute('aria-pressed',active?'true':'false');
-   button.title=active?'Отключить Push на этом устройстве':'Включить Push на этом устройстве';
+   button.title=active?copy().pushDisableTitle:copy().pushEnableTitle;
  }
  if(button){
    ensureSoundButton();
@@ -75,6 +77,7 @@
    };
  }
  window.addEventListener('panora:admin-webpush-state',()=>{renderPushButton();ensureSoundButton()});
+ window.addEventListener('panora:admin-language-changed',()=>{renderPushButton();ensureSoundButton()});
  window.addEventListener('panora:orders-updated',()=>announce());
  window.addEventListener('panora:order-status-local',()=>update());
  window.addEventListener('panora:order-cycle-updated',()=>update());
