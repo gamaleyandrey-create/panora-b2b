@@ -11,8 +11,8 @@
   <meta name="title" content="Panora — Розница">
   <meta property="og:title" content="Panora — Розница">
   <meta name="twitter:title" content="Panora — Розница">
-  <link rel="icon" href="retail/icon.svg?v=10480">
-  <link rel="stylesheet" href="retail-account.css?v=10480">
+  <link rel="icon" href="retail/icon.svg?v=10490">
+  <link rel="stylesheet" href="retail-account.css?v=10490">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap');
     :root{--green:#315f43;--green-dark:#1d3829;--green-soft:#eaf2ea;--orange:#d97841;--paper:#fbfaf7;--cream:#f3efe6;--white:#fff;--ink:#1f2a23;--muted:#748078;--line:#dce2dc;--danger:#b9483e;--shadow:0 20px 60px rgba(29,56,41,.12)}
@@ -42,7 +42,7 @@
 </style>
   
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="retail/manifest.webmanifest?v=10480">
+  <link rel="manifest" href="retail/manifest.webmanifest?v=10490">
 
 </head>
 <body>
@@ -113,7 +113,7 @@
     </aside>
   </main>
 
-  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10480</span></footer>
+  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10490</span></footer>
 </div>
 
 <dialog class="checkout-dialog" id="retailCheckoutDialog">
@@ -141,9 +141,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=10480"></script>
-<script src="public-catalog-cloud-v48.js?v=10480"></script>
-<script src="pwa-stable.js?v=10480"></script>
+<script src="supabase-config.js?v=10490"></script>
+<script src="public-catalog-cloud-v48.js?v=10490"></script>
+<script src="pwa-stable.js?v=10490"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -165,6 +165,7 @@
   Object.assign(TEXT.ru,{pointDelivery:'Доставка доступна',fulfillmentText:'Выберите самовывоз из пекарни или доставку в пределах настроенной единой зоны.',deliveryText:'Доставка из пекарни · одна зона',deliveryAddress:'Адрес доставки',deliveryNote:'Комментарий для доставки · необязательно',deliveryFee:'Доставка',deliveryFree:'Бесплатная доставка',deliveryMin:n=>`Доставка доступна от ${n}`,checkoutTitleDelivery:'Данные для доставки',slotTitleDelivery:'Когда доставить?',slotTextDelivery:'Выберите доступный интервал доставки.',deliveryContext:'Доставка',errDeliveryMin:'Сумма заказа меньше минимума для доставки.',errDeliveryAddress:'Проверьте адрес доставки.'});
   const read=(key,fallback)=>{try{const v=JSON.parse(localStorage.getItem(key)||'null');return v??fallback}catch{return fallback}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const productImageUrl=value=>{const source=String(value||'').trim()||'icon.svg';try{return new URL(source,document.baseURI).href}catch{return source}};
   const localDate=d=>{const x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),day=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
   const today=()=>localDate(new Date());
   const browserLanguage=()=>{const raw=String(navigator.language||'').toLowerCase();return ['es','en','de','ru'].find(x=>raw.startsWith(x))||'es'};
@@ -192,7 +193,7 @@
   async function loadCloudBakeDates(){try{const rows=await publicFetch('rpc/panora_retail_bake_days',{method:'POST',body:{}});state.cloudBakeDates=(Array.isArray(rows)?rows:[]).map(row=>String(row.bake_date||'')).filter(Boolean);state.apiReady.bakes=true;return true}catch{state.apiReady.bakes=false;return false}}
   function localized(obj,lang,fallback=''){return obj?.[lang]||obj?.en||obj?.es||obj?.ru||fallback}
   function sourceProducts(){const publicProducts=read('panora-public-products',[]),partnerProducts=read('panora-partner-products',[]),managed=read('panora-products',[]);if(Array.isArray(publicProducts)&&publicProducts.length)return publicProducts;if(Array.isArray(partnerProducts)&&partnerProducts.length)return partnerProducts;return Array.isArray(managed)?managed:[]}
-  function products(){const managed=sourceProducts();const mapProduct=(p,index)=>{const fallback=DEFAULT_PRODUCTS.find(x=>String(x.id)===String(p.id))||{},names=p.names||{},descs=p.descriptions||{},allNames={es:names.es||p.nameEs||p.name_es,en:names.en||p.nameEn||p.name_en,de:names.de||p.nameDe||p.name_de,ru:names.ru||p.nameRu||p.name_ru||p.name},allDescs={es:descs.es||p.descriptionEs||p.description_es,en:descs.en||p.descriptionEn||p.description_en,de:descs.de||p.descriptionDe||p.description_de,ru:descs.ru||p.descriptionRu||p.description_ru||p.description},rule=state.productSettings?.[String(p.id)]||{},configuredPrice=Number(rule.retailPrice),basePrice=Number(p.retailPrice??p.retail_price??p.price??p.basePrice??p.base_price);return{id:String(p.id),name:localized(allNames,state.lang,localized(fallback.names,state.lang,String(p.id))),desc:localized(allDescs,state.lang,localized(fallback.descriptions,state.lang,'')),image:p.image||p.imageUrl||p.image_url||p.photos?.[0]||fallback.image||'icon.svg',price:Number.isFinite(configuredPrice)?configuredPrice:(Number.isFinite(basePrice)?basePrice:null),weight:Number(p.weight||p.weight_g||fallback.weight||750),retailEnabled:rule.enabled!==false,retailStockSales:rule.stockSales!==false,retailPreorders:rule.preorders!==false,retailLimit:rule.limitConfigured?Math.max(0,Number(rule.retailLimit||0)):0,sortOrder:Number(rule.sortOrder??index)}};const base=(Array.isArray(managed)&&managed.length?managed.filter(p=>p&&!p.deletedAt&&p.active!==false&&p.storefrontVisible!==false&&p.storefront_visible!==false):DEFAULT_PRODUCTS).map(mapProduct).filter(x=>x.retailEnabled!==false).sort((a,b)=>a.sortOrder-b.sortOrder);return base}
+  function products(){const managed=sourceProducts();const mapProduct=(p,index)=>{const fallback=DEFAULT_PRODUCTS.find(x=>String(x.id)===String(p.id))||{},names=p.names||{},descs=p.descriptions||{},allNames={es:names.es||p.nameEs||p.name_es,en:names.en||p.nameEn||p.name_en,de:names.de||p.nameDe||p.name_de,ru:names.ru||p.nameRu||p.name_ru||p.name},allDescs={es:descs.es||p.descriptionEs||p.description_es,en:descs.en||p.descriptionEn||p.description_en,de:descs.de||p.descriptionDe||p.description_de,ru:descs.ru||p.descriptionRu||p.description_ru||p.description},rule=state.productSettings?.[String(p.id)]||{},configuredPrice=Number(rule.retailPrice),basePrice=Number(p.retailPrice??p.retail_price??p.price??p.basePrice??p.base_price);return{id:String(p.id),name:localized(allNames,state.lang,localized(fallback.names,state.lang,String(p.id))),desc:localized(allDescs,state.lang,localized(fallback.descriptions,state.lang,'')),image:productImageUrl(p.image||p.imageUrl||p.image_url||p.photos?.[0]||fallback.image||'icon.svg'),price:Number.isFinite(configuredPrice)?configuredPrice:(Number.isFinite(basePrice)?basePrice:null),weight:Number(p.weight||p.weight_g||fallback.weight||750),retailEnabled:rule.enabled!==false,retailStockSales:rule.stockSales!==false,retailPreorders:rule.preorders!==false,retailLimit:rule.limitConfigured?Math.max(0,Number(rule.retailLimit||0)):0,sortOrder:Number(rule.sortOrder??index)}};const base=(Array.isArray(managed)&&managed.length?managed.filter(p=>p&&!p.deletedAt&&p.active!==false&&p.storefrontVisible!==false&&p.storefront_visible!==false):DEFAULT_PRODUCTS).map(mapProduct).filter(x=>x.retailEnabled!==false).sort((a,b)=>a.sortOrder-b.sortOrder);return base}
   function signed(m){const q=Math.abs(Number(m?.quantity||0));return ['shipped','written_off','correction_minus','retail_sold'].includes(String(m?.type||''))?-q:q}
   function localEffectiveStock(product){const movements=read('panora-stock-movements',[]),completions=read('panora-bake-completions',[]),notes=read('panora-delivery-notes',[]),orders=read('panora-orders',[]),retailOrders=read('panora-retail-orders',[]),rows=[...(Array.isArray(movements)?movements:[])],now=today();(Array.isArray(completions)?completions:[]).filter(c=>c&&!c.deletedAt&&String(c.date||'')<=now).forEach(c=>(c.items||[]).forEach((item,index)=>{const good=Math.max(0,Number(item.good??(Number(item.produced||0)-Number(item.waste||0))));if(String(item.product)===String(product)&&good>0)rows.push({type:'baked',quantity:good,id:`retail-bake-${index}`})}));const seen=new Set();(Array.isArray(notes)?notes:[]).forEach(n=>{const key=n.orderId?`o:${n.orderId}`:`n:${n.id}`;if(seen.has(key))return;seen.add(key);(n.items||[]).forEach(item=>{if(String(item.product)===String(product))rows.push({type:'shipped',quantity:Number(item.quantity||0)})})});(Array.isArray(retailOrders)?retailOrders:[]).filter(o=>String(o.source||'stock')==='stock'&&String(o.status)==='completed').forEach(o=>(o.items||[]).forEach(item=>{if(String(item.product)===String(product))rows.push({type:'retail_sold',quantity:Number(item.quantity||0)})}));const anyData=rows.length||orders.length||retailOrders.length;if(!anyData)return{known:false,free:0};const raw=rows.filter(m=>String(m.product||product)===String(product)).reduce((sum,m)=>sum+signed(m),0),shippedOrders=new Set((Array.isArray(notes)?notes:[]).map(n=>String(n.orderId||'')).filter(Boolean)),partnerReserved=(Array.isArray(orders)?orders:[]).filter(o=>o&&!['shipped','cancelled'].includes(o.status)&&!shippedOrders.has(String(o.id||''))&&String(o.date||'')&&String(o.date)<=now).flatMap(o=>o.items||[]).filter(i=>String(i.product)===String(product)).reduce((sum,i)=>sum+Math.max(0,Number(i.quantity||i.quantityPieces||0)),0),retailReserved=(Array.isArray(retailOrders)?retailOrders:[]).filter(o=>String(o.source||'stock')==='stock'&&!['completed','cancelled'].includes(String(o.status||''))).flatMap(o=>o.items||[]).filter(i=>String(i.product)===String(product)).reduce((sum,i)=>sum+Math.max(0,Number(i.quantity||0)),0);return{known:true,free:Math.max(0,Math.max(0,raw)-partnerReserved-retailReserved)}}
   function effectiveStock(product){const id=String(product);if(state.apiReady.stock&&state.stockSnapshot)return state.stockSnapshot[id]||{known:true,onHand:0,partnerReserved:0,retailReserved:0,temporaryReserved:0,free:0};if(state.stockSnapshot&&state.stockSnapshot[id])return state.stockSnapshot[id];return localEffectiveStock(product)}
@@ -261,7 +262,7 @@
 </script>
 
 
-<script src="retail-account.js?v=10480"></script>
+<script src="retail-account.js?v=10490"></script>
 
 </body>
 </html>
