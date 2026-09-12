@@ -78,13 +78,17 @@ const tr=path=>{
 };
 const money=n=>{const value=new Intl.NumberFormat(I18N[lang].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);return lang==='ru'?`${value} €`:`€ ${value}`};
 const pText=p=>p.text[lang];
+function productImageUrl(value){
+ const source=String(value||'').trim()||'icon.svg';
+ try{return new URL(source,document.baseURI).href}catch{return source}
+}
 function primaryProductImage(p){
  const image=String(p?.image||'').trim(),gallery=Array.isArray(p?.gallery)?p.gallery.filter(Boolean):[];
- if(image&&!/(^|\/)icon\.svg(?:[?#]|$)/i.test(image))return image;
- return String(gallery[0]||image||'icon.svg');
+ if(image&&!/(^|\/)icon\.svg(?:[?#]|$)/i.test(image))return productImageUrl(image);
+ return productImageUrl(gallery[0]||image||'icon.svg');
 }
 function productGallery(p){
- const primary=primaryProductImage(p),gallery=Array.isArray(p?.gallery)?p.gallery.filter(Boolean):[];
+ const primary=primaryProductImage(p),gallery=Array.isArray(p?.gallery)?p.gallery.filter(Boolean).map(productImageUrl):[];
  return [primary,...gallery].filter((value,index,array)=>value&&array.indexOf(value)===index);
 }
 const unit=()=>lang==='ru'?'за 1 шт.':lang==='es'?'por 1 ud.':'per 1 pc';

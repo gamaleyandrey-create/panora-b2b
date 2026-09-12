@@ -15,11 +15,31 @@
       style: "currency",
       currency: "EUR",
     }).format(Number(value || 0));
-  // Panora 10.48: Spanish accounting documents are a bakery accounting artifact.
-  // They stay in Spanish for every partner legal form (company / sole proprietor)
-  // and never inherit the partner or bakery UI language.
-  let documentLanguage = "es";
-  const currentLanguage = () => "es";
+  // Accounting document content is always Spanish. The surrounding controls
+  // follow the current bakery/partner UI language.
+  const normalizeLanguage = (value) =>
+    ["ru", "en", "es"].includes(String(value || "").slice(0, 2).toLowerCase())
+      ? String(value || "").slice(0, 2).toLowerCase()
+      : "";
+  const resolveUiLanguage = (options = {}) => {
+    if (options.context === "restaurant") {
+      const accountLanguage = typeof account !== "undefined" && account ? account.language : "";
+      const portalLanguage = typeof lang !== "undefined" ? lang : "";
+      return (
+        normalizeLanguage(accountLanguage) ||
+        normalizeLanguage(portalLanguage) ||
+        normalizeLanguage(document.documentElement.lang) ||
+        "en"
+      );
+    }
+    return (
+      normalizeLanguage(document.querySelector("#adminLanguage")?.value) ||
+      normalizeLanguage(localStorage.getItem("panora-admin-lang")) ||
+      normalizeLanguage(document.documentElement.lang) ||
+      "en"
+    );
+  };
+  let uiLanguage = "en";
   const words = {
     ru: {
       title: "Счёт-фактура",
@@ -127,7 +147,8 @@
       vat: "IVA",
     },
   };
-  const text = (key) => (words[currentLanguage()] || words.es)[key];
+  const docText = (key) => words.es[key] || key;
+  const uiText = (key) => (words[uiLanguage] || words.en)[key] || words.es[key] || key;
   const list = (name, fallback) =>
     typeof window[name] === "function"
       ? window[name]()
@@ -157,12 +178,15 @@
       [];
     return rows.find((item) => item.id === id) || {};
   };
-  const productName = (id) => {
+  const productRecord = (id) => {
     const registries = [
       typeof productRegistry !== "undefined" ? productRegistry : [],
       typeof PRODUCTS !== "undefined" ? PRODUCTS : [],
     ];
-    const product = registries.flat().find((item) => item?.id === id) || {};
+    return registries.flat().find((item) => item?.id === id) || {};
+  };
+  const productName = (id) => {
+    const product = productRecord(id);
     return (
       product?.names?.es ||
       product?.name_es ||
@@ -204,34 +228,34 @@
 
   function downloadCsv(note, order, client, bakery, number) {
     const rows = [
-      [text("title"), number],
-      [text("issueDate"), note.date || ""],
-      [text("deliveryDate"), order.deliveryDate || order.date || note.date || ""],
+      [docText("title"), number],
+      [docText("issueDate"), note.date || ""],
+      [docText("deliveryDate"), order.deliveryDate || order.date || note.date || ""],
       [],
-      [text("seller"), bakery.legalName || "Panora"],
-      [text("taxId"), bakery.taxId || ""],
-      [text("address"), bakery.billingAddress || bakery.address || ""],
-      [text("contacts"), [bakery.email, bakery.phone].filter(Boolean).join(" ")],
+      [docText("seller"), bakery.legalName || "Panora"],
+      [docText("taxId"), bakery.taxId || ""],
+      [docText("address"), bakery.billingAddress || bakery.address || ""],
+      [docText("contacts"), [bakery.email, bakery.phone].filter(Boolean).join(" ")],
       [],
-      [text("buyer"), client.legalName || client.name || ""],
-      [text("taxId"), client.taxId || client.vatId || ""],
-      [text("address"), client.billingAddress || client.address || ""],
-      [text("contacts"), [client.email, client.phone].filter(Boolean).join(" ")],
+      [docText("buyer"), client.legalName || client.name || ""],
+      [docText("taxId"), client.taxId || client.vatId || ""],
+      [docText("address"), client.billingAddress || client.address || ""],
+      [docText("contacts"), [client.email, client.phone].filter(Boolean).join(" ")],
       [],
-      [text("product"), text("quantity"), text("price"), text("amount")],
+      [docText("product"), docText("quantity"), docText("price"), docText("amount")],
       ...note.items.map((item) => [
         productName(item.product),
         item.quantity,
         Number(note.prices?.[item.product] || 0).toFixed(2),
         (Number(item.quantity) * Number(note.prices?.[item.product] || 0)).toFixed(2),
       ]),
-      ...(Number(note.deliveryCharge||0)>0?[[(documentLanguage === "ru" ? "Доставка" : documentLanguage === "es" ? "Entrega" : "Delivery"),1,Number(note.deliveryCharge||0).toFixed(2),Number(note.deliveryCharge||0).toFixed(2)]]:[]),
+      ...(Number(note.deliveryCharge||0)>0?[["Entrega",1,Number(note.deliveryCharge||0).toFixed(2),Number(note.deliveryCharge||0).toFixed(2)]]:[]),
       [],
-      [text("total"), Number(note.total || 0).toFixed(2)],
-      [text("paid"), paidAmount(note).toFixed(2)],
-      [text("due"), Math.max(0, Number(note.total || 0) - paidAmount(note)).toFixed(2)],
-      [text("dueDate"), note.paymentDueDate || ""],
-      [text("method"), note.paymentMethod || ""],
+      [docText("total"), Number(note.total || 0).toFixed(2)],
+      [docText("paid"), paidAmount(note).toFixed(2)],
+      [docText("due"), Math.max(0, Number(note.total || 0) - paidAmount(note)).toFixed(2)],
+      [docText("dueDate"), note.paymentDueDate || ""],
+      [docText("method"), note.paymentMethod || ""],
     ];
     const csv = "\uFEFF" + rows.map((row) => row.map(safeCell).join(";")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -311,27 +335,27 @@ ${lines}
   }
 
   window.openAccountingInvoice = (value, options = {}) => {
+    uiLanguage = resolveUiLanguage(options);
     const note = findNote(value);
     if (!note) {
-      alert(text("missing"));
+      alert(uiText("missing"));
       return;
     }
     if (
       options.context === "restaurant" &&
       (typeof account === "undefined" || !account || note.restaurantId !== account.id)
     ) {
-      alert(text("access"));
+      alert(uiText("access"));
       return;
     }
     const order = findOrder(note.orderId);
     const meta = options.documentData || {};
     const variant = options.variant === "albaran" ? "albaran" : "factura";
     const spanishDocumentTitles={albaran:"Albarán",factura:"Factura",simplificada:"Factura simplificada",rectificativa:"Factura rectificativa",devolucion:"Devolución",abono:"Abono"};
-    const displayTitle = spanishDocumentTitles[meta.variant] || text(variant);
+    const displayTitle = spanishDocumentTitles[meta.variant] || docText(variant);
     const baseClient = findRestaurant(note.restaurantId);
     const baseBakery = bakeryData(note);
     const client = {...baseClient, legalName: meta.buyerSnapshot?.name || meta.buyerLegalName || baseClient.legalName, taxId: meta.buyerSnapshot?.tax_id || meta.buyerTaxId || baseClient.taxId || baseClient.vatId, billingAddress: meta.buyerSnapshot?.address || meta.buyerAddress || baseClient.billingAddress || baseClient.address};
-    documentLanguage = "es";
     const bakery = {...baseBakery, legalName: meta.sellerSnapshot?.name || meta.sellerLegalName || baseBakery.legalName, taxId: meta.sellerSnapshot?.tax_id || meta.sellerTaxId || baseBakery.taxId, billingAddress: meta.sellerSnapshot?.address || meta.sellerAddress || baseBakery.billingAddress || baseBakery.address};
     const prefix = variant === "albaran" ? "ALB-" : "F-";
     const number = meta.documentNumber || `${prefix}${new Date().getFullYear()}-${String(note.number).padStart(4, "0")}`;
@@ -349,24 +373,24 @@ ${lines}
     dialog.className = "accounting-dialog";
     const side = options.side || (options.context === "restaurant" ? "restaurant" : "bakery");
     dialog.innerHTML = `<div class="accounting-toolbar">
-      <span><strong>${esc(displayTitle)}</strong><small>${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</small></span>
-      ${options.context !== "restaurant" ? `<label>${esc(text("choose"))}<select class="accounting-side"><option value="bakery"${side === "bakery" ? " selected" : ""}>${esc(text("bakeryCopy"))}</option><option value="restaurant"${side === "restaurant" ? " selected" : ""}>${esc(text("restaurantCopy"))}</option></select></label>` : ""}
-      <button type="button" class="accounting-x" aria-label="${esc(text("close"))}">×</button>
+      <span><strong>${esc(displayTitle)}</strong><small>${esc(side === "restaurant" ? uiText("restaurantCopy") : uiText("bakeryCopy"))}</small></span>
+      ${options.context !== "restaurant" ? `<label>${esc(uiText("choose"))}<select class="accounting-side"><option value="bakery"${side === "bakery" ? " selected" : ""}>${esc(uiText("bakeryCopy"))}</option><option value="restaurant"${side === "restaurant" ? " selected" : ""}>${esc(uiText("restaurantCopy"))}</option></select></label>` : ""}
+      <button type="button" class="accounting-x" aria-label="${esc(uiText("close"))}">×</button>
     </div>
     <article class="accounting-sheet">
-      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(displayTitle)}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? text("restaurantCopy") : text("bakeryCopy"))}</p></div><dl><div><dt>${esc(text("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(text("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Fecha de operación</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
+      <header><div><span class="accounting-kicker">PANORA</span><h1>${esc(displayTitle)}</h1><p class="accounting-copy-label">${esc(side === "restaurant" ? docText("restaurantCopy") : docText("bakeryCopy"))}</p></div><dl><div><dt>${esc(docText("number"))}</dt><dd>${esc(number)}</dd></div><div><dt>${esc(docText("issueDate"))}</dt><dd>${esc(meta.issueDate || note.date || "—")}</dd></div><div><dt>Fecha de operación</dt><dd>${esc(meta.operationDate || order.deliveryDate || order.date || note.date || "—")}</dd></div></dl></header>
       <section class="accounting-parties">
-        <div><h2>${esc(text("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(text("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(text("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(text("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
-        <div><h2>${esc(text("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(text("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(text("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(text("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
+        <div><h2>${esc(docText("seller"))}</h2><strong>${esc(bakery.legalName || "Panora")}</strong><p>${esc(docText("taxId"))}: ${esc(bakery.taxId || "—")}<br>${esc(docText("address"))}: ${esc(bakery.billingAddress || bakery.address || "—")}<br>${esc(docText("contacts"))}: ${esc([bakery.email, bakery.phone].filter(Boolean).join(" ") || "—")}</p></div>
+        <div><h2>${esc(docText("buyer"))}</h2><strong>${esc(client.legalName || client.name || "—")}</strong><p>${esc(docText("taxId"))}: ${esc(client.taxId || client.vatId || "—")}<br>${esc(docText("address"))}: ${esc(client.billingAddress || client.address || "—")}<br>${esc(docText("contacts"))}: ${esc([client.email, client.phone].filter(Boolean).join(" ") || "—")}</p></div>
       </section>
-      <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(text("product"))}</span><span>${esc(text("quantity"))}</span><span>${esc(text("price"))}</span><span>${esc(text("amount"))}</span></div>${note.items.map((item) => {
+      <div class="accounting-lines"><div class="accounting-line accounting-head"><span>${esc(docText("product"))}</span><span>${esc(docText("quantity"))}</span><span>${esc(docText("price"))}</span><span>${esc(docText("amount"))}</span></div>${note.items.map((item) => {
         const issued=(meta.lines||[]).find(x=>x.product_id===item.product),price=Number(issued?.unit_price_net ?? note.prices?.[item.product] ?? 0),amount=Number(issued?.tax_base ?? (Number(item.quantity)*price));
         return `<div class="accounting-line"><strong>${esc(issued?.name||productName(item.product))}</strong><span>${esc(item.quantity)}</span><span>${esc(money(price))}</span><strong>${esc(money(amount))}</strong></div>`;
-      }).join("")}${Number(note.deliveryCharge||0)>0?`<div class="accounting-line"><strong>${esc(documentLanguage === "ru" ? "Доставка" : documentLanguage === "es" ? "Entrega" : "Delivery")}</strong><span>1</span><span>${esc(money(note.deliveryCharge))}</span><strong>${esc(money(note.deliveryCharge))}</strong></div>`:""}</div>
-      ${meta.aeatType?`<section class="accounting-tax-meta"><p><span>Tipo AEAT</span><strong>${esc(meta.aeatType)}</strong></p>${meta.rectifiesNumber?`<p><span>Rectifica</span><strong>${esc(meta.rectifiesNumber)}</strong></p>`:''}${meta.rectificationMode?`<p><span>Modalidad</span><strong>${esc(meta.rectificationMode)}</strong></p>`:''}</section>`:''}<section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(text("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(text("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(text("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(text("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(text("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(text("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(text("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
-      <footer><span>${esc(text("bakerySignature"))} __________________</span><span>${esc(text("restaurantSignature"))} __________________</span></footer>
+      }).join("")}${Number(note.deliveryCharge||0)>0?`<div class="accounting-line"><strong>${esc("Entrega")}</strong><span>1</span><span>${esc(money(note.deliveryCharge))}</span><strong>${esc(money(note.deliveryCharge))}</strong></div>`:""}</div>
+      ${meta.aeatType?`<section class="accounting-tax-meta"><p><span>Tipo AEAT</span><strong>${esc(meta.aeatType)}</strong></p>${meta.rectifiesNumber?`<p><span>Rectifica</span><strong>${esc(meta.rectifiesNumber)}</strong></p>`:''}${meta.rectificationMode?`<p><span>Modalidad</span><strong>${esc(meta.rectificationMode)}</strong></p>`:''}</section>`:''}<section class="accounting-summary"><dl>${variant === "factura" ? `<div><dt>${esc(docText("taxableBase"))}</dt><dd>${esc(money(taxableBase))}</dd></div><div><dt>${esc(docText("vat"))} ${esc(rate)}%</dt><dd>${esc(money(vatAmount))}</dd></div>` : ""}<div><dt>${esc(docText("total"))}</dt><dd>${esc(money(documentTotal))}</dd></div><div><dt>${esc(docText("paid"))}</dt><dd>${esc(money(paid))}</dd></div><div class="accounting-due"><dt>${esc(docText("due"))}</dt><dd>${esc(money(due))}</dd></div>${note.paymentDueDate ? `<div><dt>${esc(docText("dueDate"))}</dt><dd>${esc(note.paymentDueDate)}</dd></div>` : ""}${note.paymentMethod ? `<div><dt>${esc(docText("method"))}</dt><dd>${esc(note.paymentMethod)}</dd></div>` : ""}</dl></section>
+      <footer><span>${esc(docText("bakerySignature"))} __________________</span><span>${esc(docText("restaurantSignature"))} __________________</span></footer>
     </article>
-<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(text("close"))}</button><button type="button" class="secondary accounting-csv">${esc(text("csv"))}</button>${variant === "factura" ? `<button type="button" class="secondary accounting-edi">${esc(text("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(text("print"))}</button></div>`;
+<div class="accounting-actions"><button type="button" class="secondary accounting-close">${esc(uiText("close"))}</button><button type="button" class="secondary accounting-csv">${esc(uiText("csv"))}</button>${variant === "factura" ? `<button type="button" class="secondary accounting-edi">${esc(uiText("edi"))}</button>` : ""}<button type="button" class="primary accounting-print">${esc(uiText("print"))}</button></div>`;
     document.body.appendChild(dialog);
     const close = () => dialog.close();
     dialog.querySelector(".accounting-x").onclick = close;
@@ -380,13 +404,13 @@ ${lines}
       const label = dialog.querySelector(".accounting-copy-label");
       label.textContent =
         event.target.value === "restaurant"
-          ? text("restaurantCopy")
-          : text("bakeryCopy");
+          ? docText("restaurantCopy")
+          : docText("bakeryCopy");
     });
     dialog.onclick = (event) => {
       if (event.target === dialog) close();
     };
-    dialog.addEventListener("close", () => { documentLanguage="es"; dialog.remove(); }, { once: true });
+    dialog.addEventListener("close", () => { uiLanguage="en"; dialog.remove(); }, { once: true });
     dialog.showModal();
   };
 })();

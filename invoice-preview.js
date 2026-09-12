@@ -8,9 +8,14 @@
   };
   const w=key=>(COPY[language()]||COPY.ru)[key]||key;
   const locale=()=>language()==='es'?'es-ES':language()==='en'?'en-GB':'ru-RU';
+  const productRecord=id=>{
+    const registries=[typeof productRegistry!=='undefined'?productRegistry:[],typeof PRODUCTS!=='undefined'?PRODUCTS:[]];
+    return registries.flat().find(item=>item?.id===id)||{};
+  };
   const productName=id=>{
-    const lang=language(),product=typeof productRegistry!=='undefined'&&productRegistry.find(item=>item.id===id);
+    const lang=language(),product=productRecord(id);
     if(product?.names?.[lang])return product.names[lang];
+    if(product?.text?.[lang]?.[0])return product.text[lang][0];
     if(product?.names?.ru)return product.names.ru;
     const fallback={plain:{ru:'Льняной бездрожжевой хлеб с семенами',en:'Flax seed unleavened bread',es:'Pan de lino sin levadura con semillas'},pumpkin:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Pumpkin seed unleavened bread',es:'Pan de calabaza sin levadura con semillas'}};
     return fallback[id]?.[lang]||String(id||'');
