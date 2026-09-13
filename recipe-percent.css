@@ -337,3 +337,20 @@
     width:48px!important;
   }
 }
+
+/* Panora 10.59 — recipes are compact disclosures on desktop and mobile. */
+#recipeList .recipe-card{gap:0!important;overflow:hidden}
+#recipeList .recipe-card-head{cursor:pointer;align-items:center!important}
+#recipeList .recipe-mobile-toggle{
+  display:grid!important;place-items:center;width:42px;height:42px;min-width:42px;padding:0;border:1px solid var(--line);
+  border-radius:11px;background:#fff;color:var(--green);font-size:22px;line-height:1;cursor:pointer
+}
+#recipeList .recipe-mobile-toggle span{display:block;transition:transform .18s ease}
+#recipeList .recipe-card-body{display:none!important}
+#recipeList .recipe-card.is-mobile-open .recipe-card-body{display:block!important}
+#recipeList .recipe-card.is-mobile-open .recipe-mobile-toggle span{transform:rotate(180deg)}
+@media(min-width:701px){
+  #recipeList .recipe-card-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto 42px;gap:10px;padding:2px 0}
+  #recipeList .recipe-card.is-mobile-open .recipe-card-head{padding-bottom:14px}
+  #recipeList .recipe-card-body{padding-top:14px;border-top:1px solid var(--line)}
+}

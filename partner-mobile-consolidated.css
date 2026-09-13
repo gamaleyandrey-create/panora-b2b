@@ -1,4 +1,4 @@
-/* Panora 10.58 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
+/* Panora 10.59 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
 
 /* ===== migrated from mobile-partner-profile-v411.css ===== */
 /* Panora 4.11 — restore partner profile entry on mobile.
@@ -161,3 +161,45 @@
   body:not(.admin-page) .cart-fab{bottom:calc(16px + env(safe-area-inset-bottom))!important}
   body:not(.admin-page) .how-section{padding-bottom:65px!important}
 }
+
+/* Panora 10.59 — unified Partner system header: Panora | Refresh | More. */
+body:not(.admin-page) .topbar{z-index:1700!important;overflow:visible!important}
+body:not(.admin-page) .topbar .partner-system-actions{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;min-width:0!important;overflow:visible!important
+}
+.partner-global-refresh,.partner-more-toggle{
+  min-height:40px;border:1px solid rgba(255,255,255,.26)!important;border-radius:10px!important;background:rgba(255,255,255,.08)!important;
+  color:#fff!important;font:700 12px Manrope,Arial,sans-serif!important;box-shadow:none!important;cursor:pointer!important
+}
+.partner-global-refresh{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-width:118px!important;padding:0 13px!important;white-space:nowrap!important}
+.partner-global-refresh>span{font-size:17px;line-height:1;display:inline-block}.partner-global-refresh>b{font:inherit}
+.partner-global-refresh[data-loading="1"]>span{animation:panoraPartnerRefreshSpin .8s linear infinite}
+@keyframes panoraPartnerRefreshSpin{to{transform:rotate(360deg)}}
+.partner-global-refresh:hover,.partner-more-toggle:hover{background:rgba(255,255,255,.15)!important;border-color:rgba(255,255,255,.42)!important}
+.partner-global-refresh:disabled{opacity:.65;cursor:wait!important}
+.partner-more{display:block!important;position:relative!important;flex:0 0 auto!important}
+.partner-more-toggle{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:42px!important;min-width:42px!important;height:40px!important;padding:0!important;font-size:24px!important;line-height:1!important}
+.partner-more-menu[hidden]{display:none!important}
+.partner-more-menu{
+  position:absolute!important;right:0!important;top:calc(100% + 8px)!important;z-index:1800!important;width:218px!important;padding:10px!important;
+  border:1px solid #d8ded8!important;border-radius:14px!important;background:#fff!important;color:#1f3427!important;box-shadow:0 16px 42px rgba(20,34,25,.24)!important
+}
+.partner-more-menu button{font-family:Manrope,Arial,sans-serif!important}
+.partner-more-account,.partner-more-push,.partner-more-logout,.partner-more-languages button{
+  min-height:40px!important;border:1px solid #dfe4dc!important;border-radius:9px!important;background:#f7f8f5!important;color:#24372b!important;font-size:12px!important;font-weight:800!important;cursor:pointer!important
+}
+.partner-more-account,.partner-more-push,.partner-more-logout{display:flex!important;width:100%!important;align-items:center!important;justify-content:flex-start!important;padding:0 11px!important;margin:0!important}
+.partner-more-label{display:block!important;padding:10px 4px 7px!important;color:#6d776f!important;font-size:11px!important;font-weight:800!important}
+.partner-more-languages{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:5px!important}
+.partner-more-languages button.active{background:#e7efe8!important;border-color:#aac1b0!important;color:#284e36!important}
+.partner-more-push{margin-top:8px!important}.partner-more-push[aria-pressed="true"]{background:#e7efe8!important;border-color:#aac1b0!important;color:#284e36!important}
+.partner-more-logout{margin-top:8px!important;background:#fff8f7!important;color:#90483f!important}
+body:not(.admin-page) .partner-more-account.account-entry{min-width:0!important;max-width:none!important;height:40px!important;border-radius:9px!important;background:#f7f8f5!important;color:#24372b!important;box-shadow:none!important}
+@media(max-width:720px){
+ body:not(.admin-page) .topbar{grid-template-columns:minmax(0,1fr) auto!important}
+ body:not(.admin-page) .topbar .partner-system-actions{gap:7px!important;min-width:max-content!important}
+ .partner-global-refresh{min-width:112px!important;max-width:112px!important;height:40px!important;padding:0 10px!important;font-size:12px!important}
+ .partner-more-toggle{width:40px!important;min-width:40px!important;height:40px!important}
+ .partner-more-menu{width:min(218px,calc(100vw - 20px))!important}
+}
+@media(max-width:360px){.partner-global-refresh{min-width:102px!important;max-width:102px!important;padding:0 8px!important;font-size:11px!important}}

@@ -318,8 +318,8 @@
     // element and makes the user appear to be "thrown out" of gram editing.
     if(!force&&(window.panoraRecipeEditing||root.dataset.recipeEditing==='true'||document.activeElement?.closest?.('#recipeList'))&&root.children.length)return;
     const rawCatalog=window.panoraRawStock?.catalog?.()||[],catalogOptions=rawCatalog.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru')).map(row=>`<option value="${esc(row.name)}" label="${esc(row.unit==='g'?'кг / г':row.unit==='ml'?'л / мл':'шт.')}" data-unit="${esc(row.unit)}"></option>`).join('');
-    root.innerHTML=`<datalist id="panora-raw-catalog">${catalogOptions}</datalist>`+Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),tech=product?.techCard||{},items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional ${mobileRecipeMode()&&mobileOpenRecipe()===String(pid)?'is-mobile-open':''}" data-recipe-card="${pid}" data-recipe-search="${esc(productName(pid))}">
-      <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span><button class="recipe-mobile-toggle" type="button" aria-expanded="${mobileRecipeMode()&&mobileOpenRecipe()===String(pid)?'true':'false'}" aria-label="${lang==='ru'?'Открыть рецепт':lang==='es'?'Abrir receta':'Open recipe'}"><span aria-hidden="true">⌄</span></button></div>
+    root.innerHTML=`<datalist id="panora-raw-catalog">${catalogOptions}</datalist>`+Object.keys(PRODUCTS).map(pid=>{const product=recipeProduct(pid),tech=product?.techCard||{},items=recipes[pid]||[],initialFlour=items.reduce((sum,item)=>sum+(gramUnit(item.unit)&&flourName(item.name)?numeric(item.qty):0),0);return `<article class="recipe-card recipe-card-professional ${mobileOpenRecipe()===String(pid)?'is-mobile-open':''}" data-recipe-card="${pid}" data-recipe-search="${esc(productName(pid))}">
+      <div class="recipe-card-head"><h3>${esc(productName(pid))}</h3><span class="recipe-flour-summary" data-flour-total>${L().flour}</span><button class="recipe-mobile-toggle" type="button" aria-expanded="${mobileOpenRecipe()===String(pid)?'true':'false'}" aria-label="${lang==='ru'?'Открыть рецепт':lang==='es'?'Abrir receta':'Open recipe'}"><span aria-hidden="true">⌄</span></button></div>
       <div class="recipe-card-body">
       <label class="recipe-product-weight"><span>${L().weight}</span><span><input data-recipe-weight="${pid}" type="number" min="1" step="1" value="${Number(product?.weight||750)}"> g</span></label>
       <p class="recipe-help"><strong>${L().percent}.</strong> ${L().help} ${L().stock}</p>
@@ -361,12 +361,11 @@
     root.querySelectorAll('.recipe-card').forEach(card=>{
       const toggle=card.querySelector('.recipe-mobile-toggle');
       const setOpen=open=>{
-        if(!mobileRecipeMode())return;
         root.querySelectorAll('.recipe-card.is-mobile-open').forEach(other=>{if(other!==card){other.classList.remove('is-mobile-open');other.querySelector('.recipe-mobile-toggle')?.setAttribute('aria-expanded','false')}});
         card.classList.toggle('is-mobile-open',Boolean(open));toggle?.setAttribute('aria-expanded',open?'true':'false');setMobileOpenRecipe(open?card.dataset.recipeCard:'');
       };
-      toggle?.addEventListener('click',event=>{event.stopPropagation();const open=!card.classList.contains('is-mobile-open');setOpen(open);if(open)setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60)});
-      card.querySelector('.recipe-card-head')?.addEventListener('click',event=>{if(!mobileRecipeMode()||event.target.closest('button,input,select,textarea,a'))return;setOpen(!card.classList.contains('is-mobile-open'))});
+      toggle?.addEventListener('click',event=>{event.stopPropagation();const open=!card.classList.contains('is-mobile-open');setOpen(open);if(open&&mobileRecipeMode())setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60)});
+      card.querySelector('.recipe-card-head')?.addEventListener('click',event=>{if(event.target.closest('button,input,select,textarea,a'))return;setOpen(!card.classList.contains('is-mobile-open'))});
       updateCard(card);
       setCardEditMode(card,Boolean(window.panoraCloud?.hasTechCardLock?.(card.dataset.recipeCard)));
       const techDetails=card.querySelector('.recipe-tech-card');

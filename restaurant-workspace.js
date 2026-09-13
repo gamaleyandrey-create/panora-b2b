@@ -666,8 +666,8 @@
       const retailPrice=Number(product.retailPrice ?? product.basePrice ?? product.price ?? 0);
       const wholesalePrice=Number(account?.prices?.[id] ?? product.wholesalePrice ?? product.price ?? retailPrice);
       const wholesaleMinQty=Math.max(1,Number(product.wholesaleMinQty||8));
-      const image=product.image||"icon.svg";
-      const gallery=[image,...(Array.isArray(product.gallery)?product.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
+      const gallery=typeof productGallery==='function'?productGallery(product):[product.image,...(Array.isArray(product.gallery)?product.gallery:[])].filter((value,index,array)=>value&&array.indexOf(value)===index);
+      const image=gallery[0]||product.image||"icon.svg";
       return {id,name,retailPrice,wholesalePrice,wholesaleMinQty,image,gallery};
     });
 
@@ -1302,7 +1302,7 @@
       <div class="rw-profile-price-list">
         ${products.map((product) => {
           const description = productDescription(product);
-          const image = product.image || "icon.svg";
+          const image = typeof primaryProductImage==='function' ? primaryProductImage(product) : (product.image || "icon.svg");
           const weight = Number(product.weight || 0);
           return `<article class="rw-profile-price-row" data-rw-price-product="${esc(product.id)}">
             <div class="rw-profile-price-photo" style="background-image:url(&quot;${esc(image)}&quot;)"><img src="${esc(image)}" alt="${esc(itemName(product.id))}" loading="eager" decoding="async" fetchpriority="low" width="320" height="320"></div>
@@ -1325,7 +1325,26 @@
     if (activeTab === "profile") return `${profileHtml()}${pricesHtml()}`;
     return ordersHtml();
   }
+  const PARTNER_FOLD_KEY="panora-partner-fold-sections-v1059";
+  const readPartnerFoldState=()=>{try{const value=JSON.parse(localStorage.getItem(PARTNER_FOLD_KEY)||"{}");return value&&typeof value==="object"?value:{}}catch{return{}}};
+  const writePartnerFoldState=state=>{try{localStorage.setItem(PARTNER_FOLD_KEY,JSON.stringify(state))}catch{}};
+  function bindPartnerLongSections(modal){
+    const state=readPartnerFoldState();
+    const labels=()=>lang==="es"?{show:"Mostrar",hide:"Ocultar"}:lang==="en"?{show:"Show",hide:"Hide"}:{show:"Показать",hide:"Скрыть"};
+    const targets=[["messengers",".rw-messengers"],["billing",".rw-billing-details"],["settings",".rw-settings-panel"],["password",".rw-password-panel"],["prices",".rw-profile-prices"]];
+    targets.forEach(([key,selector])=>{
+      const section=modal.querySelector(selector),header=section?.querySelector(":scope > header");if(!section||!header)return;
+      section.classList.add("rw-collapsible-section");
+      let button=header.querySelector("[data-rw-section-fold]");
+      if(!button){button=document.createElement("button");button.type="button";button.className="rw-section-fold-toggle";button.dataset.rwSectionFold=key;header.append(button)}
+      const apply=open=>{section.classList.toggle("is-collapsed",!open);button.setAttribute("aria-expanded",open?"true":"false");const text=labels();button.innerHTML=`<span>${open?text.hide:text.show}</span><i aria-hidden="true">⌄</i>`;state[key]=Boolean(open);writePartnerFoldState(state)};
+      button.onclick=event=>{event.preventDefault();event.stopPropagation();apply(button.getAttribute("aria-expanded")!=="true")};
+      apply(state[key]===true);
+    });
+  }
+
   function bind(modal) {
+    bindPartnerLongSections(modal);
     modal.querySelectorAll("[data-rw-payment-allocation]").forEach((details)=>{
       details.addEventListener("toggle",()=>{
         const key=String(details.dataset.rwPaymentAllocation||"");
@@ -2159,4 +2178,26 @@
     }
     backgroundWorkspaceRender();
   });
+})();
+
+/* Panora 10.59 — Partner global header refresh / language / Push / logout. */
+(()=>{
+ const refresh=document.querySelector('#partnerGlobalRefresh'),more=document.querySelector('#partnerMoreToggle'),menu=document.querySelector('#partnerMoreMenu'),push=document.querySelector('#partnerMorePush'),logout=document.querySelector('#partnerMoreLogout'),accountButton=document.querySelector('#profileButton');
+ if(!refresh||!more||!menu)return;
+ const language=()=>String(document.documentElement.lang||'ru').slice(0,2);
+ const copy=()=>language()==='es'?{refresh:'Actualizar',refreshing:'Actualizando…',updated:'Actualizado ✓',language:'Idioma',account:'Área del socio',pushOn:'Push activado ✓',pushOff:'Activar Push',logout:'Salir'}:language()==='en'?{refresh:'Refresh',refreshing:'Refreshing…',updated:'Updated ✓',language:'Language',account:'Partner account',pushOn:'Push enabled ✓',pushOff:'Enable Push',logout:'Sign out'}:{refresh:'Обновить',refreshing:'Обновляем…',updated:'Обновлено ✓',language:'Язык',account:'Кабинет партнёра',pushOn:'Push включён ✓',pushOff:'Включить Push',logout:'Выйти'};
+ const close=()=>{menu.hidden=true;more.setAttribute('aria-expanded','false')};
+ const render=()=>{const c=copy(),label=refresh.querySelector('b');if(label&&!refresh.dataset.loading)label.textContent=c.refresh;const l=menu.querySelector('[data-partner-menu-language-label]');if(l)l.textContent=c.language;if(accountButton){const x=accountButton.querySelector('.account-entry-label');if(x)x.textContent=c.account}if(logout)logout.textContent=c.logout;menu.querySelectorAll('[data-partner-language]').forEach(button=>button.classList.toggle('active',button.dataset.partnerLanguage===language()))};
+ async function renderPush(info=null){if(!push)return;const c=copy();try{info=info||await window.panoraPartnerPush?.status?.()}catch{}const active=Boolean(info?.active);push.setAttribute('aria-pressed',active?'true':'false');push.textContent=active?c.pushOn:c.pushOff;push.disabled=!window.panoraPartnerPush}
+ more.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=menu.hidden;menu.hidden=!open;more.setAttribute('aria-expanded',open?'true':'false');if(open){render();renderPush()}});
+ document.addEventListener('click',event=>{if(!event.target.closest('.partner-more'))close()});
+ menu.querySelectorAll('[data-partner-language]').forEach(button=>button.addEventListener('click',()=>{window.panoraSetLanguage?.(button.dataset.partnerLanguage);render();close()}));
+ accountButton?.addEventListener('click',()=>close());
+ logout?.addEventListener('click',()=>{close();try{logoutAccount()}catch{document.querySelector('[data-rw-logout]')?.click()}});
+ refresh.addEventListener('click',async()=>{if(refresh.disabled)return;const c=copy(),label=refresh.querySelector('b');refresh.disabled=true;refresh.dataset.loading='1';if(label)label.textContent=c.refreshing;try{await Promise.allSettled([Promise.resolve(window.panoraPortalCloud?.load?.()),Promise.resolve(window.panoraPublicCatalog?.refreshIfChanged?.()),Promise.resolve(window.panoraOrderMessages?.refreshUnread?.())]);if(label)label.textContent=c.updated;setTimeout(()=>{delete refresh.dataset.loading;if(label)label.textContent=copy().refresh},900)}catch(error){console.warn('Panora partner global refresh',error);delete refresh.dataset.loading;if(label)label.textContent=copy().refresh}finally{refresh.disabled=false}});
+ push?.addEventListener('click',async()=>{if(push.disabled)return;push.disabled=true;try{const status=await window.panoraPartnerPush?.status?.();if(status?.active)await window.panoraPartnerPush?.disable?.();else await window.panoraPartnerPush?.enable?.();await renderPush()}catch(error){console.warn('Panora partner Push menu',error);await renderPush().catch(()=>{})}finally{push.disabled=false}});
+ window.addEventListener('panora:language-changed',()=>{render();renderPush().catch(()=>{})});
+ window.addEventListener('panora:partner-push-state',event=>renderPush(event.detail||{}));
+ window.addEventListener('panora:partner-data-updated',()=>renderPush().catch(()=>{}));
+ render();setTimeout(()=>renderPush().catch(()=>{}),600);
 })();

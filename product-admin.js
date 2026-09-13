@@ -3,6 +3,7 @@ const productRegistryDefaults=[
  {id:'pumpkin',builtIn:true,active:true,weight:750,basePrice:5,image:'bread-pumpkin.jpg',names:{ru:'Тыквенный бездрожжевой хлеб с семенами',en:'Yeast-free pumpkin bread with seeds',es:'Pan de calabaza sin levadura con semillas'},descriptions:{ru:'Бездрожжевой тыквенный хлеб с семенами.',en:'Yeast-free pumpkin bread with seeds.',es:'Pan de calabaza sin levadura con semillas.'}}
 ];
 let productRegistry=cRead('panora-products',productRegistryDefaults);
+window.panoraProductRegistry=()=>productRegistry;
 if(!productRegistry.some(p=>p.id==='plain'))productRegistry=[...productRegistryDefaults,...productRegistry];
 
 const panoraInlineMedia=value=>/^data:image\//i.test(String(value||''));
