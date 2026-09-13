@@ -11,8 +11,8 @@
   <meta name="title" content="Panora — Розница">
   <meta property="og:title" content="Panora — Розница">
   <meta name="twitter:title" content="Panora — Розница">
-  <link rel="icon" href="retail/icon.svg?v=10590">
-  <link rel="stylesheet" href="retail-account.css?v=10590">
+  <link rel="icon" href="retail/icon.svg?v=10600">
+  <link rel="stylesheet" href="retail-account.css?v=10600">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap');
     :root{--green:#315f43;--green-dark:#1d3829;--green-soft:#eaf2ea;--orange:#d97841;--paper:#fbfaf7;--cream:#f3efe6;--white:#fff;--ink:#1f2a23;--muted:#748078;--line:#dce2dc;--danger:#b9483e;--shadow:0 20px 60px rgba(29,56,41,.12)}
@@ -39,18 +39,28 @@
 @media(max-width:430px){.form-grid{grid-template-columns:1fr}.checkout-dialog{width:calc(100vw - 8px);max-height:calc(100dvh - 8px)}.hero h1{font-size:34px}.product-card{scroll-margin-top:80px}}
 
     @media(max-width:760px){.product-badge{left:12px;top:12px;padding:8px 11px;font-size:12px;line-height:1.2}}
+
+    /* Panora 10.60 — Retail system header: Panora | Refresh | More. */
+    .retail-system-topbar{overflow:visible;z-index:1700}.retail-system-actions{overflow:visible;position:relative}
+    .retail-global-refresh,.retail-more-toggle{-webkit-appearance:none;appearance:none;min-height:40px;border:1px solid rgba(255,255,255,.28);border-radius:10px;background:rgba(255,255,255,.085);background-image:none;color:#fff;font:700 12px Manrope,Arial,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.035);cursor:pointer;opacity:1}
+    .retail-global-refresh{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:118px;padding:0 13px;white-space:nowrap}.retail-global-refresh>span{display:inline-block;font-size:17px}.retail-global-refresh[data-loading="1"]>span{animation:retailHeaderSpin .8s linear infinite}.retail-global-refresh:disabled{opacity:1;color:#fff;-webkit-text-fill-color:#fff;background:rgba(255,255,255,.105)}.retail-global-refresh[data-success="1"]{background:rgba(139,196,155,.18);border-color:rgba(191,225,201,.44)}
+    .retail-more{position:relative}.retail-more-toggle{display:inline-flex;align-items:center;justify-content:center;width:42px;min-width:42px;height:40px;padding:0;font-size:24px;line-height:1}.retail-more-menu[hidden]{display:none!important}.retail-more-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:1800;width:218px;padding:10px;border:1px solid #d8ded8;border-radius:14px;background:#fff;color:#1f3427;box-shadow:0 16px 42px rgba(20,34,25,.24)}
+    .retail-more-label{display:block;padding:2px 4px 8px;color:#6d776f;font-size:11px;font-weight:800}.retail-more-languages{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.retail-more-languages button{min-height:38px;border:1px solid #dfe4dc;border-radius:9px;background:#f7f8f5;color:#24372b;font:800 11px Manrope,Arial,sans-serif;cursor:pointer}.retail-more-languages button.active{background:#e7efe8;border-color:#aac1b0;color:#284e36}.retail-more-place{display:block;margin-top:8px;padding:8px 5px 2px;color:#778078;font-size:10px}.retail-language-legacy{display:none!important}
+    @keyframes retailHeaderSpin{to{transform:rotate(360deg)}}
+    @media(max-width:700px){.retail-global-refresh{min-width:112px;max-width:112px;height:40px;padding:0 10px;font-size:12px}.retail-more-toggle{width:40px;min-width:40px;height:40px}.retail-more-menu{width:min(218px,calc(100vw - 20px))}}
+    @media(max-width:360px){.retail-global-refresh{min-width:102px;max-width:102px;padding:0 8px;font-size:11px}}
 </style>
   
 <meta property="og:site_name" content="Panora">
-  <link rel="manifest" href="retail/manifest.webmanifest?v=10590">
+  <link rel="manifest" href="retail/manifest.webmanifest?v=10600">
 
 </head>
 <body>
 <div id="panoraNetState" class="panora-net-state" role="status" aria-live="polite"></div>
 <div class="shell">
-  <header class="topbar">
+  <header class="topbar retail-system-topbar">
     <a class="brand" href="retail.html"><span class="mark">P</span><span>Panora</span></a>
-    <div class="top-actions"><span class="location-chip" data-i18n="bakery">Panadería</span><select class="lang" id="langSelect" aria-label="Language"><option value="es">ES</option><option value="en">EN</option><option value="de">DE</option><option value="ru">RU</option></select></div>
+    <div class="top-actions retail-system-actions"><button type="button" class="retail-global-refresh" id="retailGlobalRefresh" aria-label="Actualizar"><span aria-hidden="true">↻</span><b data-retail-refresh-label>Actualizar</b></button><div class="retail-more"><button type="button" class="retail-more-toggle" id="retailMoreToggle" aria-expanded="false" aria-controls="retailMoreMenu" aria-label="Más opciones">⋯</button><div class="retail-more-menu" id="retailMoreMenu" hidden><span class="retail-more-label" data-retail-menu-language>Idioma</span><div class="retail-more-languages" role="group" aria-label="Language"><button type="button" data-retail-language="es">ES</button><button type="button" data-retail-language="en">EN</button><button type="button" data-retail-language="de">DE</button><button type="button" data-retail-language="ru">RU</button></div><span class="retail-more-place" data-i18n="bakery">Panadería</span><select class="lang retail-language-legacy" id="langSelect" aria-label="Language"><option value="es">ES</option><option value="en">EN</option><option value="de">DE</option><option value="ru">RU</option></select></div></div></div>
   </header>
   <div class="status-banner" id="retailStatusBanner"><b></b><span id="retailStatusText">Tienda minorista activa</span></div>
 
@@ -113,7 +123,7 @@
     </aside>
   </main>
 
-  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10590</span></footer>
+  <footer class="footer"><strong>Panora · <span data-i18n="bakery">Panadería</span></strong><span><span data-i18n="footerRetail">Tienda minorista</span> · build 10600</span></footer>
 </div>
 
 <dialog class="checkout-dialog" id="retailCheckoutDialog">
@@ -141,9 +151,9 @@
   </div>
 </dialog>
 
-<script src="supabase-config.js?v=10590"></script>
-<script src="public-catalog-cloud-v48.js?v=10590"></script>
-<script src="pwa-stable.js?v=10590"></script>
+<script src="supabase-config.js?v=10600"></script>
+<script src="public-catalog-cloud-v48.js?v=10600"></script>
+<script src="pwa-stable.js?v=10600"></script>
 <script>
 (()=>{
   const LOCALES={es:'es-ES',en:'en-GB',de:'de-DE',ru:'ru-RU'};
@@ -231,12 +241,25 @@
   async function refreshCloud({force=false}={}){
    if(cloudRefreshInFlight)return cloudRefreshInFlight;
    const now=Date.now();if(!force&&now-cloudRefreshAt<10000)return false;cloudRefreshAt=now;
-   cloudRefreshInFlight=(async()=>{await Promise.allSettled([loadCloudRetailSettings(),loadCloudRetailProductSettings(),loadCloudStock(),loadCloudBakeDates(),window.panoraPublicCatalog?.refreshIfChanged?.()||window.panoraPublicCatalog?.refresh?.()]);applyStaticTranslations();updateModeText();renderAll();return true})().finally(()=>cloudRefreshInFlight=null);
+   cloudRefreshInFlight=(async()=>{const results=await Promise.allSettled([loadCloudRetailSettings(),loadCloudRetailProductSettings(),loadCloudStock(),loadCloudBakeDates(),window.panoraPublicCatalog?.refreshIfChanged?.()||window.panoraPublicCatalog?.refresh?.()]);applyStaticTranslations();updateModeText();renderAll();return results.slice(0,4).every(result=>result.status==='fulfilled'&&result.value!==false)})().finally(()=>cloudRefreshInFlight=null);
    return cloudRefreshInFlight;
+  }
+
+  function initRetailSystemHeader(){
+   const refresh=$('#retailGlobalRefresh'),more=$('#retailMoreToggle'),menu=$('#retailMoreMenu'),select=$('#langSelect');if(!refresh||!more||!menu||!select)return;
+   const copy=()=>state.lang==='ru'?{idle:'Обновить',busy:'Обновляем…',done:'✓ Обновлено',language:'Язык'}:state.lang==='de'?{idle:'Aktualisieren',busy:'Aktualisierung…',done:'✓ Aktualisiert',language:'Sprache'}:state.lang==='en'?{idle:'Refresh',busy:'Refreshing…',done:'✓ Updated',language:'Language'}:{idle:'Actualizar',busy:'Actualizando…',done:'✓ Actualizado',language:'Idioma'};
+   const close=()=>{menu.hidden=true;more.setAttribute('aria-expanded','false')};
+   const paint=()=>{const c=copy(),label=refresh.querySelector('[data-retail-refresh-label]');if(label&&!refresh.dataset.loading&&!refresh.dataset.success)label.textContent=c.idle;const l=menu.querySelector('[data-retail-menu-language]');if(l)l.textContent=c.language;menu.querySelectorAll('[data-retail-language]').forEach(button=>button.classList.toggle('active',button.dataset.retailLanguage===state.lang))};
+   more.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=menu.hidden;menu.hidden=!open;more.setAttribute('aria-expanded',open?'true':'false');if(open)paint()});
+   document.addEventListener('click',event=>{if(!event.target.closest('.retail-more'))close()});document.addEventListener('keydown',event=>{if(event.key==='Escape')close()});
+   menu.querySelectorAll('[data-retail-language]').forEach(button=>button.addEventListener('click',()=>{select.value=button.dataset.retailLanguage;select.dispatchEvent(new Event('change',{bubbles:true}));paint();close()}));
+   select.addEventListener('change',paint);
+   refresh.addEventListener('click',async()=>{if(refresh.disabled)return;const label=refresh.querySelector('[data-retail-refresh-label]');refresh.disabled=true;refresh.dataset.loading='1';delete refresh.dataset.success;if(label)label.textContent=copy().busy;try{const ok=await refreshCloud({force:true});if(!ok)throw new Error('retail_refresh_incomplete');delete refresh.dataset.loading;refresh.dataset.success='1';if(label)label.textContent=copy().done;window.dispatchEvent(new CustomEvent('panora:retail-global-refreshed'));setTimeout(()=>{delete refresh.dataset.success;if(label)label.textContent=copy().idle},1100)}catch(error){console.warn('Panora retail global refresh',error);delete refresh.dataset.loading;delete refresh.dataset.success;if(label)label.textContent=copy().idle}finally{refresh.disabled=false}});
+   paint();
   }
   function renderAll(){applyRetailAvailability();if(!retailSettings().enabled)return;renderDates();renderSlots();renderProducts();renderCart()}
   $$('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));$('#retailPickupOption').onclick=()=>{if(retailSettings().pickup===false||state.reservationToken)return;state.fulfillment='pickup';state.slot='';renderAll()};$('#retailDeliveryOption').onclick=()=>{if(!retailSettings().delivery||state.reservationToken)return;state.fulfillment='delivery';state.slot='';renderAll()};$('#langSelect').onchange=e=>setLanguage(e.target.value);$('#retailCheckout').onclick=openCheckout;$('#retailCustomerForm').onsubmit=confirmOrder;$$('input[name=\"paymentMethod\"]').forEach(input=>input.addEventListener('change',renderCart));$('#retailCheckoutClose').onclick=()=>closeCheckout({release:true});$('#retailSuccessClose').onclick=()=>closeCheckout({release:false});$('#retailCheckoutDialog').addEventListener('cancel',event=>{event.preventDefault();closeCheckout({release:true})});
-  applyStaticTranslations();updateModeText();renderAll();refreshCloud({force:true});window.addEventListener('panora:public-products-changed',renderAll);window.addEventListener('panora:retail-catalog-updated',renderAll);window.addEventListener('focus',()=>refreshCloud());document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCloud()});window.addEventListener('online',()=>refreshCloud({force:true}));
+  applyStaticTranslations();updateModeText();renderAll();initRetailSystemHeader();refreshCloud({force:true});window.addEventListener('panora:public-products-changed',renderAll);window.addEventListener('panora:retail-catalog-updated',renderAll);window.addEventListener('focus',()=>refreshCloud());document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCloud()});window.addEventListener('online',()=>refreshCloud({force:true}));
 })();
 </script>
 
@@ -262,7 +285,7 @@
 </script>
 
 
-<script src="retail-account.js?v=10590"></script>
+<script src="retail-account.js?v=10600"></script>
 
 </body>
 </html>

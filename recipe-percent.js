@@ -360,12 +360,15 @@
     if(archiveDetails)archiveDetails.dataset.empty=archived.length?'false':'true';
     root.querySelectorAll('.recipe-card').forEach(card=>{
       const toggle=card.querySelector('.recipe-mobile-toggle');
+      const body=card.querySelector('.recipe-card-body');
+      const syncBody=open=>{if(body){body.hidden=!open;body.setAttribute('aria-hidden',open?'false':'true')}};
       const setOpen=open=>{
-        root.querySelectorAll('.recipe-card.is-mobile-open').forEach(other=>{if(other!==card){other.classList.remove('is-mobile-open');other.querySelector('.recipe-mobile-toggle')?.setAttribute('aria-expanded','false')}});
-        card.classList.toggle('is-mobile-open',Boolean(open));toggle?.setAttribute('aria-expanded',open?'true':'false');setMobileOpenRecipe(open?card.dataset.recipeCard:'');
+        root.querySelectorAll('.recipe-card.is-mobile-open').forEach(other=>{if(other!==card){other.classList.remove('is-mobile-open');other.querySelector('.recipe-mobile-toggle')?.setAttribute('aria-expanded','false');const otherBody=other.querySelector('.recipe-card-body');if(otherBody){otherBody.hidden=true;otherBody.setAttribute('aria-hidden','true')}}});
+        card.classList.toggle('is-mobile-open',Boolean(open));toggle?.setAttribute('aria-expanded',open?'true':'false');syncBody(Boolean(open));setMobileOpenRecipe(open?card.dataset.recipeCard:'');
       };
-      toggle?.addEventListener('click',event=>{event.stopPropagation();const open=!card.classList.contains('is-mobile-open');setOpen(open);if(open&&mobileRecipeMode())setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60)});
-      card.querySelector('.recipe-card-head')?.addEventListener('click',event=>{if(event.target.closest('button,input,select,textarea,a'))return;setOpen(!card.classList.contains('is-mobile-open'))});
+      syncBody(card.classList.contains('is-mobile-open'));
+      toggle?.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=!card.classList.contains('is-mobile-open');setOpen(open);if(open&&mobileRecipeMode())setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60)});
+      card.querySelector('.recipe-card-head')?.addEventListener('click',event=>{if(event.target.closest('button,input,select,textarea,a'))return;event.preventDefault();setOpen(!card.classList.contains('is-mobile-open'))});
       updateCard(card);
       setCardEditMode(card,Boolean(window.panoraCloud?.hasTechCardLock?.(card.dataset.recipeCard)));
       const techDetails=card.querySelector('.recipe-tech-card');

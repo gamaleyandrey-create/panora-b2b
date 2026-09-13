@@ -1,4 +1,4 @@
-const CACHE='panora-v10590';
+const CACHE='panora-v10600';
 const CORE=[
   './partner/index.html',
   './partner/manifest.webmanifest',

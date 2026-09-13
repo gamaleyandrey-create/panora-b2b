@@ -354,3 +354,18 @@
   #recipeList .recipe-card.is-mobile-open .recipe-card-head{padding-bottom:14px}
   #recipeList .recipe-card-body{padding-top:14px;border-top:1px solid var(--line)}
 }
+
+
+/* Panora 10.60 — harden recipe disclosure on desktop and mobile. The body also
+   receives the native hidden attribute in JS so later theme rules cannot leave
+   a collapsed recipe visually expanded. */
+body.admin-page #recipeList .recipe-card-body[hidden]{display:none!important}
+body.admin-page #recipeList .recipe-card:not(.is-mobile-open) .recipe-card-body{display:none!important}
+body.admin-page #recipeList .recipe-card.is-mobile-open .recipe-card-body:not([hidden]){display:block!important}
+body.admin-page #recipeList .recipe-card-head{user-select:none;-webkit-user-select:none}
+@media(min-width:701px){
+  body.admin-page #recipeList .recipe-card{padding:16px 18px!important}
+  body.admin-page #recipeList .recipe-card-head{min-height:54px!important;padding:0!important}
+  body.admin-page #recipeList .recipe-card.is-mobile-open .recipe-card-head{padding-bottom:14px!important}
+  body.admin-page #recipeList .recipe-mobile-toggle{display:grid!important}
+}
