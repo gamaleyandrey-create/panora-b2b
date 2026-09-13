@@ -1522,7 +1522,7 @@ document.querySelector("#saveRestaurant").onclick = (e) => {
   document.querySelector("#restaurantForm").reset();
   renderCommerce();
 };
-document.querySelector("#refreshReminders").onclick = renderReminders;
+document.querySelector("#refreshReminders")?.addEventListener("click", renderReminders);
 document
   .querySelector("#adminLanguage")
   .addEventListener("change", () => setTimeout(renderCommerce));

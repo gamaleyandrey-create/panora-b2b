@@ -2339,6 +2339,21 @@ window.panoraRecalculateBalances=recalculateBalances;
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
   }
+  async function refreshAdminAllOnDemand(reason='global-manual'){
+    const button=document.querySelector('#adminGlobalRefresh');
+    if(button){button.disabled=true;button.dataset.loading='1';button.setAttribute('aria-busy','true')}
+    try{
+      const ok=await retrySync();
+      if(ok){
+        if(typeof renderAll==='function')renderAll();
+        if(typeof renderCommerce==='function')renderCommerce();
+        window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view:document.querySelector('.view.active')?.id?.replace(/^view-/,'')||''}}));
+      }
+      return Boolean(ok);
+    }finally{
+      if(button){button.disabled=false;delete button.dataset.loading;button.removeAttribute('aria-busy')}
+    }
+  }
   async function refreshAdminOrdersOnDemand(reason='manual'){
     if(!ready||!navigator.onLine)return false;
     const button=document.querySelector('#refreshOrdersCloud');
@@ -2410,7 +2425,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     payments:structuredClone(Array.isArray(payments)?payments:[]),
     restaurants:structuredClone(Array.isArray(restaurants)?restaurants:[])
   });
-  window.panoraCloud={start,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshAll:refreshAdminAllOnDemand,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
@@ -2499,6 +2514,8 @@ window.panoraRecalculateBalances=recalculateBalances;
   });
   window.addEventListener('pageshow',()=>{if(ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('pageshow',30)}});
   document.addEventListener('click',event=>{
+    const globalRefresh=event.target.closest?.('#adminGlobalRefresh');
+    if(globalRefresh){event.preventDefault();refreshAdminAllOnDemand('global-manual').catch(error=>{console.warn('Panora global manual refresh',error);status('Ошибка обновления')});return}
     const refresh=event.target.closest?.('#refreshOrdersCloud');
     if(refresh){event.preventDefault();refreshAdminOrdersOnDemand('manual').catch(error=>{console.warn('Panora manual orders refresh',error);status('Ошибка обновления')});return}
     const commerceNav=event.target.closest?.('.admin-nav button[data-view="orders"], [data-view="orders"], .admin-nav button[data-view="delivery-notes"], [data-view="delivery-notes"]');
