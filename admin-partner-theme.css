@@ -58,9 +58,9 @@ body.admin-page .admin-topbar .admin-logout,
 body.admin-page .admin-topbar .admin-menu-toggle{
   min-height:40px;
   padding:0 12px;
-  border:1px solid rgba(255,255,255,.28);
+  border:1px solid rgba(255,255,255,.26);
   border-radius:10px;
-  background:rgba(255,255,255,.10);
+  background:rgba(255,255,255,.08);
   color:#fff;
   font-size:12px;
   font-weight:700;
@@ -1708,14 +1708,14 @@ body.admin-page .stock-inventory-button:hover{background:#fff4f2}
   body.admin-page .admin-content{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
   body.admin-page .panora-connection-state{bottom:calc(82px + env(safe-area-inset-bottom))!important}
 }
-\n\n/* Panora 10.58 — global bakery refresh + compact mobile overflow menu. */
+\n\n/* Panora 10.59 — global bakery refresh + compact mobile overflow menu. */
 body.admin-page .admin-global-refresh,
 body.admin-page .admin-more-toggle{
   min-height:40px;
   padding:0 12px;
-  border:1px solid rgba(255,255,255,.28);
+  border:1px solid rgba(255,255,255,.26);
   border-radius:10px;
-  background:rgba(255,255,255,.10);
+  background:rgba(255,255,255,.08);
   color:#fff;
   font:700 12px Manrope,Arial,sans-serif;
   cursor:pointer;
@@ -1723,7 +1723,7 @@ body.admin-page .admin-more-toggle{
 }
 body.admin-page .admin-global-refresh{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
 body.admin-page .admin-global-refresh:hover,
-body.admin-page .admin-more-toggle:hover{background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.45)}
+body.admin-page .admin-more-toggle:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.42)}
 body.admin-page .admin-global-refresh:disabled{opacity:.65;cursor:wait}
 body.admin-page .admin-global-refresh-icon{display:inline-block;font-size:18px;line-height:1}
 body.admin-page .admin-global-refresh[data-loading="1"] .admin-global-refresh-icon{animation:panoraAdminRefreshSpin .8s linear infinite}
@@ -1757,7 +1757,7 @@ body.admin-page .admin-more-menu[hidden]{display:none!important}
 }
 
 
-/* Panora 10.58 — one global Bakery system header on desktop and mobile. */
+/* Panora 10.59 — one global Bakery system header on desktop and mobile. */
 body.admin-page .admin-topbar{z-index:1700!important}
 body.admin-page .admin-topbar .admin-top-actions{
   display:flex!important;grid-template-columns:none!important;width:auto!important;max-width:none!important;
@@ -1808,4 +1808,24 @@ body.admin-page .admin-interface-settings select{width:100%;min-height:42px;padd
 @media(max-width:360px){
   body.admin-page .admin-global-refresh{min-width:102px!important;max-width:102px!important;padding:0 8px!important;font-size:11px!important}
   body.admin-page .admin-topbar .brand{font-size:17px!important}
+}
+
+/* Panora 10.59 — compact persistent disclosure for long Bakery sections. */
+body.admin-page .panora-section-fold-toggle{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 11px;
+  border:1px solid #d7ded7;border-radius:10px;background:#fff;color:#315c42;font:800 11px Manrope,Arial,sans-serif;cursor:pointer;white-space:nowrap
+}
+body.admin-page .panora-section-fold-toggle i{font-style:normal;font-size:16px;transition:transform .18s ease}
+body.admin-page .panora-section-fold-toggle[aria-expanded="true"] i{transform:rotate(180deg)}
+body.admin-page .raw-stock-panel.panora-fold-collapsed>.raw-stock-table-wrap,
+body.admin-page .raw-stock-panel.panora-fold-collapsed>.raw-stock-note{display:none!important}
+body.admin-page .raw-stock-panel.panora-fold-collapsed .raw-stock-history-tools{display:none!important}
+body.admin-page #view-stock.panora-stock-movements-collapsed #stockMovementTabs,
+body.admin-page #view-stock.panora-stock-movements-collapsed .stock-movement-table{display:none!important}
+body.admin-page .raw-stock-history-head .panora-section-fold-toggle{align-self:start;margin-left:auto}
+body.admin-page #view-stock .stock-history-head .panora-section-fold-toggle{margin-left:auto}
+@media(max-width:720px){
+ body.admin-page .panora-section-fold-toggle{min-height:42px;padding:0 12px}
+ body.admin-page .raw-stock-history-head .panora-section-fold-toggle,
+ body.admin-page #view-stock .stock-history-head .panora-section-fold-toggle{width:100%;margin:0}
 }

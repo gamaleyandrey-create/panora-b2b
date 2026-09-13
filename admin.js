@@ -245,12 +245,23 @@ function saveRetailOrdersLocal(value){const list=Array.isArray(value)?value:[];l
 function readRetailProductSettings(){try{const value=JSON.parse(localStorage.getItem(RETAIL_PRODUCT_SETTINGS_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 function saveRetailProductSettingsLocal(value){const next=value&&typeof value==='object'?value:{};localStorage.setItem(RETAIL_PRODUCT_SETTINGS_KEY,JSON.stringify(next));return next}
 function retailAdminProducts(){
- let list=[];try{list=JSON.parse(localStorage.getItem('panora-products')||'[]')}catch{}
+ let list=[];
+ try{const live=window.panoraProductRegistry?.();if(Array.isArray(live)&&live.length)list=live}catch{}
+ if(!list.length)try{list=JSON.parse(localStorage.getItem('panora-products')||'[]')}catch{}
  if(!Array.isArray(list)||!list.length)list=[
   {id:'plain',active:true,basePrice:4.5,image:'bread-plain.jpg',names:{ru:'Льняной бездрожжевой хлеб с семенами'}},
   {id:'pumpkin',active:true,basePrice:5,image:'bread-pumpkin.jpg',names:{ru:'Тыквенный бездрожжевой хлеб с семенами'}}
  ];
  return list.filter(product=>product&&product.id&&!product.deletedAt);
+}
+function retailAdminProductImage(product){
+ const image=String(product?.image||product?.imageUrl||product?.image_url||'').trim();
+ if(image&&!/(^|\/)icon\.svg(?:[?#]|$)/i.test(image))return image;
+ const gallery=Array.isArray(product?.gallery)?product.gallery.filter(Boolean):[];
+ if(gallery.length)return String(gallery[0]);
+ if(String(product?.id)==='plain')return'bread-plain.jpg';
+ if(String(product?.id)==='pumpkin')return'bread-pumpkin.jpg';
+ return image||'icon.svg';
 }
 function retailProductLabel(product){return String(product?.names?.ru||product?.nameRu||product?.name_ru||product?.name||PRODUCTS[String(product?.id)]?.ru||product?.id||'Хлеб')}
 function decodeRetailSortOrder(value){
@@ -431,7 +442,7 @@ async function syncAndLoadFinishedStockMovementsCloud(){
 function syncRetailSettingsForm(settings){const form=$('#retailSettingsForm');if(!form)return;['enabled','stockSales','preorders','pickup','delivery','onlinePayment','payOnPickup','preorderOnlineDiscountEnabled','notifyOrderReceived','notifyReady','notifyDelivery','notifyCancelled','pushCustomerEnabled','pushAdminEnabled','pushNewOrder','pushNewMessage','fallbackWhatsApp','fallbackTelegram','fallbackSms','fallbackEmail'].forEach(name=>{if(form.elements[name])form.elements[name].checked=!!settings[name]});['reservationMinutes','preorderCutoffHours','preorderHorizonDays','preorderOnlineDiscountPercent','preorderOnlineDiscountMinDays','pickupLeadMinutes','maxOrdersPerSlot','deliveryMinTotal','deliveryFee','deliveryFreeFrom','maxDeliveriesPerSlot','contactPhone','contactEmail','contactWhatsApp','contactTelegram','pickupNote','paymentProvider','pushQuietFrom','pushQuietTo','pushVapidPublicKey'].forEach(name=>{if(form.elements[name])form.elements[name].value=String(settings[name]??'')});if(form.elements.pickupSlots)form.elements.pickupSlots.value=(settings.pickupSlots||[]).join('\n');if(form.elements.deliverySlots)form.elements.deliverySlots.value=(settings.deliverySlots||[]).join('\n');const label=$('#retailEnabledLabel');if(label)label.textContent=settings.enabled?'Включена':'Выключена'}
 function renderRetailCatalogSettings(){
  const grid=$('#retailCatalogGrid');if(!grid)return;const products=retailAdminProducts(),map=readRetailProductSettings();if(!products.length){grid.innerHTML='<div class="retail-catalog-empty">Нет активных карточек продукции.</div>';return}
- grid.innerHTML=products.map(product=>{const item=retailProductSetting(product,map),inactive=product.active===false;return `<article class="retail-catalog-card ${inactive?'is-inactive':''}" data-retail-product="${adminEscape(item.productId)}"><img src="${adminEscape(product.image||product.imageUrl||product.image_url||'icon.svg')}" alt="${adminEscape(retailProductLabel(product))}" onerror="this.src='icon.svg'"><div class="retail-catalog-card-body"><div class="retail-catalog-title"><div><strong>${adminEscape(retailProductLabel(product))}</strong><small>${inactive?'Товар выключен в карточках продукции':'Товар активен'}</small></div><label class="retail-switch"><input type="checkbox" data-retail-field="enabled" ${item.enabled&&!inactive?'checked':''} ${inactive?'disabled':''}><span></span><em>${item.enabled&&!inactive?'вкл.':'выкл.'}</em></label></div><div class="retail-catalog-controls"><label><span>Розничная цена, €</span><input type="number" min="0" step="0.01" data-retail-field="retailPrice" value="${Number(item.retailPrice||0).toFixed(2)}" ${inactive?'disabled':''}></label><label class="retail-option compact"><input type="checkbox" data-retail-field="stockSales" ${item.stockSales?'checked':''} ${inactive?'disabled':''}><span><strong>Из наличия</strong><small>Можно купить свободный остаток</small></span></label><label class="retail-option compact"><input type="checkbox" data-retail-field="preorders" ${item.preorders?'checked':''} ${inactive?'disabled':''}><span><strong>К выпечке</strong><small>Можно заказать на будущий день</small></span></label></div></div></article>`}).join('');
+ grid.innerHTML=products.map(product=>{const item=retailProductSetting(product,map),inactive=product.active===false;return `<article class="retail-catalog-card ${inactive?'is-inactive':''}" data-retail-product="${adminEscape(item.productId)}"><img src="${adminEscape(retailAdminProductImage(product))}" alt="${adminEscape(retailProductLabel(product))}" onerror="this.src='icon.svg'"><div class="retail-catalog-card-body"><div class="retail-catalog-title"><div><strong>${adminEscape(retailProductLabel(product))}</strong><small>${inactive?'Товар выключен в карточках продукции':'Товар активен'}</small></div><label class="retail-switch"><input type="checkbox" data-retail-field="enabled" ${item.enabled&&!inactive?'checked':''} ${inactive?'disabled':''}><span></span><em>${item.enabled&&!inactive?'вкл.':'выкл.'}</em></label></div><div class="retail-catalog-controls"><label><span>Розничная цена, €</span><input type="number" min="0" step="0.01" data-retail-field="retailPrice" value="${Number(item.retailPrice||0).toFixed(2)}" ${inactive?'disabled':''}></label><label class="retail-option compact"><input type="checkbox" data-retail-field="stockSales" ${item.stockSales?'checked':''} ${inactive?'disabled':''}><span><strong>Из наличия</strong><small>Можно купить свободный остаток</small></span></label><label class="retail-option compact"><input type="checkbox" data-retail-field="preorders" ${item.preorders?'checked':''} ${inactive?'disabled':''}><span><strong>К выпечке</strong><small>Можно заказать на будущий день</small></span></label></div></div></article>`}).join('');
  grid.querySelectorAll('[data-retail-field="enabled"]').forEach(input=>input.addEventListener('change',()=>{const em=input.closest('.retail-switch')?.querySelector('em');if(em)em.textContent=input.checked?'вкл.':'выкл.'}));
 }
 function collectRetailCatalogForm(){const current=readRetailProductSettings(),next={...current};$$('#retailCatalogGrid [data-retail-product]').forEach((card,index)=>{const product=retailAdminProducts().find(p=>String(p.id)===String(card.dataset.retailProduct));if(!product)return;const get=name=>card.querySelector(`[data-retail-field="${name}"]`);const previous=retailProductSetting(product,current);next[String(product.id)]=normalizeRetailProductSetting(product,{productId:String(product.id),enabled:!!get('enabled')?.checked,stockSales:!!get('stockSales')?.checked,preorders:!!get('preorders')?.checked,retailPrice:Math.max(0,Number(get('retailPrice')?.value||0)),sortOrder:index,retailLimit:previous.retailLimit,limitConfigured:previous.limitConfigured})});return next}
@@ -994,7 +1005,7 @@ function updateStockAdjustPreview(){
 }
 $$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
-// Panora 10.58 — compact global header actions on mobile.
+// Panora 10.59 — compact global header actions on mobile.
 (()=>{
  const toggle=document.querySelector('#adminMoreToggle'),menu=document.querySelector('#adminMoreMenu'),language=document.querySelector('#adminLanguage'),settingsLanguage=document.querySelector('#adminSettingsLanguage'),logout=document.querySelector('#adminMoreLogout'),push=document.querySelector('#adminMorePush');
  if(!toggle||!menu)return;
@@ -1206,3 +1217,33 @@ async function retailSendTestPush(){
 }
 function initRetailNotificationCenter(){const open=$('#retailNotificationCenter'),dialog=$('#retailNotificationsDialog'),close=$('#retailNotificationsClose'),enable=$('#retailEnableAdminPush');if(open)open.addEventListener('click',async()=>{if(dialog&&!dialog.open)dialog.showModal();await retailRenderNotificationCenter();await retailMarkAdminNotificationsRead()});if(close)close.addEventListener('click',()=>dialog?.close());if(enable)enable.addEventListener('click',async()=>{try{await retailToggleAdminPush()}catch(error){const state=$('#retailAdminPushState');if(state)state.textContent=`Push: ${error.message||'ошибка подключения'}`}});const test=$('#retailTestPush');if(test)test.addEventListener('click',retailSendTestPush);const run=()=>retailRenderNotificationCenter({showBrowser:true});const syncPush=()=>retailAdminPushStatus().then(retailRenderAdminPushState).catch(()=>{});window.addEventListener('panora:authenticated',()=>{run();setTimeout(()=>retailEnsureAdminPush({prompt:false}),500)});setTimeout(()=>{run();retailEnsureAdminPush({prompt:false})},1200);window.addEventListener('focus',()=>{if(window.panoraSupabaseSession?.access_token){run();syncPush()}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRetailNotificationCenter);else initRetailNotificationCenter();
+
+/* Panora 10.59 — persistent disclosure controls for long Bakery history sections. */
+(()=>{
+ const KEY='panora-admin-fold-sections-v1059';
+ const read=()=>{try{const value=JSON.parse(localStorage.getItem(KEY)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}};
+ const write=state=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}};
+ const labels=()=>{const l=String(document.documentElement.lang||'ru').slice(0,2);return l==='es'?{show:'Mostrar',hide:'Ocultar'}:l==='en'?{show:'Show',hide:'Hide'}:{show:'Показать',hide:'Скрыть'}};
+ function bind(){
+  const state=read();
+  const defs=[
+   {key:'raw-history',head:document.querySelector('.raw-stock-history-head'),root:document.querySelector('.raw-stock-history-head')?.closest('.raw-stock-panel'),collapsedClass:'panora-fold-collapsed'},
+   {key:'stock-movements',head:document.querySelector('#view-stock .stock-history-head'),root:document.querySelector('#view-stock'),collapsedClass:'panora-stock-movements-collapsed'}
+  ];
+  defs.forEach(def=>{
+   if(!def.head||!def.root||def.head.querySelector('[data-panora-section-fold]'))return;
+   const button=document.createElement('button');button.type='button';button.className='panora-section-fold-toggle';button.dataset.panoraSectionFold=def.key;
+   const apply=open=>{
+    def.root.classList.toggle(def.collapsedClass,!open);
+    button.setAttribute('aria-expanded',open?'true':'false');
+    const text=labels();button.innerHTML=`<span>${open?text.hide:text.show}</span><i aria-hidden="true">⌄</i>`;
+    state[def.key]=Boolean(open);write(state);
+   };
+   button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();apply(button.getAttribute('aria-expanded')!=='true')});
+   def.head.append(button);
+   apply(state[def.key]===true);
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+ window.addEventListener('panora:language-changed',()=>setTimeout(bind,0));
+})();
