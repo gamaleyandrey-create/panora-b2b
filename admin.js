@@ -994,18 +994,19 @@ function updateStockAdjustPreview(){
 }
 $$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
-// Panora 10.57 — compact global header actions on mobile.
+// Panora 10.58 — compact global header actions on mobile.
 (()=>{
- const toggle=document.querySelector('#adminMoreToggle'),menu=document.querySelector('#adminMoreMenu'),language=document.querySelector('#adminLanguage'),logout=document.querySelector('#adminMoreLogout'),push=document.querySelector('#adminMorePush');
+ const toggle=document.querySelector('#adminMoreToggle'),menu=document.querySelector('#adminMoreMenu'),language=document.querySelector('#adminLanguage'),settingsLanguage=document.querySelector('#adminSettingsLanguage'),logout=document.querySelector('#adminMoreLogout'),push=document.querySelector('#adminMorePush');
  if(!toggle||!menu)return;
  const close=()=>{menu.hidden=true;toggle.setAttribute('aria-expanded','false')};
  const open=()=>{menu.hidden=false;toggle.setAttribute('aria-expanded','true');syncPush()};
  const currentLanguage=()=>String(language?.value||localStorage.getItem('panora-admin-lang')||'ru');
- const syncLanguage=()=>{const current=currentLanguage();menu.querySelectorAll('[data-admin-language]').forEach(button=>{const active=button.dataset.adminLanguage===current;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false')})};
+ const syncLanguage=()=>{const current=currentLanguage();menu.querySelectorAll('[data-admin-language]').forEach(button=>{const active=button.dataset.adminLanguage===current;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false')});if(settingsLanguage&&settingsLanguage.value!==current)settingsLanguage.value=current};
  const pushCopy=(active=false)=>{const current=currentLanguage();return active?(current==='es'?'Push activado ✓':current==='en'?'Push enabled ✓':'Push включён ✓'):(current==='es'?'Activar Push':current==='en'?'Enable Push':'Включить Push')};
  const syncPush=async detail=>{if(!push)return;let active=Boolean(detail?.active);if(!detail){try{active=Boolean((await window.panoraAdminWebPush?.status?.())?.active)}catch{active=false}}push.textContent=pushCopy(active);push.setAttribute('aria-pressed',active?'true':'false');push.dataset.active=active?'1':'0'};
  toggle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();menu.hidden?open():close()});
  menu.querySelectorAll('[data-admin-language]').forEach(button=>button.addEventListener('click',()=>{if(!language)return;language.value=button.dataset.adminLanguage;language.dispatchEvent(new Event('change',{bubbles:true}));syncLanguage();syncPush();close()}));
+ settingsLanguage?.addEventListener('change',()=>{if(!language)return;language.value=settingsLanguage.value;language.dispatchEvent(new Event('change',{bubbles:true}));syncLanguage();syncPush()});
  push?.addEventListener('click',async()=>{push.disabled=true;try{await window.panoraAdminWebPush?.toggle?.();await syncPush()}catch(error){console.warn('Panora header Web Push',error)}finally{push.disabled=false}});
  logout?.addEventListener('click',()=>{close();document.querySelector('#adminLogout')?.click()});
  language?.addEventListener('change',()=>{syncLanguage();syncPush()});
