@@ -920,3 +920,50 @@
     flex-direction:row!important;
   }
 }
+
+/* Panora 10.63 — orders: primary action in page head, filter beside Active / Archive. */
+#view-orders .order-list-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 14px;
+}
+#view-orders .order-list-toolbar .order-archive-tabs{
+  flex:1 1 auto;
+  min-width:0;
+  margin:0!important;
+}
+#view-orders .order-list-toolbar #orderFilterToggle{
+  flex:0 0 auto;
+  min-height:44px;
+}
+@media(min-width:721px){
+  #view-orders>.order-filter-card{
+    position:static!important;
+    top:auto!important;
+    right:auto!important;
+    width:100%!important;
+    margin:-2px 0 14px!important;
+    box-shadow:0 10px 28px rgba(31,50,37,.10)!important;
+  }
+}
+@media(max-width:720px){
+  #view-orders .order-list-toolbar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+    margin:0 0 12px!important;
+  }
+  #view-orders .order-list-toolbar .order-archive-tabs{
+    margin:0!important;
+  }
+  #view-orders .head-actions{
+    grid-template-columns:1fr!important;
+  }
+  #view-orders #enableAdminNotifications,
+  #view-orders .notification-control-group,
+  #view-orders #addOrder{
+    grid-column:1!important;
+  }
+}

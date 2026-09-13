@@ -1871,3 +1871,21 @@ html body.admin-page header.admin-topbar button.admin-more-toggle:focus-visible{
 }
 html body.admin-page header.admin-topbar button.admin-global-refresh[data-loading="1"]{background:#315a41!important}
 html body.admin-page header.admin-topbar button.admin-global-refresh[data-success="1"]{background:#3b694c!important}
+
+/* Panora 10.63 — retail settings hierarchy and compact single-location card. */
+@media(min-width:721px){
+  #view-retail-settings .retail-storefront-link{
+    margin-top:14px!important;
+  }
+  #view-retail-settings .retail-location-card{
+    padding:14px 18px!important;
+    margin-bottom:14px!important;
+    gap:18px!important;
+  }
+  #view-retail-settings .retail-location-card>div>span{
+    margin-bottom:2px!important;
+  }
+  #view-retail-settings .retail-location-card p{
+    margin-top:3px!important;
+  }
+}
