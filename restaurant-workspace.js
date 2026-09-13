@@ -2180,7 +2180,7 @@
   });
 })();
 
-/* Panora 10.59 — Partner global header refresh / language / Push / logout. */
+/* Panora 10.61 — Partner global header refresh / language / Push / logout. */
 (()=>{
  const refresh=document.querySelector('#partnerGlobalRefresh'),more=document.querySelector('#partnerMoreToggle'),menu=document.querySelector('#partnerMoreMenu'),push=document.querySelector('#partnerMorePush'),logout=document.querySelector('#partnerMoreLogout'),accountButton=document.querySelector('#profileButton');
  if(!refresh||!more||!menu)return;

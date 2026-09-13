@@ -1,4 +1,4 @@
-/* Panora 10.59 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
+/* Panora 10.61 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
 
 /* ===== migrated from mobile-partner-profile-v411.css ===== */
 /* Panora 4.11 — restore partner profile entry on mobile.
@@ -162,7 +162,7 @@
   body:not(.admin-page) .how-section{padding-bottom:65px!important}
 }
 
-/* Panora 10.59 — unified Partner system header: Panora | Refresh | More. */
+/* Panora 10.61 — unified Partner system header: Panora | Refresh | More. */
 body:not(.admin-page) .topbar{z-index:1700!important;overflow:visible!important}
 body:not(.admin-page) .topbar .partner-system-actions{
   display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;min-width:0!important;overflow:visible!important
@@ -205,7 +205,7 @@ body:not(.admin-page) .partner-more-account.account-entry{min-width:0!important;
 @media(max-width:360px){.partner-global-refresh{min-width:102px!important;max-width:102px!important;padding:0 8px!important;font-size:11px!important}}
 
 
-/* Panora 10.60 — stable Partner system header controls. */
+/* Panora 10.61 — stable Partner system header controls. */
 html body:not(.admin-page) header.topbar button.partner-global-refresh,
 html body:not(.admin-page) header.topbar button.partner-more-toggle{
   -webkit-appearance:none!important;appearance:none!important;
@@ -224,3 +224,23 @@ html body:not(.admin-page) header.topbar button.partner-global-refresh:disabled{
 html body:not(.admin-page) header.topbar button.partner-global-refresh[data-success="1"]{
   background-color:rgba(139,196,155,.18)!important;border-color:rgba(191,225,201,.44)!important
 }
+
+
+/* Panora 10.61 — same stable refresh treatment on Partner desktop/mobile. */
+html body:not(.admin-page) header.topbar button.partner-global-refresh,
+html body:not(.admin-page) header.topbar button.partner-global-refresh:hover,
+html body:not(.admin-page) header.topbar button.partner-global-refresh:active,
+html body:not(.admin-page) header.topbar button.partner-global-refresh:focus,
+html body:not(.admin-page) header.topbar button.partner-global-refresh:focus-visible,
+html body:not(.admin-page) header.topbar button.partner-global-refresh:disabled,
+html body:not(.admin-page) header.topbar button.partner-more-toggle,
+html body:not(.admin-page) header.topbar button.partner-more-toggle:hover,
+html body:not(.admin-page) header.topbar button.partner-more-toggle:active,
+html body:not(.admin-page) header.topbar button.partner-more-toggle:focus,
+html body:not(.admin-page) header.topbar button.partner-more-toggle:focus-visible{
+  -webkit-appearance:none!important;appearance:none!important;background:#294b37!important;background-image:none!important;
+  border:1px solid rgba(255,255,255,.30)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  opacity:1!important;filter:none!important;box-shadow:none!important;outline:none!important
+}
+html body:not(.admin-page) header.topbar button.partner-global-refresh[data-loading="1"]{background:#315a41!important}
+html body:not(.admin-page) header.topbar button.partner-global-refresh[data-success="1"]{background:#3b694c!important}
