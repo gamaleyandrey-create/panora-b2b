@@ -2060,7 +2060,7 @@ body.panora-workspace-checkout #checkoutModal{z-index:120!important}
 
 .rw-order-bakery-audit{margin:.55rem 0;padding:.5rem .65rem;border-radius:10px;background:#f4f1e9;color:#58615b;font-size:12px;font-weight:700;line-height:1.35}
 
-/* Panora 10.61 — compact disclosures for long Partner profile sections. */
+/* Panora 10.62 — compact disclosures for long Partner profile sections. */
 .restaurant-workspace .rw-collapsible-section>header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important}
 .restaurant-workspace .rw-collapsible-section.is-collapsed>:not(header){display:none!important}
 .restaurant-workspace .rw-section-fold-toggle{

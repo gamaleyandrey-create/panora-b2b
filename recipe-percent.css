@@ -338,7 +338,7 @@
   }
 }
 
-/* Panora 10.61 — recipes are compact disclosures on desktop and mobile. */
+/* Panora 10.62 — recipes are compact disclosures on desktop and mobile. */
 #recipeList .recipe-card{gap:0!important;overflow:hidden}
 #recipeList .recipe-card-head{cursor:pointer;align-items:center!important}
 #recipeList .recipe-mobile-toggle{
@@ -356,7 +356,7 @@
 }
 
 
-/* Panora 10.61 — harden recipe disclosure on desktop and mobile. The body also
+/* Panora 10.62 — harden recipe disclosure on desktop and mobile. The body also
    receives the native hidden attribute in JS so later theme rules cannot leave
    a collapsed recipe visually expanded. */
 body.admin-page #recipeList .recipe-card-body[hidden]{display:none!important}

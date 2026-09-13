@@ -1,4 +1,4 @@
-/* Panora 10.61 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
+/* Panora 10.62 — partner mobile/profile styles. Consolidated in the exact previous cascade order. */
 
 /* ===== migrated from mobile-partner-profile-v411.css ===== */
 /* Panora 4.11 — restore partner profile entry on mobile.
@@ -162,7 +162,7 @@
   body:not(.admin-page) .how-section{padding-bottom:65px!important}
 }
 
-/* Panora 10.61 — unified Partner system header: Panora | Refresh | More. */
+/* Panora 10.62 — unified Partner system header: Panora | Refresh | More. */
 body:not(.admin-page) .topbar{z-index:1700!important;overflow:visible!important}
 body:not(.admin-page) .topbar .partner-system-actions{
   display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;min-width:0!important;overflow:visible!important
@@ -205,7 +205,7 @@ body:not(.admin-page) .partner-more-account.account-entry{min-width:0!important;
 @media(max-width:360px){.partner-global-refresh{min-width:102px!important;max-width:102px!important;padding:0 8px!important;font-size:11px!important}}
 
 
-/* Panora 10.61 — stable Partner system header controls. */
+/* Panora 10.62 — stable Partner system header controls. */
 html body:not(.admin-page) header.topbar button.partner-global-refresh,
 html body:not(.admin-page) header.topbar button.partner-more-toggle{
   -webkit-appearance:none!important;appearance:none!important;
@@ -226,7 +226,7 @@ html body:not(.admin-page) header.topbar button.partner-global-refresh[data-succ
 }
 
 
-/* Panora 10.61 — same stable refresh treatment on Partner desktop/mobile. */
+/* Panora 10.62 — same stable refresh treatment on Partner desktop/mobile. */
 html body:not(.admin-page) header.topbar button.partner-global-refresh,
 html body:not(.admin-page) header.topbar button.partner-global-refresh:hover,
 html body:not(.admin-page) header.topbar button.partner-global-refresh:active,
