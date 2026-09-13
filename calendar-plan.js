@@ -88,7 +88,7 @@ function renderBakeCalendar(){
    const badge=history?`<small class="calendar-history-badge">${l==='ru'?'Только просмотр':l==='es'?'Solo lectura':'Read only'}</small>`:'';
    const disabled=history?' disabled':'';
    const aria=history?(l==='ru'?'Прошедшая выпечка':l==='es'?'Horneado pasado':'Past bake'):(entries.length?(l==='ru'?'Открыть выпечку':l==='es'?'Abrir horneado':'Open bake'):(l==='ru'?'Запланировать выпечку':l==='es'?'Programar horneado':'Schedule bake'));
-   cells.push(`<button class="calendar-day ${date===today?'today':''} ${entries.length?'has-bake':''} ${[0,6].includes(d.getDay())?'weekend':''} ${readonly}" data-calendar-date="${date}" aria-label="${aria} ${dayLabel}"${disabled}><em><span class="weekday-name">${weekdayLabel}</span><span class="date-name">${dateLabel}</span></em>${badge}${details}</button>`);
+   cells.push(`<button class="calendar-day ${date===today?'today':''} ${entries.length?'has-bake':''} ${[0,6].includes(d.getDay())?'weekend':''} ${readonly}" data-calendar-date="${date}" data-bake-count="${entries.length}" aria-label="${aria} ${dayLabel}"${disabled}><em><span class="weekday-name">${weekdayLabel}</span><span class="date-name">${dateLabel}</span></em>${badge}${details}</button>`);
  }
  document.querySelector('#calendarGrid').innerHTML=cells.join('');
  const monthPlans=plans.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today)),planned=monthPlans.reduce((sum,p)=>sum+Number(p.planned||0),0),ordered=monthPlans.reduce((sum,p)=>sum+Number(p.ordered||0),0);

@@ -905,7 +905,11 @@ function stockProductCountLabel(value){
  const n=Math.max(0,Math.round(Number(value)||0)),m10=n%10,m100=n%100;
  return `${n} ${m10===1&&m100!==11?'товар':m10>=2&&m10<=4&&(m100<12||m100>14)?'товара':'товаров'}`;
 }
+const STOCK_PRODUCT_FOLD_KEY='panora-stock-product-fold-v1061';
+function stockProductFoldState(){try{const value=JSON.parse(localStorage.getItem(STOCK_PRODUCT_FOLD_KEY)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}}
+function saveStockProductFoldState(value){try{localStorage.setItem(STOCK_PRODUCT_FOLD_KEY,JSON.stringify(value))}catch{}}
 function renderStock(){
+ const stockFold=stockProductFoldState();
  const ids=stockProductIds(),effective=stockEffectiveMovements(),cutoff=stockCutoffDate(30);
  const cards=ids.map(pid=>{
   const raw=effective.filter(m=>String(m.product)===String(pid)).reduce((sum,m)=>sum+signed(m),0);
@@ -921,19 +925,24 @@ function renderStock(){
  $('#stockNeedsInventory').textContent=stockProductCountLabel(inventoryNeeded.length);
  $('#stockWrittenOff30').textContent=`${writtenOff30} ${t('pcs')}`;
  $('#stockCards').innerHTML=cards.map(x=>{
-  if(!x.inventoryConfirmed)return `<article class="stock-product-card has-discrepancy ${x.shortage?'has-shortage':''}">
-   <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Резерв ${x.shortage} шт. не покрыт</span>`:''}</div>
-   <div class="stock-product-main stock-product-main-unconfirmed"><small>Фактический остаток</small><b>Остаток не подтверждён</b><em>Расчётный: ${x.raw} шт.</em></div>
+  const open=stockFold[String(x.pid)]===true;
+  const title=adminEscape(stockProductName(x.pid));
+  const compact=x.inventoryConfirmed?`${x.onHand} ${t('pcs')}`:'Не подтверждён';
+  const shortageBadge=x.shortage?`<span class="stock-product-warning">${x.inventoryConfirmed?`Не хватает ${x.shortage} шт.`:`Резерв ${x.shortage} шт. не покрыт`}</span>`:'';
+  if(!x.inventoryConfirmed)return `<article class="stock-product-card has-discrepancy ${x.shortage?'has-shortage':''} ${open?'is-stock-open':'is-stock-collapsed'}">
+   <div class="stock-product-card-head"><button type="button" class="stock-product-fold-toggle" data-stock-card-toggle="${adminEscape(x.pid)}" aria-expanded="${open?'true':'false'}"><span><strong>${title}</strong><small>Фактический остаток</small></span><b>${compact}</b><i aria-hidden="true">⌄</i></button>${shortageBadge}</div>
+   <div class="stock-product-card-body" ${open?'':'hidden'}><div class="stock-product-main stock-product-main-unconfirmed"><small>Фактический остаток</small><b>Остаток не подтверждён</b><em>Расчётный: ${x.raw} шт.</em></div>
    <dl><div><dt>Активные резервы</dt><dd>${x.reserved} ${t('pcs')}</dd></div><div><dt>Свободно</dt><dd>—</dd></div></dl>
-   <button type="button" class="stock-inventory-button" data-stock-inventory="${adminEscape(x.pid)}">Провести инвентаризацию</button>
+   <button type="button" class="stock-inventory-button" data-stock-inventory="${adminEscape(x.pid)}">Провести инвентаризацию</button></div>
   </article>`;
-  return `<article class="stock-product-card ${x.shortage?'has-shortage':''}">
-   <div class="stock-product-card-head"><strong>${adminEscape(stockProductName(x.pid))}</strong>${x.shortage?`<span>Не хватает ${x.shortage} шт.</span>`:''}</div>
-   <div class="stock-product-main"><small>Подтверждено на складе</small><b>${x.onHand} ${t('pcs')}</b></div>
+  return `<article class="stock-product-card ${x.shortage?'has-shortage':''} ${open?'is-stock-open':'is-stock-collapsed'}">
+   <div class="stock-product-card-head"><button type="button" class="stock-product-fold-toggle" data-stock-card-toggle="${adminEscape(x.pid)}" aria-expanded="${open?'true':'false'}"><span><strong>${title}</strong><small>Подтверждено на складе</small></span><b>${compact}</b><i aria-hidden="true">⌄</i></button>${shortageBadge}</div>
+   <div class="stock-product-card-body" ${open?'':'hidden'}><div class="stock-product-main"><small>Подтверждено на складе</small><b>${x.onHand} ${t('pcs')}</b></div>
    <dl class="stock-channel-grid"><div><dt>B2B резерв</dt><dd>${x.partnerReserved} ${t('pcs')}</dd></div><div><dt>Розничные заказы</dt><dd>${x.retailReserved} ${t('pcs')}</dd></div><div><dt>Свободно после резервов</dt><dd>${x.free} ${t('pcs')}</dd></div><div class="stock-retail-available"><dt>Доступно Рознице сейчас</dt><dd>${x.retailAvailable} ${t('pcs')}</dd></div></dl>
-   <div class="stock-retail-allocation"><label><span>Выделено в Розницу, шт.</span><input type="number" min="0" max="9999" step="1" inputmode="numeric" value="${x.retailLimit}" data-stock-retail-limit="${adminEscape(x.pid)}"></label><button type="button" class="secondary" data-stock-retail-all="${adminEscape(x.pid)}" data-stock-retail-free="${x.free}">Выделить всё свободное</button><small>Витрина получит не больше этого лимита и никогда не больше фактически свободного остатка.</small></div>
+   <div class="stock-retail-allocation"><label><span>Выделено в Розницу, шт.</span><input type="number" min="0" max="9999" step="1" inputmode="numeric" value="${x.retailLimit}" data-stock-retail-limit="${adminEscape(x.pid)}"></label><button type="button" class="secondary" data-stock-retail-all="${adminEscape(x.pid)}" data-stock-retail-free="${x.free}">Выделить всё свободное</button><small>Витрина получит не больше этого лимита и никогда не больше фактически свободного остатка.</small></div></div>
   </article>`;
  }).join('');
+ $$('[data-stock-card-toggle]').forEach(button=>button.onclick=()=>{const pid=String(button.dataset.stockCardToggle||''),card=button.closest('.stock-product-card'),body=card?.querySelector('.stock-product-card-body'),open=button.getAttribute('aria-expanded')!=='true';if(!card||!body)return;button.setAttribute('aria-expanded',open?'true':'false');body.hidden=!open;card.classList.toggle('is-stock-open',open);card.classList.toggle('is-stock-collapsed',!open);stockFold[pid]=open;saveStockProductFoldState(stockFold)});
  const uncovered=cards.reduce((sum,x)=>sum+x.shortage,0),warningRoot=$('#stockWarnings');
  if(inventoryNeeded.length||uncovered>0){
   const first=inventoryNeeded[0]?.pid||'';
@@ -1005,7 +1014,7 @@ function updateStockAdjustPreview(){
 }
 $$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
-// Panora 10.59 — compact global header actions on mobile.
+// Panora 10.61 — compact global header actions on mobile.
 (()=>{
  const toggle=document.querySelector('#adminMoreToggle'),menu=document.querySelector('#adminMoreMenu'),language=document.querySelector('#adminLanguage'),settingsLanguage=document.querySelector('#adminSettingsLanguage'),logout=document.querySelector('#adminMoreLogout'),push=document.querySelector('#adminMorePush');
  if(!toggle||!menu)return;
@@ -1218,7 +1227,7 @@ async function retailSendTestPush(){
 function initRetailNotificationCenter(){const open=$('#retailNotificationCenter'),dialog=$('#retailNotificationsDialog'),close=$('#retailNotificationsClose'),enable=$('#retailEnableAdminPush');if(open)open.addEventListener('click',async()=>{if(dialog&&!dialog.open)dialog.showModal();await retailRenderNotificationCenter();await retailMarkAdminNotificationsRead()});if(close)close.addEventListener('click',()=>dialog?.close());if(enable)enable.addEventListener('click',async()=>{try{await retailToggleAdminPush()}catch(error){const state=$('#retailAdminPushState');if(state)state.textContent=`Push: ${error.message||'ошибка подключения'}`}});const test=$('#retailTestPush');if(test)test.addEventListener('click',retailSendTestPush);const run=()=>retailRenderNotificationCenter({showBrowser:true});const syncPush=()=>retailAdminPushStatus().then(retailRenderAdminPushState).catch(()=>{});window.addEventListener('panora:authenticated',()=>{run();setTimeout(()=>retailEnsureAdminPush({prompt:false}),500)});setTimeout(()=>{run();retailEnsureAdminPush({prompt:false})},1200);window.addEventListener('focus',()=>{if(window.panoraSupabaseSession?.access_token){run();syncPush()}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRetailNotificationCenter);else initRetailNotificationCenter();
 
-/* Panora 10.59 — persistent disclosure controls for long Bakery history sections. */
+/* Panora 10.61 — persistent disclosure controls for long Bakery history sections. */
 (()=>{
  const KEY='panora-admin-fold-sections-v1059';
  const read=()=>{try{const value=JSON.parse(localStorage.getItem(KEY)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}};

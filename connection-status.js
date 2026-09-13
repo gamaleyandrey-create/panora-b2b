@@ -210,6 +210,9 @@
     return'synced';
   };
   window.addEventListener('panora:restaurant-sync',e=>{const d=e.detail||{};show(mapState(d.type,d.text),d.text)});
+  window.addEventListener('panora:admin-global-refreshed',()=>show('synced','Актуально'));
+  window.addEventListener('panora:partner-global-refreshed',()=>show('synced','Актуально'));
+  window.addEventListener('panora:retail-global-refreshed',()=>show('synced','Актуально'));
   window.addEventListener('online',()=>show('loading','Восстанавливаем актуальные данные…'));
   window.addEventListener('offline',()=>show('offline'));
   const observeAdmin=()=>{

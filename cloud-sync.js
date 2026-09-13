@@ -2340,18 +2340,22 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
   }
   async function refreshAdminAllOnDemand(reason='global-manual'){
-    const button=document.querySelector('#adminGlobalRefresh');
-    if(button){button.disabled=true;button.dataset.loading='1';button.setAttribute('aria-busy','true')}
+    const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');
+    const copy=()=>{const l=String(document.querySelector('#adminLanguage')?.value||'ru');return l==='es'?{idle:'Actualizar',busy:'Actualizando…',done:'✓ Actualizado'}:l==='en'?{idle:'Refresh',busy:'Refreshing…',done:'✓ Updated'}:{idle:'Обновить',busy:'Обновляем…',done:'✓ Обновлено'}};
+    let success=false;
+    if(button){button.disabled=true;button.dataset.loading='1';delete button.dataset.success;button.setAttribute('aria-busy','true');if(label)label.textContent=copy().busy}
     try{
-      const ok=await retrySync();
+      const ok=await retrySync();success=Boolean(ok);
       if(ok){
         if(typeof renderAll==='function')renderAll();
         if(typeof renderCommerce==='function')renderCommerce();
+        status('Облако ✓');
         window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view:document.querySelector('.view.active')?.id?.replace(/^view-/,'')||''}}));
+        if(button){delete button.dataset.loading;button.dataset.success='1';if(label)label.textContent=copy().done}
       }
       return Boolean(ok);
     }finally{
-      if(button){button.disabled=false;delete button.dataset.loading;button.removeAttribute('aria-busy')}
+      if(button){button.disabled=false;button.removeAttribute('aria-busy');if(!success){delete button.dataset.loading;delete button.dataset.success;if(label)label.textContent=copy().idle}else setTimeout(()=>{delete button.dataset.success;if(label)label.textContent=copy().idle},1100)}
     }
   }
   async function refreshAdminOrdersOnDemand(reason='manual'){

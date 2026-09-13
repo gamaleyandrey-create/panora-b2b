@@ -56,3 +56,61 @@
   .calendar-day.has-bake>span i{margin-top:2px!important;font-size:8.5px!important;line-height:1.12!important}
   .calendar-help{margin-top:8px!important;font-size:11px!important}
 }
+
+
+/* Panora 10.61 — mobile calendar keeps the same Mon–Sun structure as desktop. */
+@media(max-width:900px){
+  body.admin-page #view-plan .bake-calendar{overflow-x:hidden!important;padding:10px!important}
+  body.admin-page #view-plan .calendar-weekdays{
+    display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;
+    width:100%!important;min-width:0!important;gap:3px!important;margin-bottom:3px!important
+  }
+  body.admin-page #view-plan .calendar-weekdays b{
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    min-height:22px!important;padding:2px 0!important;font-size:9px!important;line-height:1!important
+  }
+  body.admin-page #view-plan .calendar-grid{
+    display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;
+    width:100%!important;min-width:0!important;gap:3px!important
+  }
+  body.admin-page #view-plan .calendar-empty{
+    display:block!important;height:42px!important;min-height:42px!important
+  }
+  body.admin-page #view-plan .calendar-grid .calendar-empty.calendar-filtered{
+    display:block!important;height:0!important;min-height:0!important
+  }
+  body.admin-page #view-plan .calendar-day{
+    position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;min-width:0!important;height:42px!important;min-height:42px!important;
+    padding:2px!important;overflow:hidden!important;border-radius:8px!important
+  }
+  body.admin-page #view-plan .calendar-day>em{
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;height:34px!important;min-height:34px!important;padding:0!important
+  }
+  body.admin-page #view-plan .calendar-day .weekday-name{display:none!important}
+  body.admin-page #view-plan .calendar-day .date-name{
+    display:block!important;font-size:12px!important;line-height:1!important;margin:0!important;padding:0!important
+  }
+  body.admin-page #view-plan .calendar-day.has-bake{
+    height:42px!important;min-height:42px!important;padding:2px!important;border-width:1px!important
+  }
+  body.admin-page #view-plan .calendar-day.has-bake>em{height:34px!important;min-height:34px!important;padding:0!important}
+  body.admin-page #view-plan .calendar-day.has-bake>span,
+  body.admin-page #view-plan .calendar-day .calendar-history-badge{display:none!important}
+  body.admin-page #view-plan .calendar-day.has-bake::after{
+    content:attr(data-bake-count)!important;display:grid!important;place-items:center!important;
+    position:absolute!important;right:2px!important;bottom:2px!important;min-width:13px!important;height:13px!important;
+    padding:0 2px!important;border-radius:999px!important;background:#315b42!important;color:#fff!important;
+    font:800 8px/1 Manrope,Arial,sans-serif!important
+  }
+  body.admin-page #view-plan .bake-calendar header{grid-template-columns:1fr 1fr!important;gap:6px!important}
+  body.admin-page #view-plan .bake-calendar header h3{grid-column:1/-1!important;grid-row:1!important;font-size:18px!important}
+  body.admin-page #view-plan .bake-calendar header button{min-height:38px!important;padding:7px 5px!important;font-size:11px!important}
+}
+@media(max-width:380px){
+  body.admin-page #view-plan .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+  body.admin-page #view-plan .calendar-day{height:38px!important;min-height:38px!important}
+  body.admin-page #view-plan .calendar-day>em,body.admin-page #view-plan .calendar-day.has-bake>em{height:30px!important;min-height:30px!important}
+  body.admin-page #view-plan .calendar-day .date-name{font-size:11px!important}
+}
