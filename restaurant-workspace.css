@@ -2070,3 +2070,18 @@ body.panora-workspace-checkout #checkoutModal{z-index:120!important}
 .restaurant-workspace .rw-section-fold-toggle i{font-style:normal;font-size:16px;transition:transform .18s ease}
 .restaurant-workspace .rw-section-fold-toggle[aria-expanded="true"] i{transform:rotate(180deg)}
 @media(max-width:700px){.restaurant-workspace .rw-section-fold-toggle{min-height:42px}.restaurant-workspace .rw-collapsible-section>header{align-items:center!important}}
+
+/* Panora 10.64 — authenticated Partner desktop: keep global actions clean and remove the duplicate close button. */
+@media(min-width:721px){
+  body.panora-partner-authenticated header.topbar{
+    padding-left:clamp(24px,4vw,72px)!important;
+    padding-right:clamp(24px,4vw,72px)!important;
+    justify-content:flex-end!important;
+  }
+  body.panora-partner-authenticated header.topbar .brand{display:none!important}
+  body.panora-partner-authenticated .restaurant-workspace .rw-head .close-button{display:none!important}
+  body.panora-partner-authenticated .restaurant-workspace .rw-quick-actions{
+    align-items:center;
+    justify-content:flex-start;
+  }
+}
