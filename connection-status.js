@@ -185,7 +185,7 @@
       el.classList.remove('is-busy');
     }else if(stale){
       title.textContent='Не удалось проверить обновления';
-      detail.textContent='Показаны сохранённые данные. Нажмите «Обновить», когда связь станет стабильнее.';
+      detail.textContent='Показаны сохранённые данные. Panora повторит загрузку автоматически; «Обновить» можно нажать для немедленной проверки.';
       el.classList.remove('is-busy');
     }else if(state==='error'){
       title.textContent=raw||'Не удалось обновить данные';

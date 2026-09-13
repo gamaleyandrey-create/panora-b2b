@@ -152,7 +152,7 @@
   const pendingCount=()=>Object.keys(pending).length;
   const markPending=section=>{pending[section]=true;safeLocalSet(pendingKey,JSON.stringify(pending));showPending()};
   const clearPending=section=>{delete pending[section];if(section==='recipes')localStorage.removeItem(recipePendingSignatureKey);if(Object.keys(pending).length)safeLocalSet(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey)};
-  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,receiptPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminLeaderHeartbeat=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
+  let session=null,ready=false,planTimer=0,productTimer=0,recipeTimer=0,restaurantTimer=0,orderTimer=0,financeTimer=0,orderPoll=0,receiptPoll=0,productPoll=0,planPoll=0,restaurantPoll=0,rawStockPoll=0,bakeCompletionPoll=0,pendingRetryTimer=0,adminLeaderHeartbeat=0,adminWakeRefreshTimer=0,adminWakeRefreshAt=0,adminWakeRefreshPromise=null,adminStartupRecoveryTimer=0,adminStartupRecoveryAttempt=0,refreshing=null,loadingOrders=null,savingOrders=null,savingProducts=null,productDirty=Boolean(pending.products),savingRecipes=null,recipeDirty=Boolean(pending.recipes),recipeRevision=0,financeLoaded=false,repairingFinance=null,retrying=null,applyingCloud=0,shippingLocks=new Set();
   const techCardLocks=new Map();
   const uuid=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});
   const techCardDeviceId=(()=>{let id=localStorage.getItem('panora-tech-card-device-id');if(!id){id=uuid();localStorage.setItem('panora-tech-card-device-id',id)}return id})();
@@ -2282,6 +2282,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(pending.bakeCompletions)await syncBakeCompletionsNow();
       await loadRestaurants();await loadProducts();await loadPlans();await loadRecipes();await loadIngredientCosts();await loadOrders();await loadPayments();await loadDeliveryNotes();await ensureB2BReturnCreditPayments();await syncBakeCompletionsNow({quiet:true});await syncRawStockNow({quiet:true});await loadOperationEvents();
       audit('sync.restored','Облачная синхронизация восстановлена');
+      clearAdminStartupRecovery();
       status('Облако ✓');return true;
     }catch(error){
     if(window.panoraHandleSessionError?.(error)) return false;
@@ -2292,8 +2293,32 @@ window.panoraRecalculateBalances=recalculateBalances;
     })().finally(()=>retrying=null);
     return retrying;
   }
+  const clearAdminStartupRecovery=()=>{clearTimeout(adminStartupRecoveryTimer);adminStartupRecoveryTimer=0;adminStartupRecoveryAttempt=0};
+  const scheduleAdminStartupRecovery=(reason='startup',delay=0)=>{
+    if(!ready||!navigator.onLine)return;
+    clearTimeout(adminStartupRecoveryTimer);
+    const waits=[1200,3000,6000],wait=delay||waits[Math.min(adminStartupRecoveryAttempt,waits.length-1)];
+    adminStartupRecoveryTimer=setTimeout(async()=>{
+      adminStartupRecoveryTimer=0;
+      if(!ready||!navigator.onLine)return;
+      if(document.hidden){
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleAdminStartupRecovery(`${reason}-visible`,120)},{once:true});
+        return;
+      }
+      adminStartupRecoveryAttempt+=1;
+      const attempt=adminStartupRecoveryAttempt;
+      const ok=await retrySync().catch(()=>false);
+      if(ok){
+        clearAdminStartupRecovery();
+        window.dispatchEvent(new CustomEvent('panora:admin-startup-recovered',{detail:{reason,attempt}}));
+        return;
+      }
+      if(adminStartupRecoveryAttempt<waits.length)scheduleAdminStartupRecovery(reason);
+    },wait);
+  };
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
+    clearAdminStartupRecovery();
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
     const steps=[['товары',loadProducts],['рецептуры',loadRecipes],['цены сырья',loadIngredientCosts],['план',loadPlans],['партнёры',loadRestaurants],['заказы',loadOrders],['накладные',loadDeliveryNotes],['оплаты',loadPayments],['B2B возвраты',ensureB2BReturnCreditPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
     for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
@@ -2312,7 +2337,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
-    if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error)}else status('Облако ✓');
+    if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
   }
   async function refreshAdminOrdersOnDemand(reason='manual'){
     if(!ready||!navigator.onLine)return false;
@@ -2321,11 +2346,17 @@ window.panoraRecalculateBalances=recalculateBalances;
     try{
       await refreshDeliveryReceipts();
       const changed=await adminCommerceRevisionChanged();
+      let ordersLoaded=false,notesLoaded=false;
       if(changed?.changed){
-        if(changed.orders)await loadOrders();
+        if(changed.orders){await loadOrders();ordersLoaded=true}
         if(changed.payments)await loadPayments();
-        if(changed.notes)await loadDeliveryNotes();
+        if(changed.notes){await loadDeliveryNotes();notesLoaded=true}
       }
+      // A manual refresh is the explicit recovery path and opening the notes view
+      // must never depend only on a revision watermark that may have advanced before
+      // a transient delivery-note request failed.
+      if(reason==='manual'&&!ordersLoaded)await loadOrders();
+      if((reason==='manual'||reason==='delivery-notes-open')&&!notesLoaded)await loadDeliveryNotes();
       if(typeof renderCommerce==='function')renderCommerce();
       // Panora 10.14: a successful orders/receipt refresh clears only a stale
       // order-related error. Do not hide errors from recipes, stock, partners, etc.
@@ -2402,14 +2433,16 @@ window.panoraRecalculateBalances=recalculateBalances;
     adminWakeRefreshAt=now;
     adminWakeRefreshPromise=(async()=>{
       const view=activeAdminWakeView();
-      if(['orders','accounting','finance','reminders'].includes(view)){
-        if(view==='orders')await refreshDeliveryReceipts();
+      if(['orders','delivery-notes','accounting','finance','reminders'].includes(view)){
+        if(['orders','delivery-notes'].includes(view))await refreshDeliveryReceipts();
         const changed=await adminCommerceRevisionChanged();
+        let notesLoaded=false;
         if(changed?.changed){
           if(changed.orders)await loadOrders();
           if(changed.payments)await loadPayments();
-          if(changed.notes)await loadDeliveryNotes();
+          if(changed.notes){await loadDeliveryNotes();notesLoaded=true}
         }
+        if(view==='delivery-notes'&&!notesLoaded)await loadDeliveryNotes();
         window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view,changed:Boolean(changed?.changed)}}));
       }else if(view==='plan'){
         const [plansChanged,bakeChanged]=await Promise.all([adminOperationalComponentChanged('plans'),adminOperationalComponentChanged('bakeCompletions')]);
@@ -2449,7 +2482,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       }catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora recipe open refresh',error)}
     },80);
   });
-  window.addEventListener('online',()=>{pending=readPending();if(ready){retrySync();scheduleAdminCommerceWakeRefresh('online',100)}});
+  window.addEventListener('online',()=>{pending=readPending();if(ready){retrySync().then(ok=>{if(!ok)scheduleAdminStartupRecovery('online-recovery')}).catch(()=>scheduleAdminStartupRecovery('online-recovery'));scheduleAdminCommerceWakeRefresh('online',100)}});
   window.addEventListener('offline',()=>showPending()||status('Сохранено на устройстве'));
   const retryPendingOnWake=()=>{
     pending=readPending();
@@ -2468,8 +2501,11 @@ window.panoraRecalculateBalances=recalculateBalances;
   document.addEventListener('click',event=>{
     const refresh=event.target.closest?.('#refreshOrdersCloud');
     if(refresh){event.preventDefault();refreshAdminOrdersOnDemand('manual').catch(error=>{console.warn('Panora manual orders refresh',error);status('Ошибка обновления')});return}
-    const ordersNav=event.target.closest?.('.admin-nav button[data-view="orders"], [data-view="orders"]');
-    if(ordersNav&&ready)setTimeout(()=>refreshAdminOrdersOnDemand('orders-open').catch(error=>console.warn('Panora orders open refresh',error)),40);
+    const commerceNav=event.target.closest?.('.admin-nav button[data-view="orders"], [data-view="orders"], .admin-nav button[data-view="delivery-notes"], [data-view="delivery-notes"]');
+    if(commerceNav&&ready){
+      const view=String(commerceNav.dataset?.view||'orders');
+      setTimeout(()=>refreshAdminOrdersOnDemand(view==='delivery-notes'?'delivery-notes-open':'orders-open').catch(error=>console.warn('Panora commerce open refresh',view,error)),40);
+    }
   },true);
   navigator.serviceWorker?.addEventListener?.('message',event=>{
     if(event.data?.type==='PANORA_PUSH_OPENED'&&ready)scheduleAdminCommerceWakeRefresh('push',0);
