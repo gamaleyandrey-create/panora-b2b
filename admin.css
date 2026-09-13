@@ -387,7 +387,7 @@
 .retail-preorder-price-card{margin:14px 0;padding:16px;border:1px solid #dce6de;border-radius:16px;background:#f8fbf8;display:grid;gap:12px}.retail-preorder-price-card .retail-setting-row{margin:0}.retail-preorder-price-card>label{max-width:260px}.retail-preorder-price-card .retail-settings-intro{margin:0;color:#6f7b73;font-size:12px;line-height:1.5}@media(max-width:760px){.retail-preorder-price-card{padding:14px}.retail-preorder-price-card>label{max-width:none}}
 
 
-/* Panora 10.61 — collapsible finished-bread cards on desktop and mobile. */
+/* Panora 10.62 — collapsible finished-bread cards on desktop and mobile. */
 .stock-product-card{overflow:hidden}
 .stock-product-card-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important}
 .stock-product-fold-toggle{

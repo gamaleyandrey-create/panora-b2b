@@ -1708,7 +1708,7 @@ body.admin-page .stock-inventory-button:hover{background:#fff4f2}
   body.admin-page .admin-content{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
   body.admin-page .panora-connection-state{bottom:calc(82px + env(safe-area-inset-bottom))!important}
 }
-\n\n/* Panora 10.61 — global bakery refresh + compact mobile overflow menu. */
+\n\n/* Panora 10.62 — global bakery refresh + compact mobile overflow menu. */
 body.admin-page .admin-global-refresh,
 body.admin-page .admin-more-toggle{
   min-height:40px;
@@ -1757,7 +1757,7 @@ body.admin-page .admin-more-menu[hidden]{display:none!important}
 }
 
 
-/* Panora 10.61 — one global Bakery system header on desktop and mobile. */
+/* Panora 10.62 — one global Bakery system header on desktop and mobile. */
 body.admin-page .admin-topbar{z-index:1700!important}
 body.admin-page .admin-topbar .admin-top-actions{
   display:flex!important;grid-template-columns:none!important;width:auto!important;max-width:none!important;
@@ -1810,7 +1810,7 @@ body.admin-page .admin-interface-settings select{width:100%;min-height:42px;padd
   body.admin-page .admin-topbar .brand{font-size:17px!important}
 }
 
-/* Panora 10.61 — compact persistent disclosure for long Bakery sections. */
+/* Panora 10.62 — compact persistent disclosure for long Bakery sections. */
 body.admin-page .panora-section-fold-toggle{
   display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 11px;
   border:1px solid #d7ded7;border-radius:10px;background:#fff;color:#315c42;font:800 11px Manrope,Arial,sans-serif;cursor:pointer;white-space:nowrap
@@ -1831,7 +1831,7 @@ body.admin-page #view-stock .stock-history-head .panora-section-fold-toggle{marg
 }
 
 
-/* Panora 10.61 — stable system header controls across desktop/mobile. */
+/* Panora 10.62 — stable system header controls across desktop/mobile. */
 html body.admin-page header.admin-topbar button.admin-global-refresh,
 html body.admin-page header.admin-topbar button.admin-more-toggle{
   -webkit-appearance:none!important;appearance:none!important;
@@ -1853,7 +1853,7 @@ html body.admin-page header.admin-topbar button.admin-global-refresh[data-succes
 }
 
 
-/* Panora 10.61 — refresh button must stay readable on iOS/desktop in every interaction state. */
+/* Panora 10.62 — refresh button must stay readable on iOS/desktop in every interaction state. */
 html body.admin-page header.admin-topbar button.admin-global-refresh,
 html body.admin-page header.admin-topbar button.admin-global-refresh:hover,
 html body.admin-page header.admin-topbar button.admin-global-refresh:active,

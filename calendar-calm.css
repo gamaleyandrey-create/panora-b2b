@@ -58,7 +58,7 @@
 }
 
 
-/* Panora 10.61 — mobile calendar keeps the same Mon–Sun structure as desktop. */
+/* Panora 10.62 — mobile calendar keeps the same Mon–Sun structure as desktop. */
 @media(max-width:900px){
   body.admin-page #view-plan .bake-calendar{overflow-x:hidden!important;padding:10px!important}
   body.admin-page #view-plan .calendar-weekdays{

@@ -1098,7 +1098,7 @@
     if(!ready)throw new Error('Нет соединения с облаком');
     if(shippingLocks.has(orderId)){audit('shipment.duplicate_prevented',`Заказ ${orderId}: повторное нажатие заблокировано`,'warning');throw new Error('Отгрузка уже выполняется')}
     const localNote=deliveryNotes.find(entry=>entry.orderId===orderId);
-    if(localNote){audit('shipment.duplicate_prevented',`Заказ ${orderId}: накладная уже существует`,'warning');return localNote}
+    if(localNote){audit('shipment.duplicate_prevented',`Заказ ${orderId}: накладная уже существует`,'warning');await syncB2BShipmentStockDurability();return localNote}
     shippingLocks.add(orderId);
     try{
       if((Number(deliveryKm||0)>0||Number(deliveryRate||0)>0||Number(deliveryExtraCost||0)>0||Number(deliveryCharge||0)>0||String(deliveryMethod||'bakery_vehicle')!=='bakery_vehicle')&&!deliveryLogisticsColumnsSupported)throw new Error('Для учёта доставки примените SQL Panora 10.36. Отгрузка не проведена, данные не потеряны.');
@@ -1350,6 +1350,21 @@
       offlineProof:knownNote.offlineProof?structuredClone(knownNote.offlineProof):null
     };
   };
+  async function syncB2BShipmentStockDurability(){
+    const api=window.panoraFinishedStockPersistence;
+    try{
+      if(api?.persistB2BShipments)await api.persistB2BShipments(Array.isArray(deliveryNotes)?deliveryNotes:[]);
+      if(typeof renderStock==='function')renderStock();
+      return true;
+    }catch(error){
+      console.warn('Panora B2B shipment stock persistence',error);
+      audit('stock.shipment_persist_failed',String(error?.message||error),'warning');
+      // Keep the virtual delivery-note deduction visible immediately; deterministic
+      // backfill retries on the next finance refresh/app wake without double counting.
+      if(typeof renderStock==='function')renderStock();
+      return false;
+    }
+  }
   async function loadDeliveryNotes(){
     const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
     const knownNotes=Array.isArray(deliveryNotes)?deliveryNotes.slice():[];
@@ -1367,6 +1382,7 @@
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
     ready=true;await repairMissingDeliveryNotes();
+    await syncB2BShipmentStockDurability();
     window.panoraAdminOrderArchiveHydrated=true;
     publishAdminOrderArchiveCounts();
     const changed=beforeSignature!==noteUiSignature(deliveryNotes);
@@ -1382,7 +1398,7 @@
     const payload=valid.map(note=>deliveryNoteRow(note));
     const rows=await request('delivery_notes?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload)});
     (rows||[]).forEach(row=>{const note=deliveryNotes.find(item=>item.id===row.id);if(note){note.number=Number(row.note_number);note.qrToken=row.qr_token}});
-    cacheDeliveryNotesLocal();status('Облако ✓');
+    cacheDeliveryNotesLocal();await syncB2BShipmentStockDurability();status('Облако ✓');
   }
   const paymentSchemaCacheKey='panora-payment-read-schema-v1030';
   const paymentSchemaCacheTtl=7*24*60*60*1000;

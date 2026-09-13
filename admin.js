@@ -412,6 +412,44 @@ async function returnRetailOrderToFinishedStock(order,quantitiesByIndex=null){
  }
  renderStock();renderRetailOrderQueue();window.dispatchEvent(new CustomEvent('panora:stock-movements-changed'));return true;
 }
+const B2B_SHIPMENT_MARKER_RE=/\[panora:b2b-shipment:([^:\]]+):([^:\]]+):(\d+)\]/;
+function b2bShipmentMetaFromNoteText(value){
+ const match=String(value||'').match(B2B_SHIPMENT_MARKER_RE);return match?{orderId:String(match[1]||''),noteId:String(match[2]||''),index:Number(match[3])}:null;
+}
+function b2bShipmentKey(orderId,noteId,index){return `${String(orderId||'')}\u0000${String(noteId||'')}\u0000${Number(index)||0}`}
+function b2bShipmentKeyFromMovement(movement){const meta=b2bShipmentMetaFromNoteText(movement?.note);return meta?b2bShipmentKey(meta.orderId,meta.noteId,meta.index):String(movement?.b2bShipmentKey||'')}
+function b2bShipmentMarker(orderId,noteId,index){return `[panora:b2b-shipment:${String(orderId||'')}:${String(noteId||'')}:${Number(index)||0}]`}
+function panoraStableStockUuidFallback(seed){
+ const source=String(seed||'');const hash=salt=>{let h=(2166136261^salt)>>>0;for(let i=0;i<source.length;i++){h^=source.charCodeAt(i);h=Math.imul(h,16777619)>>>0;h^=h>>>13}return h>>>0};
+ let hex=[hash(0x9e3779b9),hash(0x85ebca6b),hash(0xc2b2ae35),hash(0x27d4eb2f)].map(v=>v.toString(16).padStart(8,'0')).join('').slice(0,32).split('');hex[12]='5';hex[16]=(['8','9','a','b'][parseInt(hex[16],16)%4]);hex=hex.join('');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+async function panoraStableStockUuid(seed){
+ try{if(globalThis.crypto?.subtle&&globalThis.TextEncoder){const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(seed||''))));const bytes=digest.slice(0,16);bytes[6]=(bytes[6]&15)|80;bytes[8]=(bytes[8]&63)|128;const hex=[...bytes].map(value=>value.toString(16).padStart(2,'0')).join('');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`}}catch{}return panoraStableStockUuidFallback(seed)
+}
+function finishedStockMovementFromCloud(row){
+ const note=String(row?.note||''),shipment=b2bShipmentMetaFromNoteText(note),cloudType=String(row?.movement_type||'');
+ return{id:String(row?.id||''),date:String(row?.movement_date||''),product:String(row?.product_id||''),type:shipment?'shipped':cloudType,quantity:Math.abs(Number(row?.quantity||0)),note,createdAt:row?.created_at||row?.updated_at||'',...(shipment?{orderId:shipment.orderId,noteId:shipment.noteId,shipmentIndex:shipment.index,b2bShipmentKey:b2bShipmentKey(shipment.orderId,shipment.noteId,shipment.index),b2bShipmentPersistent:true}:{})};
+}
+async function persistB2BShipmentMovementsCloud(notes){
+ if(!window.panoraSupabaseSession?.access_token)return false;
+ if(!finishedStockCloudHydrated){const loaded=await loadFinishedStockMovementsCloud();if(!loaded)throw new Error('Не удалось загрузить облачный склад перед фиксацией отгрузок')}
+ const source=Array.isArray(notes)?notes:[],existing=new Map((Array.isArray(movements)?movements:[]).map(row=>[String(row?.id||''),row])),cloudRows=[],localRows=[];
+ for(const note of source){
+  const orderId=String(note?.orderId||''),noteId=String(note?.id||''),date=String(note?.date||'').slice(0,10);if(!orderId||!noteId||!date)continue;
+  const items=Array.isArray(note?.items)?note.items:[];
+  for(let index=0;index<items.length;index+=1){
+   const item=items[index],product=String(item?.product||''),quantity=Math.max(0,Number(item?.quantity||item?.quantityPieces||0));if(!product||quantity<=0)continue;
+   const key=b2bShipmentKey(orderId,noteId,index),id=await panoraStableStockUuid(`panora:b2b-shipment:v1:${key}`),current=existing.get(id),marker=b2bShipmentMarker(orderId,noteId,index),createdAt=stockEconomicOccurredAt(date,note?.createdAt,note?.customerConfirmedAt,note?.offlineProof?.receivedAt),noteText=`Накладная DN-${String(note?.number||'').padStart(4,'0')} · ${marker}`;
+   if(current&&String(current.product)===product&&Math.abs(Number(current.quantity||0)-quantity)<1e-9&&b2bShipmentKeyFromMovement(current)===key)continue;
+   cloudRows.push({id,movement_date:date,product_id:product,movement_type:'correction_minus',quantity,note:noteText,created_at:createdAt,updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null});
+   localRows.push({id,date,product,type:'shipped',quantity,note:noteText,createdAt,occurredAt:createdAt,orderId,noteId,shipmentIndex:index,b2bShipmentKey:key,b2bShipmentPersistent:true});
+  }
+ }
+ if(!cloudRows.length){if(typeof renderStock==='function')renderStock();return true}
+ const saved=await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(cloudRows)}),savedIds=new Set((Array.isArray(saved)?saved:[]).map(row=>String(row?.id||'')));
+ if(cloudRows.some(row=>!savedIds.has(String(row.id))))throw new Error('Облако не подтвердило все складские движения отгрузки');
+ const merged=new Map((Array.isArray(movements)?movements:[]).map(row=>[String(row?.id||''),row]));localRows.forEach(row=>merged.set(String(row.id),row));movements=[...merged.values()];localStorage.setItem('panora-stock-movements',JSON.stringify(movements));renderStock();window.dispatchEvent(new CustomEvent('panora:finished-stock-cloud-updated',{detail:{source:'b2b-shipment-persisted',count:localRows.length}}));return true;
+}
 async function syncFinishedStockMovementsCloud(){
  const allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),rows=(Array.isArray(movements)?movements:[]).filter(m=>m&&!m.virtual&&allowed.has(String(m.type||''))&&m.id&&m.product&&Number(m.quantity)>0).map(m=>({id:String(m.id),movement_date:String(m.date||iso(new Date())),product_id:String(m.product),movement_type:String(m.type),quantity:Math.abs(Number(m.quantity||0)),note:m.note||null,created_at:m.createdAt||new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:window.panoraSupabaseSession?.user?.id||null}));if(!rows.length)return true;try{await retailAdminApi('finished_stock_movements?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});return true}catch{return false}
 }
@@ -427,7 +465,7 @@ async function loadFinishedStockMovementsCloud(){
   const before=finishedStockMovementSignature(movements),rows=await retailAdminApi(`finished_stock_movements?select=id,movement_date,product_id,movement_type,quantity,note,created_at,updated_at${deltaQuery}&order=movement_date.asc,created_at.asc`),allowed=new Set(['produced','returned','written_off','correction_plus','correction_minus','initial_balance']),byId=new Map((finishedStockCloudHydrated?Array.isArray(movements)?movements:[]:[]).map(item=>[String(item?.id||''),item]));
   // First cloud hydration is authoritative, including an empty server table.
   // This prevents old training stock from surviving a CLEAN BASE reset.
-  (Array.isArray(rows)?rows:[]).forEach(row=>{if(!row?.id||!row?.product_id||!allowed.has(String(row.movement_type||'')))return;byId.set(String(row.id),{id:String(row.id),date:String(row.movement_date||''),product:String(row.product_id),type:String(row.movement_type),quantity:Math.abs(Number(row.quantity||0)),note:row.note||'',createdAt:row.created_at||row.updated_at||''})});
+  (Array.isArray(rows)?rows:[]).forEach(row=>{if(!row?.id||!row?.product_id||!allowed.has(String(row.movement_type||'')))return;byId.set(String(row.id),finishedStockMovementFromCloud(row))});
   const newest=(rows||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);if(newest)localStorage.setItem(FINISHED_STOCK_WATERMARK_KEY,newest);finishedStockCloudHydrated=true;
   const next=[...byId.values()].filter(Boolean),changed=before!==finishedStockMovementSignature(next);movements=next;
   if(changed){localStorage.setItem('panora-stock-movements',JSON.stringify(movements));renderStock();window.dispatchEvent(new CustomEvent('panora:finished-stock-cloud-updated',{detail:{source:'cloud-live'}}))}
@@ -435,6 +473,7 @@ async function loadFinishedStockMovementsCloud(){
  }catch{return false}finally{finishedStockCloudLoading=null}})();
  return finishedStockCloudLoading;
 }
+window.panoraFinishedStockPersistence={persistB2BShipments:persistB2BShipmentMovementsCloud,loadCloud:loadFinishedStockMovementsCloud};
 async function syncAndLoadFinishedStockMovementsCloud(){
  if(!finishedStockCloudHydrated)return loadFinishedStockMovementsCloud();
  const synced=await syncFinishedStockMovementsCloud();if(!synced)return false;return loadFinishedStockMovementsCloud()
@@ -794,18 +833,19 @@ function stockCanonicalNotes(){
  return rows;
 }
 function stockShipmentMovements(){
- return stockCanonicalNotes().flatMap(note=>(note.items||[]).map((item,index)=>({
+ const persisted=new Set((Array.isArray(movements)?movements:[]).map(b2bShipmentKeyFromMovement).filter(Boolean));
+ return stockCanonicalNotes().flatMap(note=>(note.items||[]).flatMap((item,index)=>{const key=b2bShipmentKey(note?.orderId,note?.id,index);if(persisted.has(key))return[];return[{
   id:`auto-ship:${note.id}:${item.product}:${index}`,
   date:String(note.date||''),
   product:String(item.product||''),
   type:'shipped',
-  quantity:Math.max(0,Number(item.quantity||0)),
+  quantity:Math.max(0,Number(item.quantity||item.quantityPieces||0)),
   note:`Накладная DN-${String(note.number||'').padStart(4,'0')}`,
   noteId:String(note.id||''),
   orderId:String(note.orderId||''),
   occurredAt:stockEconomicOccurredAt(note.date,note.createdAt,note.customerConfirmedAt,note.offlineProof?.receivedAt),
   virtual:true
- }))).filter(m=>m.product&&m.quantity>0);
+ }]})).filter(m=>m.product&&m.quantity>0);
 }
 function stockRetailCompletedMovements(){
  return readRetailOrders().filter(order=>order&&retailOrderStatus(order)==='completed').flatMap(order=>{
@@ -827,7 +867,7 @@ function stockRetailCompletedMovements(){
 }
 function stockEffectiveMovements(){
  const notes=stockCanonicalNotes(),noteOrders=new Set(notes.map(n=>String(n.orderId||'')).filter(Boolean));
- const manual=movements.filter(panoraProductionRecordAllowed).filter(m=>!(m.type==='shipped'&&m.orderId&&noteOrders.has(String(m.orderId))));
+ const manual=movements.filter(panoraProductionRecordAllowed).filter(m=>{if(String(m?.type||'')!=='shipped')return true;if(b2bShipmentKeyFromMovement(m))return true;return !(m?.orderId&&noteOrders.has(String(m.orderId)))});
  const source=[...manual,...stockAutoBakeMovements(),...stockShipmentMovements(),...stockRetailCompletedMovements()]
   .slice().sort((a,b)=>stockMovementOrderKey(a).localeCompare(stockMovementOrderKey(b)));
  const balances=new Map(),retailOrdersById=new Map(readRetailOrders().filter(Boolean).map(order=>[String(order.id||''),order])),acceptedRetailReturns=new Map();
@@ -1014,7 +1054,7 @@ function updateStockAdjustPreview(){
 }
 $$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
-// Panora 10.61 — compact global header actions on mobile.
+// Panora 10.62 — compact global header actions on mobile.
 (()=>{
  const toggle=document.querySelector('#adminMoreToggle'),menu=document.querySelector('#adminMoreMenu'),language=document.querySelector('#adminLanguage'),settingsLanguage=document.querySelector('#adminSettingsLanguage'),logout=document.querySelector('#adminMoreLogout'),push=document.querySelector('#adminMorePush');
  if(!toggle||!menu)return;
@@ -1227,7 +1267,7 @@ async function retailSendTestPush(){
 function initRetailNotificationCenter(){const open=$('#retailNotificationCenter'),dialog=$('#retailNotificationsDialog'),close=$('#retailNotificationsClose'),enable=$('#retailEnableAdminPush');if(open)open.addEventListener('click',async()=>{if(dialog&&!dialog.open)dialog.showModal();await retailRenderNotificationCenter();await retailMarkAdminNotificationsRead()});if(close)close.addEventListener('click',()=>dialog?.close());if(enable)enable.addEventListener('click',async()=>{try{await retailToggleAdminPush()}catch(error){const state=$('#retailAdminPushState');if(state)state.textContent=`Push: ${error.message||'ошибка подключения'}`}});const test=$('#retailTestPush');if(test)test.addEventListener('click',retailSendTestPush);const run=()=>retailRenderNotificationCenter({showBrowser:true});const syncPush=()=>retailAdminPushStatus().then(retailRenderAdminPushState).catch(()=>{});window.addEventListener('panora:authenticated',()=>{run();setTimeout(()=>retailEnsureAdminPush({prompt:false}),500)});setTimeout(()=>{run();retailEnsureAdminPush({prompt:false})},1200);window.addEventListener('focus',()=>{if(window.panoraSupabaseSession?.access_token){run();syncPush()}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initRetailNotificationCenter);else initRetailNotificationCenter();
 
-/* Panora 10.61 — persistent disclosure controls for long Bakery history sections. */
+/* Panora 10.62 — persistent disclosure controls for long Bakery history sections. */
 (()=>{
  const KEY='panora-admin-fold-sections-v1059';
  const read=()=>{try{const value=JSON.parse(localStorage.getItem(KEY)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}};
