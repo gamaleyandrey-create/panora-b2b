@@ -338,7 +338,7 @@
       <p class="recipe-warning" data-warning="salt-range" hidden>${L().saltRange}</p>
       <p class="recipe-cost-hint" data-warning="cost" hidden>${L().priceHint}</p>
       <div class="recipe-batch-summary" data-recipe-batch></div>
-      <div class="recipe-semi-banner"><strong>Полуфабрикаты</strong><span>У каждого ингредиента ниже есть переключатель «Производится из сырья». Для тыквенного пюре включите его и задайте свежую тыкву + процент выхода.</span></div>
+      <div class="recipe-semi-banner"><strong>${lang==='ru'?'Полуфабрикаты':lang==='es'?'Semielaborados':'Semi-finished products'}</strong><span>${lang==='ru'?'У каждого ингредиента ниже есть переключатель «Производится из сырья». Для тыквенного пюре включите его и задайте свежую тыкву + процент выхода.':lang==='es'?'Cada ingrediente de abajo tiene el interruptor «Producido a partir de materia prima». Para el puré de calabaza, actívelo e indique calabaza fresca y el porcentaje de rendimiento.':'Each ingredient below has a “Made from raw material” switch. For pumpkin purée, enable it and set fresh pumpkin plus the yield percentage.'}</span></div>
       <div class="recipe-column-heads"><span>${L().ingredient}</span><span>${L().amount}</span><span>${L().percent}</span><span>${L().unit}</span><span></span></div>
       <div class="recipe-ingredients">${items.map((item,index)=>rowHtml(pid,item,index,initialFlour)).join('')}</div>
       <p class="recipe-warning" hidden>${L().noFlour}</p>

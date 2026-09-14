@@ -88,7 +88,8 @@ if(localStorage.getItem('panora-builtin-products-version')!=='4'){
  localStorage.setItem('panora-builtin-products-version','4');
  if(typeof restaurants!=='undefined')restaurants=savedRestaurants;
 }
-const productLabel=(id,language=lang)=>productRegistry.find(p=>p.id===id)?.names?.[language]||productRegistry.find(p=>p.id===id)?.names?.ru||id;
+const productLabel=(id,language=lang)=>{const p=productRegistry.find(p=>p.id===id);if(!p)return id;const current=['ru','en','es'].includes(language)?language:'en';return p.names?.[current]||(current==='es'?p.names?.en:p.names?.es)||p.names?.ru||id};
+const productDescription=(p,language=lang)=>{const current=['ru','en','es'].includes(language)?language:'en';return p?.descriptions?.[current]||(current==='es'?p?.descriptions?.en:p?.descriptions?.es)||p?.descriptions?.ru||(current==='es'?'Descripción no disponible.':current==='en'?'No description.':'Описание не заполнено')};
 productName=id=>productLabel(id);
 function saveProducts(){persistProductRegistryCache(productRegistry);window.panoraCloud?.queueProducts();window.dispatchEvent(new CustomEvent('panora:products-changed'))}
 function fileData(file){return new Promise(resolve=>{if(!file)return resolve('');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const size=900,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;const ctx=canvas.getContext('2d'),scale=Math.max(size/img.width,size/img.height),w=img.width*scale,h=img.height*scale;ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);resolve(canvas.toDataURL('image/webp',.84))};img.onerror=()=>resolve(reader.result);img.src=reader.result};reader.readAsDataURL(file)})}
@@ -105,9 +106,9 @@ const renderGalleryPreview=(images=editedGallery)=>{
   const help=document.querySelector('#productGalleryHelp'); if(help)help.textContent=`Дополнительных фото: ${list.length} из 6. Можно добавить ${Math.max(0,6-list.length)}. Главная фотография считается отдельно.`;
 };
 function productAdminCard(p,{archived=false}={}){
- const name=productEscape(p.names?.ru||p.id);
+ const name=productEscape(productLabel(p.id));
  const image=productEscape(p.image||'icon.svg');
- const description=productEscape(p.descriptions?.ru||'Описание не заполнено');
+ const description=productEscape(productDescription(p));
  if(archived){
   return `<article class="product-admin-card product-admin-card-archived"><div class="product-admin-photo"><img src="${image}" alt="${name}"><span class="product-status off">Архив</span></div><div class="product-admin-body"><h3>${name}</h3><p>${description}</p><dl><div><dt>Вес</dt><dd>${Number(p.weight)||0} г</dd></div><div><dt>Розничная цена</dt><dd>${Number(p.basePrice||0).toFixed(2)} €</dd></div></dl><div class="product-card-actions"><button type="button" class="secondary product-restore-button" data-delete-product="${p.id}">Восстановить карточку</button></div></div></article>`;
  }
@@ -127,7 +128,7 @@ function renderProductCards(){
 }
 async function deleteProduct(productId,button){
  const p=productRegistry.find(x=>x.id===productId);if(!p)return;
- const name=p.names?.ru||p.id,archived=p.active===false;
+ const name=productLabel(p.id),archived=p.active===false;
  const question=archived
   ?`Восстановить карточку «${name}»?\n\nОна вернётся в активные товары, но останется скрытой с витрины, пока вы не включите её отдельно.`
   :`Удалить карточку «${name}» из активных товаров?\n\nОна исчезнет из каталога пекарни, новых заказов, витрины и планирования и будет перенесена в Архив карточек. Старые заказы, накладные, цены и история сохранятся.`;
