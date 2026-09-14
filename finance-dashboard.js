@@ -13,7 +13,8 @@
   const productLabel=id=>{
     const list=read('panora-products',[]);
     const product=(Array.isArray(list)?list:[]).find(item=>String(item.id)===String(id));
-    return product?.names?.ru||product?.name||(typeof productName==='function'?productName(id):String(id));
+    const current=['ru','en','es'].includes(document.querySelector('#adminLanguage')?.value)?document.querySelector('#adminLanguage').value:'en';
+    return product?.names?.[current]||(current==='es'?product?.names?.en:product?.names?.es)||product?.names?.ru||product?.name||(typeof productName==='function'?productName(id):String(id));
   };
   const partnerLabel=id=>{
     const list=financeArray('restaurants','panora-restaurants');

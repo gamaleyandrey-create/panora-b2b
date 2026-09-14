@@ -1,5 +1,22 @@
 const invoiceDefaults={notePrefix:'DN-',nextNoteNumber:1,noteTitle:'Накладная',paymentTerms:'',noteFooter:'',bakerySignature:'Panora',customerSignature:'Партнёр',useTax:false,showTax:false};
 Object.entries(invoiceDefaults).forEach(([key,value])=>{if(bakerySettings[key]===undefined)bakerySettings[key]=value;const field=settingsForm.elements[key];if(!field)return;if(field.type==='checkbox')field.checked=Boolean(bakerySettings[key]);else field.value=bakerySettings[key]});
+const invoiceUiDefaults={
+  ru:{noteTitle:'Накладная',customerSignature:'Партнёр'},
+  en:{noteTitle:'Delivery note',customerSignature:'Partner'},
+  es:{noteTitle:'Albarán',customerSignature:'Socio'}
+};
+const invoiceUiLanguage=()=>{const value=document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'en';return ['ru','en','es'].includes(value)?value:'en'};
+function localizeInvoiceDefaultFields(){
+  const current=invoiceUiDefaults[invoiceUiLanguage()]||invoiceUiDefaults.en;
+  const knownTitle=new Set(Object.values(invoiceUiDefaults).map(item=>item.noteTitle));
+  const knownRecipient=new Set(Object.values(invoiceUiDefaults).map(item=>item.customerSignature));
+  const title=settingsForm.elements.noteTitle,recipient=settingsForm.elements.customerSignature;
+  if(title&&knownTitle.has(String(title.value||'').trim()))title.value=current.noteTitle;
+  if(recipient&&knownRecipient.has(String(recipient.value||'').trim()))recipient.value=current.customerSignature;
+}
+localizeInvoiceDefaultFields();
+window.addEventListener('panora:admin-language-changed',localizeInvoiceDefaultFields);
+
 const useTaxField=settingsForm.elements.useTax,taxRateField=settingsForm.elements.taxRate,showTaxField=settingsForm.elements.showTax;
 function updateTaxControls(){const enabled=useTaxField.checked;taxRateField.disabled=!enabled;showTaxField.disabled=!enabled;if(!enabled){taxRateField.value=0;showTaxField.checked=false}}
 useTaxField.addEventListener('change',updateTaxControls);updateTaxControls();

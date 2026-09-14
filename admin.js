@@ -263,7 +263,7 @@ function retailAdminProductImage(product){
  if(String(product?.id)==='pumpkin')return'bread-pumpkin.jpg';
  return image||'icon.svg';
 }
-function retailProductLabel(product){return String(product?.names?.ru||product?.nameRu||product?.name_ru||product?.name||PRODUCTS[String(product?.id)]?.ru||product?.id||'Хлеб')}
+function retailProductLabel(product){const current=['ru','en','es'].includes(lang)?lang:'en';const names=product?.names||{};const direct=names?.[current]||product?.[`name${current[0].toUpperCase()}${current.slice(1)}`]||product?.[`name_${current}`];const neutral=current==='es'?(names.es||names.en):(current==='en'?(names.en||names.es):names.ru);return String(direct||neutral||names.ru||product?.name||PRODUCTS[String(product?.id)]?.[current]||PRODUCTS[String(product?.id)]?.ru||product?.id||(current==='es'?'Pan':current==='en'?'Bread':'Хлеб'))}
 function decodeRetailSortOrder(value){
  const raw=Math.max(0,Math.floor(Number(value)||0));
  if(raw>=10000)return {sortOrder:Math.max(0,Math.floor(raw/10000)-1),retailLimit:Math.max(0,raw%10000),limitConfigured:true};
@@ -1052,7 +1052,7 @@ function updateStockAdjustPreview(){
  const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
  preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
 }
-$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active')});
+$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active');if(b.dataset.view==='stock'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshBreadStock?.().catch(error=>console.warn('Panora bread stock refresh',error))}});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 // Panora 10.62 — compact global header actions on mobile.
 (()=>{

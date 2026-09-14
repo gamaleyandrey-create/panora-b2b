@@ -44,7 +44,8 @@
   };
   const productLabel=id=>{
     const p=products().find(x=>String(x.id)===String(id));
-    return p?.names?.ru||p?.name||String(id);
+    const current=['ru','en','es'].includes(document.querySelector('#adminLanguage')?.value)?document.querySelector('#adminLanguage').value:'en';
+    return p?.names?.[current]||(current==='es'?p?.names?.en:p?.names?.es)||p?.names?.ru||p?.name||String(id);
   };
   const partnerTypeLabel=value=>({
     restaurant:'Ресторан',shop:'Магазин',hotel:'Отель',cafe:'Кафе',
