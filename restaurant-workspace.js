@@ -1609,7 +1609,7 @@
       const lot=trace.find(x=>String(x.product)===String(data.productId))?.lot||'';
       button.disabled=true;result.textContent=lang==='ru'?'Отправляем…':lang==='es'?'Enviando…':'Sending…';
       try{
-        if(!window.panoraPartnerQuality?.submit)throw new Error(lang==='ru'?'Нужно применить SQL Panora 10.74.':lang==='es'?'Debe aplicar el SQL Panora 10.74.':'Panora 10.74 SQL update is required.');
+        if(!window.panoraPartnerQuality?.submit)throw new Error(lang==='ru'?'Нужно применить SQL Panora 10.75.':lang==='es'?'Debe aplicar el SQL Panora 10.75.':'Panora 10.75 SQL update is required.');
         await window.panoraPartnerQuality.submit({caseType:data.caseType,deliveryNoteId:data.deliveryNoteId,orderId:note?.orderId||'',productId:data.productId,lotNumber:lot,description:data.description,requestedAction:data.requestedAction});
         result.textContent=lang==='ru'?'Обращение отправлено.':lang==='es'?'Incidencia enviada.':'Case sent.';
         result.className='success';

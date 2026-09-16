@@ -10,9 +10,9 @@ const purchase=read('purchase-costs.js');
 const html=read('admin.html');
 const build=JSON.parse(read('build.json'));
 
-assert.equal(build.version,'10.74');
-assert.equal(build.build,10740);
-assert.equal(build.cache,10740);
+assert.equal(build.version,'10.75');
+assert.equal(build.build,10750);
+assert.equal(build.cache,10750);
 assert.match(product,/data-plan-enabled/);
 assert.match(product,/Quantity is optional|Количество необязательно/);
 assert.match(product,/planned=String\(input\?\.value\|\|''\)\.trim\(\)===''\?0/);
@@ -28,4 +28,4 @@ assert.match(purchase,/manual>current\)products\.set\(product,manual\)/);
 assert.match(html,/Отметьте хлеб, который планируется выпекать/);
 assert.match(admin,/panora:b2b-shipment/);
 assert.match(admin,/replace\(\/\\s\*·\?\\s\*\\\[panora:b2b-shipment/);
-console.log('Panora 10.74 bake-day selection tests: OK');
+console.log('Panora 10.75 bake-day selection tests: OK');
