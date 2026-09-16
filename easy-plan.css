@@ -4,7 +4,7 @@
 .calendar-only-add{display:none!important}
 .plan-cancel-day{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.plan-cancel-day .danger{width:100%;min-height:48px;font-weight:700}.plan-cancel-day .danger[hidden]{display:none}
 
-/* Panora 10.68 — bake day first, quantity optional. */
+/* Panora 10.69 — bake day first, quantity optional. */
 .bread-plan-fields{display:grid;grid-template-columns:1fr;gap:10px}
 .plan-product-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,240px);gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
 .plan-product-row.is-selected{border-color:#bfd1c2;background:#f5f9f4;box-shadow:0 1px 0 rgba(38,85,55,.04)}
