@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const build=JSON.parse(fs.readFileSync('build.json','utf8'));assert.deepEqual(build,{version:'10.71',build:10710,cache:10710});
+const build=JSON.parse(fs.readFileSync('build.json','utf8'));assert.deepEqual(build,{version:'10.72',build:10720,cache:10720});
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8'),js=fs.readFileSync('production-safety.js','utf8'),css=fs.readFileSync('production-safety.css','utf8');
 const views=['ps-haccp','ps-capa','ps-recalls','ps-suppliers','ps-training'];for(const html of [admin,bakery])for(const view of views){assert(html.includes(`data-view="${view}"`),`menu missing ${view}`);assert(html.includes(`id="view-${view}"`),`view missing ${view}`)}
 for(const token of ['haccpPlans:[]','capaCases:[]','recalls:[]','approvedSuppliers:[]','trainingRecords:[]','function renderHaccp','function renderCapa','function renderRecalls','function renderSuppliers','function renderTraining','function recallRecipients','function recallNoticeText','data-ps-recall-sent','data-ps-recall-ack','psApprovedSupplierOptions'])assert(js.includes(token),`missing ${token}`);
@@ -14,4 +14,4 @@ const ctx={window,document,localStorage:storage,navigator:{onLine:false},crypto:
 const api=window.__docsTest;const normalized=api.normalizeState({});for(const k of ['haccpPlans','capaCases','recalls','approvedSuppliers','trainingRecords'])assert(Array.isArray(normalized[k]),`${k} not normalized`);
 const merged=api.mergeState({approvedSuppliers:[{id:'s1',name:'old',updatedAt:'2026-09-16T09:00:00Z'}]},{approvedSuppliers:[{id:'s1',name:'new',updatedAt:'2026-09-16T11:00:00Z'}]});assert.equal(merged.approvedSuppliers[0].name,'new');
 const rec=api.recallRecipients({lotId:'lot1'});assert.equal(rec.length,2);const cafe=rec.find(x=>x.restaurantId==='r1');assert.equal(cafe.quantity,5);assert.deepEqual([...cafe.labels],['DN-1','DN-2']);
-console.log('Panora 10.71 compliance documentation tests: OK');
+console.log('Panora 10.72 compliance documentation tests: OK');

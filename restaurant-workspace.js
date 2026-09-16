@@ -1317,11 +1317,19 @@
       </div>
     </section>`;
   }
+  function productDocumentsHtml(){
+    const allergenNames={ru:{gluten:'Глютен',crustaceans:'Ракообразные',eggs:'Яйца',fish:'Рыба',peanuts:'Арахис',soy:'Соя',milk:'Молоко',nuts:'Орехи',celery:'Сельдерей',mustard:'Горчица',sesame:'Кунжут',sulphites:'Сульфиты',lupin:'Люпин',molluscs:'Моллюски'},en:{gluten:'Gluten',crustaceans:'Crustaceans',eggs:'Eggs',fish:'Fish',peanuts:'Peanuts',soy:'Soybeans',milk:'Milk',nuts:'Nuts',celery:'Celery',mustard:'Mustard',sesame:'Sesame',sulphites:'Sulphites',lupin:'Lupin',molluscs:'Molluscs'},es:{gluten:'Gluten',crustaceans:'Crustáceos',eggs:'Huevos',fish:'Pescado',peanuts:'Cacahuetes',soy:'Soja',milk:'Leche',nuts:'Frutos de cáscara',celery:'Apio',mustard:'Mostaza',sesame:'Sésamo',sulphites:'Sulfitos',lupin:'Altramuces',molluscs:'Moluscos'}};
+    const label=id=>allergenNames[lang]?.[id]||id;
+    const rows=(Array.isArray(PRODUCTS)?PRODUCTS:[]).filter(p=>account?.prices?.[p.id]!=null||p.customerSafety).map(product=>{const safety=product.customerSafety||{},composition=safety.composition?.[lang]||safety.composition?.ru||'',storage=safety.storage?.[lang]||safety.storage?.ru||'',contains=Array.isArray(safety.contains)?safety.contains:[],may=Array.isArray(safety.mayContain)?safety.mayContain:[],desc=product.text?.[lang]?.[1]||product.text?.ru?.[1]||'';return `<article class="rw-product-doc"><header><div><strong>${esc(itemName(product.id))}</strong>${desc?`<p>${esc(desc)}</p>`:''}</div><b>${Number(product.weight||0)?`${Number(product.weight)} g`:''}</b></header><dl><div><dt>${lang==='ru'?'Состав':lang==='es'?'Ingredientes':'Ingredients'}</dt><dd>${esc(composition||'—')}</dd></div><div><dt>${lang==='ru'?'Аллергены':lang==='es'?'Alérgenos':'Allergens'}</dt><dd>${contains.length?contains.map(label).map(esc).join(', '):'—'}</dd></div><div><dt>${lang==='ru'?'Может содержать следы':lang==='es'?'Puede contener trazas':'May contain traces'}</dt><dd>${may.length?may.map(label).map(esc).join(', '):'—'}</dd></div><div><dt>${lang==='ru'?'Хранение':lang==='es'?'Conservación':'Storage'}</dt><dd>${esc(storage||'—')}</dd></div><div><dt>${lang==='ru'?'Срок годности':lang==='es'?'Vida útil':'Shelf life'}</dt><dd>${esc(safety.shelfLife||'—')}</dd></div></dl></article>`}).join('');
+    const noteRows=ownNotes().slice(0,20).map(note=>{const lots=Array.isArray(note.lotTrace)?note.lotTrace:[];return `<button type="button" class="rw-product-doc-note" data-rw-note-library="${esc(note.id)}"><span><strong>${noteNumber(note)}</strong><small>${esc(localDate(note.date))}${lots.length?` · LOT: ${esc([...new Set(lots.map(x=>x.lot).filter(Boolean))].join(', '))}`:''}</small></span><b>${lang==='ru'?'Открыть':lang==='es'?'Abrir':'Open'}</b></button>`}).join('');
+    return `<section class="rw-product-documents"><header><div><h3>${lang==='ru'?'Документы продукта':lang==='es'?'Documentos de producto':'Product documents'}</h3><p>${lang==='ru'?'Актуальная информация для партнёра: состав, аллергены, масса, хранение и срок годности. Внутренние рецептуры, поставщики и себестоимость здесь не показываются.':lang==='es'?'Información vigente para el socio: ingredientes, alérgenos, peso, conservación y vida útil. No se muestran recetas internas, proveedores ni costes.':'Current partner-facing information: ingredients, allergens, weight, storage and shelf life. Internal recipes, suppliers and costs are not shown.'}</p></div></header><div class="rw-product-doc-grid">${rows||`<p>${lang==='ru'?'Данные продукта пока не опубликованы.':lang==='es'?'Los datos del producto aún no están publicados.':'Product data has not been published yet.'}</p>`}</div><section class="rw-product-delivery-docs"><h4>${lang==='ru'?'Документы поставок':lang==='es'?'Documentos de entrega':'Delivery documents'}</h4><p>${lang==='ru'?'Накладные / Albarán по вашим поставкам.':lang==='es'?'Albaranes de tus entregas.':'Delivery notes for your deliveries.'}</p><div>${noteRows||`<small>${lang==='ru'?'Накладных пока нет.':lang==='es'?'Aún no hay albaranes.':'No delivery notes yet.'}</small>`}</div></section></section>`;
+  }
   function contentHtml() {
     if (activeTab === "home") return homeHtml();
     if (activeTab === "new") return newOrderHtml();
     if (activeTab === "notes") return notesHtml();
     if (activeTab === "payments") return paymentsHtml();
+    if (activeTab === "docs") return productDocumentsHtml();
     if (activeTab === "profile") return `${profileHtml()}${pricesHtml()}`;
     return ordersHtml();
   }
@@ -2015,7 +2023,7 @@
       payments: currentDebtItems().length,
     };
     modal.classList.add("restaurant-workspace");
-    const currentSectionLabel = ({home:t("home"),new:t("newOrder"),orders:t("orders"),notes:t("notes"),payments:t("payments"),profile:t("profile")})[activeTab] || t("home");
+    const currentSectionLabel = ({home:t("home"),new:t("newOrder"),orders:t("orders"),notes:t("notes"),payments:t("payments"),docs:(lang==="ru"?"Документы продукта":lang==="es"?"Documentos de producto":"Product documents"),profile:t("profile")})[activeTab] || t("home");
     document.body.classList.toggle("panora-partner-authenticated",Boolean(account));
     modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><div class="rw-partner-context"><span class="rw-partner-name">${partnerTypeLabel()} · ${esc(account.name)}</span><span class="rw-section-name">${esc(currentSectionLabel)}</span></div></div><button class="close-button" data-portal-close aria-label="${t("close")}">×</button></div>
       <div class="rw-layout">
@@ -2026,6 +2034,7 @@
             ["orders", t("orders"), counts.orders],
             ["notes", t("notes"), counts.notes],
             ["payments", t("payments"), counts.payments],
+            ["docs", lang==="ru"?"Документы":lang==="es"?"Documentos":"Documents", "▤"],
             ["profile", t("profile"), "__PROFILE__"],
           ]
             .map(
