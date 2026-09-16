@@ -2209,3 +2209,83 @@ html body.admin-page header.admin-topbar button.admin-global-refresh[data-succes
     grid-template-columns:1fr!important;
   }
 }
+
+/* Panora 10.77 — larger persistent collapsible Bakery navigation sections. */
+html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+  min-height:48px!important;
+  margin:10px 0 5px!important;
+  padding:10px 12px!important;
+  border:1px solid #dfe5de!important;
+  border-radius:12px!important;
+  background:#f7f8f4!important;
+  color:#35483c!important;
+  font-size:13.5px!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+  line-height:1.22!important;
+  text-transform:none!important;
+  text-align:left!important;
+}
+html body.admin-page .admin-nav #workNavToggle{margin-top:0!important}
+html body.admin-page .admin-nav .admin-nav-major-toggle .admin-nav-disclosure-title{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+html body.admin-page .admin-nav .admin-nav-major-toggle .admin-nav-disclosure-title>span:first-child{
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+}
+html body.admin-page .admin-nav .admin-nav-major-toggle>i{
+  font-size:18px!important;
+  color:#66766b!important;
+}
+html body.admin-page .admin-nav .admin-nav-major-toggle:hover{
+  border-color:#ccd8ce!important;
+  background:#f1f5ef!important;
+}
+html body.admin-page .admin-nav .admin-nav-major-toggle[aria-expanded="true"]{
+  border-color:#cbd8cd!important;
+  background:#eaf2e9!important;
+  color:#274735!important;
+}
+html body.admin-page .admin-nav .admin-nav-major-toggle.has-active[aria-expanded="false"]{
+  border-color:#bfd0c2!important;
+  background:#e3eee4!important;
+  color:#244a33!important;
+  box-shadow:inset 3px 0 0 #315b42!important;
+}
+html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major{
+  margin:0 0 8px 7px;
+  padding:1px 0 5px 8px;
+}
+
+@media (min-width:721px) and (max-width:1024px){
+  html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+    min-height:46px!important;
+    padding:9px 10px!important;
+    font-size:13px!important;
+  }
+}
+
+@media (max-width:720px){
+  html body.admin-page.admin-menu-open .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+    grid-column:1/-1!important;
+    min-height:50px!important;
+    margin:4px 0 0!important;
+    padding:10px 12px!important;
+    border:1px solid #d9e2da!important;
+    border-radius:12px!important;
+    background:#f7f8f4!important;
+    font-size:14px!important;
+    line-height:1.2!important;
+  }
+  html body.admin-page.admin-menu-open .admin-nav #workNavToggle{margin-top:0!important}
+  html body.admin-page.admin-menu-open .admin-nav .admin-nav-major-toggle[aria-expanded="true"]{
+    background:#eaf2e9!important;
+  }
+  html body.admin-page.admin-menu-open .admin-nav .admin-nav-submenu.admin-nav-submenu-major{
+    margin:0!important;
+    padding:0 0 5px!important;
+  }
+}

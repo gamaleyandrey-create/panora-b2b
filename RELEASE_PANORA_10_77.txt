@@ -1,0 +1,28 @@
+Panora 10.77 FULL
+Build/cache: 10770
+Date: 2026-09-16
+
+MAIN CHANGE — BAKERY NAVIGATION GROUPS
+- All Bakery navigation groups are now first-class collapsible sections: Work, Finance, Partners & products, Production & safety, Retail, and Settings.
+- Group headers are larger and visually stronger on desktop, tablet and the mobile More drawer.
+- Every group can be expanded/collapsed independently.
+- The chosen expanded/collapsed state is saved locally and restored on the next load on the same device/browser.
+- An explicitly collapsed group stays collapsed after reload even when its currently active page is inside that group.
+- Existing Production/Safety and Retail saved states are preserved through the same storage key.
+- First-load defaults preserve the previous visibility: Work, Finance, Partners/products and Settings start open; Production/Safety and Retail start collapsed until the user chooses otherwise.
+- Scope is Bakery/admin navigation only. Partner and Retail storefront layouts are not changed.
+
+VALIDATION
+- build.json: 10.77 / 10770 / 10770.
+- 74/74 JavaScript files pass node --check.
+- 14/14 inline scripts pass syntax validation across 8 HTML files.
+- 85/85 CSS files parse without syntax errors.
+- 370 local HTML resource references checked, 0 missing.
+- 619 static service-worker CORE resource references checked, 0 missing.
+- Core regression suite: 8/8 available tests passed.
+- Navigation regression covers all six groups and verifies that a stored collapsed state wins over an active child after reload.
+- Headless Chromium layout audit via set-content passes at 1440×1000, 800×900 and 390×844.
+- Browser assertions: no horizontal overflow at 1440/390; desktop group header 13.5 px / 48 px; tablet keeps 200 px sticky sidebar and 13 px / 46 px group headers; mobile More drawer stays 2-column for child actions with full-width 14 px / 50 px group headers.
+
+DATABASE
+- No new SQL migration is required for Panora 10.77.

@@ -618,12 +618,20 @@ function renderRetailAnalytics(){
 }
 function renderRetailFoundation(){const settings=readRetailSettings();renderRetailOrderQueue();syncRetailSettingsForm(settings);renderRetailCatalogSettings();renderRetailAnalytics()}
 const ADMIN_NAV_GROUP_STATE_KEY='panora-admin-nav-groups-v1075';
+const ADMIN_NAV_GROUPS=[
+ {toggle:'#workNavToggle',menu:'#workNavItems',key:'work',defaultOpen:true},
+ {toggle:'#financeNavToggle',menu:'#financeNavItems',key:'finance',defaultOpen:true},
+ {toggle:'#partnersNavToggle',menu:'#partnersNavItems',key:'partners',defaultOpen:true},
+ {toggle:'#productionSafetyNavToggle',menu:'#productionSafetyNavItems',key:'productionSafety',defaultOpen:false},
+ {toggle:'#retailNavToggle',menu:'#retailNavItems',key:'retail',defaultOpen:false},
+ {toggle:'#settingsNavToggle',menu:'#settingsNavItems',key:'settings',defaultOpen:true}
+];
 function readAdminNavGroupState(){try{const value=JSON.parse(localStorage.getItem(ADMIN_NAV_GROUP_STATE_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 function writeAdminNavGroupState(key,open){try{const state=readAdminNavGroupState();state[key]=!!open;localStorage.setItem(ADMIN_NAV_GROUP_STATE_KEY,JSON.stringify(state))}catch{}}
 function setAdminNavGroup(toggle,menu,key,open,{persist=true}={}){if(!toggle||!menu)return;toggle.setAttribute('aria-expanded',String(!!open));menu.hidden=!open;toggle.classList.toggle('is-open',!!open);if(persist)writeAdminNavGroupState(key,open)}
-function bindAdminNavGroup(toggleId,menuId,key){const toggle=$(toggleId),menu=$(menuId);if(!toggle||!menu)return;const state=readAdminNavGroupState(),hasActive=!!menu.querySelector('[data-view].active'),open=hasActive||(Object.prototype.hasOwnProperty.call(state,key)?!!state[key]:false);setAdminNavGroup(toggle,menu,key,open,{persist:false});toggle.onclick=()=>setAdminNavGroup(toggle,menu,key,toggle.getAttribute('aria-expanded')!=='true');menu.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setAdminNavGroup(toggle,menu,key,true)));}
-function syncAdminNavGroupActive(){[['#productionSafetyNavToggle','#productionSafetyNavItems'],['#retailNavToggle','#retailNavItems']].forEach(([toggleId,menuId])=>{const toggle=$(toggleId),menu=$(menuId);if(toggle&&menu)toggle.classList.toggle('has-active',!!menu.querySelector('[data-view].active'))})}
-function bindAdminNavGroups(){bindAdminNavGroup('#productionSafetyNavToggle','#productionSafetyNavItems','productionSafety');bindAdminNavGroup('#retailNavToggle','#retailNavItems','retail');syncAdminNavGroupActive()}
+function bindAdminNavGroup(toggleId,menuId,key,{defaultOpen=false}={}){const toggle=$(toggleId),menu=$(menuId);if(!toggle||!menu)return;const state=readAdminNavGroupState(),hasStored=Object.prototype.hasOwnProperty.call(state,key),hasActive=!!menu.querySelector('[data-view].active'),open=hasStored?!!state[key]:(hasActive||!!defaultOpen);setAdminNavGroup(toggle,menu,key,open,{persist:false});toggle.onclick=()=>setAdminNavGroup(toggle,menu,key,toggle.getAttribute('aria-expanded')!=='true');menu.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setAdminNavGroup(toggle,menu,key,true)));}
+function syncAdminNavGroupActive(){ADMIN_NAV_GROUPS.forEach(({toggle:toggleId,menu:menuId})=>{const toggle=$(toggleId),menu=$(menuId);if(toggle&&menu)toggle.classList.toggle('has-active',!!menu.querySelector('[data-view].active'))})}
+function bindAdminNavGroups(){ADMIN_NAV_GROUPS.forEach(({toggle,menu,key,defaultOpen})=>bindAdminNavGroup(toggle,menu,key,{defaultOpen}));syncAdminNavGroupActive()}
 function openRetailView(view){const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');setAdminNavGroup(toggle,menu,'retail',true);const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click()}
 function bindRetailFoundation(){
  const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
