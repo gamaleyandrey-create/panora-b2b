@@ -1,0 +1,10 @@
+/* Panora 10.73 — quality/compliance additions */
+.qc-quality-row{grid-template-columns:minmax(240px,1.4fr) minmax(220px,1fr) auto auto}
+.qc-inspection-report{margin-top:16px;border:1px solid var(--line,#d8ddd6);border-radius:18px;background:#fff;padding:20px;display:grid;gap:20px}
+.qc-inspection-report>header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid var(--line,#d8ddd6);padding-bottom:14px}
+.qc-inspection-report h3,.qc-inspection-report h4{margin:0}.qc-inspection-report p{margin:6px 0 0;color:#667066}
+.qc-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.qc-report-grid article{border:1px solid var(--line,#d8ddd6);border-radius:12px;padding:12px;display:grid;gap:5px}.qc-report-grid span{font-size:12px;color:#667066}.qc-report-grid strong{font-size:22px}
+.qc-report-detail table{width:100%;border-collapse:collapse}.qc-report-detail th,.qc-report-detail td{text-align:left;border-bottom:1px solid var(--line,#e5e9e4);padding:8px 6px;font-size:13px}
+.qc-dialog textarea{width:100%}
+@media(max-width:760px){.qc-quality-row{grid-template-columns:1fr}.qc-inspection-report{padding:14px}.qc-inspection-report>header{display:grid}.qc-report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-report-detail{overflow:auto}.qc-report-detail table{min-width:560px}}
+@media print{body.qc-printing>*:not(.admin-shell){display:none!important}body.qc-printing .admin-nav,body.qc-printing .topbar,body.qc-printing .view:not(#view-ps-inspection),body.qc-printing #view-ps-inspection>.page-head,body.qc-printing #view-ps-inspection>.ps-help,body.qc-printing #view-ps-inspection>.ps-trace-filters{display:none!important}body.qc-printing .admin-content,body.qc-printing #view-ps-inspection,body.qc-printing #psInspectionRoot{display:block!important;margin:0!important;padding:0!important;width:100%!important}body.qc-printing .qc-inspection-report{border:0;box-shadow:none;padding:0}.qc-inspection-report{break-inside:auto}.qc-inspection-report section{break-inside:avoid}}

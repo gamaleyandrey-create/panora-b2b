@@ -1,0 +1,12 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const build=JSON.parse(fs.readFileSync('build.json','utf8'));
+assert.deepEqual(build,{version:'10.73',build:10730,cache:10730});
+const ps=fs.readFileSync('production-safety.js','utf8');
+for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
+const qc=fs.readFileSync('quality-compliance-v1073.js','utf8');
+for(const token of ["const VERSION='10.73',BUILD=10730",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1073.css?v=10730','quality-compliance-v1073.js?v=10730'])assert.ok(html.includes(token),token);
+const rootSw=fs.readFileSync('sw.js','utf8'),bakerySw=fs.readFileSync('bakery/sw.js','utf8');
+assert.ok(rootSw.includes('quality-compliance-v1073.js'));assert.ok(rootSw.includes('quality-compliance-v1073.css'));assert.ok(bakerySw.includes('../quality-compliance-v1073.js'));assert.ok(bakerySw.includes('../quality-compliance-v1073.css'));
+console.log('Panora 10.73 quality/compliance tests: OK');

@@ -37,4 +37,4 @@ tip.onclick({preventDefault(){},stopPropagation(){}});assert.equal(dialog.open,t
 go.onclick();assert.equal(navClicks,1,'quick help link opens requested section');
 api.refreshNavLanguage();assert.equal(group.textContent,'ПРОИЗВОДСТВО И БЕЗОПАСНОСТЬ');assert.equal(navButtons.get('ps-help').textContent,'Справка');
 assert.equal(api.onboardingNeeded(),true,'first steps shown for an empty production setup');
-console.log('Panora 10.72 help runtime handlers: OK');
+console.log('Panora 10.73 help runtime handlers: OK');

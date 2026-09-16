@@ -48,10 +48,13 @@ const list = [
 const fs = require('node:fs');
 const current = [
   'production-safety-regression.test.js',
-  'v1070-allergen-reference.test.js',
-  'v1070-bake-day-selection.test.js',
-  'v1070-help-center.test.js',
-  'v1070-help-runtime.test.js'
+  'v1071-allergen-reference.test.js',
+  'v1071-bake-day-selection.test.js',
+  'v1071-compliance-docs.test.js',
+  'v1071-help-center.test.js',
+  'v1071-help-runtime.test.js',
+  'v1073-quality-compliance.test.js',
+  'v1073-partner-quality.test.js'
 ];
 const requested = [...new Set([...list, ...current])];
 const available = requested.filter(file => fs.existsSync(path.join(__dirname, file)));

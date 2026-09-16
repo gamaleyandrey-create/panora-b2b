@@ -1324,12 +1324,47 @@
     const noteRows=ownNotes().slice(0,20).map(note=>{const lots=Array.isArray(note.lotTrace)?note.lotTrace:[];return `<button type="button" class="rw-product-doc-note" data-rw-note-library="${esc(note.id)}"><span><strong>${noteNumber(note)}</strong><small>${esc(localDate(note.date))}${lots.length?` · LOT: ${esc([...new Set(lots.map(x=>x.lot).filter(Boolean))].join(', '))}`:''}</small></span><b>${lang==='ru'?'Открыть':lang==='es'?'Abrir':'Open'}</b></button>`}).join('');
     return `<section class="rw-product-documents"><header><div><h3>${lang==='ru'?'Документы продукта':lang==='es'?'Documentos de producto':'Product documents'}</h3><p>${lang==='ru'?'Актуальная информация для партнёра: состав, аллергены, масса, хранение и срок годности. Внутренние рецептуры, поставщики и себестоимость здесь не показываются.':lang==='es'?'Información vigente para el socio: ingredientes, alérgenos, peso, conservación y vida útil. No se muestran recetas internas, proveedores ni costes.':'Current partner-facing information: ingredients, allergens, weight, storage and shelf life. Internal recipes, suppliers and costs are not shown.'}</p></div></header><div class="rw-product-doc-grid">${rows||`<p>${lang==='ru'?'Данные продукта пока не опубликованы.':lang==='es'?'Los datos del producto aún no están publicados.':'Product data has not been published yet.'}</p>`}</div><section class="rw-product-delivery-docs"><h4>${lang==='ru'?'Документы поставок':lang==='es'?'Documentos de entrega':'Delivery documents'}</h4><p>${lang==='ru'?'Накладные / Albarán по вашим поставкам.':lang==='es'?'Albaranes de tus entregas.':'Delivery notes for your deliveries.'}</p><div>${noteRows||`<small>${lang==='ru'?'Накладных пока нет.':lang==='es'?'Aún no hay albaranes.':'No delivery notes yet.'}</small>`}</div></section></section>`;
   }
+
+  function qualityCases(){
+    try{
+      const rows=JSON.parse(localStorage.getItem('panora-portal-quality-cases')||'[]');
+      return Array.isArray(rows)?rows:[];
+    }catch{return[]}
+  }
+  function qualityStatusLabel(value){
+    return value==='closed'?(lang==='ru'?'Закрыто':lang==='es'?'Cerrado':'Closed')
+      :value==='fixing'?(lang==='ru'?'В работе':lang==='es'?'En curso':'In progress')
+      :(lang==='ru'?'Открыто':lang==='es'?'Abierto':'Open');
+  }
+  function qualityHtml(){
+    const cases=qualityCases().slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+    const noteOptions=ownNotes().slice(0,100).map(note=>`<option value="${esc(note.id)}">${esc(noteNumber(note))} · ${esc(localDate(note.date))}</option>`).join('');
+    const productOptions=(Array.isArray(PRODUCTS)?PRODUCTS:[]).filter(p=>account?.prices?.[p.id]!=null||p.customerSafety).map(p=>`<option value="${esc(p.id)}">${esc(itemName(p.id))}</option>`).join('');
+    return `<section class="rw-quality">
+      <header><div><h3>${lang==='ru'?'Качество и обращения':lang==='es'?'Calidad e incidencias':'Quality & cases'}</h3>
+      <p>${lang==='ru'?'Сообщите о проблеме по конкретной поставке. Пекарня увидит DN, продукт и LOT и сможет связать обращение с CAPA или отзывом.':lang==='es'?'Informe de un problema de una entrega concreta. La panadería verá el albarán, el producto y el LOT y podrá vincular la incidencia con CAPA o una retirada.':'Report an issue with a specific delivery. The bakery can see the delivery note, product and LOT and link the case to CAPA or a recall.'}</p></div></header>
+      <form class="rw-quality-form" data-rw-quality-form>
+        <div class="rw-quality-grid">
+          <label><span>${lang==='ru'?'Тип обращения':lang==='es'?'Tipo de incidencia':'Case type'}</span><select name="caseType"><option value="complaint">${lang==='ru'?'Жалоба':lang==='es'?'Queja':'Complaint'}</option><option value="return">${lang==='ru'?'Возврат':lang==='es'?'Devolución':'Return'}</option><option value="quality">${lang==='ru'?'Вопрос качества':lang==='es'?'Incidencia de calidad':'Quality issue'}</option></select></label>
+          <label><span>DN / Albarán</span><select name="deliveryNoteId" required><option value="">—</option>${noteOptions}</select></label>
+          <label><span>${lang==='ru'?'Продукт':lang==='es'?'Producto':'Product'}</span><select name="productId" required><option value="">—</option>${productOptions}</select></label>
+          <label><span>${lang==='ru'?'Что вы ожидаете':lang==='es'?'Acción solicitada':'Requested action'}</span><input name="requestedAction" placeholder="${lang==='ru'?'Например: проверить партию / заменить':lang==='es'?'Ej.: revisar lote / sustituir':'e.g. review lot / replace'}"></label>
+        </div>
+        <label><span>${lang==='ru'?'Описание проблемы':lang==='es'?'Descripción del problema':'Issue description'}</span><textarea name="description" rows="3" minlength="3" maxlength="4000" required></textarea></label>
+        <div class="rw-quality-submit"><button class="button button-primary" type="submit">${lang==='ru'?'Отправить в пекарню':lang==='es'?'Enviar a la panadería':'Send to bakery'}</button><span data-rw-quality-result></span></div>
+      </form>
+      <section class="rw-quality-history"><h4>${lang==='ru'?'Мои обращения':lang==='es'?'Mis incidencias':'My cases'}</h4>
+        <div>${cases.length?cases.map(row=>`<article class="rw-quality-case ${esc(row.status||'open')}"><div><strong>${esc(row.description||'—')}</strong><small>${esc(localDate(row.createdAt||''))} · ${esc(qualityStatusLabel(row.status))}${row.deliveryNoteId?` · ${esc(noteNumber(ownNotes().find(n=>String(n.id)===String(row.deliveryNoteId))||{number:''}))}`:''}</small></div>${row.bakeryResponse?`<p><b>${lang==='ru'?'Ответ пекарни':lang==='es'?'Respuesta de la panadería':'Bakery response'}:</b> ${esc(row.bakeryResponse)}</p>`:''}</article>`).join(''):`<p>${lang==='ru'?'Обращений пока нет.':lang==='es'?'Aún no hay incidencias.':'No quality cases yet.'}</p>`}</div>
+      </section>
+    </section>`;
+  }
   function contentHtml() {
     if (activeTab === "home") return homeHtml();
     if (activeTab === "new") return newOrderHtml();
     if (activeTab === "notes") return notesHtml();
     if (activeTab === "payments") return paymentsHtml();
     if (activeTab === "docs") return productDocumentsHtml();
+    if (activeTab === "quality") return qualityHtml();
     if (activeTab === "profile") return `${profileHtml()}${pricesHtml()}`;
     return ordersHtml();
   }
@@ -1559,6 +1594,28 @@
       button.disabled = true; button.textContent = t("savingProfile"); result.textContent = "";
       try { const details = Object.fromEntries(new FormData(profileForm)); details.extraMessengers = extraMessengers.map(({name, contact}) => ({name, contact})); await window.panoraRestaurantProfile.save(details); result.textContent = t("profileSaved"); result.className = "rw-profile-result success"; window.setTimeout(() => { activeTab = "profile"; renderAccountModal(); }, 650); }
       catch (error) { result.textContent = `${t("saveError")} ${error.message || ""}`.trim(); result.className = "rw-profile-result error"; button.disabled = false; button.textContent = t("saveProfile"); }
+    };
+
+    const qualityForm=modal.querySelector('[data-rw-quality-form]');
+    if(qualityForm)qualityForm.onsubmit=async event=>{
+      event.preventDefault();
+      const button=qualityForm.querySelector('[type="submit"]'),result=qualityForm.querySelector('[data-rw-quality-result]');
+      const data=Object.fromEntries(new FormData(qualityForm));
+      const note=ownNotes().find(n=>String(n.id)===String(data.deliveryNoteId));
+      const trace=Array.isArray(note?.lotTrace)?note.lotTrace:[];
+      const lot=trace.find(x=>String(x.product)===String(data.productId))?.lot||'';
+      button.disabled=true;result.textContent=lang==='ru'?'Отправляем…':lang==='es'?'Enviando…':'Sending…';
+      try{
+        if(!window.panoraPartnerQuality?.submit)throw new Error(lang==='ru'?'Нужно применить SQL Panora 10.73.':lang==='es'?'Debe aplicar el SQL Panora 10.73.':'Panora 10.73 SQL update is required.');
+        await window.panoraPartnerQuality.submit({caseType:data.caseType,deliveryNoteId:data.deliveryNoteId,orderId:note?.orderId||'',productId:data.productId,lotNumber:lot,description:data.description,requestedAction:data.requestedAction});
+        result.textContent=lang==='ru'?'Обращение отправлено.':lang==='es'?'Incidencia enviada.':'Case sent.';
+        result.className='success';
+        qualityForm.reset();
+        setTimeout(()=>{activeTab='quality';renderAccountModal();},450);
+      }catch(error){
+        result.textContent=error?.message||String(error);
+        result.className='error';
+      }finally{button.disabled=false}
     };
     // Panora 9.57: keep partner navigation on the persistent modal root.
     // The inner workspace is rebuilt after cloud sync, while the modal element
@@ -2023,7 +2080,7 @@
       payments: currentDebtItems().length,
     };
     modal.classList.add("restaurant-workspace");
-    const currentSectionLabel = ({home:t("home"),new:t("newOrder"),orders:t("orders"),notes:t("notes"),payments:t("payments"),docs:(lang==="ru"?"Документы продукта":lang==="es"?"Documentos de producto":"Product documents"),profile:t("profile")})[activeTab] || t("home");
+    const currentSectionLabel = ({home:t("home"),new:t("newOrder"),orders:t("orders"),notes:t("notes"),payments:t("payments"),docs:(lang==="ru"?"Документы продукта":lang==="es"?"Documentos de producto":"Product documents"),quality:(lang==="ru"?"Качество":lang==="es"?"Calidad":"Quality"),profile:t("profile")})[activeTab] || t("home");
     document.body.classList.toggle("panora-partner-authenticated",Boolean(account));
     modal.innerHTML = `<div class="modal-head rw-head"><div><span class="kicker">Panora</span><h2>${t("title")}</h2><div class="rw-partner-context"><span class="rw-partner-name">${partnerTypeLabel()} · ${esc(account.name)}</span><span class="rw-section-name">${esc(currentSectionLabel)}</span></div></div><button class="close-button" data-portal-close aria-label="${t("close")}">×</button></div>
       <div class="rw-layout">
@@ -2035,6 +2092,7 @@
             ["notes", t("notes"), counts.notes],
             ["payments", t("payments"), counts.payments],
             ["docs", lang==="ru"?"Документы":lang==="es"?"Documentos":"Documents", "▤"],
+            ["quality", lang==="ru"?"Качество":lang==="es"?"Calidad":"Quality", "◇"],
             ["profile", t("profile"), "__PROFILE__"],
           ]
             .map(
@@ -2129,6 +2187,7 @@
   if(window.panoraPendingPartnerCabinetOpen&&account){
     window.panoraOpenPartnerCabinet();
   }
+  window.addEventListener('panora:partner-quality-updated',()=>{if(activeTab==='quality')renderAccountModal(true)});
   window.panoraOpenPartnerProfile = () => {
     const modal=document.querySelector("#profileModal");
     if(!modal)return;

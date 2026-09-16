@@ -203,7 +203,7 @@
   const SESSION_KEY='panora-restaurant-cloud-session';
   const APP_URL='https://gamaleyandrey-create.github.io/panora-b2b/';
   let session=null,refreshPromise=null,loadPromise=null,submitting=false,lastState={type:'ok',text:'Соединение установлено'};
-  const privateKeys=new Set(['panora-restaurants','panora-orders','panora-delivery-notes','panora-payments']);
+  const privateKeys=new Set(['panora-restaurants','panora-orders','panora-delivery-notes','panora-payments','panora-quality-cases']);
   const storageKey=key=>privateKeys.has(key)?`panora-portal-${key.slice(7)}`:key;
   const setPortalRuntime=(key,value)=>{
     try{window.panoraPortalSetRuntime?.(key,value)}catch{}
@@ -344,6 +344,61 @@
     })();
     if(!readKey)return run;partnerInflightReads.set(readKey,run);
     try{return await run}finally{if(partnerInflightReads.get(readKey)===run)partnerInflightReads.delete(readKey)}
+  }
+
+  function mapPartnerQualityCase(row){
+    return {
+      id:row.id,restaurantId:row.restaurant_id,deliveryNoteId:row.delivery_note_id||'',
+      orderId:row.order_id||'',productId:row.product_id||'',lotNumber:row.lot_number||'',
+      caseType:row.case_type||'complaint',description:row.description||'',
+      requestedAction:row.requested_action||'',status:row.status||'open',
+      bakeryResponse:row.bakery_response||'',responsible:row.responsible||'',
+      createdAt:row.created_at||'',updatedAt:row.updated_at||''
+    };
+  }
+  async function fetchPartnerQualityCases(force=true){
+    if(!session?.user||!account?.id||!navigator.onLine)return read('panora-quality-cases',[])||[];
+    try{
+      const rows=await api(`partner_quality_cases?restaurant_id=eq.${encodeURIComponent(account.id)}&select=id,restaurant_id,delivery_note_id,order_id,product_id,lot_number,case_type,description,requested_action,status,bakery_response,responsible,created_at,updated_at&order=created_at.desc`);
+      const mapped=(rows||[]).map(mapPartnerQualityCase);
+      write('panora-quality-cases',mapped);
+      window.dispatchEvent(new CustomEvent('panora:partner-quality-updated',{detail:{count:mapped.length,source:'cloud'}}));
+      return mapped;
+    }catch(error){
+      const raw=String(error?.message||error||'');
+      if(!/partner_quality_cases|PGRST|404|relation/i.test(raw))console.warn('Panora partner quality load',error);
+      return read('panora-quality-cases',[])||[];
+    }
+  }
+  async function submitPartnerQualityCase(payload={}){
+    if(!account?.id)throw new Error(labels('Войдите в кабинет партнёра','Sign in to the partner account','Inicia sesión en el área del socio'));
+    if(!navigator.onLine)throw new Error(labels('Для отправки обращения требуется интернет.','Internet is required to send a quality case.','Se necesita internet para enviar una incidencia.'));
+    const description=String(payload.description||'').trim();
+    if(description.length<3)throw new Error(labels('Опишите проблему подробнее.','Please describe the issue.','Describa la incidencia con más detalle.'));
+    const id=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const body={
+      id,
+      restaurant_id:account.id,
+      delivery_note_id:payload.deliveryNoteId||null,
+      order_id:payload.orderId||null,
+      product_id:payload.productId||null,
+      lot_number:String(payload.lotNumber||''),
+      case_type:['complaint','return','quality'].includes(String(payload.caseType))?String(payload.caseType):'complaint',
+      description,
+      requested_action:String(payload.requestedAction||''),
+      status:'open',
+      created_by:session?.user?.id||null
+    };
+    try{
+      await api('partner_quality_cases',{method:'POST',body:JSON.stringify(body),headers:{Prefer:'return=minimal'}});
+    }catch(error){
+      const raw=String(error?.message||error||'');
+      if(/partner_quality_cases|PGRST|404|relation/i.test(raw))throw new Error(labels('Нужно применить SQL Panora 10.73 в Supabase.','Apply the Panora 10.73 SQL migration in Supabase.','Aplique la migración SQL Panora 10.73 en Supabase.'));
+      throw error;
+    }
+    const rows=await fetchPartnerQualityCases(true);
+    window.dispatchEvent(new CustomEvent('panora:partner-quality-created',{detail:{id}}));
+    return rows.find(x=>x.id===id)||{...body,id};
   }
   function readPendingDeliveryConfirmations(){
     try{const rows=JSON.parse(localStorage.getItem(DELIVERY_CONFIRMATION_QUEUE_KEY)||'[]');return Array.isArray(rows)?rows:[]}
@@ -633,7 +688,7 @@
         if(partnerWorkspaceEditing())schedulePartnerWorkspaceRender();
         else try{renderAccountModal(true)}catch(error){console.warn('Panora partner hydrated workspace render',error)}
       }
-      startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>flushPendingDeliveryConfirmations().catch(()=>{}),120);setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
+      startPartnerOrderPolling();startPartnerPricingPolling();setTimeout(()=>flushPendingDeliveryConfirmations().catch(()=>{}),120);setTimeout(()=>fetchPartnerQualityCases(true).catch(()=>{}),180);setTimeout(()=>partnerPushRepairRegistration().catch(()=>{}),250);setTimeout(()=>window.panoraOrderMessages?.refreshUnread?.(),350);state('ok',labels('Синхронизировано','Synced','Sincronizado'));return orders;
     })().catch(error=>{state('error',error.message);throw error}).finally(()=>loadPromise=null);
     return loadPromise;
   }
@@ -1527,5 +1582,5 @@
   }})();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)claimPartnerLeader(true)});
   window.addEventListener('focus',()=>claimPartnerLeader(true),true);
-  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};
+  window.panoraPortalCloud={load:()=>loadAll(true),refreshOrders:refreshPartnerOrders,refreshFinance:refreshPartnerFinance,refreshPricing:refreshPartnerPricing};window.panoraPartnerQuality={list:()=>read('panora-quality-cases',[])||[],refresh:()=>fetchPartnerQualityCases(true),submit:submitPartnerQualityCase};
 })();
