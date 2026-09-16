@@ -35,6 +35,6 @@ document.querySelector=(sel)=>{
 api.bindCommon(fakeRoot);assert.equal(typeof tip.onclick,'function');assert.equal(typeof go.onclick,'function');
 tip.onclick({preventDefault(){},stopPropagation(){}});assert.equal(dialog.open,true);assert.equal(title.textContent,'Блокировка партии');assert.match(text.textContent,/не используется в новых автоматических B2B\/Retail/);
 go.onclick();assert.equal(navClicks,1,'quick help link opens requested section');
-api.refreshNavLanguage();assert.equal(group.textContent,'ПРОИЗВОДСТВО И БЕЗОПАСНОСТЬ');assert.equal(navButtons.get('ps-help').textContent,'Справка');
+api.refreshNavLanguage();assert.equal(group.textContent,'Производство и безопасность');assert.equal(navButtons.get('ps-help').textContent,'Справка');
 assert.equal(api.onboardingNeeded(),true,'first steps shown for an empty production setup');
 console.log('Panora 10.75 help runtime handlers: OK');
