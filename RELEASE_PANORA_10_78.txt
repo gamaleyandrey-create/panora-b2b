@@ -1,0 +1,27 @@
+Panora 10.78 FULL
+Build/cache: 10780
+Date: 2026-09-16
+
+MAIN CHANGE — BAKERY NAVIGATION COMPACTNESS
+- Bakery navigation groups remain large, collapsible and persistent, but the vertical footprint is reduced by roughly one fifth compared with 10.77.
+- Reduced group-card height, padding, corner radius and vertical gaps on desktop/tablet.
+- Reduced the same spacing in the mobile More drawer while keeping full-width group controls and two-column child actions when groups are expanded.
+- “Производство и безопасность” now uses the same sentence-case style as the other Bakery groups instead of all caps.
+- Expand/collapse behavior and localStorage persistence from 10.77 are unchanged.
+- Scope remains Bakery/admin navigation only. Partner and Retail storefront layouts are not changed.
+
+VALIDATION
+- build.json: 10.78 / 10780 / 10780.
+- 74/74 JavaScript files pass node --check.
+- 14/14 inline scripts pass syntax validation across HTML files.
+- 85/85 CSS files parse without syntax errors.
+- 350 local HTML resource references checked, 0 missing.
+- 619 static service-worker CORE resource references checked, 0 missing.
+- Core regression suite: 8/8 tests passed.
+- Navigation regression verifies expand/collapse, stored state and reload behavior.
+- Headless Chromium layout audit passes at 1440×1000, 800×900 and 390×844.
+- Browser assertions: no horizontal overflow; desktop group controls use 12.8 px / min 42 px, tablet 12.3 px / min 40 px, mobile 13 px / 44 px; long labels wrap cleanly.
+- Mobile opened More drawer visually checked with all six collapsed groups visible above the bottom tabs.
+
+DATABASE
+- No new SQL migration is required for Panora 10.78.
