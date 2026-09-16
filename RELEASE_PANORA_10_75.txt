@@ -1,0 +1,32 @@
+Panora 10.75 FULL
+Build/cache: 10750
+Date: 2026-09-16
+
+MAIN CHANGE — COMPACT BAKERY NAVIGATION
+- "Производство и безопасность" is now a collapsible navigation group instead of a permanently expanded long list.
+- "Розница" uses the same compact disclosure pattern.
+- Open/closed state is remembered on the device.
+- Opening a child view keeps its parent group open.
+- If the currently active view belongs to a collapsed group, the group header is visually marked.
+- The retail on/off badge is now visible in the collapsed Retail header.
+- Production/Safety uses an internal scroll area on long desktop menus and a compact 2-column mobile submenu.
+- RU/EN/ES localization includes the new "Производство и безопасность" group label.
+
+RELEASE-CANDIDATE AUDIT
+- build.json: 10.75 / 10750 / 10750.
+- All four service-worker caches bumped to 10750.
+- 74 JavaScript files pass node --check.
+- 14 inline scripts pass syntax validation.
+- 8 HTML files checked.
+- Service-worker resource audit: 619 references total, 0 missing.
+- Core regression suite: 8/8 available tests passed.
+- Collapsible navigation logic is tested directly from the production admin.js source with mocked DOM/storage: toggle, persistence and child-open behavior pass.
+- Existing partner product-document privacy guard remains in the regression suite.
+
+DATABASE
+- No new SQL migration is required for Panora 10.75.
+- Panora 10.72 and 10.73 SQL migrations remain required if they have not yet been applied.
+
+NOTE
+- A live Supabase environment was not connected in this build session, so live RLS/database execution was not re-run here.
+- Browser launch through the current sandbox was blocked by the environment; navigation behavior was therefore verified through the production-source runtime test plus static HTML/CSS checks.

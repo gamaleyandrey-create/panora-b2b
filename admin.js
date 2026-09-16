@@ -617,10 +617,17 @@ function renderRetailAnalytics(){
  const productMap=new Map();completed.forEach(order=>(order.items||[]).forEach(item=>{const id=String(item.product||''),qty=Math.max(0,Number(item.quantity||0));if(id&&qty)productMap.set(id,(productMap.get(id)||0)+qty)}));const popular=[...productMap.entries()].sort((a,b)=>b[1]-a[1]),maxPopular=Math.max(1,...popular.map(([,qty])=>qty)),root=$('#retailPopularProducts');if(root)root.innerHTML=popular.length?popular.map(([id,qty])=>`<div class="retail-popular-row"><strong>${adminEscape(retailItemName(id))}</strong><span>${qty} шт.</span><i><b style="width:${Math.round(qty/maxPopular*100)}%"></b></i></div>`).join(''):'<div class="retail-analytics-empty">Завершённых розничных продаж за этот период пока нет.</div>';
 }
 function renderRetailFoundation(){const settings=readRetailSettings();renderRetailOrderQueue();syncRetailSettingsForm(settings);renderRetailCatalogSettings();renderRetailAnalytics()}
-function openRetailView(view){const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click()}
+const ADMIN_NAV_GROUP_STATE_KEY='panora-admin-nav-groups-v1075';
+function readAdminNavGroupState(){try{const value=JSON.parse(localStorage.getItem(ADMIN_NAV_GROUP_STATE_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
+function writeAdminNavGroupState(key,open){try{const state=readAdminNavGroupState();state[key]=!!open;localStorage.setItem(ADMIN_NAV_GROUP_STATE_KEY,JSON.stringify(state))}catch{}}
+function setAdminNavGroup(toggle,menu,key,open,{persist=true}={}){if(!toggle||!menu)return;toggle.setAttribute('aria-expanded',String(!!open));menu.hidden=!open;toggle.classList.toggle('is-open',!!open);if(persist)writeAdminNavGroupState(key,open)}
+function bindAdminNavGroup(toggleId,menuId,key){const toggle=$(toggleId),menu=$(menuId);if(!toggle||!menu)return;const state=readAdminNavGroupState(),hasActive=!!menu.querySelector('[data-view].active'),open=hasActive||(Object.prototype.hasOwnProperty.call(state,key)?!!state[key]:false);setAdminNavGroup(toggle,menu,key,open,{persist:false});toggle.onclick=()=>setAdminNavGroup(toggle,menu,key,toggle.getAttribute('aria-expanded')!=='true');menu.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setAdminNavGroup(toggle,menu,key,true)));}
+function syncAdminNavGroupActive(){[['#productionSafetyNavToggle','#productionSafetyNavItems'],['#retailNavToggle','#retailNavItems']].forEach(([toggleId,menuId])=>{const toggle=$(toggleId),menu=$(menuId);if(toggle&&menu)toggle.classList.toggle('has-active',!!menu.querySelector('[data-view].active'))})}
+function bindAdminNavGroups(){bindAdminNavGroup('#productionSafetyNavToggle','#productionSafetyNavItems','productionSafety');bindAdminNavGroup('#retailNavToggle','#retailNavItems','retail');syncAdminNavGroupActive()}
+function openRetailView(view){const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');setAdminNavGroup(toggle,menu,'retail',true);const button=$(`.admin-nav [data-view="${view}"]`);if(button)button.click()}
 function bindRetailFoundation(){
- const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');if(toggle&&menu)toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')==='true';toggle.setAttribute('aria-expanded',String(!open));menu.hidden=open};
- $$('#retailNavItems [data-view]').forEach(button=>button.addEventListener('click',()=>{if(toggle&&menu){toggle.setAttribute('aria-expanded','true');menu.hidden=false}if(button.dataset.view==='retail-catalog')renderRetailCatalogSettings();if(button.dataset.view==='retail-analytics')renderRetailAnalytics();if(button.dataset.view==='retail-orders')loadRetailOrdersCloud()}));
+ const toggle=$('#retailNavToggle'),menu=$('#retailNavItems');
+ $$('#retailNavItems [data-view]').forEach(button=>button.addEventListener('click',()=>{setAdminNavGroup(toggle,menu,'retail',true);if(button.dataset.view==='retail-catalog')renderRetailCatalogSettings();if(button.dataset.view==='retail-analytics')renderRetailAnalytics();if(button.dataset.view==='retail-orders')loadRetailOrdersCloud()}));
  const eventDialog=$('#retailOrderEventsDialog'),eventClose=$('#retailOrderEventsClose');if(eventClose&&eventDialog)eventClose.onclick=()=>eventDialog.close();
  const messageDialog=$('#retailOrderMessagesDialog'),messageClose=$('#retailOrderMessagesClose'),messageForm=$('#retailOrderMessageForm'),messagePushToggle=$('#retailOrderMessagesPushToggle');if(messagePushToggle)messagePushToggle.onclick=retailToggleOrderMessagePush;if(messageClose&&messageDialog)messageClose.onclick=()=>{retailMessageOrderId='';messageDialog.close()};if(messageDialog)messageDialog.addEventListener('close',()=>{retailMessageOrderId=''});if(messageForm)messageForm.onsubmit=async event=>{event.preventDefault();const field=messageForm.elements.message,button=messageForm.querySelector('button[type=submit]'),text=String(field.value||'').trim();if(!text||!retailMessageOrderId)return;button.disabled=true;try{await sendRetailBakeryMessage(retailMessageOrderId,text);field.value='';await refreshRetailOrderMessages(retailMessageOrderId,{quiet:true})}catch(error){alert(`Не удалось отправить сообщение: ${error.message||error}`)}finally{button.disabled=false}};
  const openSettings=$('#retailOpenSettings');if(openSettings)openSettings.onclick=()=>openRetailView('retail-settings');const analyticsOrders=$('#retailAnalyticsOpenOrders');if(analyticsOrders)analyticsOrders.onclick=()=>openRetailView('retail-orders');
@@ -1052,7 +1059,7 @@ function updateStockAdjustPreview(){
  const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
  preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
 }
-$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active');if(b.dataset.view==='stock'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshBreadStock?.().catch(error=>console.warn('Panora bread stock refresh',error))}});
+$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active');syncAdminNavGroupActive();if(b.dataset.view==='stock'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshBreadStock?.().catch(error=>console.warn('Panora bread stock refresh',error))}});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 // Panora 10.62 — compact global header actions on mobile.
 (()=>{
@@ -1168,6 +1175,7 @@ window.addEventListener('panora:bake-completions-changed',()=>{renderPlan();rend
 migrateLegacyBakeCompletions();
 upgradeBakeCompletionSnapshots();
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindBakeCompletion,{once:true}):bindBakeCompletion();
+bindAdminNavGroups();
 bindRetailFoundation();
 $('#printPurchase').onclick=()=>window.print();applyLanguage();
 
