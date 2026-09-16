@@ -1,0 +1,21 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const source=fs.readFileSync('production-safety.js','utf8');
+class Storage{constructor(){this.m=new Map([['panora-admin-lang','ru']])}getItem(k){return this.m.has(k)?this.m.get(k):null}setItem(k,v){this.m.set(k,String(v))}removeItem(k){this.m.delete(k)}}
+const localStorage=new Storage();
+const document={readyState:'loading',body:{classList:{contains:()=>true}},querySelector:()=>null,querySelectorAll:()=>[],addEventListener:()=>{}};
+const window={PANORA_SUPABASE:{},panoraSupabaseSession:null,panoraProductRegistry:()=>[],addEventListener:()=>{},dispatchEvent:()=>{}};
+const ctx={window,document,localStorage,navigator:{onLine:false},crypto:{randomUUID:()=>crypto.randomUUID()},structuredClone,CustomEvent:function(){},Intl,Date,Math,JSON,Number,String,Array,Object,Set,Map,Promise,console,setTimeout:()=>0,clearTimeout:()=>{},fetch:async()=>{},Notification:{permission:'denied'},FormData:function(){},confirm:()=>true,prompt:()=>null,alert:()=>{}};
+Object.assign(window,{window,document,localStorage,navigator:ctx.navigator,crypto:ctx.crypto,CustomEvent:ctx.CustomEvent,Notification:ctx.Notification});
+vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'production-safety.js'});
+const api=window.panoraProductionSafety;
+assert.equal(api.version,'10.71');assert.equal(api.build,10710);
+const s=n=>Array.from(api.suggestedIngredientAllergens(n));
+for(const name of ['Миндаль','Фундук','Грецкий орех','Кешью','Пекан','Бразильский орех','Фисташки','Макадамия']) assert(s(name).includes('nuts'),name+' must map to nuts');
+for(const name of ['Almond','Hazelnut','Walnut','Cashew','Pecan','Brazil nut','Pistachio','Queensland nut']) assert(s(name).includes('nuts'),name+' must map to nuts');
+for(const name of ['Almendra','Avellana','Nuez','Anacardo','Pacana','Nuez de Brasil','Pistacho','Macadamia']) assert(s(name).includes('nuts'),name+' must map to nuts');
+for(const name of ['Мускатный орех','Кокос','Кедровый орех','Каштан','Nutmeg','Coconut','Pine nut','Chestnut','Nuez moscada']) assert(!s(name).includes('nuts'),name+' must not map to EU nuts');
+assert.deepEqual(s('Семена тыквы'),[]);assert.deepEqual(s('Pumpkin seeds'),[]);assert.equal(api.seedAllergenAdvisory('Семена тыквы'),'pumpkin');
+assert.deepEqual(s('Семена льна'),[]);assert.deepEqual(s('Linseed'),[]);assert.equal(api.seedAllergenAdvisory('Flax seeds'),'flax');
+assert(s('Кунжут').includes('sesame'));assert(s('Sesame seeds').includes('sesame'));
+assert.match(source,/бразильский орех/);assert.match(source,/Семена тыквы и льна не входят/);assert.match(source,/Pumpkin and flax\/linseed are not on that list/);
+console.log('Panora 10.71 allergen reference tests: OK');
