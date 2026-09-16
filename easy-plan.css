@@ -3,3 +3,25 @@
 .head-actions{display:flex;gap:10px;flex-wrap:wrap}.cancel-bake-button,.danger{border:1px solid #b65349!important;background:#fff5f3!important;color:#9e3f36!important;border-radius:9px;padding:12px 17px;cursor:pointer}.danger{background:#a94339!important;color:#fff!important}.cancel-bake-summary{display:grid;gap:5px;background:#fff3e4;border-radius:10px;padding:14px;margin:14px 0}.cancel-bake-summary span{color:var(--muted);font-size:13px}.confirm-cancel-check{grid-template-columns:auto 1fr!important;align-items:center}.confirm-cancel-check input{width:18px;height:18px}
 .calendar-only-add{display:none!important}
 .plan-cancel-day{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.plan-cancel-day .danger{width:100%;min-height:48px;font-weight:700}.plan-cancel-day .danger[hidden]{display:none}
+
+/* Panora 10.67 — bake day first, quantity optional. */
+.bread-plan-fields{display:grid;grid-template-columns:1fr;gap:10px}
+.plan-product-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,240px);gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.plan-product-row.is-selected{border-color:#bfd1c2;background:#f5f9f4;box-shadow:0 1px 0 rgba(38,85,55,.04)}
+.plan-product-choice{display:flex!important;align-items:flex-start;gap:10px;margin:0!important;min-width:0}
+.plan-product-choice>input{flex:0 0 auto;width:20px;height:20px;margin:2px 0 0;accent-color:var(--green)}
+.plan-product-choice>span{display:grid;gap:4px;min-width:0}
+.plan-product-choice strong{font-size:14px;line-height:1.25;color:var(--ink)}
+.plan-product-choice small{display:block;color:var(--muted);font-size:11px;line-height:1.35}
+.plan-product-choice small b{color:var(--green);font-size:12px}
+.plan-product-choice small em{display:block;margin-top:3px;color:#8b6a2f;font-style:normal}
+.plan-product-quantity{display:grid!important;gap:5px;margin:0!important}
+.plan-product-quantity>span{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:var(--ink)}
+.plan-product-quantity>span small{font-weight:500;color:var(--muted)}
+.plan-product-quantity input:disabled{opacity:.45;background:#f2f3f0}
+@media(max-width:600px){
+ .plan-product-row{grid-template-columns:1fr;padding:13px}
+ .plan-product-quantity{padding-left:30px}
+ .plan-product-choice strong{font-size:15px}
+ .plan-product-quantity input{min-height:48px;font-size:16px}
+}
