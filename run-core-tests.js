@@ -53,7 +53,7 @@ const current = [
   'v1071-compliance-docs.test.js',
   'v1071-help-center.test.js',
   'v1071-help-runtime.test.js',
-  'v1073-quality-compliance.test.js',
+  'v1074-quality-compliance.test.js',
   'v1073-partner-quality.test.js'
 ];
 const requested = [...new Set([...list, ...current])];

@@ -393,7 +393,7 @@
       await api('partner_quality_cases',{method:'POST',body:JSON.stringify(body),headers:{Prefer:'return=minimal'}});
     }catch(error){
       const raw=String(error?.message||error||'');
-      if(/partner_quality_cases|PGRST|404|relation/i.test(raw))throw new Error(labels('Нужно применить SQL Panora 10.73 в Supabase.','Apply the Panora 10.73 SQL migration in Supabase.','Aplique la migración SQL Panora 10.73 en Supabase.'));
+      if(/partner_quality_cases|PGRST|404|relation/i.test(raw))throw new Error(labels('Нужно применить SQL Panora 10.74 в Supabase.','Apply the Panora 10.74 SQL migration in Supabase.','Aplique la migración SQL Panora 10.74 en Supabase.'));
       throw error;
     }
     const rows=await fetchPartnerQualityCases(true);
