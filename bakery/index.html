@@ -8,8 +8,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" sizes="180x180" href="bakery/apple-touch-icon.png?v=10700">
-  <link rel="icon" type="image/png" sizes="192x192" href="bakery/icon-192.png?v=10700">
+  <link rel="apple-touch-icon" sizes="180x180" href="bakery/apple-touch-icon.png?v=10710">
+  <link rel="icon" type="image/png" sizes="192x192" href="bakery/icon-192.png?v=10710">
   <title>Panora — Пекарня</title>
   <meta name="application-name" content="Panora — Пекарня">
   <meta name="apple-mobile-web-app-title" content="Panora — Пекарня">
@@ -61,84 +61,84 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v10700').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v10710').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
   try{
     const buildMarker='panora-bakery-runtime-build';
-    if(localStorage.getItem(buildMarker)!=='10700'&&'serviceWorker' in navigator){
-      localStorage.setItem(buildMarker,'10700');
+    if(localStorage.getItem(buildMarker)!=='10710'&&'serviceWorker' in navigator){
+      localStorage.setItem(buildMarker,'10710');
       navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(reg=>{try{return new URL(reg.scope).pathname.includes('/bakery/')}catch{return false}}).map(reg=>reg.unregister()))).then(()=>{
-        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','10700');location.replace(u.href)}
+        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','10710');location.replace(u.href)}
       }).catch(()=>{});
     }
   }catch{}
 })();
 </script>
-<link rel="stylesheet" href="admin.css?v=10700">
-<link rel="stylesheet" href="admin-v247.css?v=10700">
-  <link rel="stylesheet" href="commerce.css?v=10700">
-  <link rel="stylesheet" href="settings.css?v=10700">
-  <link rel="stylesheet" href="export.css?v=10700">
-  <link rel="stylesheet" href="recipe-actions.css?v=10700">
-    <link rel="stylesheet" href="date-jump.css?v=10700">
-  <link rel="stylesheet" href="easy-plan.css?v=10700">
-  <link rel="stylesheet" href="product-admin.css?v=10700">
-  <link rel="stylesheet" href="product-close.css?v=10700">
-  <link rel="stylesheet" href="calendar-plan.css?v=10700">
-  <link rel="stylesheet" href="calendar-weekend.css?v=10700">
-  <link rel="stylesheet" href="calendar-bake-highlight.css?v=10700">
-  <link rel="stylesheet" href="calendar-labels.css?v=10700">
-  <link rel="stylesheet" href="calendar-text-restore.css?v=10700">
-  <link rel="stylesheet" href="mobile-admin-orders.css?v=10700">
-  <link rel="stylesheet" href="mobile-admin-all.css?v=10700">
-  <link rel="stylesheet" href="mobile-admin-menu.css?v=10700">
-  <link rel="stylesheet" href="responsive.css?v=10700">
-  <link rel="stylesheet" href="calendar-fun.css?v=10700">
-  <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=10700">
-  <link rel="stylesheet" href="calendar-calm.css?v=10700">
-  <link rel="stylesheet" href="admin-mobile-tabs.css?v=10700">
-  <link rel="stylesheet" href="purchase-costs.css?v=10700">
-  <link rel="stylesheet" href="purchase-filter-simple.css?v=10700">
-  <link rel="stylesheet" href="daily-order-summary.css?v=10700">
-  <link rel="stylesheet" href="daily-selection.css?v=10700">
-  <link rel="stylesheet" href="account-detail.css?v=10700">
-  <link rel="stylesheet" href="order-prices.css?v=10700">
-  <link rel="stylesheet" href="admin-order-polish.css?v=10700">
-<link rel="stylesheet" href="bakery-orders-consolidated.css?v=10700">
-<link rel="stylesheet" href="notifications-v39.css?v=10700">
-  <link rel="stylesheet" href="order-notifications.css?v=10700">
-  <link rel="stylesheet" href="reminder-hours.css?v=10700">
-  <link rel="stylesheet" href="admin-auth.css?v=10700">
-  <link rel="stylesheet" href="delivery-qr.css?v=10700">
-  <link rel="stylesheet" href="delivery-offline.css?v=10700">
-  <link rel="stylesheet" href="invoice-preview.css?v=10700">
-  <link rel="stylesheet" href="accounting-invoice.css?v=10700">
-  <link rel="stylesheet" href="document-library.css?v=10700">
-  <link rel="stylesheet" href="recipe-percent.css?v=10700">
-  <link rel="stylesheet" href="unified-controls.css?v=10700">
+<link rel="stylesheet" href="admin.css?v=10710">
+<link rel="stylesheet" href="admin-v247.css?v=10710">
+  <link rel="stylesheet" href="commerce.css?v=10710">
+  <link rel="stylesheet" href="settings.css?v=10710">
+  <link rel="stylesheet" href="export.css?v=10710">
+  <link rel="stylesheet" href="recipe-actions.css?v=10710">
+    <link rel="stylesheet" href="date-jump.css?v=10710">
+  <link rel="stylesheet" href="easy-plan.css?v=10710">
+  <link rel="stylesheet" href="product-admin.css?v=10710">
+  <link rel="stylesheet" href="product-close.css?v=10710">
+  <link rel="stylesheet" href="calendar-plan.css?v=10710">
+  <link rel="stylesheet" href="calendar-weekend.css?v=10710">
+  <link rel="stylesheet" href="calendar-bake-highlight.css?v=10710">
+  <link rel="stylesheet" href="calendar-labels.css?v=10710">
+  <link rel="stylesheet" href="calendar-text-restore.css?v=10710">
+  <link rel="stylesheet" href="mobile-admin-orders.css?v=10710">
+  <link rel="stylesheet" href="mobile-admin-all.css?v=10710">
+  <link rel="stylesheet" href="mobile-admin-menu.css?v=10710">
+  <link rel="stylesheet" href="responsive.css?v=10710">
+  <link rel="stylesheet" href="calendar-fun.css?v=10710">
+  <link rel="stylesheet" href="mobile-admin-nav-fix.css?v=10710">
+  <link rel="stylesheet" href="calendar-calm.css?v=10710">
+  <link rel="stylesheet" href="admin-mobile-tabs.css?v=10710">
+  <link rel="stylesheet" href="purchase-costs.css?v=10710">
+  <link rel="stylesheet" href="purchase-filter-simple.css?v=10710">
+  <link rel="stylesheet" href="daily-order-summary.css?v=10710">
+  <link rel="stylesheet" href="daily-selection.css?v=10710">
+  <link rel="stylesheet" href="account-detail.css?v=10710">
+  <link rel="stylesheet" href="order-prices.css?v=10710">
+  <link rel="stylesheet" href="admin-order-polish.css?v=10710">
+<link rel="stylesheet" href="bakery-orders-consolidated.css?v=10710">
+<link rel="stylesheet" href="notifications-v39.css?v=10710">
+  <link rel="stylesheet" href="order-notifications.css?v=10710">
+  <link rel="stylesheet" href="reminder-hours.css?v=10710">
+  <link rel="stylesheet" href="admin-auth.css?v=10710">
+  <link rel="stylesheet" href="delivery-qr.css?v=10710">
+  <link rel="stylesheet" href="delivery-offline.css?v=10710">
+  <link rel="stylesheet" href="invoice-preview.css?v=10710">
+  <link rel="stylesheet" href="accounting-invoice.css?v=10710">
+  <link rel="stylesheet" href="document-library.css?v=10710">
+  <link rel="stylesheet" href="recipe-percent.css?v=10710">
+  <link rel="stylesheet" href="unified-controls.css?v=10710">
 
 
 
 
-<link rel="stylesheet" href="mobile-header.css?v=10700">
-<link rel="stylesheet" href="light-pro.css?v=10700">
-<link rel="stylesheet" href="connection-status.css?v=10700">
-<link rel="stylesheet" href="event-notifications.css?v=10700">
-<link rel="stylesheet" href="audit-trail.css?v=10700">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=10700">
-<link rel="stylesheet" href="install-guide.css?v=10700">
-<link rel="stylesheet" href="pwa-stable.css?v=10700">
-<link rel="stylesheet" href="pricing-v40.css?v=10700">
-<link rel="stylesheet" href="price-inputs-v42.css?v=10700">
-<link rel="stylesheet" href="mobile-partner-prices-v49.css?v=10700">
-<link rel="stylesheet" href="order-messages-v565.css?v=10700">
+<link rel="stylesheet" href="mobile-header.css?v=10710">
+<link rel="stylesheet" href="light-pro.css?v=10710">
+<link rel="stylesheet" href="connection-status.css?v=10710">
+<link rel="stylesheet" href="event-notifications.css?v=10710">
+<link rel="stylesheet" href="audit-trail.css?v=10710">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=10710">
+<link rel="stylesheet" href="install-guide.css?v=10710">
+<link rel="stylesheet" href="pwa-stable.css?v=10710">
+<link rel="stylesheet" href="pricing-v40.css?v=10710">
+<link rel="stylesheet" href="price-inputs-v42.css?v=10710">
+<link rel="stylesheet" href="mobile-partner-prices-v49.css?v=10710">
+<link rel="stylesheet" href="order-messages-v565.css?v=10710">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=10700">
-<link rel="stylesheet" href="admin-partner-theme.css?v=10700">
-<link rel="stylesheet" href="production-safety.css?v=10700">
+<link rel="stylesheet" href="finance-dashboard.css?v=10710">
+<link rel="stylesheet" href="admin-partner-theme.css?v=10710">
+<link rel="stylesheet" href="production-safety.css?v=10710">
   <meta property="og:site_name" content="Panora">
   
-<link rel="stylesheet" href="delivery-followup.css?v=10700">
+<link rel="stylesheet" href="delivery-followup.css?v=10710">
 
 </head>
 <body class="auth-pending admin-page">
@@ -185,6 +185,11 @@
       <button data-view="ps-raw-lots">Сырьё и партии</button>
       <button data-view="ps-allergens">Аллергены</button>
       <button data-view="ps-sanitation">Санитарный контроль</button>
+      <button data-view="ps-haccp">APPCC / HACCP</button>
+      <button data-view="ps-capa">Несоответствия / CAPA</button>
+      <button data-view="ps-recalls">Отзыв продукции</button>
+      <button data-view="ps-suppliers">Одобренные поставщики</button>
+      <button data-view="ps-training">Обучение персонала</button>
       <button data-view="ps-documents">Документы</button>
       <button data-view="ps-trace">Прослеживаемость</button>
       <button data-view="ps-help">Справка</button>
@@ -689,6 +694,11 @@
       <div class="view" id="view-ps-raw-lots"><div id="psRawLotsRoot"></div></div>
       <div class="view" id="view-ps-allergens"><div id="psAllergensRoot"></div></div>
       <div class="view" id="view-ps-sanitation"><div id="psSanitationRoot"></div></div>
+      <div class="view" id="view-ps-haccp"><div id="psHaccpRoot"></div></div>
+      <div class="view" id="view-ps-capa"><div id="psCapaRoot"></div></div>
+      <div class="view" id="view-ps-recalls"><div id="psRecallsRoot"></div></div>
+      <div class="view" id="view-ps-suppliers"><div id="psSuppliersRoot"></div></div>
+      <div class="view" id="view-ps-training"><div id="psTrainingRoot"></div></div>
       <div class="view" id="view-ps-documents"><div id="psDocumentsRoot"></div></div>
       <div class="view" id="view-ps-trace"><div id="psTraceRoot"></div></div>
       <div class="view" id="view-ps-help"><div id="psHelpRoot"></div></div>
@@ -811,49 +821,49 @@
     </div>
   </dialog>
 
-  <script src="pricing-sync-v44.js?v=10700"></script>
-<script src="supabase-config.js?v=10700"></script>
-<script src="stable-health.js?v=10700"></script>
-<script src="admin-auth.js?v=10700"></script>
-<script src="admin.js?v=10700"></script>
-<script src="stable-price-inputs-v42.js?v=10700"></script>
-<script src="money-edit-lock-v43.js?v=10700"></script>
-<script src="commerce.js?v=10700"></script>
-<script src="desktop-order-date-filter-v28.js?v=10700"></script>
-<script src="invoice-settings.js?v=10700"></script>
-<script src="invoice-tax-display.js?v=10700"></script>
-<script src="accounting-invoice.js?v=10700"></script>
-<script src="spanish-documents.js?v=10700"></script>
-<script src="document-library.js?v=10700"></script>
-<script src="invoice-preview.js?v=10700"></script>
-<script src="admin-localization.js?v=10700"></script>
-<script src="product-admin.js?v=10700"></script>
-<script src="calendar-plan.js?v=10700"></script>
-<script src="qrcode-browser.js?v=10700"></script>
-<script src="delivery-qr.js?v=10700"></script>
-<script src="delivery-offline.js?v=10700"></script>
-<script src="delivery-followup.js?v=10700"></script>
-<script src="mobile-admin-nav.js?v=10700"></script>
-<script src="admin-status-sync.js?v=10700"></script>
-<script src="admin-mobile-tabs.js?v=10700"></script>
-<script src="purchase-costs.js?v=10700"></script>
-<script src="invoice-close.js?v=10700"></script>
-<script src="account-detail.js?v=10700"></script>
-<script src="order-notifications.js?v=10700"></script>
-<script src="order-communication.js?v=10700"></script>
-<script src="audit-log.js?v=10700"></script>
-<script src="input-stability.js?v=10700"></script>
-<script src="cloud-sync.js?v=10700"></script>
-<script src="recipe-percent.js?v=10700"></script>
-<script src="daily-order-summary.js?v=10700"></script>
-<script src="recovery-guard.js?v=10700"></script>
-<script src="connection-status.js?v=10700"></script>
-<script src="event-notifications.js?v=10700"></script>
-<script src="audit-trail.js?v=10700"></script>
-<script src="pwa-stable.js?v=10700"></script>
-<script src="admin-partner-prices-guard-v426.js?v=10700"></script>
-<script src="admin-partner-prices-direct-v426.js?v=10700"></script>
-<script src="order-messages-v565.js?v=10700"></script>
+  <script src="pricing-sync-v44.js?v=10710"></script>
+<script src="supabase-config.js?v=10710"></script>
+<script src="stable-health.js?v=10710"></script>
+<script src="admin-auth.js?v=10710"></script>
+<script src="admin.js?v=10710"></script>
+<script src="stable-price-inputs-v42.js?v=10710"></script>
+<script src="money-edit-lock-v43.js?v=10710"></script>
+<script src="commerce.js?v=10710"></script>
+<script src="desktop-order-date-filter-v28.js?v=10710"></script>
+<script src="invoice-settings.js?v=10710"></script>
+<script src="invoice-tax-display.js?v=10710"></script>
+<script src="accounting-invoice.js?v=10710"></script>
+<script src="spanish-documents.js?v=10710"></script>
+<script src="document-library.js?v=10710"></script>
+<script src="invoice-preview.js?v=10710"></script>
+<script src="admin-localization.js?v=10710"></script>
+<script src="product-admin.js?v=10710"></script>
+<script src="calendar-plan.js?v=10710"></script>
+<script src="qrcode-browser.js?v=10710"></script>
+<script src="delivery-qr.js?v=10710"></script>
+<script src="delivery-offline.js?v=10710"></script>
+<script src="delivery-followup.js?v=10710"></script>
+<script src="mobile-admin-nav.js?v=10710"></script>
+<script src="admin-status-sync.js?v=10710"></script>
+<script src="admin-mobile-tabs.js?v=10710"></script>
+<script src="purchase-costs.js?v=10710"></script>
+<script src="invoice-close.js?v=10710"></script>
+<script src="account-detail.js?v=10710"></script>
+<script src="order-notifications.js?v=10710"></script>
+<script src="order-communication.js?v=10710"></script>
+<script src="audit-log.js?v=10710"></script>
+<script src="input-stability.js?v=10710"></script>
+<script src="cloud-sync.js?v=10710"></script>
+<script src="recipe-percent.js?v=10710"></script>
+<script src="daily-order-summary.js?v=10710"></script>
+<script src="recovery-guard.js?v=10710"></script>
+<script src="connection-status.js?v=10710"></script>
+<script src="event-notifications.js?v=10710"></script>
+<script src="audit-trail.js?v=10710"></script>
+<script src="pwa-stable.js?v=10710"></script>
+<script src="admin-partner-prices-guard-v426.js?v=10710"></script>
+<script src="admin-partner-prices-direct-v426.js?v=10710"></script>
+<script src="order-messages-v565.js?v=10710"></script>
 
 
   <dialog id="retailOrderMessagesDialog" class="retail-events-dialog retail-messages-dialog">
@@ -899,8 +909,8 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=10700"></script>
-<script src="production-safety.js?v=10700"></script>
+<script src="finance-dashboard.js?v=10710"></script>
+<script src="production-safety.js?v=10710"></script>
 
 
 
