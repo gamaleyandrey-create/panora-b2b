@@ -207,6 +207,19 @@ function updateProductTierUI(id,qty){
   if(warning){const text=tierWarningText(p,qty);warning.textContent=text;warning.hidden=!text}
  });
 }
+const customerSafetyEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function clientSafetyHtml(p){
+ const s=p?.customerSafety||{},comp=String(s.composition?.[lang]||'').trim(),contains=Array.isArray(s.contains)?s.contains:[],may=Array.isArray(s.mayContain)?s.mayContain:[],storage=String(s.storage?.[lang]||'').trim(),shelf=String(s.shelfLife||'').trim();
+ const labels=lang==='ru'?{comp:'Состав',all:'Аллергены',may:'Может содержать',storage:'Хранение',shelf:'Срок хранения'}:lang==='es'?{comp:'Ingredientes',all:'Alérgenos',may:'Puede contener',storage:'Conservación',shelf:'Vida útil'}:{comp:'Ingredients',all:'Allergens',may:'May contain',storage:'Storage',shelf:'Shelf life'};
+ const names={gluten:['глютен','gluten','gluten'],crustaceans:['ракообразные','crustaceans','crustáceos'],eggs:['яйца','eggs','huevos'],fish:['рыба','fish','pescado'],peanuts:['арахис','peanuts','cacahuetes'],soy:['соя','soy','soja'],milk:['молоко','milk','leche'],nuts:['орехи','nuts','frutos de cáscara'],celery:['сельдерей','celery','apio'],mustard:['горчица','mustard','mostaza'],sesame:['кунжут','sesame','sésamo'],sulphites:['сульфиты','sulphites','sulfitos'],lupin:['люпин','lupin','altramuces'],molluscs:['моллюски','molluscs','moluscos']};
+ const i=lang==='ru'?0:lang==='es'?2:1,name=id=>names[id]?.[i]||id,parts=[];
+ if(comp)parts.push(`<span><b>${labels.comp}:</b> ${customerSafetyEscape(comp)}</span>`);
+ if(contains.length)parts.push(`<span><b>${labels.all}:</b> ${customerSafetyEscape(contains.map(name).join(', '))}</span>`);
+ if(may.length)parts.push(`<span><b>${labels.may}:</b> ${customerSafetyEscape(may.map(name).join(', '))}</span>`);
+ if(storage)parts.push(`<span><b>${labels.storage}:</b> ${customerSafetyEscape(storage)}</span>`);
+ if(shelf)parts.push(`<span><b>${labels.shelf}:</b> ${customerSafetyEscape(shelf)}</span>`);
+ return parts.length?`<div class="product-client-safety">${parts.join('')}</div>`:'';
+}
 function renderProducts(){
  const visible=activeCategory==='all'?PRODUCTS:PRODUCTS.filter(p=>p.category===activeCategory);
  $('#productGrid').innerHTML=visible.map(p=>{
@@ -220,7 +233,7 @@ function renderProducts(){
   const gallery=productGallery(p);
   return `<article class="product-card" data-tier-product="${p.id}">
    <div class="product-image product-slider" style="--product-bg:${p.bg}" data-product-slider="${p.id}" data-slide-index="0"><img data-product-main="${p.id}" src="${gallery[0]||p.image}" alt="${x[0]}" loading="lazy" decoding="async"><span class="product-tag">${x[2]}</span>${gallery.length>1?`<button type="button" class="product-slide-arrow prev" data-product-slide="${p.id}" data-dir="-1" aria-label="‹">‹</button><button type="button" class="product-slide-arrow next" data-product-slide="${p.id}" data-dir="1" aria-label="›">›</button><div class="product-slide-dots">${gallery.map((_,index)=>`<button type="button" class="${index===0?'active':''}" data-product-dot="${p.id}" data-index="${index}" aria-label="${index+1}"></button>`).join('')}</div>`:""}</div>
-   <div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p>
+   <div class="product-info"><div class="product-name">${x[0]}</div><p class="product-description">${x[1]}</p>${clientSafetyHtml(p)}
    <div class="product-meta"><span>${weight(p)} / ${tr('catalog.piece')}</span><span>${unit(p)}</span></div>
    ${threshold?`<small class="product-wholesale-threshold">${threshold}</small>`:""}
    <div class="product-buy"><div class="price private-price"><small class="price-kind" data-tier-kind>${priceKind}</small><strong data-tier-price>${SHOW_PRICES?money(displayPrice):privatePriceText()}</strong></div>${qtyControl(p.id,qty)}</div>

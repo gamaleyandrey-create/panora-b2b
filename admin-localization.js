@@ -149,6 +149,16 @@ Object.assign(C,{
   "Например: оплата в течение 7 дней":["Example: payment within 7 days","Ejemplo: pago en un plazo de 7 días"],
   "Спасибо за сотрудничество":["Thank you for your cooperation","Gracias por su colaboración"]
 });
+Object.assign(C,{
+  'ПРОИЗВОДСТВО И БЕЗОПАСНОСТЬ':['PRODUCTION & SAFETY','PRODUCCIÓN Y SEGURIDAD'],
+  'Производство':['Production','Producción'],
+  'Партии хлеба':['Bread lots','Lotes de pan'],
+  'Сырьё и партии':['Raw materials & lots','Materias primas y lotes'],
+  'Аллергены':['Allergens','Alérgenos'],
+  'Санитарный контроль':['Sanitary control','Control sanitario'],
+  'Документы':['Documents','Documentos'],
+  'Прослеживаемость':['Traceability','Trazabilidad']
+});
 const reverse=new Map();
 for(const [ru,[en,es]] of Object.entries(C)){reverse.set(ru,ru);reverse.set(en,ru);reverse.set(es,ru)}
 const lang=()=>{const v=document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'en';return ['ru','en','es'].includes(v)?v:'en'};

@@ -913,7 +913,7 @@ function stockRetailLimit(product){
 }
 async function saveStockRetailLimit(product,value){
  const products=retailAdminProducts(),target=products.find(p=>String(p?.id)===String(product));if(!target)return false;
- const map=readRetailProductSettings(),current=retailProductSetting(target,map);map[String(product)]={...current,retailLimit:Math.min(9999,Math.max(0,Math.floor(Number(value)||0))),limitConfigured:true};
+ const map=readRetailProductSettings(),current=retailProductSetting(target,map),requested=Math.min(9999,Math.max(0,Math.floor(Number(value)||0))),lotCap=window.panoraProductionSafety?.retailAllocatable?.(product),safeLimit=Number.isFinite(Number(lotCap))?Math.min(requested,Math.max(0,Math.floor(Number(lotCap)))):requested;map[String(product)]={...current,retailLimit:safeLimit,limitConfigured:true};
  saveRetailProductSettingsLocal(map);renderStock();renderRetailCatalogSettings();
  try{await saveRetailProductSettingsCloud(map);const status=$('#retailCatalogSaved');if(status)status.textContent='Лимит Розницы сохранён в облаке';return true}catch(error){alert(`Лимит сохранён на этом устройстве, но облако не подтвердило изменение: ${error?.message||error}`);return false}
 }

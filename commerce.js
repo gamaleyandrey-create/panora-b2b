@@ -1759,6 +1759,18 @@ document.querySelector("#confirmShipment").onclick = async (e) => {
     );
     return false;
   }
+  const lotCheck = window.panoraProductionSafety?.validateBreadIssue?.(actualItems,'b2b');
+  if(lotCheck && lotCheck.ok===false){
+    const label=(typeof productName==='function'?productName(lotCheck.product):lotCheck.product)||'Bread';
+    const language=document.querySelector('#adminLanguage')?.value||localStorage.getItem('panora-admin-lang')||'ru';
+    const message=language==='en'
+      ?`Cannot ship “${label}”: ${lotCheck.available} pcs are available from unblocked lots, ${lotCheck.required} pcs are required. Check Bread lots.`
+      :language==='es'
+        ?`No se puede expedir «${label}»: hay ${lotCheck.available} uds. disponibles en lotes no bloqueados y se necesitan ${lotCheck.required} uds. Revise Lotes de pan.`
+        :`Нельзя отгрузить «${label}»: доступно из незаблокированных партий ${lotCheck.available} шт., требуется ${lotCheck.required} шт. Проверьте партии хлеба.`;
+    alert(message);
+    return false;
+  }
   button.disabled = true;
   button.textContent = "Сохраняем накладную…";
   const shipmentDialog = document.querySelector("#shipmentDialog");
