@@ -1,0 +1,25 @@
+Panora 10.79 FULL
+Build/cache: 10790
+Date: 2026-09-16
+
+MAIN CHANGE — PUSH SETTINGS PERSISTENCE
+- Fixed Bakery / Retail settings Push preferences being reset after page reload.
+- Root cause: when a database did not yet have the newer pre-order discount columns, settings save fell back directly to a minimal legacy payload that omitted Push fields. On the next load the stale cloud row then overwrote the locally chosen Push values.
+- Cloud save now uses progressive schema-compatible fallbacks: current -> 6.35 Push/messaging -> 6.33 notification -> 6.28 extended retail -> legacy core.
+- The 6.35-compatible fallback keeps push_customer_enabled, push_admin_enabled, push_new_order, push_new_message, quiet hours, VAPID public key and timezone, even when SQL 10.32 fields are unavailable.
+- When the connected database is older than the Push schema, cloud loading no longer replaces local Push choices with defaults; local Push preferences survive reload on that device.
+- Save status now explicitly reports whether Push settings were saved to cloud or only retained on the current device.
+- No UI layout changes. Bakery navigation from 10.78 is unchanged.
+
+VALIDATION
+- Dedicated Push persistence regression passed: custom Push toggles, quiet hours and VAPID key survive a simulated reload against an older cloud schema.
+- Progressive fallback regression passed: full save failure on a missing SQL 10.32 column falls back to the 6.35 payload and still saves every Push field.
+- 74/74 JavaScript files pass node --check.
+- 14/14 inline scripts pass syntax validation.
+- 85/85 CSS files parse without syntax errors.
+- 363 local HTML resource references checked, 0 missing.
+- 619 static service-worker CORE resource references checked, 0 missing.
+- Core regression suite: 8/8 available tests passed.
+
+DATABASE
+- No new SQL migration is required for Panora 10.79. Existing databases with SQL 6.35 or newer persist Push settings in the cloud. Older schemas keep the selected Push settings locally instead of resetting them after reload.
