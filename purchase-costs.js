@@ -261,9 +261,8 @@
    if(hasRealDemand){
     partnerForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);partnerProducts.set(product,(partnerProducts.get(product)||0)+qty)}}));
     retailForDate.forEach(order=>(Array.isArray(order.items)?order.items:[]).forEach(item=>{const product=String(item?.product||''),qty=Math.max(0,Number(item?.quantity||0));if(product&&qty){products.set(product,(products.get(product)||0)+qty);retailProducts.set(product,(retailProducts.get(product)||0)+qty)}}));
-   }else{
-    (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||''),qty=Math.max(0,Number(plan?.ordered||plan?.planned||0));if(product&&qty)products.set(product,(products.get(product)||0)+qty)});
    }
+   (Array.isArray(plans)?plans:[]).filter(plan=>String(plan?.bakeDate||'')===date).forEach(plan=>{const product=String(plan?.product||''),manual=Math.max(0,Number(plan?.planned||0)),current=Math.max(0,Number(products.get(product)||0));if(product&&manual>current)products.set(product,manual)});
    if(products.size)rows.push({date,source:hasRealDemand?'orders':'plan',products,partnerProducts,retailProducts});
   });
   return rows;

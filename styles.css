@@ -170,5 +170,5 @@ body.panora-partner-authenticated .product-card .product-tag{display:none!import
 #checkoutForm [data-checkout-bake-date-shadow]{display:none!important}
 #checkoutForm .checkout-time-row{grid-template-columns:minmax(0,1fr)!important}
 #checkoutForm .checkout-time-row>label{grid-column:1/-1!important}
-/* Panora 10.66 — customer-safe composition/allergen information. */
+/* Panora 10.67 — customer-safe composition/allergen information. */
 .product-client-safety{display:grid;gap:4px;margin:10px 0 12px;padding:9px 10px;border:1px solid rgba(46,87,60,.12);border-radius:10px;background:rgba(246,249,245,.92);color:#69776e;font-size:11px;line-height:1.45}.product-client-safety span{display:block}.product-client-safety b{color:#365440}
