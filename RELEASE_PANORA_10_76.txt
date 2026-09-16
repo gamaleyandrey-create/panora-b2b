@@ -1,0 +1,31 @@
+Panora 10.76 FULL
+Build/cache: 10760
+Date: 2026-09-16
+
+MAIN CHANGE — BAKERY MOBILE + DESKTOP RESPONSIVE HARDENING
+- Bakery now stays in the real desktop/tablet sidebar layout from 721 px upward.
+- The legacy 721–850 px horizontal-navigation fallback is overridden for Bakery only.
+- Bakery sidebar is sticky on desktop/tablet and scrolls independently on long navigation lists.
+- Desktop/tablet page headers keep the title/action desktop layout instead of dropping into mobile-style stacking.
+- Mobile Bakery header is deterministic: Panora brand + compact Refresh + More actions; legacy hidden controls no longer compete for space.
+- Mobile More navigation uses a compact 2-column layout for ordinary sections, while section labels and collapsible Production/Safety and Retail groups remain full-width.
+- Long Production/Safety submenu remains scrollable; on very narrow phones its child buttons switch to one column for readability.
+- Mobile bottom navigation remains docked to the viewport with safe-area spacing.
+- Scope is Bakery/admin only. Partner and Retail layouts are not changed by the responsive hardening.
+
+VALIDATION
+- build.json: 10.76 / 10760 / 10760.
+- 74 JavaScript files pass node --check.
+- 14 inline scripts pass syntax validation across 8 HTML files.
+- 85 CSS files parse without syntax errors.
+- 366 local HTML resource references checked, 0 missing.
+- 635 static service-worker resource references checked, 0 missing.
+- Core regression suite: 8/8 available tests passed.
+- Collapsible Bakery navigation runtime test still passes: toggle, persistence and child-open behavior.
+- Mobile More runtime smoke test passes: open, close, tab selection, secondary navigation and active-state behavior.
+- Headless Chromium responsive audit passes at 1440×1000, 800×900 and 390×844.
+- Browser assertions confirm: desktop/tablet grid + sticky sidebar, tablet page-head flex layout, mobile 58 px header, 42 px Refresh, bottom tabs, 2-column More drawer and no page-wide horizontal overflow.
+
+DATABASE
+- No new SQL migration is required for Panora 10.76.
+- Panora 10.72 and 10.73 SQL migrations remain required if they have not yet been applied; Panora 10.75 quality migration remains required where the quality tables have not yet been created.
