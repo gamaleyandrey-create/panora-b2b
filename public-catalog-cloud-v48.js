@@ -59,6 +59,14 @@
     if(mediaResponse.ok)media=await mediaResponse.json();
    }catch{}
    const mediaMap=new Map((Array.isArray(media)?media:[]).map(row=>[String(row.id),row]));
+   let safety=[];
+   try{
+    const safetyResponse=await fetch(`${cfg.url}/rest/v1/rpc/panora_public_product_customer_safety`,{
+     method:'POST',headers:{apikey:cfg.publishableKey,'Content-Type':'application/json',Accept:'application/json'},body:'{}',cache:'no-store'
+    });
+    if(safetyResponse.ok)safety=await safetyResponse.json();
+   }catch{}
+   const safetyMap=new Map((Array.isArray(safety)?safety:[]).map(row=>[String(row.product_id),row]));
    const next=rows.map(p=>({
     id:p.id,
     builtIn:['plain','pumpkin'].includes(p.id),
@@ -71,7 +79,8 @@
     wholesaleMinQty:Math.max(1,Number(ruleMap.get(String(p.id))?.wholesale_min_qty||8)),
     image:p.image_url||'icon.svg',
     names:{ru:p.name_ru||p.id,en:p.name_en||p.name_ru||p.id,es:p.name_es||p.name_ru||p.id},
-    descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''}
+    descriptions:{ru:p.description_ru||'',en:p.description_en||'',es:p.description_es||''},
+    customerSafety:(()=>{const x=safetyMap.get(String(p.id))||{};return{composition:{ru:x.composition_ru||'',en:x.composition_en||'',es:x.composition_es||''},contains:Array.isArray(x.contains)?x.contains:[],mayContain:Array.isArray(x.may_contain)?x.may_contain:[],storage:{ru:x.storage_ru||'',en:x.storage_en||'',es:x.storage_es||''},shelfLife:x.shelf_life||''}})()
    })).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
    const before=localStorage.getItem('panora-public-products')||'[]';
    const after=JSON.stringify(next);
