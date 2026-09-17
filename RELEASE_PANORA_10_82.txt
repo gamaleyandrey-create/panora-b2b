@@ -1,0 +1,25 @@
+Panora 10.82 FULL
+Build/cache: 10820
+Date: 2026-09-17
+
+MAIN CHANGES — BAKE CALENDAR MOBILE/DESKTOP PARITY
+- Mobile Bake Calendar now shows the same planned bread entries, ordered quantities and manual plan quantities as desktop.
+- Removed the mobile-only compact mode that hid production cards and replaced them with a numeric badge.
+- The seven-day calendar remains the same model on desktop and mobile; on phones only the grid scrolls horizontally while calendar controls remain visible.
+- Weekday labels and date labels no longer collide or split inside words on narrow screens.
+- On mobile the calendar initially aligns around today (or the first planned bake when today is not in view), while preserving manual horizontal scrolling.
+- Bakery navigation hierarchy and all fixes from Panora 10.81 are retained unchanged.
+
+DATABASE
+- No SQL migration is required for Panora 10.82.
+
+VALIDATION
+- Mobile calendar rendered at 390 px and 430 px with three planned bread cards visible for 18 September and no page-level horizontal overflow.
+- Desktop calendar rendered at 1440 px with the same planned bread cards and quantities.
+- On mobile the calendar grid scrolls internally (not the page) and initially aligns around today.
+- 74/74 JavaScript files pass node --check.
+- 14/14 inline scripts pass syntax validation.
+- 85/85 CSS files parse without syntax errors.
+- 350 local HTML resource references checked, 0 missing.
+- 619 service-worker local resource references checked, 0 missing.
+- Core regression suite: 8/8 tests passed.

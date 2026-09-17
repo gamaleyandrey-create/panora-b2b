@@ -1,7 +1,7 @@
 (()=>{
 let shownMonth=new Date();shownMonth.setDate(1);setTimeout(()=>{shownMonth=currentMadridMonth?.()||shownMonth;renderBakeCalendar?.()},0);
 const navigation=document.querySelector('.plan-navigation');navigation.hidden=true;
-navigation.insertAdjacentHTML('beforebegin',`<section class="bake-calendar" id="bakeCalendar" data-calendar-mode="active"><div class="bake-calendar-modebar"><div class="bake-calendar-tabs" role="tablist" aria-label="Дни выпечки"><button type="button" id="calendarActiveMode" class="active" aria-pressed="true">Сегодня / Будущие</button><button type="button" id="calendarHistoryMode" aria-pressed="false">Прошедшие</button></div><span id="calendarModeHint">Рабочий календарь · прошлые даты скрыты</span></div><header><button id="calendarPrev">← Предыдущий месяц</button><h3 id="calendarTitle"></h3><button id="calendarToday">Сегодня</button><button id="calendarNext">Следующий месяц →</button></header><div class="calendar-weekdays" id="calendarWeekdays"></div><div class="calendar-grid" id="calendarGrid"></div><p class="calendar-help" id="calendarHelp">Нажмите на пустую будущую дату, чтобы запланировать выпечку.</p></section>`);
+navigation.insertAdjacentHTML('beforebegin',`<section class="bake-calendar" id="bakeCalendar" data-calendar-mode="active"><div class="bake-calendar-modebar"><div class="bake-calendar-tabs" role="tablist" aria-label="Дни выпечки"><button type="button" id="calendarActiveMode" class="active" aria-pressed="true">Сегодня / Будущие</button><button type="button" id="calendarHistoryMode" aria-pressed="false">Прошедшие</button></div><span id="calendarModeHint">Рабочий календарь · прошлые даты скрыты</span></div><header><button id="calendarPrev">← Предыдущий месяц</button><h3 id="calendarTitle"></h3><button id="calendarToday">Сегодня</button><button id="calendarNext">Следующий месяц →</button></header><div class="calendar-scroll" id="calendarScroll" tabindex="0" aria-label="Календарь выпечки"><div class="calendar-weekdays" id="calendarWeekdays"></div><div class="calendar-grid" id="calendarGrid"></div></div><p class="calendar-help" id="calendarHelp">Нажмите на пустую будущую дату, чтобы запланировать выпечку.</p></section>`);
 const calendarHeading=document.querySelector('#view-plan .page-head');
 const calendarBlock=document.querySelector('#bakeCalendar');
 if(calendarHeading&&calendarBlock)calendarBlock.insertAdjacentElement('beforebegin',calendarHeading);
@@ -57,6 +57,19 @@ function setCalendarMode(mode){
 }
 function language(){return document.querySelector('#adminLanguage').value}
 function monthTitle(){return new Intl.DateTimeFormat(locales[language()],{month:'long',year:'numeric'}).format(shownMonth)}
+function alignMobileCalendar(today,shownPrefix){
+ const scroller=document.querySelector('#calendarScroll');
+ if(!scroller||!window.matchMedia('(max-width:900px)').matches)return;
+ const key=`${calendarMode}:${shownPrefix}`;
+ if(scroller.dataset.panoraAligned===key)return;
+ requestAnimationFrame(()=>{
+   const target=scroller.querySelector(`[data-calendar-date="${today}"]`)||scroller.querySelector('.calendar-day.has-bake')||scroller.querySelector('.calendar-day:not([disabled])');
+   if(!target)return;
+   const left=Math.max(0,target.offsetLeft-(scroller.clientWidth-target.offsetWidth)/2);
+   scroller.scrollLeft=left;
+   scroller.dataset.panoraAligned=key;
+ });
+}
 function renderBakeCalendar(){
  const l=language(),weekdays=l==='ru'?['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']:l==='es'?['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
  const today=madridToday(),currentMonth=today.slice(0,7),shownPrefix=monthIso(shownMonth),history=calendarMode==='history';
@@ -91,6 +104,7 @@ function renderBakeCalendar(){
    cells.push(`<button class="calendar-day ${date===today?'today':''} ${entries.length?'has-bake':''} ${[0,6].includes(d.getDay())?'weekend':''} ${readonly}" data-calendar-date="${date}" data-bake-count="${entries.length}" aria-label="${aria} ${dayLabel}"${disabled}><em><span class="weekday-name">${weekdayLabel}</span><span class="date-name">${dateLabel}</span></em>${badge}${details}</button>`);
  }
  document.querySelector('#calendarGrid').innerHTML=cells.join('');
+ alignMobileCalendar(today,shownPrefix);
  const monthPlans=plans.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today)),ordered=monthPlans.reduce((sum,p)=>sum+Math.max(0,Number(p.ordered||0))+(typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(p.bakeDate,p.product)||0)):0),0),planned=monthPlans.reduce((sum,p)=>{const demand=Math.max(0,Number(p.ordered||0))+(typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(p.bakeDate,p.product)||0)):0);return sum+Math.max(Math.max(0,Number(p.planned||0)),demand)},0);
  document.querySelector('#plannedPieces').textContent=`${planned} ${t('pcs')}`;document.querySelector('#orderedPieces').textContent=`${ordered} ${t('pcs')}`;document.querySelector('#freePieces').textContent=`${Math.max(0,planned-ordered)} ${t('pcs')}`;
  if(!history){

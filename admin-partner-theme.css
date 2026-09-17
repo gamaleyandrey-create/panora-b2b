@@ -2291,7 +2291,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major{
 }
 
 
-/* Panora 10.81 — compact persistent Bakery navigation groups.
+/* Panora 10.82 — compact persistent Bakery navigation groups.
    Keep the 10.77 disclosure model and remembered state, but reduce visual bulk
    on desktop/tablet and in the mobile More drawer. */
 html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
@@ -2351,7 +2351,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major{
   }
 }
 
-/* Panora 10.81 — larger vertical Bakery navigation on desktop and mobile. */
+/* Panora 10.82 — larger vertical Bakery navigation on desktop and mobile. */
 html body.admin-page .admin-shell{
   grid-template-columns:260px minmax(0,1fr)!important;
 }
@@ -2464,7 +2464,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major butto
   html body.admin-page .admin-content{padding-bottom:calc(128px + env(safe-area-inset-bottom))!important}
 }
 
-/* Panora 10.81 — clearer Bakery navigation hierarchy.
+/* Panora 10.82 — clearer Bakery navigation hierarchy.
    Major sections must read as section headers at a glance; child views stay calmer. */
 html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
   min-height:56px!important;

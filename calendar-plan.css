@@ -24,7 +24,7 @@
  #calendarModeHint{padding-left:2px}
 }
 
-/* Panora 10.81 — one calendar model on desktop and mobile.
+/* Panora 10.82 — one calendar model on desktop and mobile.
    Mobile keeps the same seven-column month grid and scrolls horizontally instead of
    switching to a different two/one-column representation. */
 @media(max-width:850px){
@@ -43,7 +43,7 @@
   .calendar-help{position:sticky;left:0;max-width:calc(100vw - 68px)}
 }
 
-/* Panora 10.81 mobile calendar controls stay visible while the same 7-day grid scrolls. */
+/* Panora 10.82 mobile calendar controls stay visible while the same 7-day grid scrolls. */
 @media(max-width:850px){
   .bake-calendar header{
     position:sticky!important;
