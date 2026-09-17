@@ -65,8 +65,10 @@ function alignMobileCalendar(today,shownPrefix){
  requestAnimationFrame(()=>{
    const target=scroller.querySelector(`[data-calendar-date="${today}"]`)||scroller.querySelector('.calendar-day.has-bake')||scroller.querySelector('.calendar-day:not([disabled])');
    if(!target)return;
-   const left=Math.max(0,target.offsetLeft-(scroller.clientWidth-target.offsetWidth)/2);
-   scroller.scrollLeft=left;
+   // Panora 10.83: mobile calendar now fits the viewport instead of using a wide
+   // horizontal strip. Keep the inner scroller at zero so neither the calendar nor
+   // the page can appear shifted after render/reload.
+   scroller.scrollLeft=0;
    scroller.dataset.panoraAligned=key;
  });
 }

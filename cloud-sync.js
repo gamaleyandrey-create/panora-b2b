@@ -174,7 +174,7 @@
   clearOrphanConflicts();
   const saveAccepted=()=>Object.keys(accepted).length?localStorage.setItem(acceptedKey,JSON.stringify(accepted)):localStorage.removeItem(acceptedKey);
   const conflictNames=()=>{const names={products:'технологические карты',recipes:'рецептуры',restaurants:'партнёры',plans:'план производства'};return Object.keys(conflicts).map(section=>names[section]||section).join(', ')};
-  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения: ${conflictNames()}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el)el.onclick=resolveConflicts;return true};
+  const showConflicts=()=>{const count=conflictCount();if(!count)return false;status(`Есть изменения: ${conflictNames()}`,true,'Нажмите, чтобы выбрать актуальную версию');const el=document.querySelector('#saveState');if(el){el.dataset.syncState='conflict';el.onclick=resolveConflicts}return true};
   function chooseConflictVersion(names){
     return new Promise(resolve=>{
       document.querySelector('#panoraConflictChoice')?.remove();
@@ -1826,11 +1826,32 @@ window.panoraRecalculateBalances=recalculateBalances;
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
+  // Panora 10.83: keep a last-known-good production plan separately from the live cache.
+  // A transient cloud failure or a stale empty local pending state must not blank the calendar.
+  const planLastGoodKey='panora-production-plans-last-good-v1083';
+  const readPlanCache=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
+  const saveLastGoodPlans=list=>{if(Array.isArray(list))safeLocalSet(planLastGoodKey,JSON.stringify(list))};
+  const rememberNonEmptyPlanCache=list=>{if(Array.isArray(list)&&list.length)saveLastGoodPlans(list)};
+  const restoreLastGoodPlans=()=>{
+    const live=readPlanCache('panora-production-plans');if(live.length){rememberNonEmptyPlanCache(live);return live}
+    // An empty live cache with a pending plan write can be an intentional offline
+    // cancellation. Never resurrect an older plan over an unsent local edit.
+    if(pending.plans)return live;
+    const fallback=readPlanCache(planLastGoodKey);
+    if(!fallback.length)return live;
+    plans=fallback;safeLocalSet('panora-production-plans',JSON.stringify(fallback));
+    if(typeof renderAll==='function')renderAll();
+    return fallback;
+  };
+  rememberNonEmptyPlanCache(readPlanCache('panora-production-plans'));
   async function applyCloudPlans(remote){
     applyingCloud++;
     try{
+      rememberNonEmptyPlanCache(readPlanCache('panora-production-plans'));
       plans=Array.isArray(remote)?remote:[];
       safeLocalSet('panora-production-plans',JSON.stringify(plans));
+      // Cloud-applied state is authoritative even when it is intentionally empty.
+      saveLastGoodPlans(plans);
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
       if(typeof renderAll==='function')renderAll();
@@ -1839,8 +1860,10 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function loadPlans(){
     // v325.6: plan conflicts are determined by CONTENT, not timestamps.
     // Merely starting a second device can never become a local edit.
-    const remote=await getRemotePlans();
-    const local=JSON.parse(localStorage.getItem('panora-production-plans')||'[]');
+    let remote;
+    try{remote=await getRemotePlans()}catch(error){restoreLastGoodPlans();throw error}
+    const local=readPlanCache('panora-production-plans');
+    rememberNonEmptyPlanCache(local);
     const remoteSig=planSignature(remote),localSig=planSignature(local),baseSig=String(baselines.plans||'');
 
     if(remoteSig===localSig){
@@ -1872,6 +1895,17 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
 
     if(localChanged&&remoteChanged){
+      // Panora 10.83: an empty local plan can be a stale cache/pending flag left by a
+      // failed mobile sync. If there is no explicit local cancellation for the remote
+      // dates, recover the non-empty cloud plan instead of showing a blank calendar.
+      const cancelledDates=new Set((()=>{try{return JSON.parse(localStorage.getItem('panora-cancelled-bake-dates')||'[]')}catch{return[]}})().map(row=>String(row?.date||'')));
+      const remoteDates=[...new Set(remote.map(row=>String(row?.bakeDate||'')).filter(Boolean))];
+      const explicitDeletion=local.length===0&&remoteDates.some(date=>cancelledDates.has(date));
+      if(local.length===0&&remote.length>0&&!explicitDeletion){
+        await applyCloudPlans(remote);
+        audit('sync.plan_empty_local_recovered',`Восстановлен план из облака: ${remote.length} поз.`,'warning');
+        return;
+      }
       conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
       saveConflicts();showConflicts();
       return;

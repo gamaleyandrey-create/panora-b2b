@@ -260,3 +260,64 @@
     min-width:952px!important;
   }
 }
+
+
+/* Panora 10.83 — stable mobile calendar viewport.
+   Phones keep the same dates, bread cards, ordered quantities and plan values as desktop,
+   but use a fit-to-screen two-column calendar. Bake days span the full width.
+   This removes page/grid horizontal drift completely on real iPhones. */
+@media(max-width:900px){
+  html,body.admin-page{max-width:100%!important;overflow-x:hidden!important}
+  body.admin-page #view-plan{max-width:100%!important;overflow-x:hidden!important}
+  body.admin-page #view-plan .bake-calendar{width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important}
+  body.admin-page #view-plan .calendar-scroll{
+    box-sizing:border-box!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    overflow-x:hidden!important;overflow-y:visible!important;
+    padding:0 0 5px!important;
+  }
+  body.admin-page #view-plan .calendar-weekdays{display:none!important}
+  body.admin-page #view-plan .calendar-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;min-width:0!important;
+    gap:8px!important;margin:0!important;
+  }
+  body.admin-page #view-plan .calendar-empty{display:none!important}
+  body.admin-page #view-plan .calendar-day{
+    width:100%!important;min-width:0!important;
+    height:auto!important;min-height:76px!important;
+    padding:8px!important;overflow:hidden!important;
+  }
+  body.admin-page #view-plan .calendar-day>em,
+  body.admin-page #view-plan .calendar-day.has-bake>em{
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;height:auto!important;min-height:54px!important;padding:2px 4px!important;gap:4px!important;
+    background:transparent!important;color:inherit!important;border-radius:0!important;
+  }
+  body.admin-page #view-plan .calendar-day .weekday-name{
+    display:block!important;margin:0!important;padding:0!important;background:transparent!important;
+    color:var(--muted)!important;font-size:11px!important;font-weight:750!important;line-height:1.1!important;
+    white-space:nowrap!important;
+  }
+  body.admin-page #view-plan .calendar-day .date-name,
+  body.admin-page #view-plan .calendar-day.has-bake .date-name{
+    display:block!important;margin:0!important;padding:0!important;background:transparent!important;
+    font-size:15px!important;font-weight:800!important;line-height:1.15!important;
+    white-space:nowrap!important;overflow:visible!important;word-break:normal!important;
+  }
+  body.admin-page #view-plan .calendar-day.has-bake{
+    grid-column:1/-1!important;
+    min-height:0!important;height:auto!important;
+    padding:9px!important;gap:7px!important;overflow:visible!important;
+  }
+  body.admin-page #view-plan .calendar-day.has-bake>span{
+    padding:8px 10px!important;text-align:left!important;
+  }
+  body.admin-page #view-plan .calendar-day.has-bake>span strong{font-size:12px!important;line-height:1.2!important}
+  body.admin-page #view-plan .calendar-day.has-bake>span i{font-size:10.5px!important;line-height:1.2!important}
+}
+@media(max-width:370px){
+  body.admin-page #view-plan .calendar-grid{grid-template-columns:1fr!important}
+  body.admin-page #view-plan .calendar-day.has-bake{grid-column:auto!important}
+}

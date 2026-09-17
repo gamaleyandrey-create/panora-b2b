@@ -19,7 +19,8 @@
     offline:'Нет сети',
     local:'Сохранено на устройстве',
     error:'Ошибка синхронизации',
-    pending:'Отправляем изменения…'
+    pending:'Отправляем изменения…',
+    conflict:'Нужно выбрать версию'
   };
 
   function ensure(){
@@ -51,7 +52,7 @@
   }
 
   function icon(state){
-    return state==='synced'?'●':state==='syncing'?'↻':state==='offline'?'○':state==='local'||state==='pending'?'↑':'!';
+    return state==='synced'?'●':state==='syncing'?'↻':state==='offline'?'○':state==='local'||state==='pending'?'↑':state==='conflict'?'◇':'!';
   }
 
   function render(state,text,detail=''){
@@ -71,6 +72,7 @@
       s==='offline'?'Изменения сохраняются на этом устройстве и отправятся после восстановления сети.':
       s==='local'||s==='pending'?'Есть локальные изменения. Нажмите после восстановления связи для повторной синхронизации.':
       s==='error'?'Нажмите, чтобы повторить синхронизацию.':
+      s==='conflict'?'Нажмите верхнее уведомление и выберите актуальную версию плана.':
       'Связь с облаком работает.'
     );
   }
@@ -78,6 +80,7 @@
   function classify(text='',datasetState=''){
     const t=String(text).toLowerCase();
     if(!navigator.onLine)return 'offline';
+    if(datasetState==='conflict'||/есть изменения|нужно выбрать версию/.test(t))return 'conflict';
     if(datasetState==='error'||/ошиб|error|conflict|конфликт/.test(t))return 'error';
     if(datasetState==='local'||/устройств|офлайн|offline|отправим при подключении/.test(t))return 'local';
     if(/отправляем изменения|ожидает/.test(t))return 'pending';
@@ -183,6 +186,10 @@
       title.textContent='Нет сети · показаны сохранённые данные';
       detail.textContent='После восстановления связи Panora проверит актуальные данные.';
       el.classList.remove('is-busy');
+    }else if(state==='conflict'){
+      title.textContent='Есть изменения на другом устройстве';
+      detail.textContent='Нажмите верхнее уведомление и выберите актуальную версию. Данные не удаляются.';
+      el.classList.remove('is-busy');
     }else if(stale){
       title.textContent='Не удалось проверить обновления';
       detail.textContent='Показаны сохранённые данные. Panora повторит загрузку автоматически; «Обновить» можно нажать для немедленной проверки.';
@@ -200,6 +207,7 @@
   const mapState=(type,text)=>{
     const t=String(type||'').toLowerCase(),x=String(text||'').toLowerCase();
     if(!navigator.onLine)return'offline';
+    if(t==='conflict'||/есть изменения|нужно выбрать версию/.test(x))return'conflict';
     if(t==='error'||/ошиб|error|failed/.test(x))return'error';
     if(t==='local'||/сохран.*устройств|offline|офлайн/.test(x))return'local';
     // Panora 10.32: success text such as «Синхронизировано» contains the same

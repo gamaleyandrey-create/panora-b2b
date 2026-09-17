@@ -1,0 +1,15 @@
+Panora 10.83 FULL
+Build/cache: 10830
+Date: 2026-09-17
+
+MAIN CHANGES — MOBILE BAKE CALENDAR STABILITY
+- Mobile Bake Calendar no longer uses a wide horizontally shifted strip: it fits the phone viewport in two columns.
+- Bake days span the full mobile width and keep the same bread cards, ordered quantities and plan values as desktop.
+- Page-level and calendar-level horizontal drift are both removed on real iPhones.
+- Added a last-known-good production-plan cache. A temporary cloud error can no longer blank a previously loaded calendar.
+- If a stale empty local plan conflicts with a non-empty cloud plan and there is no explicit local cancellation, Panora restores the cloud plan instead of showing an empty calendar.
+- Genuine production-plan conflicts remain protected and are shown as a version-choice state, not mislabeled as a generic synchronization failure.
+- All Panora 10.82 mobile/desktop calendar parity, Bakery navigation and Push fixes are retained.
+
+DATABASE
+- No SQL migration is required for Panora 10.83.
