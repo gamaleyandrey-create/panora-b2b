@@ -1,0 +1,29 @@
+Panora 10.81 FULL
+Build/cache: 10810
+Date: 2026-09-17
+
+MAIN CHANGES — BAKERY MOBILE NAVIGATION AND BAKE CALENDAR
+- Bakery navigation is larger and strictly vertical on mobile: one group per row and one menu item per row.
+- Mobile menu keeps the existing collapsible sections and their remembered open/collapsed state.
+- Desktop Bakery navigation is also slightly larger and wider while remaining vertical.
+- The mobile More drawer now stays above the fixed bottom navigation; the cloud status chip is hidden while the drawer is open so it cannot cover menu items.
+- Bake calendar uses the same seven-column calendar model on desktop and mobile. On narrow screens the calendar grid scrolls horizontally instead of switching to a different one/two-column representation.
+- Calendar month and navigation controls remain visible while the seven-day grid scrolls.
+- Fixed the mobile “Schedule bake day” dialog: bread rows, long product names and quantity inputs stay inside the viewport at 360/390/430 px.
+- The dialog action buttons remain reachable and stable at the bottom of the dialog.
+- Push persistence fixes from Panora 10.79 are retained unchanged.
+
+VALIDATION
+- Mobile Bakery menu rendered at 390 px with one-column groups and one-column submenu items; no page-level horizontal overflow.
+- Bakery navigation also rendered at 800 px and 1440 px.
+- Bake calendar rendered at 390 px and 1440 px with the same seven calendar columns.
+- Bake-day dialog rendered at 360, 390 and 430 px; no page-level horizontal overflow and product text stays inside the dialog.
+- 74/74 JavaScript files pass node --check.
+- 14/14 inline scripts pass syntax validation.
+- 85/85 CSS files parse without syntax errors.
+- 367 local HTML resource references checked, 0 missing.
+- 626 service-worker local resource references checked, 0 missing.
+- Core regression suite: 8/8 available tests passed.
+
+DATABASE
+- No new SQL migration is required for Panora 10.81.

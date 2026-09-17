@@ -26,7 +26,7 @@
  .plan-product-quantity input{min-height:48px;font-size:16px}
 }
 
-/* Panora 10.80 — stable mobile bake-day editor. */
+/* Panora 10.81 — stable mobile bake-day editor. */
 @media(max-width:600px){
   .easy-plan-dialog{
     width:calc(100vw - 16px)!important;
