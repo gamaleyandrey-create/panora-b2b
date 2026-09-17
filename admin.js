@@ -1074,7 +1074,7 @@ function updateStockAdjustPreview(){
  const direction=['written_off','correction_minus'].includes(type)?-1:1,after=raw+direction*qty,delta=direction*qty;
  preview.innerHTML=`Было: <strong>${raw} шт.</strong> → будет: <strong>${after} шт.</strong> · изменение ${delta>=0?'+':''}${delta} шт.`;
 }
-$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active');syncAdminNavGroupActive();if(b.dataset.view==='stock'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshBreadStock?.().catch(error=>console.warn('Panora bread stock refresh',error))}});
+$$('.admin-nav button[data-view]').forEach(b=>b.onclick=()=>{$$('.admin-nav button[data-view],.view').forEach(e=>e.classList.remove('active'));b.classList.add('active');const view=$('#view-'+b.dataset.view);if(view)view.classList.add('active');syncAdminNavGroupActive();if(b.dataset.view==='stock'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshBreadStock?.().catch(error=>console.warn('Panora bread stock refresh',error))}if(b.dataset.view==='plan'&&navigator.onLine&&window.panoraCloud?.ready){window.panoraCloud.refreshPlans?.().then(()=>{if(typeof renderBakeCalendar==='function')renderBakeCalendar()}).catch(error=>console.warn('Panora bake plan refresh',error))}});
 $('#adminLanguage').onchange=e=>{lang=e.target.value;localStorage.setItem('panora-admin-lang',lang);applyLanguage()};
 // Panora 10.62 — compact global header actions on mobile.
 (()=>{

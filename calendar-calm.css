@@ -262,7 +262,7 @@
 }
 
 
-/* Panora 10.83 — stable mobile calendar viewport.
+/* Panora 10.84 — stable mobile calendar viewport.
    Phones keep the same dates, bread cards, ordered quantities and plan values as desktop,
    but use a fit-to-screen two-column calendar. Bake days span the full width.
    This removes page/grid horizontal drift completely on real iPhones. */

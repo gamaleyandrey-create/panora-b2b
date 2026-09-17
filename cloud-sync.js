@@ -1821,16 +1821,40 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc');
     rememberRevision('plans',days);
-    return (days||[]).flatMap(day=>(day.bake_items||[]).map(item=>remotePlan({...day,...item})));
+    const list=Array.isArray(days)?days:[];
+    let embedded=list.flatMap(day=>(Array.isArray(day.bake_items)?day.bake_items:[]).map(item=>remotePlan({...day,...item})));
+    // Panora 10.84: on some mobile sessions PostgREST can return bake_days while the
+    // embedded bake_items relation is temporarily empty. Treat that as an incomplete
+    // snapshot, not as an empty production plan. Re-read bake_items directly and only
+    // accept the cloud snapshot when every active bake day has its bread rows.
+    const activeDays=list.filter(day=>day?.accepting_orders!==false);
+    const embeddedDayIds=new Set(list.filter(day=>Array.isArray(day.bake_items)&&day.bake_items.length).map(day=>String(day.id||'')));
+    const missingActive=activeDays.filter(day=>!embeddedDayIds.has(String(day.id||'')));
+    if(missingActive.length){
+      let itemRows=[];
+      try{itemRows=await request('bake_items?select=bake_day_id,product_id,planned_quantity')}
+      catch(error){const next=new Error(`Не удалось загрузить состав дней выпечки: ${error?.message||error}`);next.cause=error;throw next}
+      const byDay=new Map();
+      (Array.isArray(itemRows)?itemRows:[]).forEach(item=>{const id=String(item?.bake_day_id||'');if(!id)return;if(!byDay.has(id))byDay.set(id,[]);byDay.get(id).push(item)});
+      const stillMissing=activeDays.filter(day=>!(byDay.get(String(day.id||''))||[]).length);
+      if(stillMissing.length){
+        const error=new Error(`Облако вернуло неполный план выпечки (${stillMissing.length} дн.)`);
+        error.panoraPlanIncomplete=true;
+        throw error;
+      }
+      embedded=list.flatMap(day=>(byDay.get(String(day.id||''))||[]).map(item=>remotePlan({...day,...item})));
+      audit('sync.plan_items_recovered',`Состав дней выпечки загружен отдельным запросом: ${embedded.length} поз.`,'warning');
+    }
+    return embedded;
   }
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
-  // Panora 10.83: keep a last-known-good production plan separately from the live cache.
+  // Panora 10.84: keep a last-known-good production plan separately from the live cache.
   // A transient cloud failure or a stale empty local pending state must not blank the calendar.
   const planLastGoodKey='panora-production-plans-last-good-v1083';
   const readPlanCache=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
-  const saveLastGoodPlans=list=>{if(Array.isArray(list))safeLocalSet(planLastGoodKey,JSON.stringify(list))};
+  const saveLastGoodPlans=list=>{if(Array.isArray(list)&&list.length)safeLocalSet(planLastGoodKey,JSON.stringify(list))};
   const rememberNonEmptyPlanCache=list=>{if(Array.isArray(list)&&list.length)saveLastGoodPlans(list)};
   const restoreLastGoodPlans=()=>{
     const live=readPlanCache('panora-production-plans');if(live.length){rememberNonEmptyPlanCache(live);return live}
@@ -1895,15 +1919,20 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
 
     if(localChanged&&remoteChanged){
-      // Panora 10.83: an empty local plan can be a stale cache/pending flag left by a
-      // failed mobile sync. If there is no explicit local cancellation for the remote
-      // dates, recover the non-empty cloud plan instead of showing a blank calendar.
+      // Panora 10.84: a stale mobile pending flag can survive even when the local cache
+      // contains only old rows. If the device has no future bake rows while the cloud
+      // does, and the user did not explicitly cancel one of those cloud dates here,
+      // restore the cloud plan automatically instead of trapping the calendar in a
+      // permanent empty conflict.
       const cancelledDates=new Set((()=>{try{return JSON.parse(localStorage.getItem('panora-cancelled-bake-dates')||'[]')}catch{return[]}})().map(row=>String(row?.date||'')));
-      const remoteDates=[...new Set(remote.map(row=>String(row?.bakeDate||'')).filter(Boolean))];
-      const explicitDeletion=local.length===0&&remoteDates.some(date=>cancelledDates.has(date));
-      if(local.length===0&&remote.length>0&&!explicitDeletion){
+      const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      const localFuture=local.filter(row=>String(row?.bakeDate||'')>=today);
+      const remoteFuture=remote.filter(row=>String(row?.bakeDate||'')>=today);
+      const remoteFutureDates=[...new Set(remoteFuture.map(row=>String(row?.bakeDate||'')).filter(Boolean))];
+      const explicitDeletion=remoteFutureDates.some(date=>cancelledDates.has(date));
+      if(localFuture.length===0&&remoteFuture.length>0&&!explicitDeletion){
         await applyCloudPlans(remote);
-        audit('sync.plan_empty_local_recovered',`Восстановлен план из облака: ${remote.length} поз.`,'warning');
+        audit('sync.plan_empty_local_recovered',`Восстановлен будущий план из облака: ${remoteFuture.length} поз.`,'warning');
         return;
       }
       conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
@@ -1914,7 +1943,10 @@ window.panoraRecalculateBalances=recalculateBalances;
     await applyCloudPlans(remote);
   }
   async function refreshPlansIfChanged(){
-    if(!ready||pending.plans||conflicts.plans)return false;
+    if(!ready)return false;
+    // A calendar open/refresh is also a recovery opportunity. Reconcile pending or
+    // conflict state before deciding that plan refresh must be skipped.
+    if(pending.plans||conflicts.plans){await loadPlans();return true}
     const remote=await getRemotePlans();
     const local=JSON.parse(localStorage.getItem('panora-production-plans')||'[]');
     const remoteSig=planSignature(remote),localSig=planSignature(local);
@@ -2325,7 +2357,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       if(pending.recipes)await loadRecipes();
       if(pending.ingredientCosts)await flushIngredientCosts();
       if(pending.restaurants)await saveRestaurantsNow();
-      if(pending.plans)await savePlansNow();
+      if(pending.plans)await loadPlans();
       if(pending.orders){await saveOrdersNow();clearPending('orders')}
       if(pending.finance){await syncFinanceNow();clearPending('finance')}
       if(pending.rawStock)await syncRawStockNow();
