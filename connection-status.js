@@ -90,6 +90,7 @@
 
   function readState(){
     if(!navigator.onLine){render('offline',labels.offline);return}
+    if(document.body?.classList.contains('admin-page')&&Number(window.__panoraAdminRefreshActive||0)>0){render('syncing','Обновление данных…');return}
     const source=document.querySelector('#saveState,[data-form-save-state]');
     if(source){
       let state=classify(source.textContent,source.dataset.syncState);
@@ -125,6 +126,7 @@
   });
   window.addEventListener('offline',()=>render('offline',labels.offline));
   window.addEventListener('panora:form-save-state',event=>{
+    if(document.body?.classList.contains('admin-page')&&Number(window.__panoraAdminRefreshActive||0)>0){render('syncing','Обновление данных…');return}
     const d=event.detail||{},s=classify(d.text,d.state);
     render(s,d.text||labels[s]);
   });
@@ -227,7 +229,10 @@
   window.addEventListener('offline',()=>show('offline'));
   const observeAdmin=()=>{
     const source=document.querySelector('#saveState');if(!source)return;
-    const read=()=>{const text=source.textContent||'',state=mapState(source.dataset.syncState,text);show(state,text)};
+    const read=()=>{
+      if(Number(window.__panoraAdminRefreshActive||0)>0){show('loading','Обновление данных…');return}
+      const text=source.textContent||'',state=mapState(source.dataset.syncState,text);show(state,text)
+    };
     new MutationObserver(read).observe(source,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-sync-state']});
     if(/загруз|синхрони|обнов/i.test(source.textContent||''))read();
   };

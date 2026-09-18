@@ -186,8 +186,8 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    // Panora 10.93: keep the visible refresh line in the loading state for every
-    // real refresh/save phrase. 10.93 introduced «Обновляем календарь…», but the
+    // Panora 10.94: keep the visible refresh line in the loading state for every
+    // real refresh/save phrase. Earlier refresh paths introduced «Обновляем календарь…», but the
     // classifier did not include «обнов», so the UI immediately rendered
     // «✓ Данные актуальны» while the network request was still running.
     const syncing=/загруз|обнов|синхронизац|отправ|провер|сохраня|loading|refresh|updat|syncing|cargando|actualiz|sincron/i.test(text);
@@ -1865,7 +1865,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.93: the automatic migration remains one-shot, but an explicit
+    // Panora 10.94: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2033,7 +2033,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!ready||!navigator.onLine)return false;
     status('Обновление: календарь выпечки…');
 
-    // Panora 10.93: a manual/foreground refresh must not pull the cloud snapshot over
+    // Panora 10.94: a manual/foreground refresh must not pull the cloud snapshot over
     // an unsent local calendar edit. First reconcile pending/conflict state using the
     // same content-based synchronizer as normal saving. Only after that do a direct
     // no-cache cloud read and verify what the calendar should display.
@@ -2550,35 +2550,52 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     clearAdminStartupRecovery();
+    const startedAt=Date.now();let startupSuccess=false;
+    setAdminRefreshActivity(1);setAdminGlobalRefreshState('loading');
+    window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:'startup',automatic:true}}));
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
     const steps=[['товары',loadProducts],['заказы',loadOrders],['накладные',loadDeliveryNotes],['рецептуры',loadRecipes],['цены сырья',loadIngredientCosts],['план',loadPlans],['партнёры',loadRestaurants],['оплаты',loadPayments],['B2B возвраты',ensureB2BReturnCreditPayments],['факт выпечки',syncBakeCompletionsNow],['склад сырья',syncRawStockNow],['журнал',loadOperationEvents]],errors=[];
-    for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
-    if(window.panoraHandleSessionError?.(error)) return;
-    errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
-    if(productDirty)try{await flushProducts()}catch(error){
-    if(window.panoraHandleSessionError?.(error)) return;
-    errors.push(['товары',error])}
-    if(recipeDirty)try{await flushRecipes()}catch(error){
-    if(window.panoraHandleSessionError?.(error)) return;
-    errors.push(['рецептуры',error])}
-    const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
-    const viewIs=(...names)=>names.includes(activeAdminView());
-    startAdminLeaderHeartbeat();
-    // Panora 10.44: cloud data is event/on-demand driven.
-    // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
-    [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
-    orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
-    if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
-    // Panora 10.93: focus/pageshow can fire before authentication finishes on iOS.
-    // Run one foreground reconciliation after cloud readiness so that an early wake
-    // event is never lost and the just-opened app cannot remain on yesterday's plan.
+    try{
+      for(const [name,run] of steps){status(`Загрузка: ${name}…`);try{await run()}catch(error){
+        if(window.panoraHandleSessionError?.(error))return;
+        errors.push([name,error]);console.error(`Panora cloud sync · ${name}`,error)}}
+      if(productDirty)try{await flushProducts()}catch(error){
+        if(window.panoraHandleSessionError?.(error))return;
+        errors.push(['товары',error])}
+      if(recipeDirty)try{await flushRecipes()}catch(error){
+        if(window.panoraHandleSessionError?.(error))return;
+        errors.push(['рецептуры',error])}
+      const activeAdminView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
+      const viewIs=(...names)=>names.includes(activeAdminView());
+      startAdminLeaderHeartbeat();
+      // Panora 10.44: cloud data is event/on-demand driven.
+      // No periodic table/revision polling: refresh on realtime events, view open, app wake/focus, online and manual Refresh.
+      [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
+      orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
+      if(conflictCount())showConflicts();
+      else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}
+      else{
+        status('Обновление: завершаем текущий раздел…');
+        await settleAdminActiveView(activeAdminView()||'orders');
+        await holdVisibleRefresh(startedAt,650);
+        clearAdminStartupRecovery();status('Облако ✓');startupSuccess=true;setAdminGlobalRefreshState('success');
+        window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason:'startup',view:activeAdminView(),automatic:true}}));
+      }
+    }finally{
+      setAdminRefreshActivity(-1);
+      if(!startupSuccess)setAdminGlobalRefreshState('idle');
+      else setTimeout(()=>{if(!adminManualRefreshPromise&&!adminWakeRefreshPromise)setAdminGlobalRefreshState('idle')},900);
+    }
+    // focus/pageshow can fire before authentication finishes on iOS. Run one
+    // foreground reconciliation after readiness, but only after startup itself
+    // has painted a coherent current screen.
     scheduleAdminCommerceWakeRefresh('startup-ready',140);
   }
   const adminRefreshCopy=()=>{const l=String(document.querySelector('#adminLanguage')?.value||'ru');return l==='es'?{idle:'Actualizar',busy:'Actualización…',done:'✓ Actualizado'}:l==='en'?{idle:'Refresh',busy:'Refreshing…',done:'✓ Updated'}:{idle:'Обновить',busy:'Обновление…',done:'✓ Обновлено'}};
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 10.93: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 10.94: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2614,6 +2631,29 @@ window.panoraRecalculateBalances=recalculateBalances;
   };
   let adminManualRefreshPromise=null;
   const holdVisibleRefresh=async(startedAt,minMs=700)=>{const left=minMs-(Date.now()-startedAt);if(left>0)await new Promise(resolve=>setTimeout(resolve,left))};
+  const adminActiveView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'orders';
+  const adminNextPaint=()=>new Promise(resolve=>{
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(resolve));
+    else setTimeout(resolve,0);
+  });
+  async function settleAdminActiveView(view=adminActiveView()){
+    // Panora 10.94: the global line may say «Данные актуальны» only after the
+    // currently visible screen has actually left its loading state. This matters
+    // on both desktop and iOS where the top-level sync can finish before a queued
+    // commerce repaint is painted.
+    if(view==='orders'||view==='delivery-notes'){
+      if(!window.panoraAdminOrdersHydrated)await loadOrders();
+      if(!window.panoraAdminOrderArchiveHydrated)await loadDeliveryNotes();
+      if(typeof renderCommerce==='function')renderCommerce();
+    }else if(view==='plan'){
+      if(typeof renderBakeCalendar==='function')renderBakeCalendar();
+      else if(typeof renderAll==='function')renderAll();
+    }else if(view==='accounting'||view==='finance'||view==='reminders'){
+      if(typeof renderCommerce==='function')renderCommerce();
+    }else if(typeof renderAll==='function')renderAll();
+    await adminNextPaint();
+    return true;
+  }
   async function refreshAdminAllOnDemand(reason='global-manual'){
     if(adminManualRefreshPromise)return adminManualRefreshPromise;
     let success=false;
@@ -2643,11 +2683,12 @@ window.panoraRecalculateBalances=recalculateBalances;
         }
         success=Boolean(ok);
         if(ok){
-          if(typeof renderAll==='function')renderAll();
-          if(typeof renderCommerce==='function')renderCommerce();
+          status('Обновление: завершаем текущий раздел…');
+          const view=adminActiveView();
+          await settleAdminActiveView(view);
           await holdVisibleRefresh(startedAt,700);
           status('Облако ✓');
-          window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view:document.querySelector('.view.active')?.id?.replace(/^view-/,'')||''}}));
+          window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view}}));
           setAdminGlobalRefreshState('success');
         }
         return Boolean(ok);
@@ -2767,7 +2808,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Обновление: календарь выпечки…');
     window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 10.93: foreground refresh uses the same safe calendar reconciliation
+      // Panora 10.94: foreground refresh uses the same safe calendar reconciliation
       // as the manual button. Do not announce success until the whole wake pass ends.
       const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
       if(!planOk&&conflicts.plans){showConflicts();return false}
@@ -2802,6 +2843,8 @@ window.panoraRecalculateBalances=recalculateBalances;
       }else if(view==='products'){
         await refreshProductsIfChanged();
       }
+      status('Обновление: завершаем текущий раздел…');
+      await settleAdminActiveView(view);
       await holdVisibleRefresh(startedAt,550);
       wakeSuccess=true;
       status('Облако ✓');
