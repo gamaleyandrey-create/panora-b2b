@@ -63,13 +63,13 @@ function calendarPlanRows(){
  const live=readCalendarPlanRows('panora-production-plans'),memory=Array.isArray(plans)?plans:[],lastGood=readCalendarPlanRows('panora-production-plans-last-good-v1083'),cloudMirrorRaw=localStorage.getItem('panora-production-plans-cloud-v1087'),cloudMirror=readCalendarPlanRows('panora-production-plans-cloud-v1087');
  let conflicts={};try{conflicts=JSON.parse(localStorage.getItem('panora-cloud-conflicts-v285')||'{}')||{}}catch{}
  let pending={};try{pending=JSON.parse(localStorage.getItem('panora-cloud-pending-v283')||'{}')||{}}catch{}
- // Panora 10.87: never present a persisted, unsent device plan as the shared current
+ // Panora 10.88: never present a persisted, unsent device plan as the shared current
  // calendar after reload. If a confirmed cloud mirror exists, it stays visible while
  // the local copy is pending/conflicting; the local copy is preserved as a draft.
  if((conflicts.plans||pending.plans)&&cloudMirrorRaw!==null)return cloudMirror;
  if(live.length)return live;
  if(memory.length)return memory;
- // Panora 10.87: while cloud sync is recovering, keep displaying the last confirmed
+ // Panora 10.88: while cloud sync is recovering, keep displaying the last confirmed
  // non-empty plan rather than rendering a calendar with only dates.
  if(lastGood.length)return lastGood;
  return live;
@@ -82,7 +82,7 @@ function alignMobileCalendar(today,shownPrefix){
  requestAnimationFrame(()=>{
    const target=scroller.querySelector(`[data-calendar-date="${today}"]`)||scroller.querySelector('.calendar-day.has-bake')||scroller.querySelector('.calendar-day:not([disabled])');
    if(!target)return;
-   // Panora 10.87: mobile calendar now fits the viewport instead of using a wide
+   // Panora 10.88: mobile calendar now fits the viewport instead of using a wide
    // horizontal strip. Keep the inner scroller at zero so neither the calendar nor
    // the page can appear shifted after render/reload.
    scroller.scrollLeft=0;

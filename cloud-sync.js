@@ -126,7 +126,7 @@
     localStorage.setItem(planContentSyncKey,'1');
   }
 
-  // Panora 10.87: repair devices that were already stuck with a stale mobile
+  // Panora 10.88: repair devices that were already stuck with a stale mobile
   // production-plan pending/baseline from 10.83-10.86. Before resetting only the
   // plan sync metadata, preserve the device copy as a recoverable draft + backup.
   // The next successful cloud read then becomes authoritative on every device.
@@ -147,7 +147,7 @@
     safeLocalSet(baselineKey,JSON.stringify(baselines));
     localStorage.removeItem('panora-production-plans-cloud-v1086');
     localStorage.removeItem('panora-production-plans-local-draft-v1086');
-    // Force a fresh confirmed cloud mirror for 10.87, but keep the preserved v1087 draft.
+    // Force a fresh confirmed cloud mirror for 10.88, but keep the preserved v1087 draft.
     localStorage.removeItem('panora-production-plans-cloud-v1087');
     safeLocalSet(planAuthorityResetKey,'1');
   }
@@ -1844,18 +1844,37 @@ window.panoraFinanceTimeline=financeTimeline;
 window.panoraRecalculateBalances=recalculateBalances;
   const cutoffIso=value=>{const raw=String(value||'').trim();if(!raw)return null;const parsed=new Date(raw);return Number.isFinite(parsed.getTime())?parsed.toISOString():null};
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
-  // Panora 10.87: keep a separate cloud mirror for production plans.
+  // Panora 10.88: keep a separate cloud mirror for production plans.
   // When two devices changed the calendar concurrently, the live local cache may be
   // a draft. The calendar must not present that draft as the shared current plan.
   const planCloudMirrorKey='panora-production-plans-cloud-v1087';
   const planLocalDraftKey='panora-production-plans-local-draft-v1087';
   const planLastGoodKey='panora-production-plans-last-good-v1083';
+  const planMoveRecoveryKey='panora-production-plan-move-recovery-v1088';
+  const planDateSet=list=>new Set((Array.isArray(list)?list:[]).map(row=>String(row?.bakeDate||'')).filter(Boolean));
+  const planRowsForDate=(list,date)=>(Array.isArray(list)?list:[]).filter(row=>String(row?.bakeDate||'')===String(date||''));
+  const planDateSignature=(list,date)=>JSON.stringify(planRowsForDate(list,date).map(planComparable).sort((a,b)=>String(a.product).localeCompare(String(b.product))));
+  const recentCancelledBakeDates=()=>{
+    const now=Date.now(),maxAge=1000*60*60*24*31,rows=bakeCancellationLog();
+    return new Set((Array.isArray(rows)?rows:[]).filter(row=>{
+      const stamp=Date.parse(String(row?.cancelledAt||''));return !Number.isFinite(stamp)||now-stamp<=maxAge;
+    }).map(row=>String(row?.date||'')).filter(Boolean));
+  };
+  const isSafeExplicitPlanMove=(local,remote)=>{
+    if(localStorage.getItem(planMoveRecoveryKey)==='1')return false;
+    const localDates=planDateSet(local),remoteDates=planDateSet(remote),cancelled=recentCancelledBakeDates();
+    const removed=[...remoteDates].filter(date=>!localDates.has(date));
+    const added=[...localDates].filter(date=>!remoteDates.has(date));
+    if(!removed.length||!added.length||removed.some(date=>!cancelled.has(date)))return false;
+    const common=[...localDates].filter(date=>remoteDates.has(date));
+    return common.every(date=>planDateSignature(local,date)===planDateSignature(remote,date));
+  };
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc');
     rememberRevision('plans',days);
     const list=Array.isArray(days)?days:[];
     let embedded=list.flatMap(day=>(Array.isArray(day.bake_items)?day.bake_items:[]).map(item=>remotePlan({...day,...item})));
-    // Panora 10.87: on some mobile sessions PostgREST can return bake_days while the
+    // Panora 10.88: on some mobile sessions PostgREST can return bake_days while the
     // embedded bake_items relation is temporarily empty. Treat that as an incomplete
     // snapshot, not as an empty production plan. Re-read bake_items directly and only
     // accept the cloud snapshot when every active bake day has its bread rows.
@@ -1886,7 +1905,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
-  // Panora 10.87: keep a last-known-good production plan separately from the live cache.
+  // Panora 10.88: keep a last-known-good production plan separately from the live cache.
   // A transient cloud failure or a stale empty local pending state must not blank the calendar.
   const readPlanCache=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const saveLastGoodPlans=list=>{if(Array.isArray(list)&&list.length)safeLocalSet(planLastGoodKey,JSON.stringify(list))};
@@ -1910,7 +1929,9 @@ window.panoraRecalculateBalances=recalculateBalances;
       plans=Array.isArray(remote)?remote:[];
       safeLocalSet('panora-production-plans',JSON.stringify(plans));
       // Cloud-applied state is authoritative even when it is intentionally empty.
-      saveLastGoodPlans(plans);
+      // A confirmed empty cloud plan must clear the old non-empty fallback, otherwise
+      // a cancelled date can visually reappear after the pending flag is cleared.
+      if(plans.length)saveLastGoodPlans(plans);else localStorage.removeItem(planLastGoodKey);
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
       localStorage.removeItem(planLocalDraftKey);
@@ -1925,6 +1946,21 @@ window.panoraRecalculateBalances=recalculateBalances;
     const local=readPlanCache('panora-production-plans');
     rememberNonEmptyPlanCache(local);
     const remoteSig=planSignature(remote),localSig=planSignature(local),baseSig=String(baselines.plans||'');
+
+    // Panora 10.88: recover the exact historical failure mode where one device
+    // explicitly cancelled an old bake date and immediately created a replacement
+    // date, but the old baseline made the second save look like a foreign conflict.
+    // The recovery is deliberately narrow: every cloud-only date must have a recent
+    // local cancellation tombstone, at least one local-only replacement date must
+    // exist, and all dates shared by both snapshots must be byte-equivalent by plan.
+    if(remoteSig!==localSig&&isSafeExplicitPlanMove(local,remote)){
+      plans=local;
+      forceSections.add('plans');
+      await savePlansNow();
+      safeLocalSet(planMoveRecoveryKey,'1');
+      audit('sync.plan_move_recovered','Восстановлен перенос дня выпечки после старого конфликта синхронизации','warning');
+      return;
+    }
 
     if(remoteSig===localSig){
       plans=remote.length?remote:local;
@@ -1956,7 +1992,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
 
     if(localChanged&&remoteChanged){
-      // Panora 10.87: a stale mobile pending flag can survive even when the local cache
+      // Panora 10.88: a stale mobile pending flag can survive even when the local cache
       // contains only old rows. If the device has no future bake rows while the cloud
       // does, and the user did not explicitly cancel one of those cloud dates here,
       // restore the cloud plan automatically instead of trapping the calendar in a
@@ -2036,7 +2072,13 @@ window.panoraRecalculateBalances=recalculateBalances;
     const day=rows?.[0];
     if(!day){status('Облако ✓');return{date:target,ordersCancelled:0,alreadyMissing:true}}
     const result=await retireBakeDayRemote(day,String(reason||bakeCancellationReason(target)));
+    // Panora 10.88: cancellation is part of the plan transaction. Re-read the
+    // confirmed cloud state immediately so the next local edit (for example 18→19)
+    // compares against the post-cancellation baseline rather than the old date.
+    const remoteAfterCancel=await getRemotePlans();
+    await applyCloudPlans(remoteAfterCancel);
     await loadOrders();status('Облако ✓');
+    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remoteAfterCancel.length,source:'cloud-cancel',cancelledDate:target}}));
     window.dispatchEvent(new CustomEvent('panora:bake-day-cancelled',{detail:result}));
     return result;
   }
@@ -2079,11 +2121,18 @@ window.panoraRecalculateBalances=recalculateBalances;
       await request(`bake_items?bake_day_id=eq.${encodeURIComponent(day.id)}`,{method:'DELETE'});
       await request('bake_items?on_conflict=bake_day_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items.map(p=>({bake_day_id:day.id,product_id:p.product,planned_quantity:Number(p.planned||0)})))});
     }
-    revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');delete conflicts.plans;saveConflicts();
-    clearPending('plans');savePlanBaseline(plans);localStorage.removeItem(planLocalDraftKey);safeLocalSet(planCloudMirrorKey,JSON.stringify(Array.isArray(plans)?plans:[]));
+    // Panora 10.88: never report success from the optimistic local copy alone.
+    // Confirm the exact cloud result after retire/upsert operations and make that
+    // confirmed snapshot the cache/baseline used by this and every other device.
+    const remoteAfterSave=await getRemotePlans();
+    const confirmedSig=planSignature(remoteAfterSave),expectedSig=planSignature(plans);
+    if(confirmedSig!==expectedSig)throw new Error('Облако не подтвердило итоговый календарь выпечки. Нажмите «Обновить» и повторите сохранение.');
+    revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');
+    await applyCloudPlans(remoteAfterSave);
     if(retiredAny)await loadOrders();
     status('Сохранено');
-    window.dispatchEvent(new CustomEvent('panora:plan-saved',{detail:{at:new Date().toISOString()}}));
+    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remoteAfterSave.length,source:'cloud-confirmed-save',signature:confirmedSig}}));
+    window.dispatchEvent(new CustomEvent('panora:plan-saved',{detail:{at:new Date().toISOString(),signature:confirmedSig}}));
   }
   const fail=(section,error)=>{console.error(`Panora cloud sync · ${section}`,error);if(error?.panoraConflict){showConflicts();return}audit('sync.failed',`${section}: ${error?.message||error}`,'error');status(`Ошибка: ${section}`,true,error?.message||String(error))};
   function queuePlans(){if(applyingCloud)return;const current=typeof plans!=='undefined'?plans:JSON.parse(localStorage.getItem('panora-production-plans')||'[]');const signature=planSignature(current);if(signature===String(baselines.plans||'')){clearPending('plans');delete conflicts.plans;saveConflicts();return}markPending('plans');clearTimeout(planTimer);planTimer=setTimeout(()=>savePlansNow().catch(error=>{showPending();fail('план',error)}),350)}
@@ -2600,9 +2649,12 @@ window.panoraRecalculateBalances=recalculateBalances;
         if(view==='delivery-notes'&&!notesLoaded)await loadDeliveryNotes();
         window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view,changed:Boolean(changed?.changed)}}));
       }else if(view==='plan'){
-        const [plansChanged,bakeChanged]=await Promise.all([adminOperationalComponentChanged('plans'),adminOperationalComponentChanged('bakeCompletions')]);
-        const tasks=[];if(plansChanged)tasks.push(refreshPlansIfChanged());if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
-        if(tasks.length)await Promise.allSettled(tasks);
+        // Panora 10.88: the calendar is small enough to refresh directly whenever
+        // the app returns to the foreground. This avoids a short revision-cache
+        // window where another device could still show yesterday's bake date.
+        const bakeChanged=await adminOperationalComponentChanged('bakeCompletions');
+        const tasks=[refreshPlansIfChanged()];if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
+        await Promise.allSettled(tasks);
       }else if(view==='rawstock'){
         const [rawChanged,bakeChanged]=await Promise.all([adminOperationalComponentChanged('rawStock'),adminOperationalComponentChanged('bakeCompletions')]);
         const tasks=[];if(rawChanged)tasks.push(syncRawStockNow({quiet:true,delta:true}));if(bakeChanged)tasks.push(syncBakeCompletionsNow({quiet:true,delta:true}));
