@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.87',build:10870,cache:10870});
+assert.deepEqual(build,{version:'10.88',build:10880,cache:10880});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.87',BUILD=10870",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.88',BUILD=10880",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10870','quality-compliance-v1075.js?v=10870'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10880','quality-compliance-v1075.js?v=10880'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
@@ -43,7 +43,7 @@ const partnerWs=fs.readFileSync('restaurant-workspace.js','utf8'),partnerCss=fs.
 const cloudSync1083=fs.readFileSync('cloud-sync.js','utf8'),connection1083=fs.readFileSync('connection-status.js','utf8');
 for(const token of ['panora-production-plans-last-good-v1083','sync.plan_empty_local_recovered',"el.dataset.syncState='conflict'",'sync.plan_items_recovered',"bake_items?select=bake_day_id,product_id,planned_quantity",'if(pending.plans)await loadPlans();'])assert.ok(cloudSync1083.includes(token),token);
 for(const token of ["function calendarPlanRows()","panora-production-plans-last-good-v1083","['panora:plans-updated','panora:plan-saved','panora:plans-conflict','panora:admin-startup-recovered']"])assert.ok(calendarJs.includes(token),token);
-for(const token of ['Panora 10.87 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
+for(const token of ['Panora 10.88 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
 for(const token of ['mobile calendar now fits the viewport','scroller.scrollLeft=0'])assert.ok(calendarJs.includes(token),token);
 for(const token of ["conflict:'Нужно выбрать версию'","state==='conflict'"])assert.ok(connection1083.includes(token),token);
 
@@ -69,4 +69,27 @@ for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production
  storage.delete('panora-cloud-pending-v283');assert.deepEqual(JSON.parse(JSON.stringify(context.readRows())),local,'clean local cache may display normally');
 }
 
-console.log('Panora 10.87 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 10.88 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+
+// Panora 10.88 — regression for the reported two-device move: cancel 18 Sep,
+// schedule 19 Sep, then refresh another device that still has 18 Sep cached.
+for(const token of [
+  "const planMoveRecoveryKey='panora-production-plan-move-recovery-v1088'",
+  'isSafeExplicitPlanMove(local,remote)',
+  'const remoteAfterCancel=await getRemotePlans();',
+  'await applyCloudPlans(remoteAfterCancel);',
+  'const remoteAfterSave=await getRemotePlans();',
+  "if(confirmedSig!==expectedSig)throw new Error('Облако не подтвердило итоговый календарь выпечки.",
+  "const tasks=[refreshPlansIfChanged()]",
+  'else localStorage.removeItem(planLastGoodKey)'
+])assert.ok(cloudSync1083.includes(token),token);
+const product1088=fs.readFileSync('product-admin.js','utf8');
+assert.ok(product1088.includes("filtered=cancellationLog.filter(row=>String(row?.date||'')!==bakeDate)"),'re-scheduling a date must consume stale cancellation tombstone');
+{
+ const mk=(date,product='bread')=>({bakeDate:date,deliveryDate:date,product,planned:1,cutoff:`${date}T07:00:00.000Z`,open:true});
+ const sig=list=>JSON.stringify((list||[]).map(x=>({bakeDate:x.bakeDate,deliveryDate:x.deliveryDate,product:x.product,planned:Number(x.planned||0),cutoff:x.cutoff,open:x.open!==false})).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
+ let cloud=[mk('2026-09-18')],a={local:[...cloud],baseline:sig(cloud)},b={local:[...cloud],baseline:sig(cloud)};
+ cloud=[];a.local=[...cloud];a.baseline=sig(cloud);assert.equal(a.baseline,sig([]));
+ a.local=[mk('2026-09-19')];assert.equal(sig(cloud)!==a.baseline,false);assert.equal(sig(a.local)!==a.baseline,true);cloud=[...a.local];
+ b.local=[...cloud];b.baseline=sig(cloud);assert.deepEqual(b.local.map(x=>x.bakeDate),['2026-09-19']);
+}
