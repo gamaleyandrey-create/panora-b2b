@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.85',build:10850,cache:10850});
+assert.deepEqual(build,{version:'10.86',build:10860,cache:10860});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.85',BUILD=10850",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.86',BUILD=10860",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10850','quality-compliance-v1075.js?v=10850'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10860','quality-compliance-v1075.js?v=10860'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
@@ -42,8 +42,8 @@ const partnerWs=fs.readFileSync('restaurant-workspace.js','utf8'),partnerCss=fs.
 
 const cloudSync1083=fs.readFileSync('cloud-sync.js','utf8'),connection1083=fs.readFileSync('connection-status.js','utf8');
 for(const token of ['panora-production-plans-last-good-v1083','sync.plan_empty_local_recovered',"el.dataset.syncState='conflict'",'sync.plan_items_recovered',"bake_items?select=bake_day_id,product_id,planned_quantity",'if(pending.plans)await loadPlans();'])assert.ok(cloudSync1083.includes(token),token);
-for(const token of ["function calendarPlanRows()","panora-production-plans-last-good-v1083","['panora:plans-updated','panora:plan-saved','panora:admin-startup-recovered']"])assert.ok(calendarJs.includes(token),token);
-for(const token of ['Panora 10.85 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
+for(const token of ["function calendarPlanRows()","panora-production-plans-last-good-v1083","['panora:plans-updated','panora:plan-saved','panora:plans-conflict','panora:admin-startup-recovered']"])assert.ok(calendarJs.includes(token),token);
+for(const token of ['Panora 10.86 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
 for(const token of ['mobile calendar now fits the viewport','scroller.scrollLeft=0'])assert.ok(calendarJs.includes(token),token);
 for(const token of ["conflict:'Нужно выбрать версию'","state==='conflict'"])assert.ok(connection1083.includes(token),token);
-console.log('Panora 10.85 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 10.86 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
