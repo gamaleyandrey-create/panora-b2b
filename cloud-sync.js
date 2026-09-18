@@ -186,8 +186,8 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    // Panora 10.92: keep the visible refresh line in the loading state for every
-    // real refresh/save phrase. 10.92 introduced «Обновляем календарь…», but the
+    // Panora 10.93: keep the visible refresh line in the loading state for every
+    // real refresh/save phrase. 10.93 introduced «Обновляем календарь…», but the
     // classifier did not include «обнов», so the UI immediately rendered
     // «✓ Данные актуальны» while the network request was still running.
     const syncing=/загруз|обнов|синхронизац|отправ|провер|сохраня|loading|refresh|updat|syncing|cargando|actualiz|sincron/i.test(text);
@@ -1865,7 +1865,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.92: the automatic migration remains one-shot, but an explicit
+    // Panora 10.93: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2033,7 +2033,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!ready||!navigator.onLine)return false;
     status('Обновление: календарь выпечки…');
 
-    // Panora 10.92: a manual/foreground refresh must not pull the cloud snapshot over
+    // Panora 10.93: a manual/foreground refresh must not pull the cloud snapshot over
     // an unsent local calendar edit. First reconcile pending/conflict state using the
     // same content-based synchronizer as normal saving. Only after that do a direct
     // no-cache cloud read and verify what the calendar should display.
@@ -2569,7 +2569,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
-    // Panora 10.92: focus/pageshow can fire before authentication finishes on iOS.
+    // Panora 10.93: focus/pageshow can fire before authentication finishes on iOS.
     // Run one foreground reconciliation after cloud readiness so that an early wake
     // event is never lost and the just-opened app cannot remain on yesterday's plan.
     scheduleAdminCommerceWakeRefresh('startup-ready',140);
@@ -2578,7 +2578,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 10.92: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 10.93: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2767,7 +2767,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Обновление: календарь выпечки…');
     window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 10.92: foreground refresh uses the same safe calendar reconciliation
+      // Panora 10.93: foreground refresh uses the same safe calendar reconciliation
       // as the manual button. Do not announce success until the whole wake pass ends.
       const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
       if(!planOk&&conflicts.plans){showConflicts();return false}
