@@ -2627,7 +2627,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major butto
   }
 }
 
-/* Panora 10.90 — mobile Bakery refresh must be explicit, readable and tappable. */
+/* Panora 10.91 — mobile Bakery refresh must be explicit, readable and tappable. */
 @media (max-width:720px){
   html body.admin-page header.admin-topbar button.admin-global-refresh{
     display:inline-flex!important;
@@ -2686,5 +2686,56 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major butto
     width:32px!important;
     height:32px!important;
     flex-basis:32px!important;
+  }
+}
+
+/* Panora 10.91 — Refresh must be a real top-layer control on desktop and iOS PWA. */
+html body.admin-page header.admin-topbar{
+  isolation:isolate!important;
+}
+html body.admin-page header.admin-topbar .admin-top-actions{
+  position:relative!important;
+  z-index:1902!important;
+  pointer-events:auto!important;
+}
+html body.admin-page header.admin-topbar .brand{
+  position:relative!important;
+  z-index:1!important;
+  pointer-events:none!important;
+}
+html body.admin-page header.admin-topbar button.admin-global-refresh{
+  position:relative!important;
+  z-index:1903!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  cursor:pointer!important;
+}
+html body.admin-page header.admin-topbar button.admin-global-refresh[data-loading="1"]{
+  opacity:1!important;
+  cursor:progress!important;
+}
+html body.admin-page header.admin-topbar button.admin-global-refresh[data-loading="1"] .admin-global-refresh-icon{
+  animation:panoraAdminRefreshSpin .72s linear infinite!important;
+}
+@media (max-width:720px){
+  html body.admin-page header.admin-topbar button.admin-global-refresh{
+    min-width:120px!important;
+    max-width:120px!important;
+  }
+}
+@media (max-width:390px){
+  html body.admin-page header.admin-topbar button.admin-global-refresh{
+    min-width:116px!important;
+    max-width:116px!important;
+    font-size:11.5px!important;
+  }
+}
+@media (max-width:360px){
+  html body.admin-page header.admin-topbar button.admin-global-refresh{
+    min-width:110px!important;
+    max-width:110px!important;
+    font-size:11px!important;
   }
 }

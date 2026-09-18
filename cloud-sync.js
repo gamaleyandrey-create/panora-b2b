@@ -1861,7 +1861,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.90: the automatic migration remains one-shot, but an explicit
+    // Panora 10.91: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2032,7 +2032,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     const local=readPlanCache('panora-production-plans');
     const remoteSig=planSignature(remote),localSig=planSignature(local);
 
-    // Panora 10.90: the Refresh button is a real two-device reconciliation path.
+    // Panora 10.91: the Refresh button is a real two-device reconciliation path.
     // If this device contains the exact, explicitly-cancelled date move (for example
     // 18 → 19 September), retry that move even if the one-shot 10.88 recovery flag
     // was already consumed. This lets the device that made the edit finish sending it.
@@ -2553,34 +2553,53 @@ window.panoraRecalculateBalances=recalculateBalances;
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
-    // Panora 10.90: focus/pageshow can fire before authentication finishes on iOS.
+    // Panora 10.91: focus/pageshow can fire before authentication finishes on iOS.
     // Run one foreground reconciliation after cloud readiness so that an early wake
     // event is never lost and the just-opened app cannot remain on yesterday's plan.
     scheduleAdminCommerceWakeRefresh('startup-ready',140);
   }
-  const adminRefreshCopy=()=>{const l=String(document.querySelector('#adminLanguage')?.value||'ru');return l==='es'?{idle:'Actualizar',busy:'Actualizando…',done:'✓ Actualizado'}:l==='en'?{idle:'Refresh',busy:'Refreshing…',done:'✓ Updated'}:{idle:'Обновить',busy:'Обновляем…',done:'✓ Обновлено'}};
-  const resetAdminGlobalRefreshButton=({forceIdle=false}={})=>{
+  const adminRefreshCopy=()=>{const l=String(document.querySelector('#adminLanguage')?.value||'ru');return l==='es'?{idle:'Actualizar',busy:'Actualización…',done:'✓ Actualizado'}:l==='en'?{idle:'Refresh',busy:'Refreshing…',done:'✓ Updated'}:{idle:'Обновить',busy:'Обновление…',done:'✓ Обновлено'}};
+  const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
-    // Panora 10.90: iOS can restore a page from the back/forward cache with the native
-    // disabled state that existed while a previous refresh was running. Never let that
-    // stale DOM state make Refresh permanently untappable after returning to the app.
-    button.disabled=false;
-    if(forceIdle||button.dataset.loading==='1'){
-      delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');if(label)label.textContent=adminRefreshCopy().idle;
+    const copy=adminRefreshCopy();
+    // Panora 10.91: Refresh is never natively disabled. iOS/desktop must always be able
+    // to deliver pointer/click events; duplicate work is serialized by the JS promises.
+    button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
+    delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
+    if(state==='loading'){
+      button.dataset.loading='1';button.setAttribute('aria-busy','true');button.title=copy.busy;if(label)label.textContent=copy.busy;return;
     }
+    if(state==='success'){
+      button.dataset.success='1';button.title=copy.done;if(label)label.textContent=copy.done;return;
+    }
+    button.title=copy.idle;if(label)label.textContent=copy.idle;
+  };
+  const resetAdminGlobalRefreshButton=({forceIdle=false}={})=>{
+    const button=document.querySelector('#adminGlobalRefresh');if(!button)return;
+    button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
+    if(forceIdle||button.dataset.loading==='1')setAdminGlobalRefreshState('idle');
+  };
+  const waitForAdminRefreshReady=async()=>{
+    if(ready)return true;
+    // If authentication already finished but cloud-sync missed/has not completed its
+    // startup event, explicitly start it. Otherwise briefly wait for admin-auth to finish.
+    const active=window.panoraSupabaseSession;
+    if(active?.access_token){try{await start(active)}catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora refresh start',error)}}
+    if(ready)return true;
+    for(let i=0;i<24&&!ready;i++)await new Promise(resolve=>setTimeout(resolve,125));
+    if(!ready&&window.panoraSupabaseSession?.access_token){try{await start(window.panoraSupabaseSession)}catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora refresh restart',error)}}
+    return ready;
   };
   let adminManualRefreshPromise=null;
   async function refreshAdminAllOnDemand(reason='global-manual'){
     if(adminManualRefreshPromise)return adminManualRefreshPromise;
-    resetAdminGlobalRefreshButton();
-    const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');
-    if(!navigator.onLine){status('Сохранено на устройстве · нет сети');return false}
-    if(!ready){status('Подключаемся к облаку…');return false}
     let success=false;
     adminManualRefreshPromise=(async()=>{
-      if(button){button.disabled=false;button.dataset.loading='1';delete button.dataset.success;button.setAttribute('aria-busy','true');if(label)label.textContent=adminRefreshCopy().busy}
+      setAdminGlobalRefreshState('loading');
       try{
-        // Panora 10.90: the Bakery Refresh button is truly global. Always reconcile
+        if(!navigator.onLine){status('Сохранено на устройстве · нет сети');return false}
+        if(!await waitForAdminRefreshReady()){status('Подключаемся к облаку…');return false}
+        // Panora 10.91: the Bakery Refresh button is truly global. Always reconcile
         // the production calendar first, even when another section is open, then run
         // the normal full cloud refresh. This keeps mobile/desktop bake dates aligned.
         await refreshPlansManual(reason);
@@ -2590,11 +2609,11 @@ window.panoraRecalculateBalances=recalculateBalances;
           if(typeof renderCommerce==='function')renderCommerce();
           status('Облако ✓');
           window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view:document.querySelector('.view.active')?.id?.replace(/^view-/,'')||''}}));
-          if(button){delete button.dataset.loading;button.dataset.success='1';if(label)label.textContent=adminRefreshCopy().done}
+          setAdminGlobalRefreshState('success');
         }
         return Boolean(ok);
       }finally{
-        if(button){button.disabled=false;button.removeAttribute('aria-busy');if(!success){delete button.dataset.loading;delete button.dataset.success;if(label)label.textContent=adminRefreshCopy().idle}else setTimeout(()=>{delete button.dataset.success;if(label)label.textContent=adminRefreshCopy().idle},1100)}
+        if(!success)setAdminGlobalRefreshState('idle');else setTimeout(()=>{if(!adminManualRefreshPromise)setAdminGlobalRefreshState('idle')},1100);
       }
     })().finally(()=>{adminManualRefreshPromise=null});
     return adminManualRefreshPromise;
@@ -2693,19 +2712,20 @@ window.panoraRecalculateBalances=recalculateBalances;
   window.addEventListener('panora:bake-completion-local-change',()=>{markPending('bakeCompletions');if(ready&&navigator.onLine)syncBakeCompletionsNow().catch(error=>console.warn('Panora bake completion save',error))});
   const activeAdminWakeView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'orders';
   const refreshAdminCommerceOnWake=reason=>{
+    if(adminManualRefreshPromise)return adminManualRefreshPromise;
     if(!ready||!navigator.onLine)return Promise.resolve(false);
     const now=Date.now();
     if(adminWakeRefreshPromise)return adminWakeRefreshPromise;
     // focus + visibilitychange + pageshow commonly fire together on mobile.
-    // Deduplicate only the same wake burst. A long 15-second gate could suppress a real
+    // Deduplicate only the same wake burst. A long gate could suppress a real
     // re-entry immediately after another device changed the calendar.
     if(now-adminWakeRefreshAt<1800)return Promise.resolve(false);
     adminWakeRefreshAt=now;
+    let wakeSuccess=false;
+    setAdminGlobalRefreshState('loading');
     adminWakeRefreshPromise=(async()=>{
-      resetAdminGlobalRefreshButton({forceIdle:true});
-      // Panora 10.90: every real app entry/foreground return performs a direct cloud
-      // reconciliation of bake dates first. This does not poll in the background; it
-      // only runs on user return/focus/pageshow/online.
+      // Panora 10.91: every real app entry/foreground return performs a direct cloud
+      // reconciliation of bake dates first, and the header visibly shows that work.
       try{await refreshPlansManual(`auto-${reason}`)}catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error)}
       const view=activeAdminWakeView();
       if(['orders','delivery-notes','accounting','finance','reminders'].includes(view)){
@@ -2720,8 +2740,6 @@ window.panoraRecalculateBalances=recalculateBalances;
         if(view==='delivery-notes'&&!notesLoaded)await loadDeliveryNotes();
         window.dispatchEvent(new CustomEvent('panora:admin-commerce-wake-refreshed',{detail:{reason,view,changed:Boolean(changed?.changed)}}));
       }else if(view==='plan'){
-        // The production plan was already force-reconciled above. Only the completion
-        // facts need a component check here, avoiding a second competing plan load.
         const bakeChanged=await adminOperationalComponentChanged('bakeCompletions');
         if(bakeChanged)await syncBakeCompletionsNow({quiet:true,delta:true});
       }else if(view==='rawstock'){
@@ -2739,8 +2757,14 @@ window.panoraRecalculateBalances=recalculateBalances;
       }else if(view==='products'){
         await refreshProductsIfChanged();
       }
+      wakeSuccess=true;
+      setAdminGlobalRefreshState('success');
       return true;
-    })().finally(()=>{adminWakeRefreshPromise=null});
+    })().finally(()=>{
+      adminWakeRefreshPromise=null;
+      if(wakeSuccess)setTimeout(()=>{if(!adminManualRefreshPromise&&!adminWakeRefreshPromise)setAdminGlobalRefreshState('idle')},900);
+      else if(!adminManualRefreshPromise)setAdminGlobalRefreshState('idle');
+    });
     return adminWakeRefreshPromise;
   };
   const scheduleAdminCommerceWakeRefresh=(reason,delay=60)=>{
@@ -2766,6 +2790,26 @@ window.panoraRecalculateBalances=recalculateBalances;
     retrySync().catch(error=>console.warn('Panora pending retry',error));
   };
   clearInterval(pendingRetryTimer);pendingRetryTimer=0;
+  let adminRefreshPointerAt=0;
+  const activateAdminGlobalRefresh=event=>{
+    event?.preventDefault?.();event?.stopPropagation?.();
+    refreshAdminAllOnDemand('global-manual').catch(error=>{console.warn('Panora global manual refresh',error);status('Ошибка обновления');setAdminGlobalRefreshState('idle')});
+  };
+  const bindAdminGlobalRefreshButton=()=>{
+    const button=document.querySelector('#adminGlobalRefresh');if(!button||button.dataset.panoraRefreshBound==='1')return;
+    button.dataset.panoraRefreshBound='1';button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
+    // Pointer-up is used as a resilient activation path for iOS PWA and desktop.
+    // The following synthetic click is suppressed, while keyboard-generated clicks still work.
+    button.addEventListener('pointerup',event=>{
+      if(event.pointerType!=='touch'&&event.button!==0)return;
+      adminRefreshPointerAt=Date.now();activateAdminGlobalRefresh(event);
+    });
+    button.addEventListener('click',event=>{
+      if(Date.now()-adminRefreshPointerAt<650){event.preventDefault();event.stopPropagation();return}
+      activateAdminGlobalRefresh(event);
+    });
+  };
+  bindAdminGlobalRefreshButton();
   resetAdminGlobalRefreshButton({forceIdle:true});
   if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
   document.addEventListener('visibilitychange',()=>{
@@ -2776,8 +2820,6 @@ window.panoraRecalculateBalances=recalculateBalances;
   });
   window.addEventListener('pageshow',()=>{resetAdminGlobalRefreshButton({forceIdle:true});if(ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('pageshow',30)}});
   document.addEventListener('click',event=>{
-    const globalRefresh=event.target.closest?.('#adminGlobalRefresh');
-    if(globalRefresh){event.preventDefault();refreshAdminAllOnDemand('global-manual').catch(error=>{console.warn('Panora global manual refresh',error);status('Ошибка обновления')});return}
     const refresh=event.target.closest?.('#refreshOrdersCloud');
     if(refresh){event.preventDefault();refreshAdminOrdersOnDemand('manual').catch(error=>{console.warn('Panora manual orders refresh',error);status('Ошибка обновления')});return}
     const commerceNav=event.target.closest?.('.admin-nav button[data-view="orders"], [data-view="orders"], .admin-nav button[data-view="delivery-notes"], [data-view="delivery-notes"]');
