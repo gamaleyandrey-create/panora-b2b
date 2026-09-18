@@ -1818,12 +1818,18 @@ window.panoraFinanceTimeline=financeTimeline;
 window.panoraRecalculateBalances=recalculateBalances;
   const cutoffIso=value=>{const raw=String(value||'').trim();if(!raw)return null;const parsed=new Date(raw);return Number.isFinite(parsed.getTime())?parsed.toISOString():null};
   const remotePlan=p=>({id:`${p.id}:${p.product_id}`,bakeDate:p.bake_date,deliveryDate:p.delivery_date,product:p.product_id,planned:Number(p.planned_quantity),ordered:0,cutoff:p.cutoff_at,open:p.accepting_orders});
+  // Panora 10.86: keep a separate cloud mirror for production plans.
+  // When two devices changed the calendar concurrently, the live local cache may be
+  // a draft. The calendar must not present that draft as the shared current plan.
+  const planCloudMirrorKey='panora-production-plans-cloud-v1086';
+  const planLocalDraftKey='panora-production-plans-local-draft-v1086';
+  const planLastGoodKey='panora-production-plans-last-good-v1083';
   async function getRemotePlans(){
     const days=await request('bake_days?select=id,bake_date,delivery_date,cutoff_at,accepting_orders,updated_at,bake_items(product_id,planned_quantity)&order=bake_date.asc');
     rememberRevision('plans',days);
     const list=Array.isArray(days)?days:[];
     let embedded=list.flatMap(day=>(Array.isArray(day.bake_items)?day.bake_items:[]).map(item=>remotePlan({...day,...item})));
-    // Panora 10.85: on some mobile sessions PostgREST can return bake_days while the
+    // Panora 10.86: on some mobile sessions PostgREST can return bake_days while the
     // embedded bake_items relation is temporarily empty. Treat that as an incomplete
     // snapshot, not as an empty production plan. Re-read bake_items directly and only
     // accept the cloud snapshot when every active bake day has its bread rows.
@@ -1845,14 +1851,17 @@ window.panoraRecalculateBalances=recalculateBalances;
       embedded=list.flatMap(day=>(byDay.get(String(day.id||''))||[]).map(item=>remotePlan({...day,...item})));
       audit('sync.plan_items_recovered',`Состав дней выпечки загружен отдельным запросом: ${embedded.length} поз.`,'warning');
     }
+    // Only a complete cloud read reaches this point, so it is safe to remember it
+    // separately from the device draft/live cache. This mirror is display-only until
+    // the user resolves a genuine concurrent edit.
+    safeLocalSet(planCloudMirrorKey,JSON.stringify(embedded));
     return embedded;
   }
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
-  // Panora 10.85: keep a last-known-good production plan separately from the live cache.
+  // Panora 10.86: keep a last-known-good production plan separately from the live cache.
   // A transient cloud failure or a stale empty local pending state must not blank the calendar.
-  const planLastGoodKey='panora-production-plans-last-good-v1083';
   const readPlanCache=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
   const saveLastGoodPlans=list=>{if(Array.isArray(list)&&list.length)safeLocalSet(planLastGoodKey,JSON.stringify(list))};
   const rememberNonEmptyPlanCache=list=>{if(Array.isArray(list)&&list.length)saveLastGoodPlans(list)};
@@ -1878,6 +1887,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       saveLastGoodPlans(plans);
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+      localStorage.removeItem(planLocalDraftKey);
       if(typeof renderAll==='function')renderAll();
     }finally{applyingCloud--}
   }
@@ -1895,6 +1905,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       safeLocalSet('panora-production-plans',JSON.stringify(plans));
       savePlanBaseline(plans);
       clearPending('plans');delete conflicts.plans;delete accepted.plans;saveConflicts();saveAccepted();
+      localStorage.removeItem(planLocalDraftKey);
       return;
     }
 
@@ -1919,7 +1930,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
 
     if(localChanged&&remoteChanged){
-      // Panora 10.85: a stale mobile pending flag can survive even when the local cache
+      // Panora 10.86: a stale mobile pending flag can survive even when the local cache
       // contains only old rows. If the device has no future bake rows while the cloud
       // does, and the user did not explicitly cancel one of those cloud dates here,
       // restore the cloud plan automatically instead of trapping the calendar in a
@@ -1935,8 +1946,13 @@ window.panoraRecalculateBalances=recalculateBalances;
         audit('sync.plan_empty_local_recovered',`Восстановлен будущий план из облака: ${remoteFuture.length} поз.`,'warning');
         return;
       }
+      // Keep the user's device version as a recoverable draft, but show the confirmed
+      // cloud mirror in the calendar until the conflict is explicitly resolved.
+      safeLocalSet(planLocalDraftKey,JSON.stringify(local));
+      safeLocalSet(planCloudMirrorKey,JSON.stringify(remote));
       conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
       saveConflicts();showConflicts();
+      window.dispatchEvent(new CustomEvent('panora:plans-conflict',{detail:{source:'cloud',remoteCount:remote.length,localCount:local.length}}));
       return;
     }
 
@@ -2010,8 +2026,11 @@ window.panoraRecalculateBalances=recalculateBalances;
     const localChanged=!baseSig||localSig!==baseSig;
     const remoteChanged=Boolean(baseSig)&&remoteSig!==baseSig;
     if(localChanged&&remoteChanged&&localSig!==remoteSig&&!forceSections.has('plans')){
+      safeLocalSet(planLocalDraftKey,JSON.stringify(Array.isArray(plans)?plans:[]));
+      safeLocalSet(planCloudMirrorKey,JSON.stringify(remoteBefore));
       conflicts.plans={remoteAt:new Date().toISOString(),localAt:new Date().toISOString()};
       saveConflicts();showConflicts();
+      window.dispatchEvent(new CustomEvent('panora:plans-conflict',{detail:{source:'save-guard',remoteCount:remoteBefore.length,localCount:Array.isArray(plans)?plans.length:0}}));
       const error=new Error('План производства одновременно изменён на другом устройстве');
       error.panoraConflict=true;
       throw error;
@@ -2035,7 +2054,7 @@ window.panoraRecalculateBalances=recalculateBalances;
       await request('bake_items?on_conflict=bake_day_id,product_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items.map(p=>({bake_day_id:day.id,product_id:p.product,planned_quantity:Number(p.planned||0)})))});
     }
     revisions.plans=new Date().toISOString();localStorage.setItem(revisionKey,JSON.stringify(revisions));forceSections.delete('plans');delete conflicts.plans;saveConflicts();
-    clearPending('plans');savePlanBaseline(plans);
+    clearPending('plans');savePlanBaseline(plans);localStorage.removeItem(planLocalDraftKey);safeLocalSet(planCloudMirrorKey,JSON.stringify(Array.isArray(plans)?plans:[]));
     if(retiredAny)await loadOrders();
     status('Сохранено');
     window.dispatchEvent(new CustomEvent('panora:plan-saved',{detail:{at:new Date().toISOString()}}));
