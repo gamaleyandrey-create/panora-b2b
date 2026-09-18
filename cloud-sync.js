@@ -1823,7 +1823,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     rememberRevision('plans',days);
     const list=Array.isArray(days)?days:[];
     let embedded=list.flatMap(day=>(Array.isArray(day.bake_items)?day.bake_items:[]).map(item=>remotePlan({...day,...item})));
-    // Panora 10.84: on some mobile sessions PostgREST can return bake_days while the
+    // Panora 10.85: on some mobile sessions PostgREST can return bake_days while the
     // embedded bake_items relation is temporarily empty. Treat that as an incomplete
     // snapshot, not as an empty production plan. Re-read bake_items directly and only
     // accept the cloud snapshot when every active bake day has its bread rows.
@@ -1850,7 +1850,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const planComparable=p=>({bakeDate:String(p?.bakeDate||''),deliveryDate:String(p?.deliveryDate||''),product:String(p?.product||''),planned:Number(p?.planned||0),cutoff:String(p?.cutoff||''),open:p?.open!==false});
   const planSignature=list=>JSON.stringify((list||[]).map(planComparable).sort((a,b)=>`${a.bakeDate}|${a.product}`.localeCompare(`${b.bakeDate}|${b.product}`)));
   const savePlanBaseline=list=>{baselines.plans=planSignature(list||[]);safeLocalSet(baselineKey,JSON.stringify(baselines))};
-  // Panora 10.84: keep a last-known-good production plan separately from the live cache.
+  // Panora 10.85: keep a last-known-good production plan separately from the live cache.
   // A transient cloud failure or a stale empty local pending state must not blank the calendar.
   const planLastGoodKey='panora-production-plans-last-good-v1083';
   const readPlanCache=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}};
@@ -1919,7 +1919,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
 
     if(localChanged&&remoteChanged){
-      // Panora 10.84: a stale mobile pending flag can survive even when the local cache
+      // Panora 10.85: a stale mobile pending flag can survive even when the local cache
       // contains only old rows. If the device has no future bake rows while the cloud
       // does, and the user did not explicitly cancel one of those cloud dates here,
       // restore the cloud plan automatically instead of trapping the calendar in a

@@ -88,3 +88,91 @@
   .easy-plan-dialog .dialog-actions{position:sticky!important;bottom:-20px!important;margin:18px -16px -20px!important;padding:12px 16px calc(12px + env(safe-area-inset-bottom))!important;background:rgba(255,255,255,.97)!important;border-top:1px solid var(--line)!important;z-index:3!important}
   .easy-plan-dialog .dialog-actions button{min-height:46px!important}
 }
+
+/* Panora 10.85 — iOS-safe mobile bake-day product rows.
+   Keep every bread name beside its checkbox and inside the dialog viewport. */
+@media (max-width:720px){
+  .easy-plan-dialog .bread-plan-fields{
+    contain:layout paint!important;
+  }
+  .easy-plan-dialog .plan-product-row{
+    display:block!important;
+    inline-size:100%!important;
+    max-inline-size:100%!important;
+    min-inline-size:0!important;
+    overflow:hidden!important;
+  }
+  .easy-plan-dialog .plan-product-choice{
+    display:grid!important;
+    grid-template-columns:28px minmax(0,1fr)!important;
+    align-items:start!important;
+    justify-content:stretch!important;
+    column-gap:10px!important;
+    inline-size:100%!important;
+    max-inline-size:100%!important;
+    min-inline-size:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  .easy-plan-dialog .plan-product-choice>input{
+    grid-column:1!important;
+    grid-row:1!important;
+    justify-self:start!important;
+    inline-size:24px!important;
+    block-size:24px!important;
+    min-inline-size:24px!important;
+    min-block-size:24px!important;
+    margin:1px 0 0!important;
+  }
+  .easy-plan-dialog .plan-product-choice>span{
+    grid-column:2!important;
+    grid-row:1!important;
+    display:block!important;
+    inline-size:auto!important;
+    max-inline-size:100%!important;
+    min-inline-size:0!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    text-align:left!important;
+  }
+  .easy-plan-dialog .plan-product-choice strong,
+  .easy-plan-dialog .plan-product-choice small{
+    display:block!important;
+    inline-size:auto!important;
+    max-inline-size:100%!important;
+    min-inline-size:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    white-space:normal!important;
+    overflow-wrap:break-word!important;
+    word-break:normal!important;
+    text-align:left!important;
+  }
+  .easy-plan-dialog .plan-product-choice strong{
+    font-size:16px!important;
+    line-height:1.28!important;
+  }
+  .easy-plan-dialog .plan-product-choice small{
+    margin-top:5px!important;
+    font-size:12px!important;
+    line-height:1.4!important;
+  }
+  .easy-plan-dialog .plan-product-quantity{
+    inline-size:calc(100% - 38px)!important;
+    max-inline-size:calc(100% - 38px)!important;
+    min-inline-size:0!important;
+    margin:12px 0 0 38px!important;
+    padding-left:0!important;
+  }
+  .easy-plan-dialog .plan-product-quantity>span{
+    inline-size:100%!important;
+    min-inline-size:0!important;
+    flex-wrap:wrap!important;
+  }
+  .easy-plan-dialog .plan-product-quantity input{
+    inline-size:100%!important;
+    max-inline-size:100%!important;
+    min-inline-size:0!important;
+  }
+}

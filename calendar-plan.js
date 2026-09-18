@@ -63,7 +63,7 @@ function calendarPlanRows(){
  const live=readCalendarPlanRows('panora-production-plans'),memory=Array.isArray(plans)?plans:[],lastGood=readCalendarPlanRows('panora-production-plans-last-good-v1083');
  if(live.length)return live;
  if(memory.length)return memory;
- // Panora 10.84: while cloud sync is recovering, keep displaying the last confirmed
+ // Panora 10.85: while cloud sync is recovering, keep displaying the last confirmed
  // non-empty plan rather than rendering a calendar with only dates.
  if(lastGood.length)return lastGood;
  return live;
@@ -76,7 +76,7 @@ function alignMobileCalendar(today,shownPrefix){
  requestAnimationFrame(()=>{
    const target=scroller.querySelector(`[data-calendar-date="${today}"]`)||scroller.querySelector('.calendar-day.has-bake')||scroller.querySelector('.calendar-day:not([disabled])');
    if(!target)return;
-   // Panora 10.84: mobile calendar now fits the viewport instead of using a wide
+   // Panora 10.85: mobile calendar now fits the viewport instead of using a wide
    // horizontal strip. Keep the inner scroller at zero so neither the calendar nor
    // the page can appear shifted after render/reload.
    scroller.scrollLeft=0;

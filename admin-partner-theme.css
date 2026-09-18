@@ -2592,3 +2592,37 @@ html body.admin-page .admin-nav .admin-nav-major-toggle .retail-off-badge{
     font-size:12px!important;
   }
 }
+
+/* Panora 10.85 — calmer, unmistakable Bakery section typography.
+   Major sections use Panora's display face; child views stay in Manrope. */
+html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+  font-family:Prata,Georgia,serif!important;
+  font-size:18.5px!important;
+  font-weight:400!important;
+  letter-spacing:-.012em!important;
+  line-height:1.22!important;
+}
+html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major button{
+  font-family:Manrope,system-ui,sans-serif!important;
+  font-weight:650!important;
+}
+@media (min-width:721px) and (max-width:1024px){
+  html body.admin-page .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+    font-size:18px!important;
+  }
+}
+@media (max-width:720px){
+  html body.admin-page.admin-menu-open .admin-nav .admin-nav-disclosure.admin-nav-section-toggle.admin-nav-major-toggle{
+    font-family:Prata,Georgia,serif!important;
+    font-size:22px!important;
+    font-weight:400!important;
+    letter-spacing:-.012em!important;
+    line-height:1.2!important;
+  }
+  html body.admin-page.admin-menu-open .admin-nav .admin-nav-submenu.admin-nav-submenu-major button{
+    font-family:Manrope,system-ui,sans-serif!important;
+    font-size:17.5px!important;
+    font-weight:650!important;
+    letter-spacing:-.008em!important;
+  }
+}
