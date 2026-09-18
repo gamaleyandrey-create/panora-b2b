@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.90',build:10900,cache:10900});
+assert.deepEqual(build,{version:'10.91',build:10910,cache:10910});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.90',BUILD=10900",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.91',BUILD=10910",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10900','quality-compliance-v1075.js?v=10900'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10910','quality-compliance-v1075.js?v=10910'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
@@ -69,7 +69,7 @@ for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production
  storage.delete('panora-cloud-pending-v283');assert.deepEqual(JSON.parse(JSON.stringify(context.readRows())),local,'clean local cache may display normally');
 }
 
-console.log('Panora 10.90 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 10.91 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
 
 // Panora 10.88 — regression for the reported two-device move: cancel 18 Sep,
 // schedule 19 Sep, then refresh another device that still has 18 Sep cached.
@@ -97,29 +97,34 @@ assert.ok(product1088.includes("filtered=cancellationLog.filter(row=>String(row?
  b.local=[...cloud];b.baseline=sig(cloud);assert.deepEqual(b.local.map(x=>x.bakeDate),['2026-09-19']);
 }
 
-// Panora 10.90 — Refresh must recover from iOS bfcache disabled state and auto-refresh
-// on every real foreground entry without restoring the 15-second stale window.
+// Panora 10.91 — Refresh is a real top-layer control on iOS and desktop, remains
+// physically clickable, and visibly reports both manual and automatic synchronization.
 for(const token of [
-  'button.disabled=false;',
+  "const setAdminGlobalRefreshState=(state='idle')=>",
+  "button.removeAttribute('disabled')",
+  "setAdminGlobalRefreshState('loading');",
   "await refreshPlansManual(reason);",
+  "button.addEventListener('pointerup',event=>",
+  "button.addEventListener('click',event=>",
   "window.addEventListener('pageshow',()=>{resetAdminGlobalRefreshButton({forceIdle:true})",
-  "document.addEventListener('visibilitychange',()=>{",
   "scheduleAdminCommerceWakeRefresh('visibility')"
 ])assert.ok(cloudSync1083.includes(token),token);
 const retail1090=[fs.readFileSync('retail/index.html','utf8'),fs.readFileSync('retail.html','utf8')];
 for(const html of retail1090)for(const token of [
-  "const resetRefresh=({forceIdle=false}={})=>",
-  "refresh.disabled=false",
-  "refreshCloud({force:true})",
+  "const setRefreshState=mode=>",
+  "refresh.removeAttribute('disabled')",
+  "setRefreshState('loading')",
+  "refresh.addEventListener('pointerup',event=>",
+  "refresh.addEventListener('click',event=>",
   "window.addEventListener('pageshow',()=>autoRefresh('pageshow'))",
   "window.addEventListener('focus',()=>autoRefresh('focus'))",
-  "document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh('visibility')})"
+  "setTimeout(()=>autoRefresh('startup'),0)"
 ])assert.ok(html.includes(token),token);
 
 
 {
  const start=cloudSync1083.indexOf('const adminRefreshCopy='),end=cloudSync1083.indexOf('let adminManualRefreshPromise',start);assert.ok(start>=0&&end>start,'refresh button reset source slice');
- const label={textContent:'Обновляем…'},button={disabled:true,dataset:{loading:'1',success:'1'},attrs:new Map([['aria-busy','true']]),querySelector:sel=>sel==='.admin-global-refresh-text'?label:null,removeAttribute(k){this.attrs.delete(k)}};
+ const label={textContent:'Обновление…'},button={disabled:true,dataset:{loading:'1',success:'1'},attrs:new Map([['aria-busy','true']]),style:{},querySelector:sel=>sel==='.admin-global-refresh-text'?label:null,removeAttribute(k){this.attrs.delete(k)},setAttribute(k,v){this.attrs.set(k,v)}};
  const language={value:'ru'};
  const context={document:{querySelector:sel=>sel==='#adminGlobalRefresh'?button:sel==='#adminLanguage'?language:null}};
  vm.runInNewContext(cloudSync1083.slice(start,end)+`;this.reset=resetAdminGlobalRefreshButton;`,context);
@@ -127,20 +132,20 @@ for(const html of retail1090)for(const token of [
 }
 
 
-// Panora 10.90 — manual Bakery Refresh remains tappable while its internal promise
+// Panora 10.91 — manual Bakery Refresh remains tappable while its internal promise
 // serializes work, and it actually performs calendar reconciliation + full retry.
 {
  const start=cloudSync1083.indexOf('const adminRefreshCopy='),end=cloudSync1083.indexOf('async function refreshBreadStockData',start);assert.ok(start>=0&&end>start,'manual refresh source slice');
- const label={textContent:'Обновить'},button={disabled:false,dataset:{},attrs:new Map(),querySelector:sel=>sel==='.admin-global-refresh-text'?label:null,setAttribute(k,v){this.attrs.set(k,v)},removeAttribute(k){this.attrs.delete(k)}};
- const language={value:'ru'},active={id:'view-plan'};let planCalls=0,retryCalls=0,events=0,statuses=[];
+ const label={textContent:'Обновить'},button={disabled:false,dataset:{},attrs:new Map(),style:{},querySelector:sel=>sel==='.admin-global-refresh-text'?label:null,setAttribute(k,v){this.attrs.set(k,v)},removeAttribute(k){this.attrs.delete(k)}};
+ const language={value:'ru'},active={id:'view-plan'};let planCalls=0,retryCalls=0,events=0,statuses=[],timers=[];
  const context={
   document:{querySelector:sel=>sel==='#adminGlobalRefresh'?button:sel==='#adminLanguage'?language:sel==='.view.active'?active:null},
   navigator:{onLine:true},ready:true,status:v=>statuses.push(v),
   refreshPlansManual:async()=>{planCalls++;return true},retrySync:async()=>{retryCalls++;return true},
   renderAll:()=>{},renderCommerce:()=>{},console,CustomEvent:function(type,opts){this.type=type;this.detail=opts?.detail},
-  window:{dispatchEvent:()=>{events++}},setTimeout:fn=>{fn();return 1}
+  window:{dispatchEvent:()=>{events++}},setTimeout:fn=>{timers.push(fn);return timers.length}
  };
  vm.runInNewContext(cloudSync1083.slice(start,end)+`;this.runRefresh=refreshAdminAllOnDemand;`,context);
  const promise=context.runRefresh('test-manual');assert.equal(button.disabled,false,'manual refresh must never leave native disabled=true');
- promise.then(ok=>{assert.equal(ok,true);assert.equal(planCalls,1);assert.equal(retryCalls,1);assert.ok(events>=1);assert.equal(button.disabled,false);assert.equal(button.dataset.loading,undefined);assert.equal(label.textContent,'Обновить')});
+ promise.then(ok=>{assert.equal(ok,true);assert.equal(planCalls,1);assert.equal(retryCalls,1);assert.ok(events>=1);assert.equal(button.disabled,false);assert.equal(button.dataset.loading,undefined);assert.equal(label.textContent,'✓ Обновлено');timers.splice(0).forEach(fn=>fn());assert.equal(label.textContent,'Обновить')});
 }
