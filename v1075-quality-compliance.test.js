@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.92',build:10920,cache:10920});
+assert.deepEqual(build,{version:'10.93',build:10930,cache:10930});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.92',BUILD=10920",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.93',BUILD=10930",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10920','quality-compliance-v1075.js?v=10920'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10930','quality-compliance-v1075.js?v=10930'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
@@ -69,7 +69,7 @@ for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production
  storage.delete('panora-cloud-pending-v283');assert.deepEqual(JSON.parse(JSON.stringify(context.readRows())),local,'clean local cache may display normally');
 }
 
-console.log('Panora 10.92 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 10.93 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
 
 // Panora 10.88 — regression for the reported two-device move: cancel 18 Sep,
 // schedule 19 Sep, then refresh another device that still has 18 Sep cached.
@@ -97,7 +97,7 @@ assert.ok(product1088.includes("filtered=cancellationLog.filter(row=>String(row?
  b.local=[...cloud];b.baseline=sig(cloud);assert.deepEqual(b.local.map(x=>x.bakeDate),['2026-09-19']);
 }
 
-// Panora 10.92 — Refresh is a real top-layer control on iOS and desktop, remains
+// Panora 10.93 — Refresh is a real top-layer control on iOS and desktop, remains
 // physically clickable, and visibly reports both manual and automatic synchronization.
 for(const token of [
   "const setAdminGlobalRefreshState=(state='idle')=>",
@@ -132,7 +132,7 @@ for(const html of retail1090)for(const token of [
 }
 
 
-// Panora 10.92 — manual Bakery Refresh remains tappable while its internal promise
+// Panora 10.93 — manual Bakery Refresh remains tappable while its internal promise
 // serializes work, and it actually performs calendar reconciliation + full retry.
 {
  const start=cloudSync1083.indexOf('const adminRefreshCopy='),end=cloudSync1083.indexOf('async function refreshBreadStockData',start);assert.ok(start>=0&&end>start,'manual refresh source slice');
@@ -148,4 +148,12 @@ for(const html of retail1090)for(const token of [
  vm.runInNewContext(cloudSync1083.slice(start,end)+`;this.runRefresh=refreshAdminAllOnDemand;`,context);
  const promise=context.runRefresh('test-manual');assert.equal(button.disabled,false,'manual refresh must never leave native disabled=true');
  promise.then(ok=>{assert.equal(ok,true);assert.equal(planCalls,2);assert.equal(retryCalls,1);assert.ok(events>=1);assert.equal(button.disabled,false);assert.equal(button.dataset.loading,undefined);assert.equal(label.textContent,'✓ Обновлено');timers.splice(0).forEach(fn=>fn());assert.equal(label.textContent,'Обновить')});
+}
+
+// Panora 10.93 — Retail uses the same visible loading reminder as Bakery.
+for(const html of [fs.readFileSync('retail/index.html','utf8'),fs.readFileSync('retail.html','utf8')]){
+  assert.ok(html.includes('connection-status.css?v=10930'),'retail must load visible refresh-line styles');
+  assert.ok(html.includes('connection-status.js?v=10930'),'retail must load visible refresh-line controller');
+  assert.ok(html.includes("panora:retail-global-refresh-started"),'retail refresh must emit start event');
+  assert.ok(html.includes("panora:retail-global-refreshed"),'retail refresh must emit completion event');
 }
