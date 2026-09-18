@@ -89,7 +89,7 @@
   .easy-plan-dialog .dialog-actions button{min-height:46px!important}
 }
 
-/* Panora 10.86 — iOS-safe mobile bake-day product rows.
+/* Panora 10.87 — iOS-safe mobile bake-day product rows.
    Keep every bread name beside its checkbox and inside the dialog viewport. */
 @media (max-width:720px){
   .easy-plan-dialog .bread-plan-fields{
