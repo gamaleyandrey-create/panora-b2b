@@ -8,7 +8,7 @@ const ctx={window,document,localStorage,navigator:{onLine:false},crypto:{randomU
 Object.assign(window,{window,document,localStorage,navigator:ctx.navigator,crypto:ctx.crypto,CustomEvent:ctx.CustomEvent,Notification:ctx.Notification});
 vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'production-safety.js'});
 const api=window.panoraProductionSafety;
-assert.equal(api.version,'10.88');assert.equal(api.build,10880);
+assert.equal(api.version,'10.89');assert.equal(api.build,10890);
 const s=n=>Array.from(api.suggestedIngredientAllergens(n));
 for(const name of ['Миндаль','Фундук','Грецкий орех','Кешью','Пекан','Бразильский орех','Фисташки','Макадамия']) assert(s(name).includes('nuts'),name+' must map to nuts');
 for(const name of ['Almond','Hazelnut','Walnut','Cashew','Pecan','Brazil nut','Pistachio','Queensland nut']) assert(s(name).includes('nuts'),name+' must map to nuts');
