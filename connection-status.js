@@ -205,22 +205,24 @@
     }
   };
   const mapState=(type,text)=>{
-    const t=String(type||'').toLowerCase(),x=String(text||'').toLowerCase();
+    const t=String(type||'').toLowerCase(),x=String(text||'').toLowerCase(),trimmed=x.trim();
     if(!navigator.onLine)return'offline';
     if(t==='conflict'||/есть изменения|нужно выбрать версию/.test(x))return'conflict';
     if(t==='error'||/ошиб|error|failed/.test(x))return'error';
     if(t==='local'||/сохран.*устройств|offline|офлайн/.test(x))return'local';
-    // Panora 10.32: success text such as «Синхронизировано» contains the same
-    // lexical root as «Синхронизация…». Resolve explicit success BEFORE the
-    // broad loading regex so the partner reminder cannot spin forever.
-    if(t==='ok'||t==='synced'||/^(?:✓\s*)?(?:синхронизировано|актуально|synced|sincronizado|actualizado)$/.test(x.trim()))return'synced';
-    if(t==='loading'||t==='syncing'||t==='sending'||/загруз|обнов|синхронизац|провер|loading|updat|syncing/.test(x))return'loading';
+    // Resolve explicit finished phrases before the broad «обнов…» loading root.
+    if(/^(?:✓\s*)?(?:обновлено|данные актуальны|синхронизировано|актуально|updated|synced|sincronizado|actualizado)$/.test(trimmed))return'synced';
+    if(t==='loading'||t==='syncing'||t==='sending'||/загруз|обновлени|обновляем|синхронизац|провер|сохраня|loading|refreshing|updating|syncing|actualizando/.test(x))return'loading';
+    if(t==='ok'||t==='synced')return'synced';
     return'synced';
   };
   window.addEventListener('panora:restaurant-sync',e=>{const d=e.detail||{};show(mapState(d.type,d.text),d.text)});
+  window.addEventListener('panora:admin-global-refresh-started',()=>show('loading','Обновление данных…'));
+  window.addEventListener('panora:retail-global-refresh-started',()=>show('loading','Обновление данных…'));
   window.addEventListener('panora:admin-global-refreshed',()=>show('synced','Актуально'));
   window.addEventListener('panora:partner-global-refreshed',()=>show('synced','Актуально'));
   window.addEventListener('panora:retail-global-refreshed',()=>show('synced','Актуально'));
+  window.addEventListener('panora:retail-global-refresh-error',()=>show('error','Не удалось обновить данные'));
   window.addEventListener('online',()=>show('loading','Восстанавливаем актуальные данные…'));
   window.addEventListener('offline',()=>show('offline'));
   const observeAdmin=()=>{

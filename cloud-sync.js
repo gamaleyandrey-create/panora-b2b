@@ -186,7 +186,11 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    const syncing=/загруз|синхронизац|отправ|провер|loading|syncing|cargando|sincron/i.test(text);
+    // Panora 10.92: keep the visible refresh line in the loading state for every
+    // real refresh/save phrase. 10.92 introduced «Обновляем календарь…», but the
+    // classifier did not include «обнов», so the UI immediately rendered
+    // «✓ Данные актуальны» while the network request was still running.
+    const syncing=/загруз|обнов|синхронизац|отправ|провер|сохраня|loading|refresh|updat|syncing|cargando|actualiz|sincron/i.test(text);
     const local=/устройств|офлайн|offline|device|dispositivo|отправим при подключении/i.test(text);
     el.dataset.syncState=error?'error':syncing?'syncing':local?'local':'synced';
     el.style.cursor=error?'pointer':'';
@@ -1861,7 +1865,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.91: the automatic migration remains one-shot, but an explicit
+    // Panora 10.92: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2027,35 +2031,47 @@ window.panoraRecalculateBalances=recalculateBalances;
   }
   async function refreshPlansManual(reason='manual-refresh'){
     if(!ready||!navigator.onLine)return false;
-    status('Обновляем календарь…');
-    const remote=await getRemotePlans();
-    const local=readPlanCache('panora-production-plans');
-    const remoteSig=planSignature(remote),localSig=planSignature(local);
+    status('Обновление: календарь выпечки…');
 
-    // Panora 10.91: the Refresh button is a real two-device reconciliation path.
-    // If this device contains the exact, explicitly-cancelled date move (for example
-    // 18 → 19 September), retry that move even if the one-shot 10.88 recovery flag
-    // was already consumed. This lets the device that made the edit finish sending it.
+    // Panora 10.92: a manual/foreground refresh must not pull the cloud snapshot over
+    // an unsent local calendar edit. First reconcile pending/conflict state using the
+    // same content-based synchronizer as normal saving. Only after that do a direct
+    // no-cache cloud read and verify what the calendar should display.
+    if(pending.plans||conflicts.plans){
+      await loadPlans();
+      if(conflicts.plans){showConflicts();return false}
+    }
+
+    let remote=await getRemotePlans();
+    let local=readPlanCache('panora-production-plans');
+    let remoteSig=planSignature(remote),localSig=planSignature(local);
+
+    // Keep the narrow recovery for an explicitly cancelled old date followed by a
+    // replacement date (for example 18 → 19 September). A user-triggered Refresh may
+    // retry the verified move even if a previous one-shot recovery already ran.
     if(remoteSig!==localSig&&isSafeExplicitPlanMove(local,remote,{allowRepeat:true})){
       plans=local;
       forceSections.add('plans');
       await savePlansNow();
       safeLocalSet(planMoveRecoveryKey,'1');
       audit('sync.plan_move_manual_retry',`Ручное обновление завершило перенос дня выпечки (${reason})`,'warning');
-      window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:Array.isArray(plans)?plans.length:0,source:'manual-move-retry'}}));
+      remote=await getRemotePlans();
+      local=readPlanCache('panora-production-plans');
+      remoteSig=planSignature(remote);localSig=planSignature(local);
+      if(remoteSig!==localSig)throw new Error('Календарь выпечки не подтвердился в облаке после обновления');
+      window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'manual-move-retry',signature:remoteSig}}));
       if(typeof renderBakeCalendar==='function')renderBakeCalendar();
-      status('Облако ✓');
       return true;
     }
 
-    // Otherwise Refresh means exactly what its label says: re-read the confirmed
-    // cloud calendar. Preserve a different local copy as a recoverable draft before
-    // accepting cloud data, so a manual refresh can never silently destroy work.
+    // With no local edit left to send, the confirmed cloud snapshot is authoritative.
+    // Preserve a differing device copy as a draft before replacing it.
     if(remoteSig!==localSig&&local.length)safeLocalSet(planLocalDraftKey,JSON.stringify(local));
     await applyCloudPlans(remote);
+    const confirmed=readPlanCache('panora-production-plans');
+    if(planSignature(confirmed)!==remoteSig)throw new Error('Не удалось применить подтверждённый календарь из облака');
     window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'manual-cloud-refresh',signature:remoteSig}}));
     if(typeof renderBakeCalendar==='function')renderBakeCalendar();
-    status('Облако ✓');
     return true;
   }
 
@@ -2553,7 +2569,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     [orderPoll,receiptPoll,productPoll,planPoll,rawStockPoll,bakeCompletionPoll,restaurantPoll].forEach(timer=>{if(timer)clearInterval(timer)});
     orderPoll=receiptPoll=productPoll=planPoll=rawStockPoll=bakeCompletionPoll=restaurantPoll=0;
     if(conflictCount())showConflicts();else if(errors.length){const [name,error]=errors[0];fail(name,error);scheduleAdminStartupRecovery(`startup-${name}`)}else{clearAdminStartupRecovery();status('Облако ✓')}
-    // Panora 10.91: focus/pageshow can fire before authentication finishes on iOS.
+    // Panora 10.92: focus/pageshow can fire before authentication finishes on iOS.
     // Run one foreground reconciliation after cloud readiness so that an early wake
     // event is never lost and the just-opened app cannot remain on yesterday's plan.
     scheduleAdminCommerceWakeRefresh('startup-ready',140);
@@ -2562,7 +2578,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 10.91: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 10.92: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2574,9 +2590,15 @@ window.panoraRecalculateBalances=recalculateBalances;
     }
     button.title=copy.idle;if(label)label.textContent=copy.idle;
   };
+  const setAdminRefreshActivity=delta=>{window.__panoraAdminRefreshActive=Math.max(0,Number(window.__panoraAdminRefreshActive||0)+Number(delta||0))};
   const resetAdminGlobalRefreshButton=({forceIdle=false}={})=>{
     const button=document.querySelector('#adminGlobalRefresh');if(!button)return;
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
+    // Focus/pageshow can fire in the middle of a real refresh (especially iOS PWA).
+    // Never erase the spinner while a real refresh transaction is active. The
+    // window counter also keeps this helper independently testable and lets stale
+    // bfcache loading state be reset when no request is actually running.
+    if(Number(window.__panoraAdminRefreshActive||0)>0&&button.dataset.loading==='1')return;
     if(forceIdle||button.dataset.loading==='1')setAdminGlobalRefreshState('idle');
   };
   const waitForAdminRefreshReady=async()=>{
@@ -2591,31 +2613,48 @@ window.panoraRecalculateBalances=recalculateBalances;
     return ready;
   };
   let adminManualRefreshPromise=null;
+  const holdVisibleRefresh=async(startedAt,minMs=700)=>{const left=minMs-(Date.now()-startedAt);if(left>0)await new Promise(resolve=>setTimeout(resolve,left))};
   async function refreshAdminAllOnDemand(reason='global-manual'){
     if(adminManualRefreshPromise)return adminManualRefreshPromise;
     let success=false;
     adminManualRefreshPromise=(async()=>{
+      const startedAt=Date.now();
+      setAdminRefreshActivity(1);
       setAdminGlobalRefreshState('loading');
+      status('Обновление: подключение к облаку…');
+      window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason}}));
       try{
+        // If an automatic wake refresh is already finishing, wait for it and then run
+        // the explicit manual pass. A click is never ignored merely because auto-sync
+        // happened to be active at the same moment.
+        if(adminWakeRefreshPromise)await adminWakeRefreshPromise.catch(()=>false);
         if(!navigator.onLine){status('Сохранено на устройстве · нет сети');return false}
         if(!await waitForAdminRefreshReady()){status('Подключаемся к облаку…');return false}
-        // Panora 10.91: the Bakery Refresh button is truly global. Always reconcile
-        // the production calendar first, even when another section is open, then run
-        // the normal full cloud refresh. This keeps mobile/desktop bake dates aligned.
-        await refreshPlansManual(reason);
-        const ok=await retrySync();success=Boolean(ok);
+        const planOk=await refreshPlansManual(reason);
+        if(!planOk&&conflicts.plans){showConflicts();return false}
+        status('Обновление: остальные данные…');
+        const ok=await retrySync();
+        if(ok){
+          // Final no-cache calendar verification: the visible calendar must match the
+          // confirmed cloud snapshot before the UI is allowed to say «данные актуальны».
+          status('Обновление: проверяем календарь…');
+          const finalPlanOk=await refreshPlansManual(`${reason}-final-verify`);
+          if(!finalPlanOk){success=false;return false}
+        }
+        success=Boolean(ok);
         if(ok){
           if(typeof renderAll==='function')renderAll();
           if(typeof renderCommerce==='function')renderCommerce();
+          await holdVisibleRefresh(startedAt,700);
           status('Облако ✓');
           window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason,view:document.querySelector('.view.active')?.id?.replace(/^view-/,'')||''}}));
           setAdminGlobalRefreshState('success');
         }
         return Boolean(ok);
       }finally{
-        if(!success)setAdminGlobalRefreshState('idle');else setTimeout(()=>{if(!adminManualRefreshPromise)setAdminGlobalRefreshState('idle')},1100);
+        if(!success)setAdminGlobalRefreshState('idle');else setTimeout(()=>{if(!adminManualRefreshPromise&&!adminWakeRefreshPromise)setAdminGlobalRefreshState('idle')},1100);
       }
-    })().finally(()=>{adminManualRefreshPromise=null});
+    })().finally(()=>{setAdminRefreshActivity(-1);adminManualRefreshPromise=null});
     return adminManualRefreshPromise;
   }
   async function refreshBreadStockData(){
@@ -2722,11 +2761,17 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(now-adminWakeRefreshAt<1800)return Promise.resolve(false);
     adminWakeRefreshAt=now;
     let wakeSuccess=false;
+    const startedAt=Date.now();
+    setAdminRefreshActivity(1);
     setAdminGlobalRefreshState('loading');
+    status('Обновление: календарь выпечки…');
+    window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 10.91: every real app entry/foreground return performs a direct cloud
-      // reconciliation of bake dates first, and the header visibly shows that work.
-      try{await refreshPlansManual(`auto-${reason}`)}catch(error){if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error)}
+      // Panora 10.92: foreground refresh uses the same safe calendar reconciliation
+      // as the manual button. Do not announce success until the whole wake pass ends.
+      const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
+      if(!planOk&&conflicts.plans){showConflicts();return false}
+      status('Обновление: данные раздела…');
       const view=activeAdminWakeView();
       if(['orders','delivery-notes','accounting','finance','reminders'].includes(view)){
         if(['orders','delivery-notes'].includes(view))await refreshDeliveryReceipts();
@@ -2757,11 +2802,14 @@ window.panoraRecalculateBalances=recalculateBalances;
       }else if(view==='products'){
         await refreshProductsIfChanged();
       }
+      await holdVisibleRefresh(startedAt,550);
       wakeSuccess=true;
+      status('Облако ✓');
       setAdminGlobalRefreshState('success');
+      window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason:`auto-${reason}`,view,automatic:true}}));
       return true;
     })().finally(()=>{
-      adminWakeRefreshPromise=null;
+      setAdminRefreshActivity(-1);adminWakeRefreshPromise=null;
       if(wakeSuccess)setTimeout(()=>{if(!adminManualRefreshPromise&&!adminWakeRefreshPromise)setAdminGlobalRefreshState('idle')},900);
       else if(!adminManualRefreshPromise)setAdminGlobalRefreshState('idle');
     });
