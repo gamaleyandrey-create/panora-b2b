@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.86',build:10860,cache:10860});
+assert.deepEqual(build,{version:'10.87',build:10870,cache:10870});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.86',BUILD=10860",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.87',BUILD=10870",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10860','quality-compliance-v1075.js?v=10860'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10870','quality-compliance-v1075.js?v=10870'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
@@ -43,7 +43,30 @@ const partnerWs=fs.readFileSync('restaurant-workspace.js','utf8'),partnerCss=fs.
 const cloudSync1083=fs.readFileSync('cloud-sync.js','utf8'),connection1083=fs.readFileSync('connection-status.js','utf8');
 for(const token of ['panora-production-plans-last-good-v1083','sync.plan_empty_local_recovered',"el.dataset.syncState='conflict'",'sync.plan_items_recovered',"bake_items?select=bake_day_id,product_id,planned_quantity",'if(pending.plans)await loadPlans();'])assert.ok(cloudSync1083.includes(token),token);
 for(const token of ["function calendarPlanRows()","panora-production-plans-last-good-v1083","['panora:plans-updated','panora:plan-saved','panora:plans-conflict','panora:admin-startup-recovered']"])assert.ok(calendarJs.includes(token),token);
-for(const token of ['Panora 10.86 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
+for(const token of ['Panora 10.87 — stable mobile calendar viewport.','grid-template-columns:repeat(2,minmax(0,1fr))!important','grid-column:1/-1!important','overflow-x:hidden!important'])assert.ok(calendarCalm.includes(token),token);
 for(const token of ['mobile calendar now fits the viewport','scroller.scrollLeft=0'])assert.ok(calendarJs.includes(token),token);
 for(const token of ["conflict:'Нужно выбрать версию'","state==='conflict'"])assert.ok(connection1083.includes(token),token);
-console.log('Panora 10.86 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+
+for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production-plans-recovery-draft-v1087','panora-production-plans-cloud-v1087','The next successful cloud read then becomes authoritative on every device.'])assert.ok(cloudSync1083.includes(token),token);
+{
+ const start=cloudSync1083.indexOf("const planAuthorityResetKey='panora-cloud-plan-authority-reset-v1087'"),end=cloudSync1083.indexOf('const restaurantSyncShape',start);assert.ok(start>=0&&end>start,'plan authority reset source slice');
+ const storage=new Map([['panora-production-plans',JSON.stringify([{bakeDate:'2026-09-19',product:'mobile-draft'}])],['panora-production-plans-cloud-v1086','old-cloud'],['panora-production-plans-local-draft-v1086','old-draft']]);
+ const localStorage={getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)};
+ const pending={plans:true,orders:true},conflicts={plans:{remoteAt:'x'},orders:{remoteAt:'y'}},accepted={plans:'x',orders:'y'},revisions={plans:'x',orders:'y'},baselines={plans:'local-base',orders:'order-base'},backups=[];
+ const context={pending,conflicts,accepted,revisions,baselines,pendingKey:'pending',conflictKey:'conflict',acceptedKey:'accepted',revisionKey:'revision',baselineKey:'baseline',localStorage,JSON,Object,Boolean,Array,safeLocalSet:(k,v)=>{storage.set(k,String(v));return true},saveBackup:(sections,reason)=>{backups.push({sections,reason});return{};}};
+ vm.runInNewContext(cloudSync1083.slice(start,end),context);
+ assert.equal(storage.get('panora-cloud-plan-authority-reset-v1087'),'1');
+ assert.deepEqual(JSON.parse(storage.get('panora-production-plans-recovery-draft-v1087')),[{bakeDate:'2026-09-19',product:'mobile-draft'}]);
+ assert.equal(storage.has('panora-production-plans-cloud-v1087'),false,'fresh cloud mirror must be forced');
+ assert.equal(storage.has('panora-production-plans-cloud-v1086'),false);assert.equal(storage.has('panora-production-plans-local-draft-v1086'),false);
+ assert.equal('plans' in pending,false);assert.equal('plans' in conflicts,false);assert.equal('plans' in baselines,false);assert.equal(pending.orders,true);assert.equal(backups.length,1);
+}
+{
+ const start=calendarJs.indexOf('function readCalendarPlanRows'),end=calendarJs.indexOf('function alignMobileCalendar',start);assert.ok(start>=0&&end>start,'calendar plan source slice');
+ const local=[{bakeDate:'2026-09-19',product:'mobile'}],cloud=[{bakeDate:'2026-09-18',product:'desktop'}],storage=new Map([['panora-production-plans',JSON.stringify(local)],['panora-production-plans-cloud-v1087',JSON.stringify(cloud)],['panora-cloud-pending-v283',JSON.stringify({plans:true})]]);
+ const context={localStorage:{getItem:k=>storage.has(k)?storage.get(k):null},plans:local,JSON,Array};vm.runInNewContext(calendarJs.slice(start,end)+`;this.readRows=calendarPlanRows;`,context);
+ assert.deepEqual(JSON.parse(JSON.stringify(context.readRows())),cloud,'persisted pending plan must display confirmed cloud mirror');
+ storage.delete('panora-cloud-pending-v283');assert.deepEqual(JSON.parse(JSON.stringify(context.readRows())),local,'clean local cache may display normally');
+}
+
+console.log('Panora 10.87 quality/compliance + vertical navigation + mobile calendar sync tests: OK');

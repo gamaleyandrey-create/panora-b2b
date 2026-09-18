@@ -19,7 +19,7 @@ const seed={
  'panora-bake-completions':JSON.stringify([{id:'bake1',date:'2026-09-16',createdAt:'2026-09-16T06:00:00Z',updatedAt:'2026-09-16T08:00:00Z',items:[{product:'bread1',planned:10,produced:10,waste:1,good:9,recipeSnapshot:recipe}]}]),
  'panora-production-safety-v1066':JSON.stringify({version:1,technicalCards:{},ingredientAllergens:{'flour|g':{contains:['gluten'],updatedAt:'2026-09-15T00:00:00Z'}},productionRuns:[],breadLots:[],rawLots:[{id:'raw-old',ingredientKey:'flour|g',ingredientName:'Flour',unit:'g',quantity:800,supplier:'A',supplierLot:'F-OLD',receivedDate:'2026-09-10',expiryDate:'2026-10-01',createdAt:'2026-09-10T00:00:00Z',updatedAt:'2026-09-10T00:00:00Z'},{id:'raw-new',ingredientKey:'flour|g',ingredientName:'Flour',unit:'g',quantity:500,supplier:'B',supplierLot:'F-NEW',receivedDate:'2026-09-12',expiryDate:'2026-09-25',createdAt:'2026-09-12T00:00:00Z',updatedAt:'2026-09-12T00:00:00Z'}],allocations:[],rawUsages:[],rawOverrides:{},sanitary:[],documents:[]})
 };
-const c=context(seed,4),api=c.window.panoraProductionSafety;assert.equal(api.version,'10.86');assert.equal(api.build,10860);api.reconcile();const st=api.read();
+const c=context(seed,4),api=c.window.panoraProductionSafety;assert.equal(api.version,'10.87');assert.equal(api.build,10870);api.reconcile();const st=api.read();
 assert.equal(st.productionRuns.length,1,'actual bake creates one production run');assert.equal(st.breadLots.length,1,'actual bake creates one bread lot');
 assert.match(st.breadLots[0].number,/^LOT-2026-09-16-001$/);assert.equal(st.breadLots[0].quantity,9);
 const stat=api.lotStats(st.breadLots[0]);assert.deepEqual(JSON.parse(JSON.stringify(stat)),{b2b:3,retail:2,written:0,available:4});
@@ -48,8 +48,8 @@ console.log('production safety regression: 23 assertions passed');
   const sql=fs.readFileSync(path.join(root,'PANORA_10.66_PRODUCTION_SAFETY.sql'),'utf8');
   const assert2=(cond,msg)=>{ if(!cond) throw new Error('production safety release guard: '+msg); };
   assert2(/ПРОИЗВОДСТВО И БЕЗОПАСНОСТЬ/i.test(admin),'admin production/safety group');
-  assert2(/production-safety\.js\?v=10860/.test(admin),'admin module version');
-  assert2(/production-safety\.js\?v=10860/.test(bakery),'bakery module version');
+  assert2(/production-safety\.js\?v=10870/.test(admin),'admin module version');
+  assert2(/production-safety\.js\?v=10870/.test(bakery),'bakery module version');
   assert2(/validateBreadIssue/.test(commerce),'B2B lot validation hook');
   assert2(/retailAllocatable/.test(adminJs),'Retail lot availability cap');
   assert2(/productSafetyHtml/.test(retailRoot) && /productSafetyHtml/.test(retailIndex),'customer-safe product info in both retail entry points');
