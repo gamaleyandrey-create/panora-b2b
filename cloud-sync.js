@@ -1860,8 +1860,13 @@ window.panoraRecalculateBalances=recalculateBalances;
       const stamp=Date.parse(String(row?.cancelledAt||''));return !Number.isFinite(stamp)||now-stamp<=maxAge;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
-  const isSafeExplicitPlanMove=(local,remote)=>{
-    if(localStorage.getItem(planMoveRecoveryKey)==='1')return false;
+  const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
+    // Panora 10.89: the automatic migration remains one-shot, but an explicit
+    // user Refresh is allowed to retry the same verified move. This matters when
+    // 10.88 marked the recovery as attempted while another device still showed the
+    // old date. The safety checks below (cancellation tombstone + identical shared
+    // dates) still have to pass before anything is pushed to the cloud.
+    if(!allowRepeat&&localStorage.getItem(planMoveRecoveryKey)==='1')return false;
     const localDates=planDateSet(local),remoteDates=planDateSet(remote),cancelled=recentCancelledBakeDates();
     const removed=[...remoteDates].filter(date=>!localDates.has(date));
     const added=[...localDates].filter(date=>!remoteDates.has(date));
@@ -2020,6 +2025,40 @@ window.panoraRecalculateBalances=recalculateBalances;
 
     await applyCloudPlans(remote);
   }
+  async function refreshPlansManual(reason='manual-refresh'){
+    if(!ready||!navigator.onLine)return false;
+    status('Обновляем календарь…');
+    const remote=await getRemotePlans();
+    const local=readPlanCache('panora-production-plans');
+    const remoteSig=planSignature(remote),localSig=planSignature(local);
+
+    // Panora 10.89: the Refresh button is a real two-device reconciliation path.
+    // If this device contains the exact, explicitly-cancelled date move (for example
+    // 18 → 19 September), retry that move even if the one-shot 10.88 recovery flag
+    // was already consumed. This lets the device that made the edit finish sending it.
+    if(remoteSig!==localSig&&isSafeExplicitPlanMove(local,remote,{allowRepeat:true})){
+      plans=local;
+      forceSections.add('plans');
+      await savePlansNow();
+      safeLocalSet(planMoveRecoveryKey,'1');
+      audit('sync.plan_move_manual_retry',`Ручное обновление завершило перенос дня выпечки (${reason})`,'warning');
+      window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:Array.isArray(plans)?plans.length:0,source:'manual-move-retry'}}));
+      if(typeof renderBakeCalendar==='function')renderBakeCalendar();
+      status('Облако ✓');
+      return true;
+    }
+
+    // Otherwise Refresh means exactly what its label says: re-read the confirmed
+    // cloud calendar. Preserve a different local copy as a recoverable draft before
+    // accepting cloud data, so a manual refresh can never silently destroy work.
+    if(remoteSig!==localSig&&local.length)safeLocalSet(planLocalDraftKey,JSON.stringify(local));
+    await applyCloudPlans(remote);
+    window.dispatchEvent(new CustomEvent('panora:plans-updated',{detail:{count:remote.length,source:'manual-cloud-refresh',signature:remoteSig}}));
+    if(typeof renderBakeCalendar==='function')renderBakeCalendar();
+    status('Облако ✓');
+    return true;
+  }
+
   async function refreshPlansIfChanged(){
     if(!ready)return false;
     // A calendar open/refresh is also a recovery opportunity. Reconcile pending or
@@ -2521,6 +2560,11 @@ window.panoraRecalculateBalances=recalculateBalances;
     let success=false;
     if(button){button.disabled=true;button.dataset.loading='1';delete button.dataset.success;button.setAttribute('aria-busy','true');if(label)label.textContent=copy().busy}
     try{
+      // Panora 10.89: on the bake calendar, manual Refresh must reconcile plans
+      // first instead of merely running the generic pending queue. Generic retrySync
+      // could keep a stale plan conflict alive and make the button appear ineffective.
+      const activeView=document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'';
+      if(activeView==='plan')await refreshPlansManual(reason);
       const ok=await retrySync();success=Boolean(ok);
       if(ok){
         if(typeof renderAll==='function')renderAll();
@@ -2614,7 +2658,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     payments:structuredClone(Array.isArray(payments)?payments:[]),
     restaurants:structuredClone(Array.isArray(restaurants)?restaurants:[])
   });
-  window.panoraCloud={start,refreshAll:refreshAdminAllOnDemand,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,refreshBreadStock:refreshBreadStockData,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
+  window.panoraCloud={start,refreshAll:refreshAdminAllOnDemand,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,refreshPlansManual,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,refreshBreadStock:refreshBreadStockData,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
   window.addEventListener('panora:authenticated',event=>start(event.detail));
   window.addEventListener('panora:raw-stock-local-change',()=>{
