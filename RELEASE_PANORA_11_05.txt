@@ -1,0 +1,13 @@
+Panora 11.05 FULL
+build/cache 11050
+
+MOBILE BAKERY STARTUP / ORDER LOADING
+- Desktop Bakery behavior is intentionally unchanged.
+- Mobile Bakery preserves a stale local production-plan conflict as a recovery snapshot, then removes only the plan sync flags before cloud startup. Supabase remains authoritative on a clean mobile startup.
+- Derived order demand no longer recreates a production-plan conflict while mobile startup is still running.
+- Mobile Bakery explicitly retries the cloud order read after authentication, app resume, focus and network return until the order hydration finishes.
+- If a previous mobile order cache exists, it may be shown while the authoritative cloud read is still in flight; the real cloud-hydration flag is never forged and the screen repaints again after cloud success.
+- cloud-sync.js is unchanged from Panora 11.04 / the stable 10.75-based Bakery core.
+- Calendar layout/rendering files are unchanged from Panora 11.04.
+- Partner and Retail application logic is unchanged.
+- No SQL migration required.

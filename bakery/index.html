@@ -61,14 +61,14 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11040').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11050').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
   try{
     const buildMarker='panora-bakery-runtime-build';
-    if(localStorage.getItem(buildMarker)!=='11040'&&'serviceWorker' in navigator){
-      localStorage.setItem(buildMarker,'11040');
+    if(localStorage.getItem(buildMarker)!=='11050'&&'serviceWorker' in navigator){
+      localStorage.setItem(buildMarker,'11050');
       navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(reg=>{try{return new URL(reg.scope).pathname.includes('/bakery/')}catch{return false}}).map(reg=>reg.unregister()))).then(()=>{
-        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11040');location.replace(u.href)}
+        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11050');location.replace(u.href)}
       }).catch(()=>{});
     }
   }catch{}
@@ -125,7 +125,7 @@
 <link rel="stylesheet" href="connection-status.css?v=11020">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11040">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11050">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -859,7 +859,7 @@
 <script src="admin.js?v=11020"></script>
 <script src="stable-price-inputs-v42.js?v=11020"></script>
 <script src="money-edit-lock-v43.js?v=11020"></script>
-<script src="commerce.js?v=11040"></script>
+<script src="commerce.js?v=11050"></script>
 <script src="desktop-order-date-filter-v28.js?v=11020"></script>
 <script src="invoice-settings.js?v=11020"></script>
 <script src="invoice-tax-display.js?v=11020"></script>
@@ -884,6 +884,77 @@
 <script src="order-communication.js?v=11020"></script>
 <script src="audit-log.js?v=11020"></script>
 <script src="input-stability.js?v=11020"></script>
+<script>
+/* Panora 11.05 — mobile Bakery startup recovery.
+   Desktop is intentionally untouched. On phones/tablets we preserve a stale
+   local plan conflict as a recovery snapshot, remove only its sync flags, then
+   explicitly make sure the order read finishes. Cached orders may be shown
+   while the authoritative cloud read is still in flight; the cloud hydration
+   flag itself is never forged. */
+(()=>{
+  const isMobile=()=>{try{return Boolean(window.matchMedia?.('(max-width: 900px)').matches||Number(window.innerWidth||0)<=900)}catch{return false}};
+  if(!isMobile())return;
+  window.__panoraMobileBakeryStartup=true;
+  const readObject=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}};
+  const writeObject=(key,value)=>{try{const keys=Object.keys(value);if(keys.length)localStorage.setItem(key,JSON.stringify(value));else localStorage.removeItem(key)}catch{}};
+  try{
+    const pendingKey='panora-cloud-pending-v283',conflictKey='panora-cloud-conflicts-v285',acceptedKey='panora-cloud-accepted-v317';
+    const pending=readObject(pendingKey),conflicts=readObject(conflictKey),accepted=readObject(acceptedKey);
+    if(pending.plans===true||conflicts.plans){
+      const raw=localStorage.getItem('panora-production-plans');
+      const backupKey='panora-mobile-plan-startup-backups-v1105';
+      let backups=[];try{const value=JSON.parse(localStorage.getItem(backupKey)||'[]');if(Array.isArray(value))backups=value}catch{}
+      backups.unshift({at:new Date().toISOString(),build:11050,reason:'mobile-startup-plan-conflict',plans:raw||'[]',conflict:conflicts.plans||null});
+      try{localStorage.setItem(backupKey,JSON.stringify(backups.slice(0,3)))}catch{}
+      delete pending.plans;delete conflicts.plans;delete accepted.plans;
+      writeObject(pendingKey,pending);writeObject(conflictKey,conflicts);writeObject(acceptedKey,accepted);
+      try{localStorage.setItem('panora-mobile-plan-startup-clean-v11050',new Date().toISOString())}catch{}
+    }
+  }catch(error){console.warn('Panora mobile startup preflight',error)}
+
+  let timer=0,attempt=0,running=false;
+  const cachedOrdersAvailable=()=>{try{const rows=JSON.parse(localStorage.getItem('panora-orders')||'[]');return Array.isArray(rows)&&rows.length>0}catch{return false}};
+  const revealCachedOrders=()=>{
+    if(window.panoraAdminOrdersHydrated||window.__panoraMobileOrderCacheVisible||!cachedOrdersAvailable())return;
+    window.__panoraMobileOrderCacheVisible=true;
+    try{window.renderCommerce?.()}catch{}
+    try{window.dispatchEvent(new CustomEvent('panora:mobile-orders-cache-visible',{detail:{build:11050}}))}catch{}
+  };
+  const schedule=(delay=500)=>{clearTimeout(timer);timer=setTimeout(ensureOrders,delay)};
+  async function ensureOrders(){
+    if(!isMobile()||!navigator.onLine||document.hidden)return;
+    if(window.panoraAdminOrdersHydrated){
+      window.__panoraMobileOrderCacheVisible=false;
+      try{window.renderCommerce?.()}catch{}
+      return;
+    }
+    const cloud=window.panoraCloud;
+    if(!cloud?.ready||typeof cloud.refreshOrders!=='function'){schedule(700);return}
+    if(running)return;
+    running=true;attempt+=1;
+    try{
+      const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('mobile order refresh timeout')),9000));
+      await Promise.race([Promise.resolve(cloud.refreshOrders()),timeout]);
+    }catch(error){console.warn('Panora mobile order startup refresh',error)}
+    finally{running=false}
+    if(window.panoraAdminOrdersHydrated){
+      window.__panoraMobileOrderCacheVisible=false;
+      try{window.renderCommerce?.()}catch{}
+      try{window.dispatchEvent(new CustomEvent('panora:mobile-orders-ready',{detail:{attempt,build:11050}}))}catch{}
+      return;
+    }
+    if(attempt>=1)revealCachedOrders();
+    if(attempt<4)schedule([900,1800,3500,6000][Math.min(attempt,3)]);
+  }
+  window.addEventListener('panora:authenticated',()=>schedule(250));
+  window.addEventListener('online',()=>schedule(120));
+  window.addEventListener('pageshow',()=>schedule(180));
+  window.addEventListener('focus',()=>schedule(220));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(180)});
+  setTimeout(()=>schedule(0),700);
+  setTimeout(()=>{window.__panoraMobileBakeryStartup=false},30000);
+})();
+</script>
 <script src="cloud-sync.js?v=11020"></script>
 <script src="connection-status.js?v=11020"></script>
 <script src="recipe-percent.js?v=11020"></script>

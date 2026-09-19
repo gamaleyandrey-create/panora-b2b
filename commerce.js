@@ -225,7 +225,15 @@ function syncPlansFromOrders() {
     const key = `${p.bakeDate}:${p.product}`;
     if (!grouped[key]) p.ordered = 0;
   });
-  cSave("panora-production-plans", current);
+  if(window.__panoraMobileBakeryStartup===true&&!window.panoraAdminOrderArchiveHydrated){
+    // Panora 11.05: order hydration derives demand for the calendar, but that
+    // derived write is not a bakery plan edit and must not recreate a plan
+    // conflict while the mobile startup transaction is still running.
+    try{
+      if(typeof setLocalStorageSafely==='function')setLocalStorageSafely('panora-production-plans',JSON.stringify(current));
+      else localStorage.setItem('panora-production-plans',JSON.stringify(current));
+    }catch(error){console.warn('Panora mobile derived plan cache',error)}
+  }else cSave("panora-production-plans", current);
   plans = current;
   return current;
 }
@@ -251,7 +259,7 @@ const orderCountSnapshot=(()=>{
   return null;
 })();
 const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
-// Panora 11.04 — mobile Bakery must not hide already-loaded orders while
+// Panora 11.05 — mobile Bakery must not hide already-loaded orders while
 // delivery-note receipt reconciliation is still finishing. Desktop keeps the
 // stricter 10.75 archive-hydration gate because it is already stable there.
 const adminOrderMobileViewport=()=>{
@@ -260,7 +268,7 @@ const adminOrderMobileViewport=()=>{
 };
 const adminOrderCloudLoading=()=>{
   if(!navigator.onLine)return false;
-  if(adminOrderMobileViewport())return !window.panoraAdminOrdersHydrated;
+  if(adminOrderMobileViewport())return !window.panoraAdminOrdersHydrated&&!window.__panoraMobileOrderCacheVisible;
   return !adminOrderArchiveReady();
 };
 const orderCountsForHeader=()=>{
