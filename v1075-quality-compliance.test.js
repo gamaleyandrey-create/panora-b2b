@@ -1,16 +1,17 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.95',build:10950,cache:10950});
+assert.deepEqual(build,{version:'10.96',build:10960,cache:10960});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.95',BUILD=10950",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='10.96',BUILD=10960",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10950','quality-compliance-v1075.js?v=10950'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10960','quality-compliance-v1075.js?v=10960'])assert.ok(html.includes(token),token);
 
-for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productsNavToggle"','id="productsNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery]){assert.match(html,/id="partnersNavToggle"[\s\S]*?>[\s\S]*?Партнёры[\s\S]*?<\/button>[\s\S]*?id="partnersNavItems"[\s\S]*?Напоминания клиентам[\s\S]*?Партнёры и цены[\s\S]*?<\/div>/);assert.match(html,/id="productsNavToggle"[\s\S]*?>[\s\S]*?Продукция[\s\S]*?<\/button>[\s\S]*?id="productsNavItems"[\s\S]*?Карточки продукции[\s\S]*?Рецептуры[\s\S]*?<\/div>/);assert.ok(!html.includes('>Партнёры и продукция<'));}
 const adminJs=fs.readFileSync('admin.js','utf8'),adminCss=fs.readFileSync('admin.css','utf8');
-for(const token of ['ADMIN_NAV_GROUP_STATE_KEY','panora-admin-nav-groups-v1075','ADMIN_NAV_GROUPS','workNavToggle','financeNavToggle','partnersNavToggle','productionSafetyNavToggle','retailNavToggle','settingsNavToggle','hasStored?!!state[key]:(hasActive||!!defaultOpen)','bindAdminNavGroups()','syncAdminNavGroupActive'])assert.ok(adminJs.includes(token),token);
+for(const token of ['ADMIN_NAV_GROUP_STATE_KEY','panora-admin-nav-groups-v1075','ADMIN_NAV_GROUPS','workNavToggle','financeNavToggle','partnersNavToggle','productsNavToggle','productionSafetyNavToggle','retailNavToggle','settingsNavToggle','hasStored?!!state[key]:hasLegacy?!!state[legacyKey]:(hasActive||!!defaultOpen)','bindAdminNavGroups()','syncAdminNavGroupActive'])assert.ok(adminJs.includes(token),token);
 for(const token of ['Panora 10.75 — compact collapsible Bakery navigation groups','admin-nav-submenu-long','grid-column:1/-1','max-height:48dvh'])assert.ok(adminCss.includes(token),token);const adminTheme=fs.readFileSync('admin-partner-theme.css','utf8');for(const token of ['Panora 10.77 — larger persistent collapsible Bakery navigation sections','admin-nav-major-toggle.has-active','Panora 10.82 — compact persistent Bakery navigation groups','Panora 10.82 — larger vertical Bakery navigation on desktop and mobile.','grid-template-columns:260px minmax(0,1fr)!important','grid-template-columns:1fr!important','min-height:56px!important','font-size:16px!important'])assert.ok(adminTheme.includes(token),token);const planCss=fs.readFileSync('easy-plan.css','utf8'),calendarCss=fs.readFileSync('calendar-plan.css','utf8');for(const token of ['Panora 10.82 — stable mobile bake-day editor.','min-inline-size:0!important','overflow-x:hidden!important'])assert.ok(planCss.includes(token),token);for(const token of ['Panora 10.82 — one calendar model on desktop and mobile.','grid-template-columns:repeat(7,minmax(96px,1fr))!important','min-width:720px!important','.calendar-weekdays{display:grid!important'])assert.ok(calendarCss.includes(token),token);const calendarJs=fs.readFileSync('calendar-plan.js','utf8'),calendarCalm=fs.readFileSync('calendar-calm.css','utf8');for(const token of ['class=\"calendar-scroll\" id=\"calendarScroll\"','function alignMobileCalendar(today,shownPrefix)','alignMobileCalendar(today,shownPrefix);'])assert.ok(calendarJs.includes(token),token);for(const token of ['Panora 10.82 — mobile/desktop bake-calendar parity.','grid-template-columns:repeat(7,minmax(132px,1fr))!important','body.admin-page #view-plan .calendar-day.has-bake>span{','white-space:nowrap!important;','body.admin-page #view-plan .calendar-day.has-bake::after{','content:none!important;'])assert.ok(calendarCalm.includes(token),token);
 {
  const start=adminJs.indexOf("const ADMIN_NAV_GROUP_STATE_KEY"),end=adminJs.indexOf('function openRetailView',start);assert.ok(start>=0&&end>start,'nav group source slice');
@@ -31,6 +32,10 @@ for(const token of ['Panora 10.75 — compact collapsible Bakery navigation grou
 {
  const start=adminJs.indexOf("const ADMIN_NAV_GROUP_STATE_KEY"),end=adminJs.indexOf('function openRetailView',start),storage=new Map([['panora-admin-nav-groups-v1075',JSON.stringify({finance:false})]]),attrs=new Map(),listeners=new Map(),child={addEventListener:(name,fn)=>listeners.set(name,fn)},toggle={setAttribute:(k,v)=>attrs.set(k,String(v)),getAttribute:k=>attrs.get(k)||null,classList:{toggle:()=>{}},set onclick(fn){listeners.set('toggle',fn)}},menu={hidden:false,querySelector:()=>child,querySelectorAll:()=>[child]},context={$:sel=>sel==='#financeNavToggle'?toggle:sel==='#financeNavItems'?menu:null,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},Object,JSON};
  vm.runInNewContext(adminJs.slice(start,end)+`;this.navApi={bindAdminNavGroup};`,context);context.navApi.bindAdminNavGroup('#financeNavToggle','#financeNavItems','finance',{defaultOpen:true});assert.equal(attrs.get('aria-expanded'),'false');assert.equal(menu.hidden,true,'stored collapsed state must survive reload even with active child');
+}
+{
+ const start=adminJs.indexOf("const ADMIN_NAV_GROUP_STATE_KEY"),end=adminJs.indexOf('function openRetailView',start),storage=new Map([['panora-admin-nav-groups-v1075',JSON.stringify({partners:false})]]),attrs=new Map(),listeners=new Map(),child={addEventListener:(name,fn)=>listeners.set(name,fn)},toggle={setAttribute:(k,v)=>attrs.set(k,String(v)),getAttribute:k=>attrs.get(k)||null,classList:{toggle:()=>{}},set onclick(fn){listeners.set('toggle',fn)}},menu={hidden:false,querySelector:()=>null,querySelectorAll:()=>[child]},context={$:sel=>sel==='#productsNavToggle'?toggle:sel==='#productsNavItems'?menu:null,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},Object,JSON};
+ vm.runInNewContext(adminJs.slice(start,end)+`;this.navApi={bindAdminNavGroup};`,context);context.navApi.bindAdminNavGroup('#productsNavToggle','#productsNavItems','products',{defaultOpen:true,legacyKey:'partners'});assert.equal(attrs.get('aria-expanded'),'false','new Products group should inherit the old combined-group state once');listeners.get('toggle')();const state=JSON.parse(storage.get('panora-admin-nav-groups-v1075'));assert.equal(state.partners,false);assert.equal(state.products,true,'Products must persist independently after first user toggle');
 }
 const rootSw=fs.readFileSync('sw.js','utf8'),bakerySw=fs.readFileSync('bakery/sw.js','utf8');
 assert.ok(rootSw.includes('quality-compliance-v1075.js'));assert.ok(rootSw.includes('quality-compliance-v1075.css'));assert.ok(bakerySw.includes('../quality-compliance-v1075.js'));assert.ok(bakerySw.includes('../quality-compliance-v1075.css'));
@@ -70,7 +75,7 @@ for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production
 }
 
 
-// Panora 10.95 — the global refresh lifecycle cannot announce completion while
+// Panora 10.96 — the global refresh lifecycle cannot announce completion while
 // the visible Bakery screen is still hydrating. This covers desktop + mobile,
 // including the reported Orders screen where the top line said «актуальны» while
 // the table still said «Загружаем…».
@@ -83,7 +88,7 @@ for(const token of [
   "if(Number(window.__panoraAdminRefreshActive||0)>0){show('loading','Обновление данных…');return}"
 ])assert.ok((cloudSync1083+'\n'+connection1083).includes(token),token);
 
-console.log('Panora 10.95 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 10.96 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
 
 // Panora 10.88 — regression for the reported two-device move: cancel 18 Sep,
 // schedule 19 Sep, then refresh another device that still has 18 Sep cached.
@@ -111,7 +116,7 @@ assert.ok(product1088.includes("filtered=cancellationLog.filter(row=>String(row?
  b.local=[...cloud];b.baseline=sig(cloud);assert.deepEqual(b.local.map(x=>x.bakeDate),['2026-09-19']);
 }
 
-// Panora 10.95 — Refresh is a real top-layer control on iOS and desktop, remains
+// Panora 10.96 — Refresh is a real top-layer control on iOS and desktop, remains
 // physically clickable, and visibly reports both manual and automatic synchronization.
 for(const token of [
   "const setAdminGlobalRefreshState=(state='idle')=>",
@@ -146,7 +151,7 @@ for(const html of retail1090)for(const token of [
 }
 
 
-// Panora 10.95 — manual Bakery Refresh remains tappable while its internal promise
+// Panora 10.96 — manual Bakery Refresh remains tappable while its internal promise
 // serializes work, and it actually performs calendar reconciliation + full retry.
 {
  const start=cloudSync1083.indexOf('const adminRefreshCopy='),end=cloudSync1083.indexOf('async function refreshBreadStockData',start);assert.ok(start>=0&&end>start,'manual refresh source slice');
@@ -164,15 +169,15 @@ for(const html of retail1090)for(const token of [
  promise.then(ok=>{assert.equal(ok,true);assert.equal(planCalls,2);assert.equal(retryCalls,1);assert.ok(events>=1);assert.equal(button.disabled,false);assert.equal(button.dataset.loading,undefined);assert.equal(label.textContent,'✓ Обновлено');timers.splice(0).forEach(fn=>fn());assert.equal(label.textContent,'Обновить')});
 }
 
-// Panora 10.95 — Retail uses the same visible loading reminder as Bakery.
+// Panora 10.96 — Retail uses the same visible loading reminder as Bakery.
 for(const html of [fs.readFileSync('retail/index.html','utf8'),fs.readFileSync('retail.html','utf8')]){
-  assert.ok(html.includes('connection-status.css?v=10950'),'retail must load visible refresh-line styles');
-  assert.ok(html.includes('connection-status.js?v=10950'),'retail must load visible refresh-line controller');
+  assert.ok(html.includes('connection-status.css?v=10960'),'retail must load visible refresh-line styles');
+  assert.ok(html.includes('connection-status.js?v=10960'),'retail must load visible refresh-line controller');
   assert.ok(html.includes("panora:retail-global-refresh-started"),'retail refresh must emit start event');
   assert.ok(html.includes("panora:retail-global-refreshed"),'retail refresh must emit completion event');
 }
 
-// Panora 10.95 — reported Bakery startup regression: the top line must never say
+// Panora 10.96 — reported Bakery startup regression: the top line must never say
 // «Данные актуальны» while Orders/Delivery Notes are still on «Загружаем…».
 for(const token of [
   "window.panoraAdminOrdersHydrated=true;",
