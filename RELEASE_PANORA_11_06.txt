@@ -1,0 +1,15 @@
+Panora 11.06 FULL
+build/cache 11060
+
+PRICE TAGS & PACKAGE LABELS
+- Added Bakery > Products > Price tags and labels.
+- Three print templates: shelf price tag, package label, full label.
+- Sizes: 58x40, 70x50, 100x50 mm; roll/single-label and A4 sheet printing with selectable starting cell.
+- Product labels use existing product name, retail price, recipes, production-safety composition/allergens, LOTs, bakery details and shelf-life data.
+- Added product label metadata: legal names RU/EN/ES, GTIN/EAN-13, SKU, net weight override, shelf life, storage text, manufacturer/country, verified claims, advertising/product URL, nutrition per 100 g.
+- EAN-13 checksum is validated; Panora does not invent official GTINs.
+- Advertising QR supports Panora retail catalog, product/custom URL, promotion, Instagram, WhatsApp or website.
+- Brand/reklama settings are stored locally and synchronized through the existing production-safety state when available.
+- Print preview, per-product label counts, LOT/best-before, print history and repeat-last-batch added.
+- Existing Bakery order loading, cloud-sync.js, Partner and Retail flows were not changed.
+- No SQL migration required.

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'11.05',build:11050,cache:11050});
+assert.deepEqual(build,{version:'11.06',build:11060,cache:11060});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
@@ -68,4 +68,21 @@ for(const html of [admin,bakery]){
  const status=html.indexOf('connection-status.js?v=11020');
  assert.ok(cloud>=0&&status>=0&&cloud<status,'Bakery must load 10.75 cloud-sync before connection-status');
 }
-console.log('Panora 11.05 quality/compliance + Bakery 10.75 rollback guards: OK');
+
+const productAdmin1106=fs.readFileSync('product-admin.js','utf8'),productAdminCss1106=fs.readFileSync('product-admin.css','utf8');
+for(const html of [admin,bakery])for(const token of ['data-view="price-labels"','id="view-price-labels"','id="priceLabelBuilder"','product-admin.css?v=11060','product-admin.js?v=11060'])assert.ok(html.includes(token),`11.06 label UI: ${token}`);
+for(const token of ['Panora 11.06 — bakery price tags','const BUILD=11060','function eanCheck','function normalizeEan','function eanSvg','window.PanoraQRCode?.toDataURL','Ценник','Упаковка','Полная этикетка','GTIN / EAN‑13','Пищевая ценность на 100 г','Рекламный QR','function printLabels','function recordHistory'])assert.ok(productAdmin1106.includes(token),`11.06 label logic: ${token}`);
+for(const token of ['Panora 11.06 — price tags and package labels','.pl-layout','.pl-label','.pl-template-full','.product-label-nutrition-grid'])assert.ok(productAdminCss1106.includes(token),`11.06 label CSS: ${token}`);
+assert.ok(fs.readFileSync('RELEASE_PANORA_11_06.txt','utf8').includes('No SQL migration required.'));
+
+{
+ const start=productAdmin1106.indexOf('function eanCheck'),end=productAdmin1106.indexOf('function latestLot',start);assert.ok(start>=0&&end>start,'EAN source slice');
+ const context={String,Number};vm.runInNewContext(productAdmin1106.slice(start,end)+`;this.eanApi={eanCheck,normalizeEan,eanSvg};`,context);
+ assert.equal(context.eanApi.normalizeEan('400638133393'),'4006381333931','12-digit GTIN must receive a valid EAN-13 check digit');
+ assert.equal(context.eanApi.normalizeEan('4006381333931'),'4006381333931','valid EAN-13 must be preserved');
+ assert.equal(context.eanApi.normalizeEan('4006381333932'),'','invalid EAN-13 checksum must be rejected');
+ assert.ok(context.eanApi.eanSvg('4006381333931').includes('aria-label="EAN 4006381333931"'));
+}
+
+
+console.log('Panora 11.06 quality/compliance + Bakery 10.75 rollback guards: OK');
