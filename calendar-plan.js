@@ -60,19 +60,21 @@ function monthTitle(){return new Intl.DateTimeFormat(locales[language()],{month:
 
 function readCalendarPlanRows(key){try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}catch{return[]}}
 function calendarPlanRows(){
- const live=readCalendarPlanRows('panora-production-plans'),memory=Array.isArray(plans)?plans:[],lastGood=readCalendarPlanRows('panora-production-plans-last-good-v1083'),cloudMirrorRaw=localStorage.getItem('panora-production-plans-cloud-v1087'),cloudMirror=readCalendarPlanRows('panora-production-plans-cloud-v1087');
- let conflicts={};try{conflicts=JSON.parse(localStorage.getItem('panora-cloud-conflicts-v285')||'{}')||{}}catch{}
- let pending={};try{pending=JSON.parse(localStorage.getItem('panora-cloud-pending-v283')||'{}')||{}}catch{}
- // Panora 10.88: never present a persisted, unsent device plan as the shared current
- // calendar after reload. If a confirmed cloud mirror exists, it stays visible while
- // the local copy is pending/conflicting; the local copy is preserved as a draft.
- if((conflicts.plans||pending.plans)&&cloudMirrorRaw!==null)return cloudMirror;
- if(live.length)return live;
- if(memory.length)return memory;
- // Panora 10.88: while cloud sync is recovering, keep displaying the last confirmed
- // non-empty plan rather than rendering a calendar with only dates.
- if(lastGood.length)return lastGood;
- return live;
+ // Panora 11.03: calendar and the desktop plan view must use the exact same in-memory
+ // plan collection. Older 10.88 device-local mirrors could make phone and desktop show
+ // different bake days after the 10.75 cloud-sync rollback. Local storage is fallback
+ // only before admin.js has initialized the shared plans array.
+ if(Array.isArray(plans))return plans;
+ return readCalendarPlanRows('panora-production-plans');
+}
+function retailDemand(date,product){
+ try{return typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(date,product)||0)):0}catch{return 0}
+}
+function calendarEntryMetrics(plan){
+ const date=String(plan?.bakeDate||''),product=String(plan?.product||''),partner=Math.max(0,Number(plan?.ordered||0)),retail=retailDemand(date,product),ordered=partner+retail,manual=Math.max(0,Number(plan?.planned||0)),working=Math.max(manual,ordered);
+ let completion=null,item=null;
+ try{completion=typeof bakeCompletionFor==='function'?bakeCompletionFor(date):null;item=completion?.items?.find(row=>String(row?.product||'')===product)||null}catch{}
+ return{partner,retail,ordered,manual,working,completion,item};
 }
 function alignMobileCalendar(today,shownPrefix){
  const scroller=document.querySelector('#calendarScroll');
@@ -116,7 +118,10 @@ function renderBakeCalendar(){
  for(let day=firstDay;day<=days;day++){
    const d=new Date(year,month,day),date=iso(d),isPast=date<today,isVisible=history?isPast:!isPast;
    if(!isVisible){cells.push('<div class="calendar-empty calendar-filtered"></div>');continue}
-   const weekdayLabel=new Intl.DateTimeFormat(locales[l],{weekday:'long'}).format(d),dateLabel=new Intl.DateTimeFormat(locales[l],{day:'numeric',month:'long'}).format(d),dayLabel=`${weekdayLabel}, ${dateLabel}`,entries=planRows.filter(p=>p.bakeDate===date),details=entries.map(p=>{const partner=Math.max(0,Number(p.ordered||0)),retail=typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(date,p.product)||0)):0,ordered=partner+retail,manual=Math.max(0,Number(p.planned||0)),planText=manual>0?(l==='ru'?`план ${manual} шт.`:l==='es'?`plan ${manual} uds.`:`plan ${manual} pcs`):(l==='ru'?'план без количества':l==='es'?'plan sin cantidad':'plan without quantity'),orderedText=l==='ru'?`${ordered} заказано`:l==='es'?`${ordered} pedido`:`${ordered} ordered`;return `<span><strong>${productName(p.product)}</strong><i>${orderedText} · ${planText}</i></span>`}).join('');
+   const weekdayLabel=new Intl.DateTimeFormat(locales[l],{weekday:'long'}).format(d),dateLabel=new Intl.DateTimeFormat(locales[l],{day:'numeric',month:'long'}).format(d),dayLabel=`${weekdayLabel}, ${dateLabel}`,entries=planRows.filter(p=>p.bakeDate===date),details=entries.map(p=>{
+     const m=calendarEntryMetrics(p),planText=m.manual>0?(l==='ru'?`план ${m.manual} шт.`:l==='es'?`plan ${m.manual} uds.`:`plan ${m.manual} pcs`):(l==='ru'?'план без количества':l==='es'?'plan sin cantidad':'plan without quantity'),orderedText=l==='ru'?`Партнёры ${m.partner} · Розница ${m.retail} · всего ${m.ordered}`:l==='es'?`Socios ${m.partner} · Retail ${m.retail} · total ${m.ordered}`:`Partners ${m.partner} · Retail ${m.retail} · total ${m.ordered}`,workingText=l==='ru'?`к выпечке ${m.working} шт.`:l==='es'?`a hornear ${m.working} uds.`:`to bake ${m.working} pcs`,statusText=m.completion?(l==='ru'?`завершено · факт ${Math.max(0,Number(m.item?.good??m.item?.produced??0))} шт.`:l==='es'?`finalizado · real ${Math.max(0,Number(m.item?.good??m.item?.produced??0))} uds.`:`completed · actual ${Math.max(0,Number(m.item?.good??m.item?.produced??0))} pcs`):p.open===false?(l==='ru'?'заказы закрыты':l==='es'?'pedidos cerrados':'orders closed'):(l==='ru'?'заказы открыты':l==='es'?'pedidos abiertos':'orders open');
+     return `<span class="calendar-bread"><strong>${productName(p.product)}</strong><i>${orderedText}</i><i>${planText} · ${workingText}</i><i class="calendar-bread-status">${statusText}</i></span>`;
+   }).join('');
    const readonly=history?'history-readonly':'';
    const badge=history?`<small class="calendar-history-badge">${l==='ru'?'Только просмотр':l==='es'?'Solo lectura':'Read only'}</small>`:'';
    const disabled=history?' disabled':'';
@@ -125,7 +130,7 @@ function renderBakeCalendar(){
  }
  document.querySelector('#calendarGrid').innerHTML=cells.join('');
  alignMobileCalendar(today,shownPrefix);
- const monthPlans=planRows.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today)),ordered=monthPlans.reduce((sum,p)=>sum+Math.max(0,Number(p.ordered||0))+(typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(p.bakeDate,p.product)||0)):0),0),planned=monthPlans.reduce((sum,p)=>{const demand=Math.max(0,Number(p.ordered||0))+(typeof retailPreorderQuantity==='function'?Math.max(0,Number(retailPreorderQuantity(p.bakeDate,p.product)||0)):0);return sum+Math.max(Math.max(0,Number(p.planned||0)),demand)},0);
+ const monthPlans=planRows.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today)),ordered=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).ordered,0),planned=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).working,0);
  document.querySelector('#plannedPieces').textContent=`${planned} ${t('pcs')}`;document.querySelector('#orderedPieces').textContent=`${ordered} ${t('pcs')}`;document.querySelector('#freePieces').textContent=`${Math.max(0,planned-ordered)} ${t('pcs')}`;
  if(!history){
    document.querySelectorAll('[data-calendar-date]:not([disabled])').forEach(b=>b.onclick=()=>{const date=b.dataset.calendarDate,entries=planRows.filter(p=>p.bakeDate===date);weekStart=startOfWeek(new Date(`${date}T12:00:00`));renderPlan();document.querySelector('#addPlan').click();const f=document.querySelector('#planForm'),cancel=document.querySelector('#cancelSelectedBake');f.bakeDate.value=date;setDefaultPlanDates(f,date);if(entries.length){const first=entries[0];f.deliveryDate.value=first.deliveryDate||date;if(first.cutoff)f.cutoff.value=String(first.cutoff).slice(0,16);f.open.checked=first.open!==false}window.panoraBuildPlanProductFields?.(date);window.panoraLocalizePlanDialog?.(entries.length>0);cancel.hidden=!entries.length;cancel.dataset.date=date})

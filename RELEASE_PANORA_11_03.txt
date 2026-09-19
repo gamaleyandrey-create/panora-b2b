@@ -1,0 +1,11 @@
+Panora 11.03
+build/cache 11030
+
+BAKERY CALENDAR PARITY
+- Bakery orders, delivery notes and cloud-sync remain unchanged from the working 11.02 rollback.
+- Bake calendar now renders from the same in-memory plans array used by the desktop plan logic; obsolete device-local 10.88 mirrors are no longer a separate calendar source.
+- Mobile and desktop use the same calendar entry markup and calculations: partner demand, retail demand, total ordered, manual plan, effective bake quantity and completion/status.
+- Removed conflicting 10.62 / 10.82 / 10.88 mobile calendar CSS models. Mobile is responsive only (2 columns, 1 column on narrow phones) and no longer hides bread details.
+- Root/Bakery service-worker caches bumped to 11030 so the calendar update is fetched reliably.
+- Partner and Retail application files/logic are unchanged.
+- No SQL required.
