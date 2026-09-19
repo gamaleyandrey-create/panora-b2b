@@ -186,7 +186,7 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    // Panora 10.94: keep the visible refresh line in the loading state for every
+    // Panora 10.95: keep the visible refresh line in the loading state for every
     // real refresh/save phrase. Earlier refresh paths introduced «Обновляем календарь…», but the
     // classifier did not include «обнов», so the UI immediately rendered
     // «✓ Данные актуальны» while the network request was still running.
@@ -1058,7 +1058,16 @@
       const watermark=!firstHydration?String(localStorage.getItem(adminOrdersWatermarkKey)||''):'';
       const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
       const fetched=await request(`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
-      if(watermark&&!(fetched||[]).length){status('Облако ✓');return}
+      if(watermark&&!(fetched||[]).length){
+        // Panora 10.95: a valid «no changes since watermark» response is still a
+        // completed cloud hydration. Keep the Orders screen out of its perpetual
+        // «Загружаем…» state and repaint cached authoritative rows immediately.
+        window.panoraAdminOrdersHydrated=true;
+        publishAdminOrderArchiveCounts();
+        if(typeof renderCommerce==='function')renderCommerce();
+        status(`Облако ✓ · ${orders?.length||0} заказов`);
+        return;
+      }
       const newest=(fetched||[]).reduce((latest,row)=>String(row?.updated_at||'')>latest?String(row.updated_at):latest,watermark);
       const hydrated=await hydrateAdminOrderRows(fetched||[]);
       const changedRows=await repairTrueOrphanOrders(hydrated);
@@ -1865,7 +1874,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.94: the automatic migration remains one-shot, but an explicit
+    // Panora 10.95: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2033,7 +2042,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!ready||!navigator.onLine)return false;
     status('Обновление: календарь выпечки…');
 
-    // Panora 10.94: a manual/foreground refresh must not pull the cloud snapshot over
+    // Panora 10.95: a manual/foreground refresh must not pull the cloud snapshot over
     // an unsent local calendar edit. First reconcile pending/conflict state using the
     // same content-based synchronizer as normal saving. Only after that do a direct
     // no-cache cloud read and verify what the calendar should display.
@@ -2581,6 +2590,11 @@ window.panoraRecalculateBalances=recalculateBalances;
         clearAdminStartupRecovery();status('Облако ✓');startupSuccess=true;setAdminGlobalRefreshState('success');
         window.dispatchEvent(new CustomEvent('panora:admin-global-refreshed',{detail:{reason:'startup',view:activeAdminView(),automatic:true}}));
       }
+    }catch(error){
+      if(window.panoraHandleSessionError?.(error))return;
+      console.error('Panora startup finalization',error);
+      status('Ошибка обновления',true,error?.message||String(error));
+      scheduleAdminStartupRecovery('startup-finalize');
     }finally{
       setAdminRefreshActivity(-1);
       if(!startupSuccess)setAdminGlobalRefreshState('idle');
@@ -2595,7 +2609,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 10.94: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 10.95: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2637,14 +2651,20 @@ window.panoraRecalculateBalances=recalculateBalances;
     else setTimeout(resolve,0);
   });
   async function settleAdminActiveView(view=adminActiveView()){
-    // Panora 10.94: the global line may say «Данные актуальны» only after the
+    // Panora 10.95: the global line may say «Данные актуальны» only after the
     // currently visible screen has actually left its loading state. This matters
     // on both desktop and iOS where the top-level sync can finish before a queued
     // commerce repaint is painted.
     if(view==='orders'||view==='delivery-notes'){
       if(!window.panoraAdminOrdersHydrated)await loadOrders();
       if(!window.panoraAdminOrderArchiveHydrated)await loadDeliveryNotes();
+      if(!window.panoraAdminOrdersHydrated||!window.panoraAdminOrderArchiveHydrated)
+        throw new Error('Заказы и накладные ещё не завершили облачную загрузку');
       if(typeof renderCommerce==='function')renderCommerce();
+      await adminNextPaint();
+      const loadingText=String(document.querySelector('#orderRows')?.textContent||'');
+      if(view==='orders'&&/Загружаем актуальные заказы|Loading current orders|Cargando pedidos/i.test(loadingText))
+        throw new Error('Экран заказов ещё не завершил отрисовку облачных данных');
     }else if(view==='plan'){
       if(typeof renderBakeCalendar==='function')renderBakeCalendar();
       else if(typeof renderAll==='function')renderAll();
@@ -2780,7 +2800,13 @@ window.panoraRecalculateBalances=recalculateBalances;
   });
   window.panoraCloud={start,refreshAll:refreshAdminAllOnDemand,refreshOrders:loadOrders,refreshFinanceDashboard:refreshFinanceDashboardData,refreshRestaurants:refreshRestaurantsIfChanged,refreshRestaurantPrices:refreshRestaurantPricesDirect,refreshPlans:refreshPlansIfChanged,refreshPlansManual,queuePlans,queueProducts,flushProducts,saveProductConfirmed,saveProductTechCardConfirmed,acquireTechCardLock,renewTechCardLock,releaseTechCardLock,hasTechCardLock,queueRecipes,flushRecipes,queueIngredientCosts,flushIngredientCosts,refreshIngredientCosts:loadIngredientCosts,queueRestaurants,flushRestaurants,setRestaurantActiveConfirmed,saveRestaurantPriceConfirmed,queueOrders,queueFinance,saveDeliveryReceiptConfirmed,refreshDeliveryReceipts,refreshAdminOrdersOnDemand,refreshBreadStock:refreshBreadStockData,syncFinance:syncFinanceNow,syncRawStock:syncRawStockNow,syncBakeCompletions:syncBakeCompletionsNow,retrySync,resolveConflicts,restoreLatestBackup,openBackupHistory,refreshAudit:loadOperationEvents,repairFinance:repairMissingDeliveryNotes,updateOrderStatus,cancelBakeDayAtomic,shipOrderAtomic,recordPaymentAtomic,confirmPaymentAtomic,cancelPaymentAtomic,resolvePaymentDisputeAtomic,syncB2BReturnCredits:ensureB2BReturnCreditPayments,get ready(){return ready},get pendingCount(){return pendingCount()},get conflictCount(){return conflictCount()},get backupCount(){return readBackups().length}};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initBackupHistory):initBackupHistory();
-  window.addEventListener('panora:authenticated',event=>start(event.detail));
+  window.addEventListener('panora:authenticated',event=>{
+    const authenticated=event?.detail||window.panoraSupabaseSession;
+    if(!authenticated?.access_token)return;
+    start(authenticated).catch(error=>{
+      if(!window.panoraHandleSessionError?.(error)){console.error('Panora cloud start after authentication',error);status('Ошибка обновления',true,error?.message||String(error))}
+    });
+  });
   window.addEventListener('panora:raw-stock-local-change',()=>{
     markPending('rawStock');rawStockState(navigator.onLine?'Отправляем…':'Офлайн · сохранено',navigator.onLine?'syncing':'local');
     if(ready&&navigator.onLine)syncRawStockNow().catch(error=>{
@@ -2808,7 +2834,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Обновление: календарь выпечки…');
     window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 10.94: foreground refresh uses the same safe calendar reconciliation
+      // Panora 10.95: foreground refresh uses the same safe calendar reconciliation
       // as the manual button. Do not announce success until the whole wake pass ends.
       const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
       if(!planOk&&conflicts.plans){showConflicts();return false}
@@ -2902,7 +2928,9 @@ window.panoraRecalculateBalances=recalculateBalances;
   };
   bindAdminGlobalRefreshButton();
   resetAdminGlobalRefreshButton({forceIdle:true});
-  if(window.panoraSupabaseSession)start(window.panoraSupabaseSession);
+  if(window.panoraSupabaseSession)start(window.panoraSupabaseSession).catch(error=>{
+    if(!window.panoraHandleSessionError?.(error)){console.error('Panora initial cloud start',error);status('Ошибка обновления',true,error?.message||String(error))}
+  });
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){resetAdminGlobalRefreshButton({forceIdle:true});if(ready){retryPendingOnWake();scheduleAdminCommerceWakeRefresh('visibility')}};
   });

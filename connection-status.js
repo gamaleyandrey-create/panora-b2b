@@ -58,7 +58,10 @@
   function render(state,text,detail=''){
     const el=ensure();
     if(!el)return;
-    const s=state||'synced';
+    let s=state||'synced';
+    // Panora 10.95: no subordinate sync event may announce «актуально» while
+    // Bakery still has an active startup/manual/wake refresh transaction.
+    if(document.body?.classList.contains('admin-page')&&Number(window.__panoraAdminRefreshActive||0)>0&&s==='synced'){s='syncing';text='Обновление данных…'}
     const partnerPage=!document.body.classList.contains('admin-page');
     const resolved=(s==='synced'&&partnerPage)?'Актуально':(text||labels[s]||labels.synced);
     last={state:s,text:resolved};
@@ -174,6 +177,9 @@
   };
   const show=(state,text)=>{
     const el=ensure();if(!el)return;
+    // Keep the full-width line busy for the whole Bakery transaction, even if an
+    // inner loader emits its own successful status before Orders/Notes/Calendar paint.
+    if(isAdmin()&&Number(window.__panoraAdminRefreshActive||0)>0&&state==='synced'){state='loading';text='Обновление данных…'}
     clearTimeout(hideTimer);lastState=state;
     const title=el.querySelector('[data-load-title]'),detail=el.querySelector('[data-load-detail]');
     const stale=state==='error'&&hasCachedAdminData();
