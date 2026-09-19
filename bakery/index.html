@@ -61,14 +61,14 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11030').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11040').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
   try{
     const buildMarker='panora-bakery-runtime-build';
-    if(localStorage.getItem(buildMarker)!=='11030'&&'serviceWorker' in navigator){
-      localStorage.setItem(buildMarker,'11030');
+    if(localStorage.getItem(buildMarker)!=='11040'&&'serviceWorker' in navigator){
+      localStorage.setItem(buildMarker,'11040');
       navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(reg=>{try{return new URL(reg.scope).pathname.includes('/bakery/')}catch{return false}}).map(reg=>reg.unregister()))).then(()=>{
-        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11030');location.replace(u.href)}
+        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11040');location.replace(u.href)}
       }).catch(()=>{});
     }
   }catch{}
@@ -125,7 +125,7 @@
 <link rel="stylesheet" href="connection-status.css?v=11020">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11030">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11040">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -859,7 +859,7 @@
 <script src="admin.js?v=11020"></script>
 <script src="stable-price-inputs-v42.js?v=11020"></script>
 <script src="money-edit-lock-v43.js?v=11020"></script>
-<script src="commerce.js?v=11020"></script>
+<script src="commerce.js?v=11040"></script>
 <script src="desktop-order-date-filter-v28.js?v=11020"></script>
 <script src="invoice-settings.js?v=11020"></script>
 <script src="invoice-tax-display.js?v=11020"></script>

@@ -251,7 +251,18 @@ const orderCountSnapshot=(()=>{
   return null;
 })();
 const adminOrderArchiveReady=()=>Boolean(window.panoraAdminOrdersHydrated&&window.panoraAdminOrderArchiveHydrated);
-const adminOrderCloudLoading=()=>Boolean(navigator.onLine&&!adminOrderArchiveReady());
+// Panora 11.04 — mobile Bakery must not hide already-loaded orders while
+// delivery-note receipt reconciliation is still finishing. Desktop keeps the
+// stricter 10.75 archive-hydration gate because it is already stable there.
+const adminOrderMobileViewport=()=>{
+  try{return Boolean(window.matchMedia?.('(max-width: 900px)').matches||Number(window.innerWidth||0)<=900)}
+  catch{return false}
+};
+const adminOrderCloudLoading=()=>{
+  if(!navigator.onLine)return false;
+  if(adminOrderMobileViewport())return !window.panoraAdminOrdersHydrated;
+  return !adminOrderArchiveReady();
+};
 const orderCountsForHeader=()=>{
   // Panora 10.32: shipped orders cannot be classified until delivery notes / receipt
   // confirmations are loaded. Never present stale mobile cache as authoritative.

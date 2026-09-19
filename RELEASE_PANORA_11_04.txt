@@ -1,0 +1,12 @@
+Panora 11.04 FULL
+build/cache 11040
+
+MOBILE BAKERY ORDER LOADING ONLY
+- Desktop order loading behavior is unchanged.
+- Mobile Bakery no longer hides already-loaded orders while delivery-note receipt/archive reconciliation is still finishing.
+- On mobile, the Orders screen becomes readable immediately after the cloud order list is hydrated.
+- Active and archived tabs use the best delivery-note evidence already available and repaint again when receipt reconciliation completes.
+- cloud-sync.js is unchanged from Panora 11.03 / the stable 10.75-based Bakery core.
+- Calendar files are unchanged from Panora 11.03.
+- Partner and Retail application logic is unchanged.
+- No SQL migration required.
