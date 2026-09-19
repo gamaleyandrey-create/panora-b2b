@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'11.03',build:11030,cache:11030});
+assert.deepEqual(build,{version:'11.04',build:11040,cache:11040});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
@@ -68,4 +68,4 @@ for(const html of [admin,bakery]){
  const status=html.indexOf('connection-status.js?v=11020');
  assert.ok(cloud>=0&&status>=0&&cloud<status,'Bakery must load 10.75 cloud-sync before connection-status');
 }
-console.log('Panora 11.03 quality/compliance + Bakery 10.75 rollback guards: OK');
+console.log('Panora 11.04 quality/compliance + Bakery 10.75 rollback guards: OK');
