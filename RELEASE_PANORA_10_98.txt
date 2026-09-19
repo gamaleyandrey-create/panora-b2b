@@ -1,0 +1,9 @@
+Panora 10.98 · build/cache 10980
+
+Bakery refresh/loading repair based on the stable Retail refresh pattern:
+- connection status is mounted before cloud-sync starts, so startup/manual refresh is visible;
+- delivery-note cloud hydration is authoritative immediately after a successful read;
+- finance repair and stock durability run after hydration and can no longer leave Orders stuck on “Loading…”;
+- delivery-note loads are serialized to avoid duplicate concurrent hydration.
+
+No SQL required.

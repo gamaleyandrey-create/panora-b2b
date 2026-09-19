@@ -59,7 +59,7 @@
     const el=ensure();
     if(!el)return;
     let s=state||'synced';
-    // Panora 10.97: no subordinate sync event may announce «актуально» while
+    // Panora 10.98: no subordinate sync event may announce «актуально» while
     // Bakery still has an active startup/manual/wake refresh transaction.
     if(document.body?.classList.contains('admin-page')&&Number(window.__panoraAdminRefreshActive||0)>0&&s==='synced'){s='syncing';text='Обновление данных…'}
     const partnerPage=!document.body.classList.contains('admin-page');
