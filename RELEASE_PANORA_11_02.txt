@@ -1,0 +1,8 @@
+Panora 11.02
+
+Bakery rollback / compatibility release.
+- Bakery orders + delivery notes cloud engine restored exactly to Panora 10.75 (Git blob 4e83f12b328292a5d3e77b9934925ef426d3eab0).
+- Bakery startup script order restored so cloud-sync loads before connection-status.
+- Bakery PWA cache bumped to 11020.
+- Partner and Retail application files/logic are retained from Panora 11.01.
+- No SQL required.
