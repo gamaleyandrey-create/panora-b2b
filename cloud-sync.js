@@ -186,7 +186,7 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    // Panora 10.98: keep the visible refresh line in the loading state for every
+    // Panora 10.99: keep the visible refresh line in the loading state for every
     // real refresh/save phrase. Earlier refresh paths introduced «Обновляем календарь…», but the
     // classifier did not include «обнов», so the UI immediately rendered
     // «✓ Данные актуальны» while the network request was still running.
@@ -1059,7 +1059,7 @@
       const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
       const fetched=await request(`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
       if(watermark&&!(fetched||[]).length){
-        // Panora 10.98: a valid «no changes since watermark» response is still a
+        // Panora 10.99: a valid «no changes since watermark» response is still a
         // completed cloud hydration. Keep the Orders screen out of its perpetual
         // «Загружаем…» state and repaint cached authoritative rows immediately.
         window.panoraAdminOrdersHydrated=true;
@@ -1357,14 +1357,22 @@
   };
   const recoveredNote=order=>{const items=structuredClone(order.items||[]),prices=structuredClone(order.prices||{}),subtotal=items.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(prices[item.product]||0),0),taxRate=Number(order.taxRate||0),tax=subtotal*taxRate/100;return{id:order.id,number:null,orderId:order.id,restaurantId:order.restaurantId,date:localDate(order.deliveryDate||order.date||new Date().toISOString()),items,prices,bakery:structuredClone(typeof bakerySettings!=='undefined'?bakerySettings:{}),subtotal,taxRate,tax,goodsTotal:subtotal+tax,total:subtotal+tax,deliveryMethod:'bakery_vehicle',deliveryKm:0,deliveryRate:0,deliveryExtraCost:0,transportCost:0,deliveryCharge:0,paid:0,balanceAfter:0,recovered:true}};
   const deliveryNoteRow=(note,{includeId=true}={})=>{note.qrToken ||= crypto.randomUUID();const row={order_id:note.orderId,restaurant_id:note.restaurantId,delivered_at:`${localDate(note.date)}T12:00:00Z`,payment_due_date:note.paymentDueDate||null,total:Number(note.total||0),trays_delivered:Number(note.traysDelivered||0),trays_returned:Number(note.traysReturned||0),tray_balance_after:Number(note.trayBalanceAfter||0),customer_trays_received:note.customerTraysReceived==null?null:Number(note.customerTraysReceived),customer_trays_returned:note.customerTraysReturned==null?null:Number(note.customerTraysReturned),qr_token:note.qrToken,customer_confirmed_at:note.customerConfirmedAt||null,customer_receiver:note.customerReceiver||null,offline_received_at:note.offlineProof?.receivedAt||null,offline_receiver:note.offlineProof?.receiver||null,offline_signature:note.offlineProof?.signature||null,...(deliveryLogisticsColumnsSupported?{goods_total:Number(note.goodsTotal ?? Math.max(0,Number(note.total||0)-Number(note.deliveryCharge||0))),delivery_method:note.deliveryMethod||'bakery_vehicle',delivery_distance_km:Math.max(0,Number(note.deliveryKm||0)),delivery_rate_per_km:Math.max(0,Number(note.deliveryRate||0)),delivery_extra_cost:Math.max(0,Number(note.deliveryExtraCost||0)),transport_cost:Math.max(0,Number(note.transportCost||0)),delivery_charge:Math.max(0,Number(note.deliveryCharge||0))}:{})};if(includeId&&note.id)row.id=note.id;if(Number(note.number)>0)row.note_number=Number(note.number);return row};
-  async function repairMissingDeliveryNotes(){
+  async function repairMissingDeliveryNotes(remoteRowsHint=null,knownNotesHint=[]){
     if(repairingFinance)return repairingFinance;
     repairingFinance=(async()=>{
-      const remoteRows=await requestDeliveryNotes('');
+      // Panora 10.99: loadDeliveryNotes already owns a complete delivery-note read.
+      // Reuse it during hydration instead of issuing a second request, while keeping
+      // the no-argument repair path intact for manual/legacy callers.
+      const remoteRows=Array.isArray(remoteRowsHint)?remoteRowsHint:await requestDeliveryNotes('');
+      const knownNotes=Array.isArray(knownNotesHint)?knownNotesHint:[];
       const remoteOrders=new Set((remoteRows||[]).map(row=>row.order_id));
       const missing=(orders||[]).filter(order=>order.status==='shipped'&&order.restaurantId&&!remoteOrders.has(order.id));
       for(const order of missing){
-        const local=deliveryNotes.find(note=>note.orderId===order.id)||recoveredNote(order);
+        const known=knownNotes.find(note=>String(note?.orderId||'')===String(order.id));
+        // Restore only durable receipt evidence from the previous known note. Do not
+        // treat an arbitrary stale local note as an unsent cloud delivery note.
+        const preserved=known&&hasFinalReceiptEvidence(known)?known:null;
+        const local=deliveryNotes.find(note=>note.orderId===order.id)||preserved||recoveredNote(order);
         const rows=await request('delivery_notes?on_conflict=order_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(deliveryNoteRow(local,{includeId:false}))});
         const saved=rows?.[0];if(!saved)throw new Error(`Не удалось восстановить накладную заказа PN-${String(order.number||'—').padStart(4,'0')}`);
         const restored=rowNote(saved),index=deliveryNotes.findIndex(note=>note.orderId===order.id);
@@ -1417,29 +1425,24 @@
           ||local.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''));
         return preserveFinalReceiptEvidence(mapped,known);
       });
-      // Panora 10.98: hydrate and paint authoritative delivery notes immediately,
-      // exactly like Retail paints its successful cloud reads before ancillary work.
-      // Finance repair / stock durability must never keep Orders on «Загружаем…».
       deliveryNotes=remote;
       financeLoaded=true;
-      cacheDeliveryNotesLocal();
       ready=true;
+
+      // Panora 10.99: archive visibility is authoritative only after missing shipped
+      // delivery notes have been reconciled. 10.99 unlocked the archive before this
+      // repair and could therefore paint old completed orders as active or absent.
+      // Reuse the already-fetched rows so this integrity gate does not add a second
+      // delivery-note read; preserve only final receipt evidence from prior known data.
+      await repairMissingDeliveryNotes(rows||[],[...knownNotes,...local]);
       window.panoraAdminOrderArchiveHydrated=true;
       publishAdminOrderArchiveCounts();
-      const initialChanged=beforeSignature!==noteUiSignature(deliveryNotes);
-      if(initialChanged||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
+      const changed=beforeSignature!==noteUiSignature(deliveryNotes);
+      if(changed||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
 
-      // These are repair/derived-data passes, not hydration gates. Run them after
-      // the authoritative cloud rows are already visible, mirroring Retail's
-      // "load -> render -> ancillary work" pattern. A slow legacy repair must never
-      // hold the global refresh line or keep Orders in «Загружаем…».
-      Promise.resolve().then(async()=>{
-        try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora delivery-note repair after hydration',error)}
-        try{await syncB2BShipmentStockDurability()}catch(error){console.warn('Panora delivery-note stock durability after hydration',error)}
-        publishAdminOrderArchiveCounts();
-        const finalChanged=beforeSignature!==noteUiSignature(deliveryNotes);
-        if(finalChanged||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
-      }).catch(error=>console.warn('Panora delivery-note post-hydration work',error));
+      // Stock durability is derived data and must not block the Orders screen.
+      Promise.resolve().then(()=>syncB2BShipmentStockDurability())
+        .catch(error=>console.warn('Panora delivery-note stock durability after hydration',error));
       return deliveryNotes;
     })().finally(()=>{loadingDeliveryNotes=null});
     return loadingDeliveryNotes;
@@ -1889,7 +1892,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 10.98: the automatic migration remains one-shot, but an explicit
+    // Panora 10.99: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2057,7 +2060,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!ready||!navigator.onLine)return false;
     status('Обновление: календарь выпечки…');
 
-    // Panora 10.98: a manual/foreground refresh must not pull the cloud snapshot over
+    // Panora 10.99: a manual/foreground refresh must not pull the cloud snapshot over
     // an unsent local calendar edit. First reconcile pending/conflict state using the
     // same content-based synchronizer as normal saving. Only after that do a direct
     // no-cache cloud read and verify what the calendar should display.
@@ -2624,7 +2627,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 10.98: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 10.99: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2666,7 +2669,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     else setTimeout(resolve,0);
   });
   async function settleAdminActiveView(view=adminActiveView()){
-    // Panora 10.98: the global line may say «Данные актуальны» only after the
+    // Panora 10.99: the global line may say «Данные актуальны» only after the
     // currently visible screen has actually left its loading state. This matters
     // on both desktop and iOS where the top-level sync can finish before a queued
     // commerce repaint is painted.
@@ -2849,7 +2852,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Обновление: календарь выпечки…');
     window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 10.98: foreground refresh uses the same safe calendar reconciliation
+      // Panora 10.99: foreground refresh uses the same safe calendar reconciliation
       // as the manual button. Do not announce success until the whole wake pass ends.
       const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
       if(!planOk&&conflicts.plans){showConflicts();return false}

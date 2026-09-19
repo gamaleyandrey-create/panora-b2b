@@ -1,0 +1,11 @@
+Panora 10.99 · build/cache 10990
+
+Bakery order/archive hydration repair based on Panora 10.98:
+- archived shipped orders are not classified until missing delivery notes are reconciled;
+- delivery-note repair reuses the already fetched cloud rows, avoiding a redundant second read during startup;
+- if a shipped note is temporarily missing remotely, only durable final receipt evidence from the previously known note may be preserved during repair;
+- stock durability remains post-hydration best-effort and does not block Orders;
+- loadingDeliveryNotes serialization remains intact;
+- Retail business logic is unchanged.
+
+No SQL required.
