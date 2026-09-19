@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'10.99',build:10990,cache:10990});
+assert.deepEqual(build,{version:'11.00',build:11000,cache:11000});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
-for(const token of ["const VERSION='10.99',BUILD=10990",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
+for(const token of ["const VERSION='11.00',BUILD=11000",'partner_quality_cases','renderQuality()','renderLabs()','renderShelf()','renderPackaging()','renderInspection()','createCapaFromCase','Печать / PDF'])assert.ok(qc.includes(token),token);
 const admin=fs.readFileSync('admin.html','utf8'),bakery=fs.readFileSync('bakery/index.html','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=10990','quality-compliance-v1075.js?v=10990'])assert.ok(html.includes(token),token);
+for(const html of [admin,bakery])for(const token of ['data-view="ps-quality"','data-view="ps-labs"','data-view="ps-shelf-life"','data-view="ps-packaging"','data-view="ps-inspection"','quality-compliance-v1075.css?v=11000','quality-compliance-v1075.js?v=11000'])assert.ok(html.includes(token),token);
 
 for(const html of [admin,bakery])for(const token of ['id="workNavToggle"','id="workNavItems"','id="financeNavToggle"','id="financeNavItems"','id="partnersNavToggle"','id="partnersNavItems"','id="productsNavToggle"','id="productsNavItems"','id="productionSafetyNavToggle"','id="productionSafetyNavItems"','id="retailNavToggle"','id="retailNavItems"','id="settingsNavToggle"','id="settingsNavItems"','admin-nav-major-toggle','admin-nav-submenu-long','admin-nav-submenu-retail'])assert.ok(html.includes(token),token);
 for(const html of [admin,bakery]){assert.match(html,/id="partnersNavToggle"[\s\S]*?>[\s\S]*?Партнёры[\s\S]*?<\/button>[\s\S]*?id="partnersNavItems"[\s\S]*?Напоминания клиентам[\s\S]*?Партнёры и цены[\s\S]*?<\/div>/);assert.match(html,/id="productsNavToggle"[\s\S]*?>[\s\S]*?Продукция[\s\S]*?<\/button>[\s\S]*?id="productsNavItems"[\s\S]*?Карточки продукции[\s\S]*?Рецептуры[\s\S]*?<\/div>/);assert.ok(!html.includes('>Партнёры и продукция<'));}
@@ -76,20 +76,22 @@ for(const token of ['panora-cloud-plan-authority-reset-v1087','panora-production
 }
 
 
-// Panora 10.99 — the global refresh lifecycle cannot announce completion while
-// the visible Bakery screen is still hydrating. This covers desktop + mobile,
-// including the reported Orders screen where the top line said «актуальны» while
-// the table still said «Загружаем…».
+// Panora 11.00 — manual refresh may retain the newer active-view guard, but
+// startup is deliberately rolled back to the proven 10.75 sequential bootstrap.
 for(const token of [
   'async function settleAdminActiveView(view=adminActiveView())',
-  "status('Обновление: завершаем текущий раздел…');",
   'await settleAdminActiveView(view);',
-  "await settleAdminActiveView(activeAdminView()||'orders');",
   "if(document.body?.classList.contains('admin-page')&&Number(window.__panoraAdminRefreshActive||0)>0){render('syncing','Обновление данных…');return}",
   "if(Number(window.__panoraAdminRefreshActive||0)>0){show('loading','Обновление данных…');return}"
 ])assert.ok((cloudSync1083+'\n'+connection1083).includes(token),token);
+{
+  const start=cloudSync1083.indexOf('async function start(authSession)');
+  const end=cloudSync1083.indexOf('const adminRefreshCopy=',start);
+  const src=cloudSync1083.slice(start,end);
+  assert.ok(!src.includes('settleAdminActiveView('),'startup must stay on the 10.75 simple bootstrap');
+}
 
-console.log('Panora 10.99 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
+console.log('Panora 11.00 quality/compliance + vertical navigation + mobile calendar sync tests: OK');
 
 // Panora 10.88 — regression for the reported two-device move: cancel 18 Sep,
 // schedule 19 Sep, then refresh another device that still has 18 Sep cached.
@@ -103,7 +105,6 @@ for(const token of [
   "await refreshPlansManual(`auto-${reason}`)",
   "if(now-adminWakeRefreshAt<1800)",
   "resetAdminGlobalRefreshButton({forceIdle:true})",
-  "scheduleAdminCommerceWakeRefresh('startup-ready',140)",
   'else localStorage.removeItem(planLastGoodKey)'
 ])assert.ok(cloudSync1083.includes(token),token);
 const product1088=fs.readFileSync('product-admin.js','utf8');
@@ -117,7 +118,7 @@ assert.ok(product1088.includes("filtered=cancellationLog.filter(row=>String(row?
  b.local=[...cloud];b.baseline=sig(cloud);assert.deepEqual(b.local.map(x=>x.bakeDate),['2026-09-19']);
 }
 
-// Panora 10.99 — Refresh is a real top-layer control on iOS and desktop, remains
+// Panora 11.00 — Refresh is a real top-layer control on iOS and desktop, remains
 // physically clickable, and visibly reports both manual and automatic synchronization.
 for(const token of [
   "const setAdminGlobalRefreshState=(state='idle')=>",
@@ -152,7 +153,7 @@ for(const html of retail1090)for(const token of [
 }
 
 
-// Panora 10.99 — manual Bakery Refresh remains tappable while its internal promise
+// Panora 11.00 — manual Bakery Refresh remains tappable while its internal promise
 // serializes work, and it actually performs calendar reconciliation + full retry.
 {
  const start=cloudSync1083.indexOf('const adminRefreshCopy='),end=cloudSync1083.indexOf('async function refreshBreadStockData',start);assert.ok(start>=0&&end>start,'manual refresh source slice');
@@ -170,46 +171,45 @@ for(const html of retail1090)for(const token of [
  promise.then(ok=>{assert.equal(ok,true);assert.equal(planCalls,2);assert.equal(retryCalls,1);assert.ok(events>=1);assert.equal(button.disabled,false);assert.equal(button.dataset.loading,undefined);assert.equal(label.textContent,'✓ Обновлено');timers.splice(0).forEach(fn=>fn());assert.equal(label.textContent,'Обновить')});
 }
 
-// Panora 10.99 — Retail uses the same visible loading reminder as Bakery.
+// Panora 11.00 — Retail uses the same visible loading reminder as Bakery.
 for(const html of [fs.readFileSync('retail/index.html','utf8'),fs.readFileSync('retail.html','utf8')]){
-  assert.ok(html.includes('connection-status.css?v=10990'),'retail must load visible refresh-line styles');
-  assert.ok(html.includes('connection-status.js?v=10990'),'retail must load visible refresh-line controller');
+  assert.ok(html.includes('connection-status.css?v=11000'),'retail must load visible refresh-line styles');
+  assert.ok(html.includes('connection-status.js?v=11000'),'retail must load visible refresh-line controller');
   assert.ok(html.includes("panora:retail-global-refresh-started"),'retail refresh must emit start event');
   assert.ok(html.includes("panora:retail-global-refreshed"),'retail refresh must emit completion event');
 }
 
-// Panora 10.99 — reported Bakery startup regression: the top line must never say
-// «Данные актуальны» while Orders/Delivery Notes are still on «Загружаем…».
-for(const token of [
-  "window.panoraAdminOrdersHydrated=true;",
-  "if(typeof renderCommerce==='function')renderCommerce();",
-  "throw new Error('Заказы и накладные ещё не завершили облачную загрузку')",
-  "throw new Error('Экран заказов ещё не завершил отрисовку облачных данных')",
-  "console.error('Panora startup finalization',error)",
-  "window.addEventListener('panora:authenticated',event=>{",
-  "console.error('Panora initial cloud start',error)"
-])assert.ok(cloudSync1083.includes(token),token);
+// Panora 11.00 — Bakery bootstrap is rolled back to the proven 10.75 ordering.
+for(const html of [fs.readFileSync('admin.html','utf8'),fs.readFileSync('bakery/index.html','utf8')]){
+  const cloud=html.indexOf('cloud-sync.js?v=11000');
+  const connection=html.indexOf('connection-status.js?v=11000');
+  assert.ok(cloud>=0&&connection>cloud,'Bakery must load cloud-sync before connection-status');
+}
+{
+  const start=cloudSync1083.indexOf('async function start(authSession)');
+  const end=cloudSync1083.indexOf('const adminRefreshCopy=',start);
+  assert.ok(start>=0&&end>start,'Bakery startup source slice');
+  const src=cloudSync1083.slice(start,end);
+  assert.ok(src.includes("const steps=[['товары',loadProducts],['заказы',loadOrders],['накладные',loadDeliveryNotes]"),'startup must use stable sequential 10.75 order');
+  assert.ok(!src.includes('settleAdminActiveView('),'startup must not use the newer active-view settlement gate');
+  assert.ok(src.includes("if(typeof renderCommerce==='function')renderCommerce();"),'startup must paint commerce after successful bootstrap');
+}
 for(const token of [
   "Number(window.__panoraAdminRefreshActive||0)>0&&s==='synced'",
   "Number(window.__panoraAdminRefreshActive||0)>0&&state==='synced'"
 ])assert.ok(connection1083.includes(token),token);
 
-
-// Panora 10.99 — archive integrity is a hydration gate, while stock durability
-// remains post-hydration. This prevents completed shipped orders from disappearing
-// when a legacy/missing delivery note needs deterministic recovery.
+// Panora 11.00 — delivery-note/archive hydration follows the confirmed 10.75 sequence.
 {
   const start=cloudSync1083.indexOf('async function loadDeliveryNotes()');
   const end=cloudSync1083.indexOf('async function saveDeliveryNotesNow()',start);
   assert.ok(start>=0&&end>start,'delivery-note hydration source slice');
   const src=cloudSync1083.slice(start,end);
-  const repair=src.indexOf('await repairMissingDeliveryNotes(rows||[],[...knownNotes,...local]);');
+  const repair=src.indexOf('await repairMissingDeliveryNotes();');
+  const stock=src.indexOf('await syncB2BShipmentStockDurability();');
   const hydrated=src.indexOf('window.panoraAdminOrderArchiveHydrated=true;');
-  const stock=src.indexOf('Promise.resolve().then(()=>syncB2BShipmentStockDurability())');
-  assert.ok(repair>=0,'archive repair must be awaited');
-  assert.ok(hydrated>repair,'archive cannot become authoritative before repair');
-  assert.ok(stock>hydrated,'stock durability must stay post-hydration');
-  assert.ok(cloudSync1083.includes('async function repairMissingDeliveryNotes(remoteRowsHint=null,knownNotesHint=[])'),'repair accepts already-fetched rows');
-  assert.ok(cloudSync1083.includes("const remoteRows=Array.isArray(remoteRowsHint)?remoteRowsHint:await requestDeliveryNotes('');"),'repair reuses hydration response');
-  assert.ok(cloudSync1083.includes('const preserved=known&&hasFinalReceiptEvidence(known)?known:null;'),'only final receipt evidence may be preserved');
+  assert.ok(repair>=0,'10.75 repair must be awaited');
+  assert.ok(stock>repair,'10.75 stock durability must follow repair');
+  assert.ok(hydrated>stock,'archive cannot become authoritative before both 10.75 gates complete');
+  assert.ok(cloudSync1083.includes("const remoteRows=await requestDeliveryNotes('');"),'legacy repair must verify complete delivery-note set');
 }
