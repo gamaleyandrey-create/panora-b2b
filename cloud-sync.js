@@ -186,7 +186,7 @@
   const status=(text,error=false,detail='')=>{
     const el=document.querySelector('#saveState');if(!el)return;
     el.textContent=text;el.style.color='';el.title=detail||'';
-    // Panora 11.00: keep the visible refresh line in the loading state for every
+    // Panora 11.01: keep the visible refresh line in the loading state for every
     // real refresh/save phrase. Earlier refresh paths introduced «Обновляем календарь…», but the
     // classifier did not include «обнов», so the UI immediately rendered
     // «✓ Данные актуальны» while the network request was still running.
@@ -1049,6 +1049,28 @@
     window.dispatchEvent(new CustomEvent('panora:order-counts-updated',{detail:{active,archive,authoritative:true}}));
   };
 
+  async function requestAdminOrders(deltaQuery=''){
+    const delta=String(deltaQuery||'');
+    const embedded=`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${delta}&order=order_number.asc`;
+    try{return await request(embedded)}catch(error){
+      // Panora 11.01: a broken/temporarily unavailable embedded relationship must not
+      // blank the Bakery. Fall back to plain orders and hydrate related rows separately.
+      console.warn('Panora admin orders embedded read failed; using compatible fallback',error);
+      const base=await request(`orders?select=id,order_number,restaurant_id,bake_day_id,status,comment,cancelled_reason,created_at,updated_at${delta}&order=order_number.asc`);
+      const orderIds=(base||[]).map(row=>String(row?.id||'')).filter(Boolean);
+      const dayIds=[...new Set((base||[]).map(row=>String(row?.bake_day_id||'')).filter(Boolean))];
+      const quote=list=>list.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
+      const [days,items]=await Promise.all([
+        dayIds.length?request(`bake_days?id=in.(${encodeURIComponent(quote(dayIds))})&select=id,bake_date,delivery_date`):Promise.resolve([]),
+        orderIds.length?request(`order_items?order_id=in.(${encodeURIComponent(quote(orderIds))})&select=order_id,product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot&order=order_id.asc,product_id.asc`):Promise.resolve([])
+      ]);
+      const dayMap=new Map((days||[]).map(row=>[String(row.id),row]));
+      const itemMap=new Map();
+      for(const item of items||[]){const key=String(item.order_id||'');if(!itemMap.has(key))itemMap.set(key,[]);itemMap.get(key).push(item)}
+      return (base||[]).map(row=>({...row,bake_days:dayMap.get(String(row.bake_day_id||''))||{},order_items:itemMap.get(String(row.id||''))||[]}));
+    }
+  }
+
   async function loadOrders(){
     if(loadingOrders)return loadingOrders;if(savingOrders)await savingOrders;
     if(pending.orders){await saveOrdersNow();clearPending('orders')}
@@ -1057,9 +1079,43 @@
       const beforeSignature=orderUiSignature(typeof orders!=='undefined'?orders:[]);
       const watermark=!firstHydration?String(localStorage.getItem(adminOrdersWatermarkKey)||''):'';
       const deltaQuery=watermark?`&updated_at=gt.${encodeURIComponent(watermark)}`:'';
-      const fetched=await request(`orders?select=id,order_number,restaurant_id,status,comment,cancelled_reason,created_at,updated_at,bake_days(bake_date,delivery_date),order_items(product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot)${deltaQuery}&order=order_number.asc`);
+      let fetched=await requestAdminOrders(deltaQuery);
+      // A first full read returning zero while the server's commerce summary says that
+      // orders exist is not authoritative. Retry through the compatible non-embedded path
+      // before allowing an empty screen to replace a usable local cache.
+      if(firstHydration&&!(fetched||[]).length){
+        let expected=0,countVerified=false;
+        try{
+          const revisionRows=await request('rpc/panora_admin_commerce_revision',{method:'POST',body:'{}'});
+          const revisionRow=Array.isArray(revisionRows)?revisionRows[0]:revisionRows;
+          if(revisionRow&&('active_count' in revisionRow||'archive_count' in revisionRow))countVerified=true;
+          expected=Math.max(0,Number(revisionRow?.active_count)||0)+Math.max(0,Number(revisionRow?.archive_count)||0);
+        }catch(error){console.warn('Panora order count verification unavailable',error)}
+        const cachedCount=Array.isArray(orders)?orders.length:0;
+        if(expected>0||(!countVerified&&cachedCount>0)){
+          try{
+            // Force the fallback branch by issuing the plain shape directly.
+            const base=await request(`orders?select=id,order_number,restaurant_id,bake_day_id,status,comment,cancelled_reason,created_at,updated_at&order=order_number.asc`);
+            if(base?.length){
+              const orderIds=base.map(row=>String(row?.id||'')).filter(Boolean),dayIds=[...new Set(base.map(row=>String(row?.bake_day_id||'')).filter(Boolean))];
+              const quote=list=>list.map(id=>`"${id.replace(/"/g,'')}"`).join(',');
+              const [days,items]=await Promise.all([dayIds.length?request(`bake_days?id=in.(${encodeURIComponent(quote(dayIds))})&select=id,bake_date,delivery_date`):Promise.resolve([]),orderIds.length?request(`order_items?order_id=in.(${encodeURIComponent(quote(orderIds))})&select=order_id,product_id,quantity,unit_price,product_names_snapshot,product_image_snapshot&order=order_id.asc,product_id.asc`):Promise.resolve([])]);
+              const dayMap=new Map((days||[]).map(row=>[String(row.id),row])),itemMap=new Map();
+              for(const item of items||[]){const key=String(item.order_id||'');if(!itemMap.has(key))itemMap.set(key,[]);itemMap.get(key).push(item)}
+              fetched=base.map(row=>({...row,bake_days:dayMap.get(String(row.bake_day_id||''))||{},order_items:itemMap.get(String(row.id||''))||[]}));
+            }
+          }catch(error){console.warn('Panora plain order recovery read failed',error)}
+          if(!(fetched||[]).length&&cachedCount>0){
+            window.panoraAdminOrdersHydrated=true;
+            if(typeof renderCommerce==='function')renderCommerce();
+            const detail=countVerified?`Облако сообщает ${expected} заказов, но список не был получен. Локальные данные не удалены.`:'Проверить количество заказов в облаке не удалось. Локальные данные не удалены.';
+            status(`Заказы: показаны сохранённые данные (${cachedCount})`,true,detail);
+            return orders;
+          }
+        }
+      }
       if(watermark&&!(fetched||[]).length){
-        // Panora 11.00: keep the safe no-change hydration guard while restoring the 10.75 Bakery bootstrap.
+        // Panora 11.01: keep the safe no-change hydration guard while restoring the 10.75 Bakery bootstrap.
         // completed cloud hydration. Keep the Orders screen out of its perpetual
         // «Загружаем…» state and repaint cached authoritative rows immediately.
         window.panoraAdminOrdersHydrated=true;
@@ -1370,7 +1426,11 @@
         const restored=rowNote(saved),index=deliveryNotes.findIndex(note=>note.orderId===order.id);
         if(index>=0)deliveryNotes[index]=restored;else deliveryNotes.push(restored);
       }
-      for(const row of remoteRows||[]){if(!deliveryNotes.some(note=>note.orderId===row.order_id))deliveryNotes.push(rowNote(row))}
+      for(const row of remoteRows||[]){
+        const mapped=rowNote(row),index=deliveryNotes.findIndex(note=>String(note?.orderId||'')===String(row.order_id||''));
+        if(index>=0)deliveryNotes[index]=preserveFinalReceiptEvidence(mapped,deliveryNotes[index]);
+        else deliveryNotes.push(mapped);
+      }
       const changed=noteUiSignature(deliveryNotes)!==noteUiSignature(JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]'));
       recalculateBalances();cacheDeliveryNotesLocal();
       if(missing.length||changed)queueAdminCommerceRender();
@@ -1410,29 +1470,57 @@
       const beforeSignature=noteUiSignature(typeof deliveryNotes!=='undefined'?deliveryNotes:[]);
       const knownNotes=Array.isArray(deliveryNotes)?deliveryNotes.slice():[];
       const rows=await requestDeliveryNotes('&order=note_number.asc');
-      const local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]');
+      let local=[];try{local=JSON.parse(localStorage.getItem('panora-delivery-notes')||'[]')}catch{}
+      const knownPool=[...knownNotes,...(Array.isArray(local)?local:[])];
       const remote=(rows||[]).map(row=>{
         const mapped=rowNote(row);
-        const known=knownNotes.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''))
-          ||local.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''));
+        const known=knownPool.find(note=>String(note?.id||'')===String(mapped?.id||'')||String(note?.orderId||'')===String(mapped?.orderId||''));
         return preserveFinalReceiptEvidence(mapped,known);
       });
-      // Panora 11.00: Bakery commerce bootstrap restored to the proven 10.75 flow.
-      // A delivery-note load is not authoritative until missing shipped notes and
-      // stock durability have completed. This intentionally favors the stable
-      // 10.75 sequence over the newer split hydration/post-hydration pipeline.
-      deliveryNotes=remote;
-      financeLoaded=true;cacheDeliveryNotesLocal();
-      ready=true;await repairMissingDeliveryNotes();
-      await syncB2BShipmentStockDurability();
+      const remoteOrderIds=new Set(remote.map(note=>String(note?.orderId||'')).filter(Boolean));
+      const shippedIds=new Set((orders||[]).filter(order=>String(order?.status||'')==='shipped').map(order=>String(order.id)));
+      let cloudNotesExpected=false;
+      if(!remote.length&&knownPool.length){
+        try{
+          const revisionRows=await request('rpc/panora_admin_commerce_revision',{method:'POST',body:'{}'});
+          const revisionRow=Array.isArray(revisionRows)?revisionRows[0]:revisionRows;
+          cloudNotesExpected=Boolean(revisionRow?.notes_revision);
+        }catch(error){console.warn('Panora delivery-note revision verification unavailable',error)}
+      }
+      const preserved=[];
+      for(const note of knownPool){
+        const orderId=String(note?.orderId||'');
+        if(!orderId||remoteOrderIds.has(orderId)||!shippedIds.has(orderId))continue;
+        // Partial cloud reads preserve only final receipt evidence. If the cloud says
+        // a notes revision exists but returned zero rows, keep all cached linked notes
+        // until the background repair/re-read reconciles them.
+        if(!hasFinalReceiptEvidence(note)&&!cloudNotesExpected)continue;
+        if(preserved.some(item=>String(item?.orderId||'')===orderId))continue;
+        preserved.push({...structuredClone(note),preservedFinalReceiptEvidence:hasFinalReceiptEvidence(note),preservedCloudGap:cloudNotesExpected});
+      }
+      // Panora 11.01: cloud rows become visible immediately. A single historical
+      // repair can no longer hold the whole Orders/Notes UI in a loading state.
+      // Missing cached notes are retained only when they contain monotonic final
+      // receipt evidence, so an already received delivery cannot reopen/disappear.
+      deliveryNotes=[...remote,...preserved];
+      financeLoaded=true;cacheDeliveryNotesLocal();ready=true;
       window.panoraAdminOrderArchiveHydrated=true;
       publishAdminOrderArchiveCounts();
-      const changed=beforeSignature!==noteUiSignature(deliveryNotes);
-      if(changed||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
+      const initialChanged=beforeSignature!==noteUiSignature(deliveryNotes);
+      if(initialChanged||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
+
+      Promise.resolve().then(async()=>{
+        try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora delivery-note repair deferred',error)}
+        try{await syncB2BShipmentStockDurability()}catch(error){console.warn('Panora stock durability deferred',error)}
+        publishAdminOrderArchiveCounts();
+        cacheDeliveryNotesLocal();
+        if(beforeSignature!==noteUiSignature(deliveryNotes)||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
+      }).catch(error=>console.warn('Panora delivery-note post-hydration',error));
       return deliveryNotes;
     })().finally(()=>{loadingDeliveryNotes=null});
     return loadingDeliveryNotes;
   }
+
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;
     const valid=deliveryNotes.filter(note=>orders.some(order=>order.id===note.orderId)&&restaurants.some(r=>r.id===note.restaurantId));
@@ -1878,7 +1966,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     }).map(row=>String(row?.date||'')).filter(Boolean));
   };
   const isSafeExplicitPlanMove=(local,remote,{allowRepeat=false}={})=>{
-    // Panora 11.00: the automatic migration remains one-shot, but an explicit
+    // Panora 11.01: the automatic migration remains one-shot, but an explicit
     // user Refresh is allowed to retry the same verified move. This matters when
     // 10.88 marked the recovery as attempted while another device still showed the
     // old date. The safety checks below (cancellation tombstone + identical shared
@@ -2046,7 +2134,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     if(!ready||!navigator.onLine)return false;
     status('Обновление: календарь выпечки…');
 
-    // Panora 11.00: a manual/foreground refresh must not pull the cloud snapshot over
+    // Panora 11.01: a manual/foreground refresh must not pull the cloud snapshot over
     // an unsent local calendar edit. First reconcile pending/conflict state using the
     // same content-based synchronizer as normal saving. Only after that do a direct
     // no-cache cloud read and verify what the calendar should display.
@@ -2563,7 +2651,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   async function start(authSession){
     if(!authSession?.access_token||session?.access_token===authSession.access_token&&ready)return;
     clearAdminStartupRecovery();
-    // Panora 11.00: restore the stable 10.75 Bakery startup contract. The cloud
+    // Panora 11.01: restore the stable 10.75 Bakery startup contract. The cloud
     // bootstrap owns one simple sequential pass and does not run an extra active-view
     // settlement gate before announcing readiness.
     session=authSession;ready=true;clearOrphanConflicts();status('Загрузка облака…');
@@ -2594,7 +2682,7 @@ window.panoraRecalculateBalances=recalculateBalances;
   const setAdminGlobalRefreshState=(state='idle')=>{
     const button=document.querySelector('#adminGlobalRefresh'),label=button?.querySelector('.admin-global-refresh-text');if(!button)return;
     const copy=adminRefreshCopy();
-    // Panora 11.00: Refresh is never natively disabled. iOS/desktop must always be able
+    // Panora 11.01: Refresh is never natively disabled. iOS/desktop must always be able
     // to deliver pointer/click events; duplicate work is serialized by the JS promises.
     button.disabled=false;button.removeAttribute('disabled');if(button.style)button.style.pointerEvents='auto';
     delete button.dataset.loading;delete button.dataset.success;button.removeAttribute('aria-busy');
@@ -2636,7 +2724,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     else setTimeout(resolve,0);
   });
   async function settleAdminActiveView(view=adminActiveView()){
-    // Panora 11.00: the global line may say «Данные актуальны» only after the
+    // Panora 11.01: the global line may say «Данные актуальны» only after the
     // currently visible screen has actually left its loading state. This matters
     // on both desktop and iOS where the top-level sync can finish before a queued
     // commerce repaint is painted.
@@ -2819,7 +2907,7 @@ window.panoraRecalculateBalances=recalculateBalances;
     status('Обновление: календарь выпечки…');
     window.dispatchEvent(new CustomEvent('panora:admin-global-refresh-started',{detail:{reason:`auto-${reason}`,automatic:true}}));
     adminWakeRefreshPromise=(async()=>{
-      // Panora 11.00: foreground refresh uses the same safe calendar reconciliation
+      // Panora 11.01: foreground refresh uses the same safe calendar reconciliation
       // as the manual button. Do not announce success until the whole wake pass ends.
       const planOk=await refreshPlansManual(`auto-${reason}`).catch(error=>{if(!window.panoraHandleSessionError?.(error))console.warn('Panora automatic plan refresh',reason,error);return false});
       if(!planOk&&conflicts.plans){showConflicts();return false}

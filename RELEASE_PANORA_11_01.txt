@@ -1,0 +1,12 @@
+Panora 11.01 FULL
+build/cache 11010
+
+BAKERY COMMERCE RECOVERY
+- Orders: added a schema-compatible fallback read. If the embedded orders query fails, Bakery reads plain orders and hydrates bake days/items separately.
+- Orders: a verified/unknown zero-row read can no longer erase a useful local order cache when cloud counters indicate data exists or counters cannot be verified.
+- Delivery notes: cloud rows become visible immediately; one historical repair no longer blocks the whole Orders/Notes screen.
+- Delivery notes: final receipt evidence from a known cached note is preserved when a partial cloud response temporarily omits that note.
+- Delivery notes: when the cloud revision says notes exist but the read returns zero, linked cached notes remain visible until background reconciliation completes.
+- Reappearing cloud notes replace temporary preserved placeholders without losing monotonic receipt evidence.
+- Existing Partner and Retail business logic was not changed.
+- No SQL migration required.
