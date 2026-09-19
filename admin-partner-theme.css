@@ -2627,7 +2627,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major butto
   }
 }
 
-/* Panora 10.99 — mobile Bakery refresh must be explicit, readable and tappable. */
+/* Panora 11.00 — mobile Bakery refresh must be explicit, readable and tappable. */
 @media (max-width:720px){
   html body.admin-page header.admin-topbar button.admin-global-refresh{
     display:inline-flex!important;
@@ -2689,7 +2689,7 @@ html body.admin-page .admin-nav .admin-nav-submenu.admin-nav-submenu-major butto
   }
 }
 
-/* Panora 10.99 — Refresh must be a real top-layer control on desktop and iOS PWA. */
+/* Panora 11.00 — Refresh must be a real top-layer control on desktop and iOS PWA. */
 html body.admin-page header.admin-topbar{
   isolation:isolate!important;
 }

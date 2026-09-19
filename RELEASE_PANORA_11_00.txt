@@ -1,0 +1,11 @@
+Panora 11.00
+build/cache 11000
+
+Bakery rollback/stabilization based on the confirmed working Panora 10.75 flow.
+
+- Restored Bakery bootstrap order: cloud-sync.js loads before connection-status.js in admin.html and /bakery/.
+- Restored the simple sequential Bakery startup contract from 10.75; removed the newer active-view settlement gate from startup.
+- Restored 10.75 delivery-note hydration semantics: repair missing shipped delivery notes and finish B2B stock durability before archive hydration is declared ready.
+- Kept the later safe guard that treats a valid empty delta response for orders as a completed hydration.
+- Partner and Retail business logic were not rolled back.
+- No SQL required.
