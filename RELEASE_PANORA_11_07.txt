@@ -1,0 +1,12 @@
+Panora 11.07 FULL
+build/cache 11070
+
+LABEL FIT & CODE SIZING
+- 58×40 shelf price tag uses a compact but readable layout with EAN-13 and advertising QR sized to stay inside the label.
+- EAN-13 keeps vector bars, standard quiet-zone allocation and crisp-edge rendering.
+- Advertising QR is rendered at 256 px with a 4-module quiet margin; physical QR size is 11.5–14 mm depending on label size.
+- Package/full templates now offer 100×70 mm for long composition, producer and nutrition text; it is the default for package/full labels with full information.
+- 70×50 and 100×50 remain available for shorter content. Panora measures the rendered label before printing and blocks printing if any text/code would be clipped.
+- Required information is not silently reduced to unreadable micro-type.
+- Bakery cloud-sync remains byte-identical to Panora 10.75. Partner/Retail business logic was not changed.
+- No SQL migration required.
