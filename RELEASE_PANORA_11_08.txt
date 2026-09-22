@@ -1,0 +1,13 @@
+Panora 11.08 FULL
+build/cache 11080
+
+VERTICAL PACKAGE LABEL
+- Added a dedicated 58×160 mm vertical package-label template in Bakery > Products > Price tags and labels.
+- Existing horizontal price-tag, package-label and full-label templates remain available and unchanged in purpose.
+- Vertical label uses the product name, composition, net weight, shelf life and EAN-13 from the current Panora product/safety data.
+- Producer and bakery address are taken from the bakery profile in Panora.
+- Vertical Panora branding is fixed to the application brand; no decorative product illustration and no BIO marking are printed.
+- The vertical call-to-action says “Заказывайте на сайте PANORA.ES”; its QR is fixed to https://panora.es/.
+- EAN-13 keeps vector bars and safe quiet zones; QR uses 256 px generation with a 4-module margin.
+- Print fit guards remain active for horizontal and vertical labels; printing stops if required content is clipped.
+- No SQL migration required.

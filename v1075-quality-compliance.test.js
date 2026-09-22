@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'11.07',build:11070,cache:11070});
+assert.deepEqual(build,{version:'11.08',build:11080,cache:11080});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
@@ -69,29 +69,36 @@ for(const html of [admin,bakery]){
  assert.ok(cloud>=0&&status>=0&&cloud<status,'Bakery must load 10.75 cloud-sync before connection-status');
 }
 
-const productAdmin1107=fs.readFileSync('product-admin.js','utf8'),productAdminCss1107=fs.readFileSync('product-admin.css','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="price-labels"','id="view-price-labels"','id="priceLabelBuilder"','product-admin.css?v=11070','product-admin.js?v=11070'])assert.ok(html.includes(token),`11.07 label UI: ${token}`);
-for(const token of ['Panora 11.07 — label fit guards','const BUILD=11070','function eanCheck','function normalizeEan','function eanSvg','shape-rendering=\"crispEdges\"','window.PanoraQRCode?.toDataURL','margin:4','width:256','100x70','function minimumSizeForTemplate','function renderedFitIssues','function measureLabelFit','Печать остановлена','Ценник','Упаковка','Полная этикетка','GTIN / EAN‑13','Пищевая ценность на 100 г','Рекламный QR','function printLabels','function recordHistory'])assert.ok(productAdmin1107.includes(token),`11.07 label logic: ${token}`);
-for(const token of ['Panora 11.07 — price tags and package labels','.pl-layout','.pl-label','.pl-template-full','.product-label-nutrition-grid','Panora 11.07 — physical label fit','.pl-size-58x40 .pl-barcode{flex-basis:31mm','.pl-size-58x40 .pl-qr img{width:11.5mm','.pl-size-100x70 .pl-barcode{flex-basis:42mm','.pl-fit-fail'])assert.ok(productAdminCss1107.includes(token),`11.07 label CSS: ${token}`);
-assert.ok(fs.readFileSync('RELEASE_PANORA_11_07.txt','utf8').includes('No SQL migration required.'));
+const productAdmin1108=fs.readFileSync('product-admin.js','utf8'),productAdminCss1108=fs.readFileSync('product-admin.css','utf8');
+for(const html of [admin,bakery])for(const token of ['data-view="price-labels"','id="view-price-labels"','id="priceLabelBuilder"','product-admin.css?v=11080','product-admin.js?v=11080','горизонтальные и вертикальные этикетки'])assert.ok(html.includes(token),`11.08 label UI: ${token}`);
+for(const token of ['Panora 11.08 — price tags, horizontal labels and vertical package label','const BUILD=11080','const PANORA_SITE=\'https://panora.es/\'','function eanCheck','function normalizeEan','function eanSvg','shape-rendering="crispEdges"','window.PanoraQRCode?.toDataURL','margin:4','width:256','58x160','data-value="vertical"','Вертикальная','Заказывайте на сайте','PANORA.ES','function verticalSiteUrl','function renderedFitIssues','function measureLabelFit','Печать остановлена','Ценник','Упаковка','Полная','GTIN / EAN-13','Пищевая ценность на 100 г','function printLabels','function recordHistory'])assert.ok(productAdmin1108.includes(token),`11.08 label logic: ${token}`);
+for(const token of ['Panora 11.08 — price tags, horizontal labels and vertical package label','.pl-layout','.pl-label','.pl-template-full','.product-label-nutrition-grid','.pl-template-vertical','.pl-size-58x160','.pl-vertical-order','.pl-size-58x40 .pl-barcode{flex-basis:31mm','.pl-size-100x70 .pl-barcode{flex-basis:42mm','.pl-fit-fail'])assert.ok(productAdminCss1108.includes(token),`11.08 label CSS: ${token}`);
+const release1108=fs.readFileSync('RELEASE_PANORA_11_08.txt','utf8');
+for(const token of ['Panora 11.08 FULL','58×160 mm','horizontal price-tag','https://panora.es/','no BIO marking','No SQL migration required.'])assert.ok(release1108.includes(token),token);
+assert.ok(!productAdmin1108.includes('BIO'), 'Product label code must not print BIO marking');
 
 {
- const start=productAdmin1107.indexOf('function eanCheck'),end=productAdmin1107.indexOf('function latestLot',start);assert.ok(start>=0&&end>start,'EAN source slice');
- const context={String,Number};vm.runInNewContext(productAdmin1107.slice(start,end)+`;this.eanApi={eanCheck,normalizeEan,eanSvg};`,context);
+ const start=productAdmin1108.indexOf('function eanCheck'),end=productAdmin1108.indexOf('function latestLot',start);assert.ok(start>=0&&end>start,'EAN source slice');
+ const context={String,Number};vm.runInNewContext(productAdmin1108.slice(start,end)+`;this.eanApi={eanCheck,normalizeEan,eanSvg};`,context);
  assert.equal(context.eanApi.normalizeEan('400638133393'),'4006381333931','12-digit GTIN must receive a valid EAN-13 check digit');
  assert.equal(context.eanApi.normalizeEan('4006381333931'),'4006381333931','valid EAN-13 must be preserved');
  assert.equal(context.eanApi.normalizeEan('4006381333932'),'','invalid EAN-13 checksum must be rejected');
- assert.ok(context.eanApi.eanSvg('4006381333931').includes('aria-label="EAN 4006381333931"'));assert.ok(context.eanApi.eanSvg('4006381333931').includes('x="11"'),'EAN left quiet zone must start at module 11');
+ assert.ok(context.eanApi.eanSvg('4006381333931').includes('aria-label="EAN 4006381333931"'));
+ assert.ok(context.eanApi.eanSvg('4006381333931').includes('x="11"'),'EAN left quiet zone must start at module 11');
+ assert.ok(context.eanApi.eanSvg('4006381333931').includes('shape-rendering="crispEdges"'));
 }
-
-
 {
- const start=productAdmin1107.indexOf('function renderedFitIssues'),end=productAdmin1107.indexOf('async function measureLabelFit',start);assert.ok(start>=0&&end>start,'label fit source slice');
- const toggles=[];const context={builder:{size:'70x50'}};vm.runInNewContext(productAdmin1107.slice(start,end)+`;this.fit=renderedFitIssues;`,context);
- const ok={scrollWidth:100,clientWidth:100,scrollHeight:50,clientHeight:50,classList:{toggle:(k,v)=>toggles.push([k,v])}};
- const bad={scrollWidth:101,clientWidth:100,scrollHeight:61,clientHeight:50,classList:{toggle:(k,v)=>toggles.push([k,v])}};
- const issues=context.fit({querySelectorAll:()=>[ok,bad]});assert.equal(issues.length,1);assert.ok(issues[0].includes('70x50'));assert.ok(toggles.some(([k,v])=>k==='pl-fit-fail'&&v===true));
+ const start=productAdmin1108.indexOf('function verticalSiteUrl'),end=productAdmin1108.indexOf('function eanCheck',start);assert.ok(start>=0&&end>start,'vertical URL source slice');
+ const context={PANORA_SITE:'https://panora.es/'};vm.runInNewContext(productAdmin1108.slice(start,end)+`;this.site=verticalSiteUrl();`,context);assert.equal(context.site,'https://panora.es/');
 }
+{
+ const start=productAdmin1108.indexOf('function renderedFitIssues'),end=productAdmin1108.indexOf('async function measureLabelFit',start);assert.ok(start>=0&&end>start,'label fit source slice');
+ const toggles=[];const context={builder:{size:'58x160'}};vm.runInNewContext(productAdmin1108.slice(start,end)+`;this.fit=renderedFitIssues;`,context);
+ const ok={scrollWidth:58,clientWidth:58,scrollHeight:160,clientHeight:160,classList:{toggle:(k,v)=>toggles.push([k,v])}};
+ const bad={scrollWidth:58,clientWidth:58,scrollHeight:162,clientHeight:160,classList:{toggle:(k,v)=>toggles.push([k,v])}};
+ const issues=context.fit({querySelectorAll:()=>[ok,bad]});assert.equal(issues.length,1);assert.ok(issues[0].includes('58x160'));assert.ok(toggles.some(([k,v])=>k==='pl-fit-fail'&&v===true));
+}
+for(const token of ['Ценник','Упаковка','Полная','Вертикальная'])assert.ok(productAdmin1108.includes(token),`template retained: ${token}`);
+for(const token of ['58 × 40 мм · ценник','70 × 50 мм · компактно','100 × 50 мм · короткий текст','100 × 70 мм · состав + коды','58 × 160 мм · вертикальная'])assert.ok(productAdmin1108.includes(token),`size retained/added: ${token}`);
 
-
-console.log('Panora 11.07 label-fit + Bakery 10.75 rollback guards: OK');
+console.log('Panora 11.08 vertical labels + horizontal-label preservation + Bakery 10.75 rollback guards: OK');
