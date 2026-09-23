@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.deepEqual(build,{version:'11.12',build:11120,cache:11120});
+assert.deepEqual(build,{version:'11.13',build:11130,cache:11130});
 const ps=fs.readFileSync('production-safety.js','utf8');
 for(const token of ['qualityCases:[]','labAnalyses:[]','shelfLifeEvidence:[]','packagingRecords:[]','mutate:(fn)=>'])assert.ok(ps.includes(token),token);
 const qc=fs.readFileSync('quality-compliance-v1075.js','utf8');
@@ -69,17 +69,17 @@ for(const html of [admin,bakery]){
  assert.ok(cloud>=0&&status>=0&&cloud<status,'Bakery must load 10.75 cloud-sync before connection-status');
 }
 
-const productAdmin1112=fs.readFileSync('product-admin.js','utf8'),productAdminCss1112=fs.readFileSync('product-admin.css','utf8');
-for(const html of [admin,bakery])for(const token of ['data-view="price-labels"','id="view-price-labels"','id="priceLabelBuilder"','product-admin.css?v=11120','product-admin.js?v=11120','горизонтальные и вертикальные этикетки'])assert.ok(html.includes(token),`11.12 label UI: ${token}`);
-for(const token of ['Panora 11.12 — rich-text label editor, manual text blocks and visual layout controls.','const BUILD=11120','const PANORA_SITE=\'https://panora.es/\'','function eanCheck','function normalizeEan','function eanSvg','shape-rendering="crispEdges"','function thermalInk','color:{dark:codeInk(),light:\'#ffffff\'}','58x160','data-value="vertical"','Вертикальная','Preenvasado','Envasado para venta inmediata','ES · основной','Белый + чёрный','Белый + основной цвет','function validationIssues','allergensVerified','quidEs','function highlightedComposition','pl-allergen-inline','Información nutricional por 100 g','Pide en','PANORA.ES','function verticalSiteUrl','function renderedFitIssues','function measureLabelFit','Печать остановлена','function printLabels','function recordHistory','Редактировать макет','Свой размер','Обычный принтер','function captureLayoutFromPreview','function wireLayoutEditorPreview','function blockAttrs','function layoutSafetyIssues','plBlockRotate','plAddBrandBlock','plAddTaglineBlock','data-pl-align',"function addManualTextBlock(kind='text')",'Название блока','function dynamicFieldMap','function undoLayout','function redoLayout','function saveCurrentTemplate','На передний план','Заблокировать','function confirmPrintWarnings','Игнорировать предупреждения и печатать','blocking:[...new Set(blocking)]'])assert.ok(productAdmin1112.includes(token),`11.12 label logic: ${token}`);
-for(const token of ['Panora 11.12 — rich text, own blocks, alignment/layers/templates and confirm-before-print','Panora 11.12 — thermal/standard printer preview and confirmable completeness warnings.','.pl-layout','.pl-label','.pl-template-full','.product-label-nutrition-grid','.pl-template-vertical','.pl-size-58x160','.pl-vertical-order','.pl-allergen-inline','.pl-internal-code','.pl-size-58x40 .pl-price small{font-size:2mm','.pl-custom-layout','.pl-resize-handle','.pl-printer-standard-color','.pl-grid-4','.pl-rich-toolbar','.pl-align-buttons','.pl-layout-adders','.pl-template-tools','.pl-text-editing','.pl-print-warning-dialog','.pl-confirm-title'])assert.ok(productAdminCss1112.includes(token),`11.12 label CSS: ${token}`);
-const release1112=fs.readFileSync('RELEASE_PANORA_11_12.txt','utf8');
-for(const token of ['Panora 11.12 FULL','GTIN/EAN-13','internal Panora cash-register code','58×160','Spanish remains the default','white + black','No BIO marking','No SQL migration required.'])assert.ok(release1112.includes(token),token);
-assert.ok(!productAdmin1112.includes('BIO'), 'Product label code must not print BIO marking');
+const productAdmin1113=fs.readFileSync('product-admin.js','utf8'),productAdminCss1113=fs.readFileSync('product-admin.css','utf8');
+for(const html of [admin,bakery])for(const token of ['data-view="price-labels"','id="view-price-labels"','id="priceLabelBuilder"','product-admin.css?v=11130','product-admin.js?v=11130','горизонтальные и вертикальные этикетки'])assert.ok(html.includes(token),`11.13 label UI: ${token}`);
+for(const token of ['Panora 11.13 — persistent label tool panel and complete visual block controls.','const BUILD=11130','const PANORA_SITE=\'https://panora.es/\'','function eanCheck','function normalizeEan','function eanSvg','shape-rendering="crispEdges"','function thermalInk','color:{dark:codeInk(),light:\'#ffffff\'}','58x160','data-value="vertical"','Вертикальная','Preenvasado','Envasado para venta inmediata','ES · основной','Белый + чёрный','Белый + основной цвет','function validationIssues','allergensVerified','quidEs','function highlightedComposition','pl-allergen-inline','Información nutricional por 100 g','Pide en','PANORA.ES','function verticalSiteUrl','function renderedFitIssues','function measureLabelFit','Печать остановлена','function printLabels','function recordHistory','Редактировать макет','Свой размер','Обычный принтер','function captureLayoutFromPreview','function wireLayoutEditorPreview','function blockAttrs','function layoutSafetyIssues','plBlockRotate','plAddBrandBlock','plAddTaglineBlock','data-pl-align',"function addManualTextBlock(kind='text')",'Название блока','function dynamicFieldMap','function undoLayout','function redoLayout','function saveCurrentTemplate','На передний план','Заблокировать','function confirmPrintWarnings','Игнорировать предупреждения и печатать','blocking:[...new Set(blocking)]','plBlockPicker','function preferredBlockId','function ensureEditorSelection','plToggleHidden','plCopyStyle','plPasteStyle','data-pl-box-align','plBlockLineHeight','plBlockLetterSpacing'])assert.ok(productAdmin1113.includes(token),`11.13 label logic: ${token}`);
+for(const token of ['Panora 11.12 — rich text, own blocks, alignment/layers/templates and confirm-before-print','Panora 11.12 — thermal/standard printer preview and confirmable completeness warnings.','.pl-layout','.pl-label','.pl-template-full','.product-label-nutrition-grid','.pl-template-vertical','.pl-size-58x160','.pl-vertical-order','.pl-allergen-inline','.pl-internal-code','.pl-size-58x40 .pl-price small{font-size:2mm','.pl-custom-layout','.pl-resize-handle','.pl-printer-standard-color','.pl-grid-4','.pl-rich-toolbar','.pl-align-buttons','.pl-layout-adders','.pl-template-tools','.pl-text-editing','.pl-print-warning-dialog','.pl-confirm-title','.pl-block-picker','.pl-box-align','.pl-inspector-title','Panora 11.13 — persistent visual editor controls'])assert.ok(productAdminCss1113.includes(token),`11.13 label CSS: ${token}`);
+const release1113=fs.readFileSync('RELEASE_PANORA_11_13.txt','utf8');
+for(const token of ['Panora 11.13 — persistent label tool panel and complete visual block controls.','const BUILD=11130','const PANORA_SITE=\'https://panora.es/\'','function eanCheck','function normalizeEan','function eanSvg','shape-rendering="crispEdges"','function thermalInk','color:{dark:codeInk(),light:\'#ffffff\'}','58x160','data-value="vertical"','Вертикальная','Preenvasado','Envasado para venta inmediata','ES · основной','Белый + чёрный','Белый + основной цвет','function validationIssues','allergensVerified','quidEs','function highlightedComposition','pl-allergen-inline','Información nutricional por 100 g','Pide en','PANORA.ES','function verticalSiteUrl','function renderedFitIssues','function measureLabelFit','Печать остановлена','function printLabels','function recordHistory','Редактировать макет','Свой размер','Обычный принтер','function captureLayoutFromPreview','function wireLayoutEditorPreview','function blockAttrs','function layoutSafetyIssues','plBlockRotate','plAddBrandBlock','plAddTaglineBlock','data-pl-align',"function addManualTextBlock(kind='text')",'Название блока','function dynamicFieldMap','function undoLayout','function redoLayout','function saveCurrentTemplate','На передний план','Заблокировать','function confirmPrintWarnings','Игнорировать предупреждения и печатать','blocking:[...new Set(blocking)]','plBlockPicker','function preferredBlockId','function ensureEditorSelection','plToggleHidden','plCopyStyle','plPasteStyle','data-pl-box-align','plBlockLineHeight','plBlockLetterSpacing'])assert.ok(productAdmin1113.includes(token),`11.13 label logic: ${token}`);
+assert.ok(!productAdmin1113.includes('BIO'), 'Product label code must not print BIO marking');
 
 {
- const start=productAdmin1112.indexOf('function eanCheck'),end=productAdmin1112.indexOf('function latestLot',start);assert.ok(start>=0&&end>start,'EAN source slice');
- const context={String,Number};vm.runInNewContext(productAdmin1112.slice(start,end)+`;this.eanApi={eanCheck,normalizeEan,eanSvg};`,context);
+ const start=productAdmin1113.indexOf('function eanCheck'),end=productAdmin1113.indexOf('function latestLot',start);assert.ok(start>=0&&end>start,'EAN source slice');
+ const context={String,Number};vm.runInNewContext(productAdmin1113.slice(start,end)+`;this.eanApi={eanCheck,normalizeEan,eanSvg};`,context);
  assert.equal(context.eanApi.normalizeEan('400638133393'),'4006381333931','12-digit GTIN must receive a valid EAN-13 check digit');
  assert.equal(context.eanApi.normalizeEan('4006381333931'),'4006381333931','valid EAN-13 must be preserved');
  assert.equal(context.eanApi.normalizeEan('4006381333932'),'','invalid EAN-13 checksum must be rejected');
@@ -88,31 +88,31 @@ assert.ok(!productAdmin1112.includes('BIO'), 'Product label code must not print 
  assert.ok(context.eanApi.eanSvg('4006381333931','#0057B8').includes('fill="#0057B8"'),'EAN must use selected thermal ink');
 }
 {
- const start=productAdmin1112.indexOf('function defaultInternalCode'),end=productAdmin1112.indexOf('function internalProductCode',start);assert.ok(start>=0&&end>start,'internal-code source slice');
- const context={String,Math};vm.runInNewContext(productAdmin1112.slice(start,end)+`;this.code=defaultInternalCode;`,context);
+ const start=productAdmin1113.indexOf('function defaultInternalCode'),end=productAdmin1113.indexOf('function internalProductCode',start);assert.ok(start>=0&&end>start,'internal-code source slice');
+ const context={String,Math};vm.runInNewContext(productAdmin1113.slice(start,end)+`;this.code=defaultInternalCode;`,context);
  const a=context.code('plain'),b=context.code('plain'),c=context.code('pumpkin');assert.match(a,/^P\d{6}$/);assert.equal(a,b,'internal code must be stable for the same product ID');assert.notEqual(a,c,'different built-in products should receive different internal codes');
 }
 {
- const start=productAdmin1112.indexOf('function verticalSiteUrl'),end=productAdmin1112.indexOf('function thermalInk',start);assert.ok(start>=0&&end>start,'vertical URL source slice');
- const context={PANORA_SITE:'https://panora.es/'};vm.runInNewContext(productAdmin1112.slice(start,end)+`;this.site=verticalSiteUrl();`,context);assert.equal(context.site,'https://panora.es/');
+ const start=productAdmin1113.indexOf('function verticalSiteUrl'),end=productAdmin1113.indexOf('function thermalInk',start);assert.ok(start>=0&&end>start,'vertical URL source slice');
+ const context={PANORA_SITE:'https://panora.es/'};vm.runInNewContext(productAdmin1113.slice(start,end)+`;this.site=verticalSiteUrl();`,context);assert.equal(context.site,'https://panora.es/');
 }
 {
- const start=productAdmin1112.indexOf('function nutritionComplete'),end=productAdmin1112.indexOf('function needsQuid',start);assert.ok(start>=0&&end>start,'nutrition completeness source slice');
- const context={num:v=>Number(String(v??'').replace(',','.'))||0,String,Number};vm.runInNewContext(productAdmin1112.slice(start,end)+`;this.ok=nutritionComplete;`,context);
+ const start=productAdmin1113.indexOf('function nutritionComplete'),end=productAdmin1113.indexOf('function needsQuid',start);assert.ok(start>=0&&end>start,'nutrition completeness source slice');
+ const context={num:v=>Number(String(v??'').replace(',','.'))||0,String,Number};vm.runInNewContext(productAdmin1113.slice(start,end)+`;this.ok=nutritionComplete;`,context);
  assert.equal(context.ok({kj:1000,kcal:240,fat:2,saturates:0.3,carbs:45,sugars:2,protein:8,salt:1.1}),true);
  assert.equal(context.ok({kj:1000,kcal:240,fat:2,saturates:0.3,carbs:45,sugars:2,protein:8,salt:''}),false);
 }
 {
- const start=productAdmin1112.indexOf('function renderedFitIssues'),end=productAdmin1112.indexOf('async function measureLabelFit',start);assert.ok(start>=0&&end>start,'label fit source slice');
- const toggles=[];const context={builder:{size:'58x160'},builderDimensions:()=>({w:58,h:160}),currentLayout:()=>null,richTextEditable:()=>true};vm.runInNewContext(productAdmin1112.slice(start,end)+`;this.fit=renderedFitIssues;`,context);
+ const start=productAdmin1113.indexOf('function renderedFitIssues'),end=productAdmin1113.indexOf('async function measureLabelFit',start);assert.ok(start>=0&&end>start,'label fit source slice');
+ const toggles=[];const context={builder:{size:'58x160'},builderDimensions:()=>({w:58,h:160}),currentLayout:()=>null,richTextEditable:()=>true};vm.runInNewContext(productAdmin1113.slice(start,end)+`;this.fit=renderedFitIssues;`,context);
  const ok={scrollWidth:58,clientWidth:58,scrollHeight:160,clientHeight:160,classList:{toggle:(k,v)=>toggles.push([k,v])}};
  const bad={scrollWidth:58,clientWidth:58,scrollHeight:162,clientHeight:160,classList:{toggle:(k,v)=>toggles.push([k,v])}};
  const issues=context.fit({querySelectorAll:()=>[ok,bad]});assert.equal(issues.length,1);assert.ok(issues[0].includes('58×160'));assert.ok(toggles.some(([k,v])=>k==='pl-fit-fail'&&v===true));
 }
 
 {
- const start=productAdmin1112.indexOf('function validationIssues'),end=productAdmin1112.indexOf('function warnings',start);assert.ok(start>=0&&end>start,'validation source slice');
- const source=productAdmin1112.slice(start,end)+`;this.check=validationIssues;`;
+ const start=productAdmin1113.indexOf('function validationIssues'),end=productAdmin1113.indexOf('function warnings',start);assert.ok(start>=0&&end>start,'validation source slice');
+ const source=productAdmin1113.slice(start,end)+`;this.check=validationIssues;`;
  const common={
   productList:()=>[{id:'bread',basePrice:5,names:{es:'Pan artesano'}}],
   bakeryProfile:()=>({legalName:'Panora SL',address:'Calle Prueba 1',country:'España'}),
@@ -128,11 +128,11 @@ assert.ok(!productAdmin1112.includes('BIO'), 'Product label code must not print 
  const immediate={...common,builder:{template:'package',packageMode:'immediate',language:'es',size:'100x70',showBarcode:false,showQr:false,bakeDate:'2026-09-23',products:{bread:{selected:true,lot:'',bestBefore:'2026-09-26'}}}};
  vm.runInNewContext(source,immediate);const immediateIssues=immediate.check();assert.equal(immediateIssues.errors.length,0,'immediate-sale mode must not require lot/nutrition when other required data is complete');
 }
-assert.ok(productAdmin1112.includes('${esc(c.internal)}: <b>${esc(internal)}</b>'),'package/full/vertical meta must print internal code');
-assert.ok(productAdmin1112.includes('pl-internal-code'),'shelf price tag must print internal cash-register code');
-for(const token of ['Ценник','Упаковка','Полная','Вертикальная'])assert.ok(productAdmin1112.includes(token),`template retained: ${token}`);
-for(const token of ['58 × 40 мм · ценник','70 × 50 мм · компактно','100 × 50 мм','100 × 70 мм · рекомендовано','58 × 160 мм · вертикальная'])assert.ok(productAdmin1112.includes(token),`size retained/added: ${token}`);
-assert.ok(productAdmin1112.includes("language:migrated?'es'"),'Spanish must be the migrated/default label language');
-assert.ok(productAdmin1112.includes('if(confirmable.length&&!await confirmPrintWarnings(confirmable))return'),'missing label data must require explicit confirmation before print');
+assert.ok(productAdmin1113.includes('${esc(c.internal)}: <b>${esc(internal)}</b>'),'package/full/vertical meta must print internal code');
+assert.ok(productAdmin1113.includes('pl-internal-code'),'shelf price tag must print internal cash-register code');
+for(const token of ['Ценник','Упаковка','Полная','Вертикальная'])assert.ok(productAdmin1113.includes(token),`template retained: ${token}`);
+for(const token of ['58 × 40 мм · ценник','70 × 50 мм · компактно','100 × 50 мм','100 × 70 мм · рекомендовано','58 × 160 мм · вертикальная'])assert.ok(productAdmin1113.includes(token),`size retained/added: ${token}`);
+assert.ok(productAdmin1113.includes("language:migrated?'es'"),'Spanish must be the migrated/default label language');
+assert.ok(productAdmin1113.includes('if(confirmable.length&&!await confirmPrintWarnings(confirmable))return'),'missing label data must require explicit confirmation before print');
 
-console.log('Panora 11.12 rich label editor + confirmable print warnings + compliance guards: OK');
+console.log('Panora 11.13 persistent label tools + rich editor + confirmable print warnings: OK');
