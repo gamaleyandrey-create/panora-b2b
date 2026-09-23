@@ -1,0 +1,11 @@
+Panora 11.14 FULL
+build/cache 11140
+
+DIRECT LABEL TEXT EDITING + STABLE EDITOR EXIT
+- Fixed the editor transition that could make the Bakery page become unresponsive after pressing “Готово”. Enter/exit editing now changes the editor state in place and refreshes only the preview, instead of rebuilding the whole Products/Labels view.
+- Text blocks are now edited directly on the physical label. Click a text block to place the caret and type; select part of its text and apply a different font, size, bold, italic or underline from the existing rich-text tools.
+- Selected text blocks now have a dedicated ↕ move handle and a bottom-right resize handle. This removes the old conflict where dragging the block and placing the text caret used the same gesture.
+- Brand/logo and tagline remain separate blocks. QR, EAN and rule remain non-text blocks and keep protected resize/move behaviour.
+- Temporary editor handles are never stored in user text overrides or printed output.
+- Existing size, rotation, alignment, layers, locking, hide/show, copy/paste style, own blocks, own templates, thermal/standard printer and confirm-before-print behavior are preserved.
+- Spanish remains the default label language. No BIO marking. No SQL migration required.
