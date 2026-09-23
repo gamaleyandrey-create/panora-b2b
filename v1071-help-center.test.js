@@ -1,6 +1,6 @@
 const fs=require('fs');const assert=require('assert');
 const js=fs.readFileSync('production-safety.js','utf8');const css=fs.readFileSync('production-safety.css','utf8');const build=JSON.parse(fs.readFileSync('build.json','utf8'));
-assert.equal(build.version,'11.10');assert.equal(build.build,11100);assert.equal(build.cache,11100);
+assert.equal(build.version,'11.11');assert.equal(build.build,11110);assert.equal(build.cache,11110);
 for(const section of ['production','breadLots','rawLots','allergens','sanitation','haccp','capa','recalls','suppliers','training','documents','trace'])assert(js.includes(`helpBlock('${section}')`),`missing help for ${section}`);
 for(const id of ['gluten','crustaceans','eggs','fish','peanuts','soy','milk','nuts','celery','mustard','sesame','sulphites','lupin','molluscs'])assert(js.includes(`${id}:`),`missing allergen guide ${id}`);
 assert(js.includes('suggestedIngredientAllergens'));assert(js.includes('data-ps-apply-suggestion'));assert(js.includes('data-ps-apply-all-suggestions'));assert(js.includes('Проверьте состав и маркировку поставщика.'));
