@@ -1,0 +1,16 @@
+Panora 11.12 FULL
+build/cache 11120
+
+RICH LABEL EDITOR + CONFIRMABLE PRINT WARNINGS
+- Added manual text blocks directly in the label canvas. New text can be moved, resized, rotated and edited in place.
+- Added rich text selection editing inside one block: different font size, Manrope/Prata/Arial, bold, italic and underline can be applied to selected fragments.
+- Logo/brand and tagline/slogan are separate layout blocks. The editor also provides dedicated + Brand and + Tagline blocks.
+- Added left / center / right text alignment inside each text block.
+- Added layer controls, lock/unlock, duplicate, undo/redo, dynamic product fields and reusable custom label templates.
+- Dynamic fields include product name, price, €/kg, weight, ingredients, allergens, lot, best-before date, internal SKU, EAN, producer, address, brand and tagline.
+- Existing visual editor keeps custom physical label size, 58×160 vertical format, block resizing, rotation 0/90/180/270, 1 mm snapping, thermal printer and standard printer modes. Thermal output supports white + black or white + one selected dark ink.
+- Missing product/legal data no longer hard-blocks print. Panora shows a pre-print warning dialog with the full list. Printing continues only after the operator checks “Ignore warnings and print”.
+- Structural problems still block print: no selected product, unsafe/out-of-bounds layout, too-small protected QR/EAN block or rendered content that does not fit the physical label.
+- Spanish remains the default label language. Horizontal and vertical templates, GTIN/EAN-13, internal Panora cash-register code, Spain packaging modes and panora.es QR logic are preserved.
+- EAN-13 SVG pattern table was rechecked while updating the editor.
+- No BIO marking. No SQL migration required.
