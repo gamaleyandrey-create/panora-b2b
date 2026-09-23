@@ -1,0 +1,12 @@
+Panora 11.11 FULL
+build/cache 11110
+
+VISUAL LABEL LAYOUT EDITOR + TWO PRINTER TYPES
+- Added a direct visual layout editor inside Bakery > Products > Price tags and labels. Blocks can be dragged inside the label and resized from the bottom-right handle with mouse or touch/pointer input.
+- Per-block controls include X/Y position, width, height, font size, Manrope/Prata/Arial style, font weight and 0°/90°/180°/270° rotation. Layouts are stored separately for every template and physical label size.
+- Added a custom physical label size mode with editable width and height in millimetres. Existing 58×40, 70×50, 100×50, 100×70 and 58×160 formats remain available.
+- Added 1 mm snapping, reset-to-default layout and automatic persistence. QR and EAN blocks have minimum safe dimensions and layout validation blocks printing if a saved block leaves the label boundary or becomes too small.
+- Added printer type selection: Thermal printer or Standard printer. Thermal output remains white + black or white + one selected ink. Standard printer supports full Panora accent + black text/codes or monochrome output.
+- A4 sheet and single-label/roll output remain available for both printer types.
+- Spanish remains the default label language. Horizontal and vertical templates, GTIN/EAN-13, internal Panora cash-register code, Spain packaging modes and panora.es QR logic are preserved.
+- No BIO marking. No SQL migration required.
