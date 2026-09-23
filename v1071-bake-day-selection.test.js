@@ -10,9 +10,9 @@ const purchase=read('purchase-costs.js');
 const html=read('admin.html');
 const build=JSON.parse(read('build.json'));
 
-assert.equal(build.version,'11.13');
-assert.equal(build.build,11130);
-assert.equal(build.cache,11130);
+assert.equal(build.version,'11.14');
+assert.equal(build.build,11140);
+assert.equal(build.cache,11140);
 assert.match(product,/data-plan-enabled/);
 assert.match(product,/Quantity is optional|Количество необязательно/);
 assert.match(product,/planned=String\(input\?\.value\|\|''\)\.trim\(\)===''\?0/);
