@@ -1,0 +1,17 @@
+Panora 11.09 FULL
+build/cache 11090
+
+SPAIN-FIRST THERMAL LABELS
+- Spanish (ES) is the default label language; RU and EN remain optional additional label languages.
+- Existing horizontal price-tag, package-label and full-label formats remain available together with the 58×160 mm vertical format.
+- Price tags now prioritize product denomination, final selling price, €/kg when weight is known, net weight and allergen information.
+- Package/full/vertical labels support two Spain-oriented modes: Preenvasado and Envasado para venta inmediata.
+- Preenvasado print is blocked until Spanish denomination, Spanish ingredients, confirmed allergens, net weight, best-before/use-by data, Spanish storage conditions, bakery operator/address, lot and complete nutrition per 100 g are available.
+- Envasado para venta inmediata uses the bakery/packer identity and address and does not require nutrition, but prints it when complete data exists.
+- QUID / highlighted-ingredient percentage is stored in the product label metadata and is required by Panora when the Spanish product name highlights common characteristic ingredients such as lino, semillas or calabaza.
+- Declared allergens are emphasized inside the ingredients text and are also shown in a separate allergen line.
+- Thermal output uses only white plus one ink: monochrome white/black or optional white + one selected main color. QR and EAN use the same selected thermal ink.
+- Vertical QR remains fixed to https://panora.es/; other label QR modes default to the Panora website.
+- Readable print sizes are preserved and fit guards block printing instead of shrinking mandatory text into micro-type.
+- No BIO marking or decorative food illustration is used.
+- No SQL migration required.
