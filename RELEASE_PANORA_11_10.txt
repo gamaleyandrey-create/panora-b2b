@@ -1,0 +1,12 @@
+Panora 11.10 FULL
+build/cache 11100
+
+RETAIL GTIN + CASH-REGISTER CODE
+- Official GTIN / EAN-13 remains the external retail identifier for stores and retail networks; Panora validates the EAN-13 check digit but does not invent an official GTIN.
+- Every Panora product now also has a separate internal cash-register code (Código interno / SKU). It is shown in the product editor, product rows and all printed label formats.
+- If an internal SKU has not been entered yet, Panora derives a stable Panora code from the product ID so the cash-register code is never blank; saving the product card persists the editable value.
+- Price tag 58×40 prints the internal code in a compact line without replacing GTIN/EAN-13.
+- Package, full and vertical labels include the internal code in the traceability/meta block while the EAN-13 barcode remains the code intended for external retail scanning.
+- Spanish remains the default label language; existing horizontal and 58×160 vertical formats are preserved.
+- Thermal output remains white + black or white + one selected ink; No BIO marking is used.
+- No SQL migration required.
