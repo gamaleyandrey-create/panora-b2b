@@ -1,0 +1,11 @@
+Panora 11.13 FULL
+build/cache 11130
+
+PERSISTENT LABEL EDITOR TOOL PANEL
+- Fixed the label-editor usability regression where font, size, alignment, rotation, layer and rich-text controls appeared to disappear until a block was selected. The complete block toolbox now remains visible at all times.
+- Entering Edit layout automatically creates the working layout when needed and selects the first useful block. Finishing edit mode keeps the last selected block visible in the inspector instead of clearing the panel.
+- Added an explicit Selected block picker so every block can be reached even when it is small, hidden, rotated or behind another element.
+- Preserved direct drag/resize, 0/90/180/270 rotation, font family/weight/size, rich text by selected fragment, separate Brand and Slogan blocks, dynamic fields, undo/redo, layers, locking, duplication and custom templates.
+- Added block show/hide, copy/paste typography style, label-edge/centre alignment, line-height and letter-spacing controls.
+- Missing food-label fields remain confirmable warnings: the user can tick Ignore warnings and print. Physical-layout failures remain blocking.
+- Spanish remains the default print language. Thermal and standard-printer output remain available. No BIO marking. No SQL migration required.
