@@ -1,0 +1,25 @@
+Panora 11.18 FULL
+build/cache 11180
+
+SPAIN BREAD / BAKERY LABEL COMPLIANCE
+- Added an in-app Spanish legal filling guide for shelf price tags, unpackaged bread, retail-immediate packaging and ordinary prepacked products.
+- Product label metadata now includes bread category, <=24 h bakery mode, legal-claim confirmations, largest package surface, nutrition exemption flag, origin/primary-ingredient origin, and packaging-waste information.
+- Spanish date wording uses “Consumir preferentemente antes del …” when a day is printed. Bakery/repostería normally consumed within 24 h can omit the minimum-durability date when the product is explicitly marked in that mode.
+- Lote is no longer requested as an absolute duplicate when a clearly printed date contains day and month; Panora warns only when neither adequate date nor lot identifies the batch.
+- QUID checking now also applies to shelf tags where the product name or emphasis requires a percentage.
+- Pan común gets a 24-hour sale-age warning based on the baking date. Claims such as artesana, masa madre and larga fermentación are checked against explicit confirmations before printing.
+- Prepacked nutrition can use the Annex V small-direct-local-supply exemption only after explicit confirmation; otherwise the full nutrition declaration remains expected.
+- Country of origin is not printed automatically. When origin is declared and the primary ingredient differs, Panora can print the primary ingredient origin statement.
+- Added household packaging waste/container information, point-of-sale mode, and compostable-packaging certification/no-litter checks.
+- Added approximate x-height guardrails for edited mandatory packaging blocks: 1.2 mm, or 0.9 mm when the recorded largest package surface is below 80 cm².
+- Missing legal/product fields remain overridable through the existing “ignore warnings and print” confirmation; only technical layout failures remain hard blocks.
+- No BIO marking. No SQL migration required.
+
+LEGAL REFERENCES USED BY THE IN-APP GUIDE
+- Regulation (EU) 1169/2011 (consolidated 01/04/2025)
+- Royal Decree 126/2015
+- Royal Decree 308/2019 (bread quality standard)
+- Royal Decree 3423/2000 (consumer price display)
+- Royal Decree 1808/1991 (lot identification)
+- Royal Decree 1055/2022 (packaging and packaging waste)
+- Regulation (EU) 2025/40 (PPWR; harmonised material labelling starts later under Article 12 timetable)

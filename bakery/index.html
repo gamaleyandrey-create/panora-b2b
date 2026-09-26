@@ -61,14 +61,14 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11170').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-bakery-v/i.test(k)&&k!=='panora-bakery-v11180').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
   try{
     const buildMarker='panora-bakery-runtime-build';
-    if(localStorage.getItem(buildMarker)!=='11170'&&'serviceWorker' in navigator){
-      localStorage.setItem(buildMarker,'11170');
+    if(localStorage.getItem(buildMarker)!=='11180'&&'serviceWorker' in navigator){
+      localStorage.setItem(buildMarker,'11180');
       navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(reg=>{try{return new URL(reg.scope).pathname.includes('/bakery/')}catch{return false}}).map(reg=>reg.unregister()))).then(()=>{
-        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11170');location.replace(u.href)}
+        if(!new URL(location.href).searchParams.has('fresh')){const u=new URL(location.href);u.searchParams.set('fresh','11180');location.replace(u.href)}
       }).catch(()=>{});
     }
   }catch{}
@@ -82,7 +82,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=11020">
     <link rel="stylesheet" href="date-jump.css?v=11020">
   <link rel="stylesheet" href="easy-plan.css?v=11020">
-  <link rel="stylesheet" href="product-admin.css?v=11170">
+  <link rel="stylesheet" href="product-admin.css?v=11180">
   <link rel="stylesheet" href="product-close.css?v=11020">
   <link rel="stylesheet" href="calendar-plan.css?v=11030">
   <link rel="stylesheet" href="calendar-weekend.css?v=11020">
@@ -125,7 +125,7 @@
 <link rel="stylesheet" href="connection-status.css?v=11020">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11170">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11180">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -873,7 +873,7 @@
 <script src="document-library.js?v=11020"></script>
 <script src="invoice-preview.js?v=11020"></script>
 <script src="admin-localization.js?v=11020"></script>
-<script src="product-admin.js?v=11170"></script>
+<script src="product-admin.js?v=11180"></script>
 <script src="calendar-plan.js?v=11030"></script>
 <script src="qrcode-browser.js?v=11020"></script>
 <script src="delivery-qr.js?v=11020"></script>
