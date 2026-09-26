@@ -1,0 +1,12 @@
+Panora 11.16 FULL
+build/cache 11160
+
+STABLE INLINE TEXT EDITING + INSERT / DELETE BLOCKS
+- Fixed Chromium page hangs while typing directly inside label blocks. Keystrokes now update only the live contenteditable block; sanitized layout persistence is debounced and flushed after a short pause or when leaving the block. Typing no longer triggers a label re-render on every character.
+- Editor move/resize chrome is explicitly non-editable so caret input stays inside label text.
+- Added a generic “Вставить блок” control. It can insert Text, Brand/Logo and Slogan blocks and restore any previously deleted system block.
+- Added “Удалить блок” for the selected block. User-created blocks are removed; system blocks are non-destructively marked deleted and can be restored from “Вставить блок”.
+- Deleted/hidden blocks are ignored by physical-layout validation and deleted system blocks are omitted from preview/print output.
+- Existing exact label width/height, thermal/standard printer modes, uploaded logo, collapsible editor, rich text, alignment, rotation, layers, lock/hide, templates and confirm-before-print behavior are preserved.
+- €/kg remains compact secondary information. Spanish remains the primary label language.
+- No BIO marking. No SQL migration required.
