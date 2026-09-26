@@ -1,0 +1,19 @@
+Panora 11.20 FULL
+build/cache 11200
+
+REPORTS + EDO
+- Added a dedicated Bakery > Finance > Reports module without changing Partner or Retail UI.
+- Reports include Overview, Sales, Production, Finished Stock, Finance, Partners, Quality, Legal registers and EDO.
+- Period presets and explicit From/To filters are available together with channel, partner and product filters.
+- KPI header shows revenue, sold pieces, good production, bake waste, current receivables and EDO items needing attention.
+- Mandatory/control register dashboard covers Facturas expedidas, Facturas recibidas, IVA control, traceability, APPCC/HACCP, Registro de jornada source availability, packaging, food waste/write-offs, EDO and VERI*FACTU integration state.
+- The legal dashboard is deliberately a completeness/source control: it does not claim that a green card replaces gestor/asesor review or an AEAT filing.
+- Added EDO / Factura electronica tracking for outgoing B2B documents with lifecycle status, channel and external identifier. Statuses are never presented as externally sent unless the operator records the confirmed status.
+- Added a structured incoming electronic-invoice register with supplier, NIF/CIF, taxable base, IVA, total, channel, external ID and lifecycle status.
+- CSV/Excel-compatible export and Print/PDF are available for the currently open report.
+- Existing Finance, Payments, Production & Safety, label editor and stock workflows are preserved.
+
+MANDATORY SHELF-PRICE BLOCKS
+- Panora 11.19 Spain shelf-price block checks remain unchanged: Nombre ES, Precio, Precio €/kg, Peso, Alérgenos, conditional QUID and >24 h pan común warning.
+- No BIO marking.
+- No SQL migration required.

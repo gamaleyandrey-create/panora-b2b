@@ -61,7 +61,7 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11190').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11200').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
 })();
 </script>
@@ -73,7 +73,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=11020">
     <link rel="stylesheet" href="date-jump.css?v=11020">
   <link rel="stylesheet" href="easy-plan.css?v=11020">
-  <link rel="stylesheet" href="product-admin.css?v=11190">
+  <link rel="stylesheet" href="product-admin.css?v=11200">
   <link rel="stylesheet" href="product-close.css?v=11020">
   <link rel="stylesheet" href="calendar-plan.css?v=11030">
   <link rel="stylesheet" href="calendar-weekend.css?v=11020">
@@ -116,7 +116,7 @@
 <link rel="stylesheet" href="connection-status.css?v=11020">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11190">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11200">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -124,7 +124,7 @@
 <link rel="stylesheet" href="mobile-partner-prices-v49.css?v=11020">
 <link rel="stylesheet" href="order-messages-v565.css?v=11020">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=11020">
+<link rel="stylesheet" href="finance-dashboard.css?v=11200">
 <link rel="stylesheet" href="admin-partner-theme.css?v=11020">
   <meta property="og:site_name" content="Panora">
   
@@ -213,6 +213,7 @@
       <div class="admin-nav-submenu admin-nav-submenu-major" id="financeNavItems">
         <button data-view="accounting">Оплаты и долги</button>
         <button data-view="finance">Финансы</button>
+        <button data-view="reports">Отчёты</button>
       </div>
 
       <button type="button" class="admin-nav-disclosure admin-nav-section-toggle admin-nav-major-toggle" id="settingsNavToggle" aria-expanded="true" aria-controls="settingsNavItems"><span class="admin-nav-disclosure-title"><span>Настройки</span></span><i aria-hidden="true">⌄</i></button>
@@ -730,6 +731,46 @@
       <div class="view" id="view-ps-archive"><div id="psArchiveRoot"></div></div>
       <div class="view" id="view-ps-help"><div id="psHelpRoot"></div></div>
 
+
+      <div class="view" id="view-reports">
+        <div class="page-head reports-page-head">
+          <div><span class="kicker">PANORA</span><h2>Отчёты</h2><p>Обязательные и контрольные реестры для Испании, ЭДО и управленческая аналитика по данным Panora.</p></div>
+          <div class="reports-head-actions"><button type="button" class="secondary" id="reportsRefresh">Обновить</button><button type="button" class="secondary" id="reportsExportCsv">CSV / Excel</button><button type="button" class="secondary" id="reportsPrint">Печать / PDF</button></div>
+        </div>
+        <section class="reports-filterbar" aria-label="Фильтры отчётов">
+          <div class="reports-period-presets" id="reportsPeriodPresets"><button type="button" data-period="today">Сегодня</button><button type="button" class="active" data-period="month">Месяц</button><button type="button" data-period="quarter">Квартал</button><button type="button" data-period="year">Год</button></div>
+          <label><span>С</span><input id="reportsDateFrom" type="date" data-panora-no-draft="1"></label>
+          <label><span>По</span><input id="reportsDateTo" type="date" data-panora-no-draft="1"></label>
+          <label><span>Канал</span><select id="reportsChannel"><option value="all">Все</option><option value="b2b">B2B</option><option value="retail">Розница</option></select></label>
+          <label><span>Партнёр</span><select id="reportsPartner"><option value="all">Все партнёры</option></select></label>
+          <label><span>Продукт</span><select id="reportsProduct"><option value="all">Все продукты</option></select></label>
+        </section>
+        <div id="reportsDataState" class="reports-data-state" hidden></div>
+        <section class="reports-kpis" id="reportsKpis" aria-label="Ключевые показатели"></section>
+        <nav class="reports-tabs" id="reportsTabs" aria-label="Разделы отчётов">
+          <button type="button" class="active" data-report-tab="overview">Обзор</button>
+          <button type="button" data-report-tab="sales">Продажи</button>
+          <button type="button" data-report-tab="production">Производство</button>
+          <button type="button" data-report-tab="stock">Склад</button>
+          <button type="button" data-report-tab="finance">Финансы</button>
+          <button type="button" data-report-tab="partners">Партнёры</button>
+          <button type="button" data-report-tab="quality">Качество</button>
+          <button type="button" data-report-tab="legal">Юридические</button>
+          <button type="button" class="reports-edo-tab" data-report-tab="edo">ЭДО</button>
+        </nav>
+        <section id="reportsContent" class="reports-content"></section>
+        <dialog id="reportsEdoDialog" class="reports-edo-dialog">
+          <form method="dialog" id="reportsEdoForm">
+            <button type="button" class="dialog-close" id="reportsEdoClose" aria-label="Закрыть">×</button>
+            <span class="kicker">PANORA · ЭДО</span><h3>Входящий электронный счёт</h3>
+            <p class="form-hint">Реестр хранит структурированные реквизиты и статус документа. Само добавление записи не означает отправку или подтверждение внешней системой.</p>
+            <div class="reports-form-grid"><label><span>Дата</span><input name="date" type="date" required></label><label><span>№ документа</span><input name="documentNumber" maxlength="80" required></label><label><span>Поставщик</span><input name="supplier" maxlength="180" required></label><label><span>NIF / CIF</span><input name="taxId" maxlength="30"></label><label><span>База, €</span><input name="base" inputmode="decimal" required></label><label><span>IVA, €</span><input name="vat" inputmode="decimal" required></label><label><span>Итого, €</span><input name="total" inputmode="decimal" required></label><label><span>Статус</span><select name="status"><option value="received">Получен</option><option value="accepted">Принят</option><option value="rejected">Отклонён</option><option value="paid">Оплачен</option></select></label><label><span>Канал</span><select name="channel"><option value="private">Частная платформа</option><option value="aeat">Публичное решение AEAT</option><option value="face">FACe</option><option value="other">Другой</option></select></label><label><span>Внешний ID</span><input name="externalId" maxlength="160"></label></div>
+            <label><span>Примечание</span><input name="note" maxlength="300"></label>
+            <div class="dialog-actions"><button type="button" id="reportsEdoCancel">Отмена</button><button type="submit" class="primary">Добавить в реестр</button></div>
+          </form>
+        </dialog>
+      </div>
+
       <div class="view" id="view-settings">
         <div class="page-head"><div><span class="kicker">PANORA</span><h2>Реквизиты пекарни</h2><p>Эти данные печатаются в накладных и других документах.</p></div></div>
         <section class="settings-card admin-interface-settings" aria-labelledby="adminInterfaceSettingsTitle"><h3 id="adminInterfaceSettingsTitle">Интерфейс</h3><p class="form-hint">Язык можно изменить здесь или в меню ⋯. Настройка применяется сразу на этом устройстве.</p><label><span>Язык</span><select id="adminSettingsLanguage" aria-label="Язык"><option value="ru">RU · Русский</option><option value="en">EN · English</option><option value="es">ES · Español</option></select></label></section>
@@ -864,7 +905,7 @@
 <script src="document-library.js?v=11020"></script>
 <script src="invoice-preview.js?v=11020"></script>
 <script src="admin-localization.js?v=11020"></script>
-<script src="product-admin.js?v=11190"></script>
+<script src="product-admin.js?v=11200"></script>
 <script src="calendar-plan.js?v=11030"></script>
 <script src="qrcode-browser.js?v=11020"></script>
 <script src="delivery-qr.js?v=11020"></script>
@@ -936,7 +977,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=11020"></script>
+<script src="finance-dashboard.js?v=11200"></script>
 <script src="production-safety.js?v=11020"></script>
 <script src="quality-compliance-v1075.js?v=11020"></script>
 
