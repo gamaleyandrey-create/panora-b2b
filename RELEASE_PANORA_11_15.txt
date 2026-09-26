@@ -1,0 +1,11 @@
+Panora 11.15 FULL
+build/cache 11150
+
+LABEL EDITOR / THERMAL PRINTER
+- Exact physical label width and height are always editable in millimetres for every template. Presets remain available, while manual entry switches to exact-size mode and preserves the current layout for the new dimensions.
+- The label editor can be collapsed and expanded; the preference is saved.
+- Brand settings now accept an uploaded PNG/JPG/WebP/SVG logo. The logo is a normal editable brand block; standard print keeps the image and thermal output uses its alpha shape as a one-ink mask when possible. Transparent PNG/SVG is recommended for thermal printing.
+- The slogan/tagline is a separate optional block. An empty slogan stays empty; the vertical template no longer injects “panadería artesana”.
+- €/kg is deliberately reduced to a compact secondary line while the main selling price remains prominent.
+- Direct on-label rich text editing, block positioning/resizing/rotation, EAN/QR safety guards, warning-confirmed incomplete-field printing, Spanish-first labels and both thermal/standard printer modes are preserved.
+- No BIO marking. No SQL migration required.
