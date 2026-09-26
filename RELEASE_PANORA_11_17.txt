@@ -1,0 +1,12 @@
+Panora 11.17 FULL
+build/cache 11170
+
+LABEL EDITOR STABILITY FIX
+- Fixed Chromium page hangs when typing directly inside label blocks in the Bakery label editor.
+- Label preview/editable content is explicitly isolated from the global admin UI localization MutationObserver. Typing in a label no longer triggers a full UI translation/render pass on every DOM text mutation.
+- Inline typing does not serialize or rerender the label on every character and no longer uses a debounce timer. It only marks the active editor dirty; text is persisted on blur, block switch, Done, or explicit rich-text formatting.
+- Existing tools «Вставить блок» and «Удалить блок», plus restore-system-block, remain available.
+- The layout editor now has its own always-visible physical label width/height controls in millimetres with an explicit «Применить размер» button, so thermal-roll sizing is accessible directly beside the editor.
+- Editor controls were compacted into a clearer toolbar: icon undo/redo, a single Insert-block control, compact reset/template actions and stronger Edit/Done hierarchy.
+- Exact label width/height, thermal/standard printer modes, image brand, removable tagline, compact €/kg and rich-text editing remain unchanged.
+- No BIO marking. No SQL migration required.

@@ -40,6 +40,7 @@
   const esc = (value) => globalThis.CSS?.escape ? CSS.escape(value) : String(value).replace(/["\\]/g, "\\$&");
   const isTransient = (node) => {
     if (!(node instanceof Element)) return false;
+    if (node.closest?.('[data-panora-user-content],[data-panora-no-draft]')) return true;
     const id = String(node.id || "").toLowerCase();
     const dataKeys = Object.keys(node.dataset || {}).map(key => key.toLowerCase());
     return node.matches?.('[type="search"],[data-panora-no-draft],[data-rw-stable-input],[data-rw-stable-select],[data-qty-select]') ||
