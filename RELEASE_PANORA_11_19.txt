@@ -1,0 +1,13 @@
+Panora 11.19 FULL
+build/cache 11190
+
+MANDATORY SHELF-PRICE BLOCKS · SPAIN
+- The shelf price tag is split into independent system blocks: Nombre ES, Precio, Precio €/kg, Peso, Alérgenos, conditional QUID, and conditional warning for pan común baked more than 24 hours ago.
+- Added a visible “Obligatorios del precio · España” checklist showing whether each required block is present in the final edited layout and whether its source data is complete.
+- If a mandatory shelf block is hidden, deleted, or manually edited to empty text, Panora adds a print warning. The user can still print after explicitly choosing to ignore warnings, per the existing print-confirmation workflow.
+- Brand, QR, EAN-13, internal SKU, advertising text and IVA incl. remain optional shelf-price blocks.
+- Existing 11.18 shelf layouts using the former combined Producto/Precio blocks are automatically migrated to the new independent blocks.
+- Precio €/kg remains deliberately compact; editor safety allows it down to 0.9 mm while warning below that threshold.
+- Added explicit >24 h shelf-warning block for pan común when applicable.
+- Packaging/full/vertical labels and all 11.18 Spain compliance checks remain intact.
+- No BIO marking. No SQL migration required.
