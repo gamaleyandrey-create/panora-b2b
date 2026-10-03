@@ -1,0 +1,19 @@
+Panora 11.26 FULL
+build/cache 11260
+
+WARNING-FIRST PRINT FLOW
+- Print warnings are confirmed inside Panora before a new print tab is opened.
+- When warnings exist, the print tab is opened directly by the user's click on “Печатать”, preserving Chrome user activation and preventing the loading tab from hiding the confirmation dialog.
+- When there are no warnings, the print tab still opens immediately from the original Print click.
+- The prepared tab remains user-controlled with “Печать / PDF” and “Закрыть”; no automatic print or automatic close.
+
+STRONG SHELF-PRICE HIERARCHY
+- Shelf sale price is visually dominant over unit price: default/main 6.4 mm vs 1.15 mm for Precio por kg on 58×40.
+- Print CSS now explicitly styles Precio por kg and IVA; browser default font size can no longer make unit price compete with the main price.
+- Existing custom shelf layouts are migrated once to preserve a clear main-price hierarchy.
+- Layout warnings flag a shelf price that is not at least 2.5× the unit-price font size.
+
+MUNBYN / SAMPLE LABELS
+- MUNBYN RW403B 203 dpi profile, Bluetooth/PDF workflow and sample/test labels remain intact.
+- No BIO marking.
+- No SQL migration required.
