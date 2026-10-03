@@ -1,0 +1,20 @@
+Panora 11.24 FULL
+build/cache 11240
+
+BACKGROUND-SAFE PRINT PIPELINE
+- Fixed the managed print tab remaining forever on “Готовим этикетку…” after Chrome moved the Bakery tab into the background.
+- Print-time fit measurement no longer waits for requestAnimationFrame in the background tab; layout is forced and measured synchronously.
+- QR generation has a 2.5 second safety timeout, so a stalled QR promise cannot freeze the entire print pipeline.
+- The managed print window still opens synchronously from the click, receives the finished HTML, waits for its own images/fonts, and then invokes the browser print dialog.
+
+LABEL BUILDER COLLISION FIX · PRESERVED FROM 11.22
+- border-box sizing and collision-safe two-column layout remain in place.
+
+MUNBYN RW403B · WIRELESS PRINTING · PRESERVED
+- Bluetooth workflow through MUNBYN Print remains available, including the in-app wireless guide and PDF-oriented workflow.
+
+SAMPLE / TEST LABELS · PRESERVED
+- Sample/test labels for variants of one bread remain available with NO VENTA and no price blocks.
+
+No BIO marking.
+No SQL migration required.
