@@ -1,0 +1,25 @@
+Panora 11.25 FULL
+build/cache 11250
+
+USER-CONTROLLED PRINT / PDF PAGE
+- The prepared label tab no longer calls window.print() automatically.
+- After preparation, the tab stays open and shows the finished label plus explicit “Печать / PDF” and “Закрыть” controls.
+- The system print dialog opens only after the user presses “Печать / PDF”, preserving a direct user gesture in Chrome/Safari.
+- The print toolbar is screen-only and is hidden by @media print, so it never changes the physical 1:1 label output.
+- Preparation errors no longer auto-close the tab; the tab stays open with a clear error message.
+
+BACKGROUND-SAFE PRINT PIPELINE · PRESERVED
+- Print-time fit measurement remains synchronous and QR generation keeps its timeout guard.
+- The preparation tab still opens synchronously from the original Panora click.
+
+LABEL BUILDER COLLISION FIX · PRESERVED
+- border-box sizing and collision-safe two-column layout remain in place.
+
+MUNBYN RW403B · WIRELESS PRINTING · PRESERVED
+- Bluetooth workflow through MUNBYN Print remains available, including PDF-oriented printing at 100% / Actual size.
+
+SAMPLE / TEST LABELS · PRESERVED
+- Sample/test labels for variants of one bread remain available with NO VENTA and no price blocks.
+
+No BIO marking.
+No SQL migration required.
