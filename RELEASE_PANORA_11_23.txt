@@ -1,0 +1,20 @@
+Panora 11.23 FULL
+build/cache 11230
+
+RELIABLE PRINT WINDOW FIX
+- Fixed the Bakery label Print action opening a blank about:blank tab in Chromium.
+- The print window now opens synchronously from the user click and remains attached to Panora while the label is generated.
+- Panora writes a complete HTML document into the managed print window, waits for QR/images and fonts, then focuses the window and invokes the browser print dialog.
+- Validation or cancelled warning confirmation closes the temporary print window, so no empty tab remains.
+
+LABEL BUILDER COLLISION FIX · PRESERVED FROM 11.22
+- border-box sizing and collision-safe two-column layout remain in place.
+
+MUNBYN RW403B · WIRELESS PRINTING · PRESERVED
+- Bluetooth workflow through MUNBYN Print remains available, including the in-app wireless guide and PDF-oriented workflow.
+
+SAMPLE / TEST LABELS · PRESERVED
+- Sample/test labels for variants of one bread remain available with NO VENTA and no price blocks.
+
+No BIO marking.
+No SQL migration required.
