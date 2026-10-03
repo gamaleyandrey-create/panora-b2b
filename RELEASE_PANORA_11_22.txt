@@ -1,0 +1,21 @@
+Panora 11.22 FULL
+build/cache 11220
+
+LABEL BUILDER COLLISION FIX
+- Fixed the real overlap between the left controls and the sticky preview: form controls now use border-box sizing and every grid child can shrink inside its own track.
+- The two-column builder uses zero-minimum grid tracks, and a container-width fallback stacks the preview when the actual builder area becomes too narrow, regardless of the full browser viewport/sidebar width.
+- Preview header wrapping from 11.21 remains intact.
+
+MUNBYN RW403B · WIRELESS PRINTING
+- Added an in-app Bluetooth workflow for cable-free printing.
+- iPhone/iPad workflow: MUNBYN Print -> 4 inch -> RW403B; Panora prepares the exact-size print/PDF, then the PDF is imported into MUNBYN Print and sent to the printer over Bluetooth.
+- MUNBYN print action is labelled “Печать / PDF для MUNBYN” when the RW403B profile is active.
+- Exact-size / 100% printing and the existing 40–110 mm RW403B width guardrail remain enforced.
+- Added a link to MUNBYN's official phone connection instructions.
+
+SAMPLE / TEST LABELS
+- Panora 11.21 sample/test label workflow is preserved: multiple variants of one base bread, baking method, ingredient/composition changes, sample status, NO VENTA, date, weight and allergens.
+
+VALIDATION
+- No BIO marking.
+- No SQL migration required.
