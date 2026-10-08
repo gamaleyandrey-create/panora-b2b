@@ -61,7 +61,7 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11260').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11270').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
 })();
 </script>
@@ -73,7 +73,7 @@
   <link rel="stylesheet" href="recipe-actions.css?v=11020">
     <link rel="stylesheet" href="date-jump.css?v=11020">
   <link rel="stylesheet" href="easy-plan.css?v=11020">
-  <link rel="stylesheet" href="product-admin.css?v=11260">
+  <link rel="stylesheet" href="product-admin.css?v=11270">
   <link rel="stylesheet" href="product-close.css?v=11020">
   <link rel="stylesheet" href="calendar-plan.css?v=11030">
   <link rel="stylesheet" href="calendar-weekend.css?v=11020">
@@ -116,7 +116,7 @@
 <link rel="stylesheet" href="connection-status.css?v=11020">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11260">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11270">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -229,7 +229,7 @@
           <div class="week-navigation"><button id="prevWeek">← Предыдущая неделя</button><strong id="periodLabel"></strong><button id="nextWeek">Следующая неделя →</button><button id="today">Текущая неделя</button></div>
           <div class="date-jump"><label><span id="planDateJumpLabel">Выбрать дату</span><input id="planDateJump" data-panora-no-draft="1" type="date"></label><button id="goToPlanDate">Показать неделю</button></div>
         </div>
-        <div class="summary-grid"><article><span data-t="planned">Запланировано</span><strong id="plannedPieces">0 шт.</strong></article><article><span data-t="ordered">Заказано</span><strong id="orderedPieces">0 шт.</strong></article><article><span data-t="reserve">Свободно</span><strong id="freePieces">0 шт.</strong></article></div>
+        <div class="summary-grid"><article><span data-t="planned">Всего к выпечке</span><strong id="plannedPieces">0 шт.</strong><small id="plannedPiecesDetail" class="plan-summary-detail"></small></article><article><span data-t="ordered">Всего заказано</span><strong id="orderedPieces">0 шт.</strong><small id="orderedPiecesDetail" class="plan-summary-detail"></small></article><article><span data-t="reserve">Сверх заказов</span><strong id="freePieces">0 шт.</strong><small id="freePiecesDetail" class="plan-summary-detail"></small></article></div>
         <section class="bake-completion-board" id="bakeCompletionBoard" aria-label="Фактическая выпечка"></section>
         <div id="planList" class="plan-list"></div>
       </div>
@@ -905,7 +905,7 @@
 <script src="document-library.js?v=11020"></script>
 <script src="invoice-preview.js?v=11020"></script>
 <script src="admin-localization.js?v=11020"></script>
-<script src="product-admin.js?v=11260"></script>
+<script src="product-admin.js?v=11270"></script>
 <script src="calendar-plan.js?v=11030"></script>
 <script src="qrcode-browser.js?v=11020"></script>
 <script src="delivery-qr.js?v=11020"></script>

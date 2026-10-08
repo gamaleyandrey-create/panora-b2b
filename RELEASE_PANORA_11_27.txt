@@ -1,0 +1,15 @@
+Panora 11.27 FULL
+build/cache 11270
+
+CLEAR BAKE TOTALS
+- Calendar KPI cards now say “Всего к выпечке” and “Всего заказано” so they are explicitly totals across bread types.
+- Each KPI shows the arithmetic breakdown by bread type. Example: two breads with 17 pcs each are displayed as “2 вида хлеба · 17 + 17 = 34”.
+- “Сверх заказов” explicitly reports when all bread types are fully covered by orders.
+- Week and month summaries use the same calculation helper, preventing the two calendar render paths from drifting apart.
+- Order, production, stock, retail and finance business quantities are unchanged; this release fixes interpretation of the aggregate calendar totals, not the underlying order quantities.
+
+PRESERVED
+- Panora 11.26 warning-first printing and shelf-price hierarchy remain intact.
+- MUNBYN RW403B profile and sample/test labels remain intact.
+- No BIO marking.
+- No SQL migration required.

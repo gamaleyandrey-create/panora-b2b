@@ -212,6 +212,14 @@ body.admin-page .summary-grid article strong{
   color:#2a4534;
   font:clamp(23px,2vw,30px)/1.05 Prata,Georgia,serif;
 }
+
+body.admin-page .summary-grid article .plan-summary-detail{
+  display:block;
+  margin-top:9px;
+  color:var(--panora-muted);
+  font:600 11px/1.35 Manrope,Arial,sans-serif;
+  overflow-wrap:anywhere;
+}
 body.admin-page .stock-overview-grid article,
 body.admin-page .finance-main-kpis article,
 body.admin-page .finance-secondary-kpis article,

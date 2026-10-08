@@ -130,8 +130,9 @@ function renderBakeCalendar(){
  }
  document.querySelector('#calendarGrid').innerHTML=cells.join('');
  alignMobileCalendar(today,shownPrefix);
- const monthPlans=planRows.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today)),ordered=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).ordered,0),planned=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).working,0);
- document.querySelector('#plannedPieces').textContent=`${planned} ${t('pcs')}`;document.querySelector('#orderedPieces').textContent=`${ordered} ${t('pcs')}`;document.querySelector('#freePieces').textContent=`${Math.max(0,planned-ordered)} ${t('pcs')}`;
+ const monthPlans=planRows.filter(p=>p.bakeDate.startsWith(shownPrefix)&&(history?p.bakeDate<today:p.bakeDate>=today));
+ if(typeof updatePlanSummaryCards==='function')updatePlanSummaryCards(monthPlans,{scope:monthTitle()});
+ else{const ordered=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).ordered,0),planned=monthPlans.reduce((sum,p)=>sum+calendarEntryMetrics(p).working,0);document.querySelector('#plannedPieces').textContent=`${planned} ${t('pcs')}`;document.querySelector('#orderedPieces').textContent=`${ordered} ${t('pcs')}`;document.querySelector('#freePieces').textContent=`${Math.max(0,planned-ordered)} ${t('pcs')}`;}
  if(!history){
    document.querySelectorAll('[data-calendar-date]:not([disabled])').forEach(b=>b.onclick=()=>{const date=b.dataset.calendarDate,entries=planRows.filter(p=>p.bakeDate===date);weekStart=startOfWeek(new Date(`${date}T12:00:00`));renderPlan();document.querySelector('#addPlan').click();const f=document.querySelector('#planForm'),cancel=document.querySelector('#cancelSelectedBake');f.bakeDate.value=date;setDefaultPlanDates(f,date);if(entries.length){const first=entries[0];f.deliveryDate.value=first.deliveryDate||date;if(first.cutoff)f.cutoff.value=String(first.cutoff).slice(0,16);f.open.checked=first.open!==false}window.panoraBuildPlanProductFields?.(date);window.panoraLocalizePlanDialog?.(entries.length>0);cancel.hidden=!entries.length;cancel.dataset.date=date})
  }
