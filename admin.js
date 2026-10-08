@@ -632,6 +632,8 @@ const ADMIN_NAV_GROUP_STATE_KEY='panora-admin-nav-groups-v1075';
 const ADMIN_NAV_GROUPS=[
  {toggle:'#workNavToggle',menu:'#workNavItems',key:'work',defaultOpen:true},
  {toggle:'#financeNavToggle',menu:'#financeNavItems',key:'finance',defaultOpen:true},
+ {toggle:'#documentsNavToggle',menu:'#documentsNavItems',key:'documents',defaultOpen:true},
+ {toggle:'#analyticsNavToggle',menu:'#analyticsNavItems',key:'analytics',defaultOpen:true},
  {toggle:'#partnersNavToggle',menu:'#partnersNavItems',key:'partners',defaultOpen:true},
  {toggle:'#productsNavToggle',menu:'#productsNavItems',key:'products',legacyKey:'partners',defaultOpen:true},
  {toggle:'#productionSafetyNavToggle',menu:'#productionSafetyNavItems',key:'productionSafety',defaultOpen:false},

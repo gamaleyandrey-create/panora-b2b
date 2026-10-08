@@ -1,0 +1,13 @@
+Panora 11.30 FULL
+build/cache 11300
+
+DOCUMENTS + BUSINESS ANALYTICS
+- Added a top-level Documents section between Finance and Analytics.
+- Documents workspace includes All documents, Factura, Albarán, EDO, Incoming, Outgoing, Requires action and Archive.
+- EDO status/channel/external ID editing and incoming electronic invoice creation now live in Documents.
+- Related B2B documents can be opened directly from the document register.
+- Analytics remains a separate management section with Business overview, Profit & margin, Sales & partners, Production, Stock & purchases, Debtors and Cash flow.
+- The Analytics EDO tab is now read-only Control EDO and links to the working Documents register.
+- Business P&L reuses the existing Finance calculation engine; no duplicate profit formula was introduced.
+- Existing Quality and Legal control reports remain secondary Analytics tabs.
+- No BIO marking. No SQL migration required.

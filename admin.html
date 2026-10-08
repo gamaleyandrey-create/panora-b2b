@@ -61,19 +61,19 @@
     }
   }catch{}
   try{
-    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11280').map(k=>caches.delete(k)))).catch(()=>{});
+    if('caches' in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^panora-v/i.test(k)&&k!=='panora-v11300').map(k=>caches.delete(k)))).catch(()=>{});
   }catch{}
 })();
 </script>
 <link rel="stylesheet" href="admin.css?v=11020">
 <link rel="stylesheet" href="admin-v247.css?v=11020">
-  <link rel="stylesheet" href="commerce.css?v=11280">
+  <link rel="stylesheet" href="commerce.css?v=11300">
   <link rel="stylesheet" href="settings.css?v=11020">
   <link rel="stylesheet" href="export.css?v=11020">
   <link rel="stylesheet" href="recipe-actions.css?v=11020">
     <link rel="stylesheet" href="date-jump.css?v=11020">
   <link rel="stylesheet" href="easy-plan.css?v=11020">
-  <link rel="stylesheet" href="product-admin.css?v=11280">
+  <link rel="stylesheet" href="product-admin.css?v=11300">
   <link rel="stylesheet" href="product-close.css?v=11020">
   <link rel="stylesheet" href="calendar-plan.css?v=11030">
   <link rel="stylesheet" href="calendar-weekend.css?v=11020">
@@ -113,10 +113,10 @@
 
 <link rel="stylesheet" href="mobile-header.css?v=11020">
 <link rel="stylesheet" href="light-pro.css?v=11020">
-<link rel="stylesheet" href="connection-status.css?v=11280">
+<link rel="stylesheet" href="connection-status.css?v=11300">
 <link rel="stylesheet" href="event-notifications.css?v=11020">
 <link rel="stylesheet" href="audit-trail.css?v=11020">
-<link rel="manifest" href="bakery/manifest.webmanifest?v=11280">
+<link rel="manifest" href="bakery/manifest.webmanifest?v=11300">
 <link rel="stylesheet" href="install-guide.css?v=11020">
 <link rel="stylesheet" href="pwa-stable.css?v=11020">
 <link rel="stylesheet" href="pricing-v40.css?v=11020">
@@ -124,7 +124,7 @@
 <link rel="stylesheet" href="mobile-partner-prices-v49.css?v=11020">
 <link rel="stylesheet" href="order-messages-v565.css?v=11020">
 
-<link rel="stylesheet" href="finance-dashboard.css?v=11200">
+<link rel="stylesheet" href="finance-dashboard.css?v=11300">
 <link rel="stylesheet" href="admin-partner-theme.css?v=11020">
   <meta property="og:site_name" content="Panora">
   
@@ -213,7 +213,29 @@
       <div class="admin-nav-submenu admin-nav-submenu-major" id="financeNavItems">
         <button data-view="accounting">Оплаты и долги</button>
         <button data-view="finance">Финансы</button>
-        <button data-view="reports">Отчёты</button>
+      </div>
+
+      <button type="button" class="admin-nav-disclosure admin-nav-section-toggle admin-nav-major-toggle" id="documentsNavToggle" aria-expanded="true" aria-controls="documentsNavItems"><span class="admin-nav-disclosure-title"><span>Документы</span></span><i aria-hidden="true">⌄</i></button>
+      <div class="admin-nav-submenu admin-nav-submenu-major" id="documentsNavItems">
+        <button data-view="documents" data-document-open="all">Все документы</button>
+        <button data-view="documents" data-document-open="invoices">Счета / Factura</button>
+        <button data-view="documents" data-document-open="albaran">Накладные / Albarán</button>
+        <button data-view="documents" data-document-open="edo">ЭДО</button>
+        <button data-view="documents" data-document-open="incoming">Входящие</button>
+        <button data-view="documents" data-document-open="outgoing">Исходящие</button>
+        <button data-view="documents" data-document-open="action">Требуют действия</button>
+        <button data-view="documents" data-document-open="archive">Архив</button>
+      </div>
+
+      <button type="button" class="admin-nav-disclosure admin-nav-section-toggle admin-nav-major-toggle" id="analyticsNavToggle" aria-expanded="true" aria-controls="analyticsNavItems"><span class="admin-nav-disclosure-title"><span>Аналитика</span></span><i aria-hidden="true">⌄</i></button>
+      <div class="admin-nav-submenu admin-nav-submenu-major" id="analyticsNavItems">
+        <button data-view="reports" data-report-open="overview">Обзор бизнеса</button>
+        <button data-view="reports" data-report-open="profit">Прибыль и маржа</button>
+        <button data-view="reports" data-report-open="sales">Продажи и партнёры</button>
+        <button data-view="reports" data-report-open="production">Производство</button>
+        <button data-view="reports" data-report-open="stock">Склад и закупки</button>
+        <button data-view="reports" data-report-open="debtors">Дебиторка</button>
+        <button data-view="reports" data-report-open="cashflow">Денежный поток</button>
       </div>
 
       <button type="button" class="admin-nav-disclosure admin-nav-section-toggle admin-nav-major-toggle" id="settingsNavToggle" aria-expanded="true" aria-controls="settingsNavItems"><span class="admin-nav-disclosure-title"><span>Настройки</span></span><i aria-hidden="true">⌄</i></button>
@@ -732,9 +754,42 @@
       <div class="view" id="view-ps-help"><div id="psHelpRoot"></div></div>
 
 
+      <div class="view" id="view-documents">
+        <div class="page-head reports-page-head documents-page-head">
+          <div><span class="kicker">PANORA · ДОКУМЕНТЫ</span><h2>Документы</h2><p>Накладные, Factura и ЭДО в одном рабочем реестре. Здесь меняются статусы и открываются связанные документы.</p></div>
+          <div class="reports-head-actions"><button type="button" class="secondary" id="documentsRefresh">Обновить</button><button type="button" class="secondary" id="documentsExportCsv">CSV / Excel</button></div>
+        </div>
+        <section class="documents-toolbar" aria-label="Фильтры документов">
+          <label class="documents-search"><span>Поиск</span><input id="documentsSearch" type="search" placeholder="№, партнёр, поставщик, статус…"></label>
+          <div id="documentsDataState" class="reports-data-state" hidden></div>
+        </section>
+        <section class="reports-kpis documents-kpis" id="documentsKpis" aria-label="Состояние документов"></section>
+        <nav class="reports-tabs documents-tabs" id="documentsTabs" aria-label="Разделы документов">
+          <button type="button" class="active" data-document-tab="all">Все документы</button>
+          <button type="button" data-document-tab="invoices">Счета / Factura</button>
+          <button type="button" data-document-tab="albaran">Накладные / Albarán</button>
+          <button type="button" data-document-tab="edo">ЭДО</button>
+          <button type="button" data-document-tab="incoming">Входящие</button>
+          <button type="button" data-document-tab="outgoing">Исходящие</button>
+          <button type="button" data-document-tab="action">Требуют действия</button>
+          <button type="button" data-document-tab="archive">Архив</button>
+        </nav>
+        <section id="documentsContent" class="reports-content documents-content"></section>
+        <dialog id="reportsEdoDialog" class="reports-edo-dialog">
+          <form method="dialog" id="reportsEdoForm">
+            <button type="button" class="dialog-close" id="reportsEdoClose" aria-label="Закрыть">×</button>
+            <span class="kicker">PANORA · ЭДО</span><h3>Входящий электронный счёт</h3>
+            <p class="form-hint">Реестр хранит структурированные реквизиты и статус документа. Само добавление записи не означает отправку или подтверждение внешней системой.</p>
+            <div class="reports-form-grid"><label><span>Дата</span><input name="date" type="date" required></label><label><span>№ документа</span><input name="documentNumber" maxlength="80" required></label><label><span>Поставщик</span><input name="supplier" maxlength="180" required></label><label><span>NIF / CIF</span><input name="taxId" maxlength="30"></label><label><span>База, €</span><input name="base" inputmode="decimal" required></label><label><span>IVA, €</span><input name="vat" inputmode="decimal" required></label><label><span>Итого, €</span><input name="total" inputmode="decimal" required></label><label><span>Статус</span><select name="status"><option value="received">Получен</option><option value="accepted">Принят</option><option value="rejected">Отклонён</option><option value="paid">Оплачен</option></select></label><label><span>Канал</span><select name="channel"><option value="private">Частная платформа</option><option value="aeat">Публичное решение AEAT</option><option value="face">FACe</option><option value="other">Другой</option></select></label><label><span>Внешний ID</span><input name="externalId" maxlength="160"></label></div>
+            <label><span>Примечание</span><input name="note" maxlength="300"></label>
+            <div class="dialog-actions"><button type="button" id="reportsEdoCancel">Отмена</button><button type="submit" class="primary">Добавить в реестр</button></div>
+          </form>
+        </dialog>
+      </div>
+
       <div class="view" id="view-reports">
         <div class="page-head reports-page-head">
-          <div><span class="kicker">PANORA</span><h2>Отчёты</h2><p>Обязательные и контрольные реестры для Испании, ЭДО и управленческая аналитика по данным Panora.</p></div>
+          <div><span class="kicker">PANORA · УПРАВЛЕНИЕ</span><h2>Аналитика</h2><p>Выручка, прибыль, маржа, производство, склад, дебиторка и денежный поток — по данным Panora.</p></div>
           <div class="reports-head-actions"><button type="button" class="secondary" id="reportsRefresh">Обновить</button><button type="button" class="secondary" id="reportsExportCsv">CSV / Excel</button><button type="button" class="secondary" id="reportsPrint">Печать / PDF</button></div>
         </div>
         <section class="reports-filterbar" aria-label="Фильтры отчётов">
@@ -748,27 +803,19 @@
         <div id="reportsDataState" class="reports-data-state" hidden></div>
         <section class="reports-kpis" id="reportsKpis" aria-label="Ключевые показатели"></section>
         <nav class="reports-tabs" id="reportsTabs" aria-label="Разделы отчётов">
-          <button type="button" class="active" data-report-tab="overview">Обзор</button>
-          <button type="button" data-report-tab="sales">Продажи</button>
+          <button type="button" class="active" data-report-tab="overview">Обзор бизнеса</button>
+          <button type="button" data-report-tab="profit">Прибыль и маржа</button>
+          <button type="button" data-report-tab="sales">Продажи и партнёры</button>
           <button type="button" data-report-tab="production">Производство</button>
-          <button type="button" data-report-tab="stock">Склад</button>
-          <button type="button" data-report-tab="finance">Финансы</button>
-          <button type="button" data-report-tab="partners">Партнёры</button>
+          <button type="button" data-report-tab="stock">Склад и закупки</button>
+          <button type="button" data-report-tab="debtors">Дебиторка</button>
+          <button type="button" data-report-tab="cashflow">Денежный поток</button>
           <button type="button" data-report-tab="quality">Качество</button>
           <button type="button" data-report-tab="legal">Юридические</button>
-          <button type="button" class="reports-edo-tab" data-report-tab="edo">ЭДО</button>
+          <button type="button" class="reports-edo-tab" data-report-tab="edo">Контроль ЭДО</button>
         </nav>
         <section id="reportsContent" class="reports-content"></section>
-        <dialog id="reportsEdoDialog" class="reports-edo-dialog">
-          <form method="dialog" id="reportsEdoForm">
-            <button type="button" class="dialog-close" id="reportsEdoClose" aria-label="Закрыть">×</button>
-            <span class="kicker">PANORA · ЭДО</span><h3>Входящий электронный счёт</h3>
-            <p class="form-hint">Реестр хранит структурированные реквизиты и статус документа. Само добавление записи не означает отправку или подтверждение внешней системой.</p>
-            <div class="reports-form-grid"><label><span>Дата</span><input name="date" type="date" required></label><label><span>№ документа</span><input name="documentNumber" maxlength="80" required></label><label><span>Поставщик</span><input name="supplier" maxlength="180" required></label><label><span>NIF / CIF</span><input name="taxId" maxlength="30"></label><label><span>База, €</span><input name="base" inputmode="decimal" required></label><label><span>IVA, €</span><input name="vat" inputmode="decimal" required></label><label><span>Итого, €</span><input name="total" inputmode="decimal" required></label><label><span>Статус</span><select name="status"><option value="received">Получен</option><option value="accepted">Принят</option><option value="rejected">Отклонён</option><option value="paid">Оплачен</option></select></label><label><span>Канал</span><select name="channel"><option value="private">Частная платформа</option><option value="aeat">Публичное решение AEAT</option><option value="face">FACe</option><option value="other">Другой</option></select></label><label><span>Внешний ID</span><input name="externalId" maxlength="160"></label></div>
-            <label><span>Примечание</span><input name="note" maxlength="300"></label>
-            <div class="dialog-actions"><button type="button" id="reportsEdoCancel">Отмена</button><button type="submit" class="primary">Добавить в реестр</button></div>
-          </form>
-        </dialog>
+
       </div>
 
       <div class="view" id="view-settings">
@@ -893,10 +940,10 @@
 <script src="supabase-config.js?v=11020"></script>
 <script src="stable-health.js?v=11020"></script>
 <script src="admin-auth.js?v=11020"></script>
-<script src="admin.js?v=11280"></script>
+<script src="admin.js?v=11300"></script>
 <script src="stable-price-inputs-v42.js?v=11020"></script>
 <script src="money-edit-lock-v43.js?v=11020"></script>
-<script src="commerce.js?v=11280"></script>
+<script src="commerce.js?v=11300"></script>
 <script src="desktop-order-date-filter-v28.js?v=11020"></script>
 <script src="invoice-settings.js?v=11020"></script>
 <script src="invoice-tax-display.js?v=11020"></script>
@@ -904,25 +951,25 @@
 <script src="spanish-documents.js?v=11020"></script>
 <script src="document-library.js?v=11020"></script>
 <script src="invoice-preview.js?v=11020"></script>
-<script src="admin-localization.js?v=11020"></script>
-<script src="product-admin.js?v=11280"></script>
+<script src="admin-localization.js?v=11300"></script>
+<script src="product-admin.js?v=11300"></script>
 <script src="calendar-plan.js?v=11030"></script>
 <script src="qrcode-browser.js?v=11020"></script>
 <script src="delivery-qr.js?v=11020"></script>
 <script src="delivery-offline.js?v=11020"></script>
 <script src="delivery-followup.js?v=11020"></script>
 <script src="mobile-admin-nav.js?v=11020"></script>
-<script src="admin-status-sync.js?v=11280"></script>
+<script src="admin-status-sync.js?v=11300"></script>
 <script src="admin-mobile-tabs.js?v=11020"></script>
 <script src="purchase-costs.js?v=11020"></script>
 <script src="invoice-close.js?v=11020"></script>
 <script src="account-detail.js?v=11020"></script>
-<script src="order-notifications.js?v=11280"></script>
+<script src="order-notifications.js?v=11300"></script>
 <script src="order-communication.js?v=11020"></script>
 <script src="audit-log.js?v=11020"></script>
 <script src="input-stability.js?v=11020"></script>
-<script src="connection-status.js?v=11280"></script>
-<script src="cloud-sync.js?v=11280"></script>
+<script src="connection-status.js?v=11300"></script>
+<script src="cloud-sync.js?v=11300"></script>
 <script src="recipe-percent.js?v=11020"></script>
 <script src="daily-order-summary.js?v=11020"></script>
 <script src="recovery-guard.js?v=11020"></script>
@@ -977,7 +1024,7 @@
     </form>
   </dialog>
 
-<script src="finance-dashboard.js?v=11200"></script>
+<script src="finance-dashboard.js?v=11300"></script>
 <script src="production-safety.js?v=11020"></script>
 <script src="quality-compliance-v1075.js?v=11020"></script>
 

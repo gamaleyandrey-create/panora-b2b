@@ -158,7 +158,22 @@ Object.assign(C,{
   'Аллергены':['Allergens','Alérgenos'],
   'Санитарный контроль':['Sanitary control','Control sanitario'],
   'Документы':['Documents','Documentos'],
-  'Прослеживаемость':['Traceability','Trazabilidad']
+  'Прослеживаемость':['Traceability','Trazabilidad'],
+  'Аналитика':['Analytics','Analítica'],
+  'Все документы':['All documents','Todos los documentos'],
+  'Счета / Factura':['Invoices / Factura','Facturas'],
+  'Накладные / Albarán':['Delivery notes / Albarán','Albaranes'],
+  'ЭДО':['E-documents','Documentos electrónicos'],
+  'Входящие':['Incoming','Entrantes'],
+  'Исходящие':['Outgoing','Salientes'],
+  'Требуют действия':['Requires action','Requieren acción'],
+  'Обзор бизнеса':['Business overview','Resumen del negocio'],
+  'Прибыль и маржа':['Profit & margin','Beneficio y margen'],
+  'Продажи и партнёры':['Sales & partners','Ventas y socios'],
+  'Склад и закупки':['Stock & purchasing','Stock y compras'],
+  'Дебиторка':['Receivables','Cuentas por cobrar'],
+  'Денежный поток':['Cash flow','Flujo de caja'],
+  'Контроль ЭДО':['E-document control','Control de documentos electrónicos']
 });
 const reverse=new Map();
 for(const [ru,[en,es]] of Object.entries(C)){reverse.set(ru,ru);reverse.set(en,ru);reverse.set(es,ru)}
