@@ -218,7 +218,7 @@ syncProductSelects();renderProductManagement();renderProductCards();renderCommer
 /* Panora 11.26 — warning-first print flow + strong shelf-price hierarchy. */
 (()=>{
 'use strict';
-const BUILD=11260;
+const BUILD=11270;
 const SAFETY_KEY='panora-production-safety-v1066';
 const SAFETY_PENDING_KEY='panora-production-safety-pending-v1066';
 const BUILDER_KEY='panora-label-builder-v1106';

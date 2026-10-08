@@ -1,5 +1,6 @@
 const fs=require('fs');
 const assert=require('assert');
+const vm=require('vm');
 const read=name=>fs.readFileSync(name,'utf8');
 const product=read('product-admin.js');
 const calendar=read('calendar-plan.js');
@@ -10,9 +11,9 @@ const purchase=read('purchase-costs.js');
 const html=read('admin.html');
 const build=JSON.parse(read('build.json'));
 
-assert.equal(build.version,'11.26');
-assert.equal(build.build,11260);
-assert.equal(build.cache,11260);
+assert.equal(build.version,'11.27');
+assert.equal(build.build,11270);
+assert.equal(build.cache,11270);
 assert.match(product,/data-plan-enabled/);
 assert.match(product,/Quantity is optional|Количество необязательно/);
 assert.match(product,/planned=String\(input\?\.value\|\|''\)\.trim\(\)===''\?0/);
@@ -28,4 +29,24 @@ assert.match(purchase,/manual>current\)products\.set\(product,manual\)/);
 assert.match(html,/Отметьте хлеб, который планируется выпекать/);
 assert.match(admin,/panora:b2b-shipment/);
 assert.match(admin,/replace\(\/\\s\*·\?\\s\*\\\[panora:b2b-shipment/);
-console.log('Panora 10.75 bake-day selection tests: OK');
+
+assert.match(admin,/function planSummaryDetail/);
+assert.match(admin,/function updatePlanSummaryCards/);
+assert.match(calendar,/updatePlanSummaryCards\(monthPlans,\{scope:monthTitle\(\)\}\)/);
+assert.match(html,/plannedPiecesDetail/);
+assert.match(html,/orderedPiecesDetail/);
+{
+ const start=admin.indexOf('function planSummaryTypeLabel'),end=admin.indexOf('function renderPlan',start);
+ assert.ok(start>=0&&end>start,'11.27 summary helper source slice');
+ const nodes={plannedPieces:{},orderedPieces:{},freePieces:{},plannedPiecesDetail:{},orderedPiecesDetail:{},freePiecesDetail:{}};
+ const context={lang:'ru',retailPreorderQuantity:()=>0,t:key=>key==='pcs'?'шт.':key,$:sel=>nodes[String(sel).replace('#','')]||null,Map,Math,Number,String,Array,Object};
+ vm.runInNewContext(admin.slice(start,end)+`;this.summaryApi={planSummaryDetail,updatePlanSummaryCards};`,context);
+ const rows=[{product:'flax',ordered:17,planned:17,bakeDate:'2026-10-08'},{product:'pumpkin',ordered:17,planned:17,bakeDate:'2026-10-08'}];
+ const result=context.summaryApi.updatePlanSummaryCards(rows,{scope:'октябрь 2026 г.'});
+ assert.equal(result.ordered,34);assert.equal(result.planned,34);assert.equal(result.extra,0);
+ assert.equal(nodes.orderedPieces.textContent,'34 шт.');assert.equal(nodes.plannedPieces.textContent,'34 шт.');
+ assert.match(nodes.orderedPiecesDetail.textContent,/2 вида хлеба/);assert.match(nodes.orderedPiecesDetail.textContent,/17 \+ 17 = 34/);
+ assert.match(nodes.freePiecesDetail.textContent,/заказ покрыт/);
+}
+
+console.log('Panora 11.27 bake totals tests: OK');
