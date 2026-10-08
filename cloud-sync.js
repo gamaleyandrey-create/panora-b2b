@@ -994,22 +994,18 @@
     })().finally(()=>{adminCommerceRevisionPromise=null});
     return adminCommerceRevisionPromise;
   }
-  const adminOrderFollowupForCount=order=>{
-    try{
-      const note=(deliveryNotes||[]).find(item=>String(item?.orderId||'')===String(order?.id||''));
-      if(!note)return {};
-      const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};
-      return all[String(note.id||note.orderId||'')]||{};
-    }catch{return {}}
-  };
   const adminOrderArchivedForCount=order=>{
-    const status=String(order?.status||'');
-    if(status==='cancelled')return true;
+    if(typeof window.panoraAdminOrderIsArchived==='function')return window.panoraAdminOrderIsArchived(order,deliveryNotes);
+    const status=String(order?.status||'').toLowerCase();
+    if(['cancelled','canceled','closed','archived','delivered','completed','paid'].includes(status))return true;
+    if(Boolean(order?.archived||order?.isArchived||order?.archive))return true;
     if(status!=='shipped')return false;
     if(order?.deliveryConfirmedAt)return true;
     const note=(deliveryNotes||[]).find(item=>String(item?.orderId||'')===String(order?.id||''));
     if(!note)return false;
-    return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||adminOrderFollowupForCount(order).manualClosedAt);
+    let manual=false;
+    try{const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};manual=Boolean(all[String(note.id||note.orderId||'')]?.manualClosedAt)}catch{}
+    return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||manual);
   };
   const publishAdminOrderArchiveCounts=()=>{
     if(!window.panoraAdminOrdersHydrated||!window.panoraAdminOrderArchiveHydrated)return;
@@ -1381,14 +1377,16 @@
     // Panora 10.32 preserves only already-final receipt evidence while refreshing.
     deliveryNotes=remote;
     financeLoaded=true;cacheDeliveryNotesLocal();
-    ready=true;await repairMissingDeliveryNotes();
-    await syncB2BShipmentStockDurability();
+    // Panora 11.28: the successful cloud read is the authoritative receipt hydration.
+    // Do not keep Orders hidden while historical-note repair or stock durability
+    // reconciliation runs afterwards. Those jobs are best-effort post-hydration work.
     window.panoraAdminOrderArchiveHydrated=true;
     publishAdminOrderArchiveCounts();
     const changed=beforeSignature!==noteUiSignature(deliveryNotes);
-    // First receipt hydration must repaint even when the note signature happened to
-    // match cache, because mobile order archive classification was intentionally held.
-    if(changed||window.panoraAdminOrdersHydrated)queueAdminCommerceRender()
+    if(changed||window.panoraAdminOrdersHydrated)queueAdminCommerceRender();
+    ready=true;
+    try{await repairMissingDeliveryNotes()}catch(error){console.warn('Panora delivery-note repair after hydration',error)}
+    try{await syncB2BShipmentStockDurability()}catch(error){console.warn('Panora B2B stock durability after receipt hydration',error)}
   }
   async function saveDeliveryNotesNow(){
     if(!ready||typeof deliveryNotes==='undefined')return;

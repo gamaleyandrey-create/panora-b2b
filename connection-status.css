@@ -73,3 +73,9 @@ body:not(.admin-page) .panora-load-reminder.is-done strong{font-size:12px}
 body:not(.admin-page) .panora-load-reminder.is-done small{display:none}
 .panora-load-reminder[data-state="stale"] .panora-load-reminder-main i{border-right-color:currentColor}
 @media(max-width:720px){body:not(.admin-page) .panora-load-reminder.is-done{padding:7px 16px}body:not(.admin-page) .panora-load-reminder.is-done strong{font-size:12px}}
+
+/* Panora 11.28 — conflict banner itself is the visible action target. */
+body.admin-page .panora-load-reminder.is-actionable{cursor:pointer;padding-top:11px;padding-bottom:11px;background:#f3f8f3;border-bottom-color:#b9d0bf;box-shadow:0 7px 20px rgba(34,75,48,.12)}
+body.admin-page .panora-load-reminder.is-actionable:hover{background:#edf6ef}
+body.admin-page .panora-load-reminder.is-actionable:focus-visible{outline:3px solid rgba(48,105,67,.24);outline-offset:-3px}
+body.admin-page .panora-load-reminder.is-actionable [data-load-detail]{color:#42684d;font-weight:700}

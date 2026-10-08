@@ -87,19 +87,23 @@ function setLocalStorageSafely(key,payload){
  }
 }
 const PANORA_ORDERS_CACHE_ARCHIVE_LIMIT=20;
-function isArchivedAdminOrder(row){
+function isArchivedAdminOrder(row,notesInput=null){
  const status=String(row?.status||'').toLowerCase();
- if(['cancelled','canceled','closed','archived'].includes(status))return true;
- if(['delivered'].includes(status))return true;
- if(status!=='shipped')return Boolean(row?.archived||row?.isArchived||row?.archive);
+ // Panora 11.28: one canonical archive predicate is shared by the order list,
+ // tab counters, bounded local cache and cloud-published counts. A shipped order
+ // stays active until receipt is final; terminal/legacy states are always archive.
+ if(['cancelled','canceled','closed','archived','delivered','completed','paid'].includes(status))return true;
+ if(Boolean(row?.archived||row?.isArchived||row?.archive))return true;
+ if(status!=='shipped')return false;
  if(row?.deliveryConfirmedAt)return true;
- const notes=typeof deliveryNotes!=='undefined'&&Array.isArray(deliveryNotes)?deliveryNotes:[];
+ const notes=Array.isArray(notesInput)?notesInput:(typeof deliveryNotes!=='undefined'&&Array.isArray(deliveryNotes)?deliveryNotes:[]);
  const note=notes.find(item=>String(item?.orderId||'')===String(row?.id||''));
  if(!note)return false;
  let manual=false;
  try{const all=JSON.parse(localStorage.getItem('panora-delivery-followups')||'{}')||{};manual=Boolean(all[String(note.id||note.orderId||'')]?.manualClosedAt)}catch{}
  return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||manual);
 }
+window.panoraAdminOrderIsArchived=isArchivedAdminOrder;
 function compactAdminOrderForCache(row){
  const copy={...(row||{})};
  if(Array.isArray(copy.items)){

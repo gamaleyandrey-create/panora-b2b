@@ -41,9 +41,12 @@
       if(!navigator.onLine)return;
       el.disabled=true;
       try{
-        await window.panoraFormDrafts?.flush?.();
-        await window.panoraCloud?.retrySync?.();
-        await window.panoraPortalCloud?.refreshOrders?.();
+        if(el.dataset.state==='conflict'&&typeof window.panoraCloud?.resolveConflicts==='function')await window.panoraCloud.resolveConflicts();
+        else{
+          await window.panoraFormDrafts?.flush?.();
+          await window.panoraCloud?.retrySync?.();
+          await window.panoraPortalCloud?.refreshOrders?.();
+        }
       }catch{}
       finally{el.disabled=false;readState()}
     });
@@ -75,7 +78,7 @@
       s==='offline'?'Изменения сохраняются на этом устройстве и отправятся после восстановления сети.':
       s==='local'||s==='pending'?'Есть локальные изменения. Нажмите после восстановления связи для повторной синхронизации.':
       s==='error'?'Нажмите, чтобы повторить синхронизацию.':
-      s==='conflict'?'Нажмите верхнее уведомление и выберите актуальную версию плана.':
+      s==='conflict'?'Нажмите здесь, чтобы выбрать актуальную версию.':
       'Связь с облаком работает.'
     );
   }
@@ -173,6 +176,9 @@
     el.innerHTML='<div class="panora-load-reminder-main"><i aria-hidden="true"></i><div><strong data-load-title></strong><small data-load-detail></small></div></div><div class="panora-load-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>';
     const anchor=document.querySelector('.admin-topbar,header,.topbar');
     if(anchor?.parentNode)anchor.insertAdjacentElement('afterend',el);else document.body.prepend(el);
+    const openConflict=async()=>{if(el.dataset.state!=='conflict'||typeof window.panoraCloud?.resolveConflicts!=='function')return;try{await window.panoraCloud.resolveConflicts()}catch{}};
+    el.addEventListener('click',openConflict);
+    el.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&el.dataset.state==='conflict'){event.preventDefault();openConflict()}});
     return el;
   };
   const show=(state,text)=>{
@@ -185,6 +191,10 @@
     const stale=state==='error'&&hasCachedAdminData();
     const shownState=stale?'stale':state;
     el.dataset.state=shownState;el.hidden=false;el.classList.remove('is-done');
+    const actionable=state==='conflict'&&isAdmin();
+    el.classList.toggle('is-actionable',actionable);
+    if(actionable){el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label','Выбрать актуальную версию данных')}
+    else{el.setAttribute('role','status');el.removeAttribute('tabindex');el.removeAttribute('aria-label')}
     const raw=String(text||'').trim();
     if(state==='loading'||state==='syncing'){
       title.textContent=raw||'Обновляем данные…';
@@ -196,7 +206,7 @@
       el.classList.remove('is-busy');
     }else if(state==='conflict'){
       title.textContent='Есть изменения на другом устройстве';
-      detail.textContent='Нажмите верхнее уведомление и выберите актуальную версию. Данные не удаляются.';
+      detail.textContent='Нажмите этот баннер, чтобы выбрать актуальную версию. Данные не удаляются.';
       el.classList.remove('is-busy');
     }else if(stale){
       title.textContent='Не удалось проверить обновления';

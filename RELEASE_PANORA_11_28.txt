@@ -1,0 +1,17 @@
+Panora 11.28 FULL
+build/cache 11280
+
+ORDERS + CONFLICT RECOVERY
+- The visible “Есть изменения на другом устройстве” banner is now itself clickable and opens the version-choice dialog. The hidden legacy #saveState is no longer referenced by the user-facing instruction.
+- The bottom cloud status button also opens the version-choice dialog when the state is conflict.
+- Orders are no longer blanked after the order list has already hydrated while delivery-note / receipt reconciliation is still running.
+- A successful delivery-note cloud read immediately marks order archive classification as authoritatively hydrated and repaints Orders. Historical missing-note repair and B2B stock durability reconciliation now run afterwards as best-effort work and cannot keep Orders stuck on “Загружаем…”.
+- While receipt evidence is still reconciling, Orders remain visible and show a compact “Подтверждения получения обновляются…” note.
+- Active/Archive classification is now canonical across the visible list, tab counters, bounded local order cache and cloud-published counts. Cancelled/closed/received orders are Archive; a shipped order without final receipt confirmation remains Active. Legacy delivered/completed/paid states are also kept in Archive and cannot expose shipment actions.
+
+PRESERVED
+- Panora 11.27 calendar total clarification remains intact.
+- Panora 11.26 warning-first printing and shelf-price hierarchy remain intact.
+- MUNBYN RW403B profile and sample/test labels remain intact.
+- No BIO marking.
+- No SQL migration required.

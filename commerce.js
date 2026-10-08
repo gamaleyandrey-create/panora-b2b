@@ -269,8 +269,11 @@ const adminOrderMobileViewport=()=>{
 const adminOrderCloudLoading=()=>{
   if(!navigator.onLine)return false;
   if(adminOrderMobileViewport())return !window.panoraAdminOrdersHydrated&&!window.__panoraMobileOrderCacheVisible;
-  return !adminOrderArchiveReady();
+  // Panora 11.28: delivery-note/receipt hydration may finish after the order list.
+  // Never blank already-loaded orders while that secondary reconciliation runs.
+  return !window.panoraAdminOrdersHydrated;
 };
+const adminOrderReceiptHydrationPending=()=>Boolean(window.panoraAdminOrdersHydrated&&!window.panoraAdminOrderArchiveHydrated);
 const orderCountsForHeader=()=>{
   // Panora 10.32: shipped orders cannot be classified until delivery notes / receipt
   // confirmations are loaded. Never present stale mobile cache as authoritative.
@@ -473,6 +476,12 @@ function orderStatus(o) {
       confirmed: "Подтверждён",
       shipped: "Отгружен",
       cancelled: "Отменён",
+      canceled: "Отменён",
+      delivered: "Получен",
+      completed: "Получен",
+      paid: "Получен",
+      closed: "Завершён",
+      archived: "Архив",
     }[o.status] || o.status
   );
 }
@@ -511,8 +520,11 @@ function bakeryOrderAuditHtml(o) {
 function orderActions(o) {
   const step=(n,label,state)=>`<span class="order-flow-step ${state}" aria-label="Этап ${n}: ${label}"><b>${state==='done'?'✓':n}</b><span>${label}</span></span>`;
   const pricing=orderPricingState(o);
-  if (o.status === "cancelled")
+  const status=String(o?.status||'').toLowerCase();
+  if (status === "cancelled" || status === "canceled")
     return `<div class="order-flow order-flow-cancelled"><span>Заказ отменён</span></div>`;
+  if(orderIsArchived(o)&&status!=='shipped')
+    return `<div class="order-flow order-flow-shipped"><span>Заказ завершён</span></div>`;
   if (o.status === "shipped")
     return `<div class="order-flow order-flow-shipped">${step(1,'Подтвердить','done')}${step(2,'Отгрузить','done')}${step(3,'Накладная','current')}</div><div class="order-flow-actions shipped-actions"><button class="action-small primary-flow" data-note="${o.id}">Открыть накладную</button><button class="action-small panora-note-more" type="button" data-note-library="${o.id}" aria-label="Документы накладной">⋯</button><button class="action-small shipped-qr" data-delivery-qr="${o.id}">QR-код</button></div>`;
   if (o.status === "submitted")
@@ -543,8 +555,10 @@ const orderReceiptFinalized=o=>{
   return Boolean(note.customerConfirmedAt||note?.offlineProof?.receivedAt||orderFollowupMeta(o).manualClosedAt);
 };
 const orderIsArchived=o=>{
-  const status=String(o?.status||'');
-  if(status==='cancelled')return true;
+  if(typeof window.panoraAdminOrderIsArchived==='function')return window.panoraAdminOrderIsArchived(o,deliveryNotes);
+  const status=String(o?.status||'').toLowerCase();
+  if(['cancelled','canceled','closed','archived','delivered','completed','paid'].includes(status))return true;
+  if(Boolean(o?.archived||o?.isArchived||o?.archive))return true;
   return status==='shipped'&&orderReceiptFinalized(o);
 };
 const orderArchiveMatches=o=>orderArchiveView==='archive'?orderIsArchived(o):!orderIsArchived(o);
@@ -590,7 +604,8 @@ function renderOrders() {
     archiveTabs.classList.toggle('is-loading',!!headerCounts.loading);
     archiveTabs.innerHTML=`
       <button type="button" class="${orderArchiveView==='active'?'active':''}" data-order-archive-view="active"><span>Активные</span><b>${headerCounts.active}</b></button>
-      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архивные</span><b>${headerCounts.archive}</b></button>`;
+      <button type="button" class="${orderArchiveView==='archive'?'active':''}" data-order-archive-view="archive"><span>Архивные</span><b>${headerCounts.archive}</b></button>
+      ${adminOrderReceiptHydrationPending()?'<span class="order-receipt-hydration-note">Подтверждения получения обновляются…</span>':''}`;
     archiveTabs.querySelectorAll('[data-order-archive-view]').forEach(button=>button.onclick=()=>{
       const next=button.dataset.orderArchiveView;
       if(next===orderArchiveView)return;
@@ -610,7 +625,7 @@ function renderOrders() {
     new:o=>o.status==='submitted',
     confirmed:o=>!['submitted','shipped','cancelled'].includes(o.status),
     shipped:o=>o.status==='shipped',
-    completed:o=>o.status==='cancelled'||orderReceiptFinalized(o)
+    completed:o=>orderIsArchived(o)
   };
   if(statusBar){
     const defs=[['all','Все'],['new','Новые'],['confirmed','Подтверждённые'],['shipped','Отгруженные'],['completed','Завершённые']];
